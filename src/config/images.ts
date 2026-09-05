@@ -1,0 +1,15 @@
+export const images = {
+  appIcon: require('../../assets/image/app_icon.png'),
+  favicon: require('../../assets/image/favicon.png'),
+  languageSelectionBackground: require('../../assets/image/language_selection.png'),
+  onboardingSlide1: require('../../assets/image/screen_1_icon.png'),
+  onboardingSlide2: require('../../assets/image/screen_2_icon.png'),
+  onboardingSlide3: require('../../assets/image/screen_3_icon.png'),
+  categorySkin: require('../../assets/image/glowing-skin.png'),
+  categoryAllergy: require('../../assets/image/allergy.png'),
+  categoryDigestion: require('../../assets/image/gastroenterology.png'),
+  categoryWomensHealth: require('../../assets/image/woman-avatar.png'),
+  categoryChildCare: require('../../assets/image/baby.png'),
+  doctorPortrait: require('../../assets/image/woman-avatar.png'),
+  healthTipHero: require('../../assets/image/screen.png'),
+} as const;

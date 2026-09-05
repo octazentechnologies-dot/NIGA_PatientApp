@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "991452928656",
+    "project_id": "homeocentrum-mobile",
+    "storage_bucket": "homeocentrum-mobile.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:991452928656:android:84d106a497f865841b1615",
+        "android_client_info": {
+          "package_name": "com.nigahomeocentrum.patient"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBeD2ALAiSSqwU8C7K3klXsHNKaQMc_rk0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,63 @@
+{
+  "expo": {
+    "name": "NIGA Patient",
+    "slug": "niga-patient",
+    "scheme": "nigapatient",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#ffffff",
+    "androidStatusBar": {
+      "barStyle": "dark-content",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.nigahomeocentrum.patient"
+    },
+    "android": {
+      "package": "com.nigahomeocentrum.patient",
+      "backgroundColor": "#ffffff",
+      "googleServicesFile": "./google-services.json",
+      "adaptiveIcon": {
+        "backgroundColor": "#f7faf8",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "softwareKeyboardLayoutMode": "resize"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Allow HelloHomeo to use the microphone for voice search.",
+          "speechRecognitionPermission": "Allow HelloHomeo to convert your speech to text for doctor search.",
+          "androidSpeechServicePackages": [
+            "com.google.android.googlequicksearchbox"
+          ]
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#f7faf8",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200
+        }
+      ],
+      "@react-native-community/datetimepicker",
+      "expo-status-bar",
+      "expo-system-ui",
+      "expo-notifications"
+    ],
+    "extra": {
+      "apiBaseUrl": "https://api1.homeocentrum.com/api"
+    }
+  }
+}
