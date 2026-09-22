@@ -1,12 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import {
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaModal } from './SafeAreaModal';
+
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { FamilyMembersViewModel } from '../controllers/useFamilyMembersController';
@@ -15,18 +16,23 @@ import { radii } from '../theme/radii';
 import { layout, spacing } from '../theme/spacing';
 import { fontFamilyFor } from '../utilities/fonts';
 import { scaleFont } from '../utilities/scale';
+import { sheetBottomPadding } from '../utilities/sheetInset';
 import { AppButton } from './AppButton';
 import { AppText } from './AppText';
+import { DatePickerSheet } from './DatePickerSheet';
 import { FormField } from './FormField';
 
 type AddFamilyMemberSheetProps = Pick<
   FamilyMembersViewModel,
   | 'language'
   | 't'
+  | 'sheetMode'
   | 'addSheetOpen'
   | 'relationshipPickerOpen'
   | 'fullName'
   | 'dateOfBirth'
+  | 'datePickerOpen'
+  | 'datePickerValue'
   | 'gender'
   | 'relationship'
   | 'mobileNumber'
@@ -36,7 +42,10 @@ type AddFamilyMemberSheetProps = Pick<
   | 'relationshipLabel'
   | 'onCloseAddSheet'
   | 'onChangeFullName'
+  | 'onChangeDateOfBirth'
   | 'onOpenDatePicker'
+  | 'onCloseDatePicker'
+  | 'onConfirmDateOfBirth'
   | 'onSelectGender'
   | 'onOpenRelationshipPicker'
   | 'onCloseRelationshipPicker'
@@ -49,10 +58,13 @@ type AddFamilyMemberSheetProps = Pick<
 export function AddFamilyMemberSheet({
   language,
   t,
+  sheetMode,
   addSheetOpen,
   relationshipPickerOpen,
   fullName,
   dateOfBirth,
+  datePickerOpen,
+  datePickerValue,
   gender,
   relationship,
   mobileNumber,
@@ -62,7 +74,10 @@ export function AddFamilyMemberSheet({
   relationshipLabel,
   onCloseAddSheet,
   onChangeFullName,
+  onChangeDateOfBirth,
   onOpenDatePicker,
+  onCloseDatePicker,
+  onConfirmDateOfBirth,
   onSelectGender,
   onOpenRelationshipPicker,
   onCloseRelationshipPicker,
@@ -74,7 +89,7 @@ export function AddFamilyMemberSheet({
   const insets = useSafeAreaInsets();
 
   return (
-    <Modal
+    <SafeAreaModal
       transparent
       animationType="slide"
       visible={addSheetOpen}
@@ -85,7 +100,7 @@ export function AddFamilyMemberSheet({
         <View
           style={[
             styles.sheet,
-            { paddingBottom: Math.max(insets.bottom, spacing.md) },
+            { paddingBottom: sheetBottomPadding(insets, spacing.md) },
           ]}
         >
           <View style={styles.handle} />
@@ -95,7 +110,11 @@ export function AddFamilyMemberSheet({
               color={colors.primary}
               style={styles.sheetTitle}
             >
-              {t('addFamilyMemberTitle')}
+              {t(
+                sheetMode === 'edit'
+                  ? 'familyEditMemberTitle'
+                  : 'addFamilyMemberTitle',
+              )}
             </AppText>
             <Pressable
               accessibilityRole="button"
@@ -127,6 +146,9 @@ export function AddFamilyMemberSheet({
               value={dateOfBirth}
               placeholder={t('dateOfBirthPlaceholder')}
               language={language}
+              keyboardType="number-pad"
+              maxLength={10}
+              onChangeText={onChangeDateOfBirth}
               rightIcon={
                 <Ionicons
                   name="calendar-outline"
@@ -134,7 +156,7 @@ export function AddFamilyMemberSheet({
                   color={colors.primary}
                 />
               }
-              onPress={onOpenDatePicker}
+              onIconPress={onOpenDatePicker}
             />
 
             <View style={styles.fieldGroup}>
@@ -277,7 +299,11 @@ export function AddFamilyMemberSheet({
 
           <View style={styles.footer}>
             <AppButton
-              label={t('familySendAuthRequest')}
+              label={t(
+                sheetMode === 'edit'
+                  ? 'familySaveMember'
+                  : 'familySendAuthRequest',
+              )}
               textVariant="titleMd"
               disabled={!canSubmit}
               onPress={onSubmitMember}
@@ -286,7 +312,19 @@ export function AddFamilyMemberSheet({
           </View>
         </View>
       </View>
-    </Modal>
+
+      <DatePickerSheet
+        visible={datePickerOpen}
+        value={datePickerValue}
+        maximumDate={new Date()}
+        minimumDate={new Date(1900, 0, 1)}
+        locale={language === 'mr' ? 'mr-IN' : 'en-IN'}
+        cancelLabel={t('cancel')}
+        doneLabel={t('done')}
+        onCancel={onCloseDatePicker}
+        onConfirm={onConfirmDateOfBirth}
+      />
+    </SafeAreaModal>
   );
 }
 
@@ -322,12 +360,12 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(24, 28, 27, 0.4)',
   },
   sheet: {
     maxHeight: '90%',
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
     borderTopLeftRadius: radii.md,
     borderTopRightRadius: radii.md,
   },
@@ -380,14 +418,14 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
   },
   genderSegmentSelected: {
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
   },
   phoneWrap: {
     minHeight: layout.buttonHeight,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.outline,
     borderRadius: radii.sm,
@@ -420,7 +458,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     borderWidth: 1.5,
     borderColor: colors.outline,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 2,
@@ -434,14 +472,14 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
+    paddingTop: spacing.sm,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.surfaceContainerHighest,
   },
   submit: {
     minHeight: 52,
     width: '100%',
-    borderRadius: radii.sm,
+    borderRadius: radii.button,
   },
   dropdownList: {
     gap: spacing.sm,
@@ -453,7 +491,7 @@ const styles = StyleSheet.create({
     borderColor: colors.outlineVariant,
     justifyContent: 'center',
     paddingHorizontal: spacing.md,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
   },
   dropdownOptionSelected: {
     borderColor: colors.primary,

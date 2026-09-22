@@ -33,6 +33,7 @@ export async function apiRequest<T>(
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',
+        ...options.headers,
       },
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
       signal: controller.signal,

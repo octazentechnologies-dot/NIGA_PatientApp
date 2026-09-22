@@ -1,12 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import {
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaModal } from '../components/SafeAreaModal';
+
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppButton } from '../components/AppButton';
@@ -22,10 +23,14 @@ import { radii } from '../theme/radii';
 import { layout, spacing } from '../theme/spacing';
 import { fontFamilyFor } from '../utilities/fonts';
 import { scaleFont } from '../utilities/scale';
+import { sheetBottomPadding } from '../utilities/sheetInset';
 
 export function CompleteProfileView({
   language,
   t,
+  screenTitle,
+  primaryActionLabel,
+  showSkip,
   fullName,
   dateOfBirth,
   gender,
@@ -84,6 +89,7 @@ export function CompleteProfileView({
       />
 
       <ScrollView
+        style={styles.scroll}
         bounces={false}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
@@ -95,8 +101,8 @@ export function CompleteProfileView({
           <View style={styles.progressTrack}>
             <View style={styles.progressFill} />
           </View>
-          <AppText variant="headlineMd" color="#000000">
-            {t('profileTitle')}
+          <AppText variant="headlineMd" color="#1F1F1F">
+            {screenTitle}
           </AppText>
         </View>
 
@@ -296,26 +302,30 @@ export function CompleteProfileView({
       <View
         style={[
           styles.footer,
-          { paddingBottom: Math.max(insets.bottom, spacing.md) },
+          { paddingBottom: sheetBottomPadding(insets, spacing.md) },
         ]}
       >
         <AppButton
-          label={t('continue')}
+          label={primaryActionLabel}
           textVariant="titleMd"
           onPress={onContinue}
           style={styles.footerButton}
           iconPosition="end"
           icon={
-            <Ionicons name="arrow-forward" size={20} color={colors.onButton} />
+            showSkip ? (
+              <Ionicons name="arrow-forward" size={20} color={colors.onButton} />
+            ) : undefined
           }
         />
-        <AppButton
-          variant="secondary"
-          label={t('skipForNow')}
-          textVariant="titleMd"
-          onPress={onSkip}
-          style={[styles.footerButton, styles.skipButton]}
-        />
+        {showSkip ? (
+          <AppButton
+            variant="secondary"
+            label={t('skipForNow')}
+            textVariant="titleMd"
+            onPress={onSkip}
+            style={[styles.footerButton, styles.skipButton]}
+          />
+        ) : null}
       </View>
 
       <DatePickerSheet
@@ -330,14 +340,20 @@ export function CompleteProfileView({
         onConfirm={onConfirmDateOfBirth}
       />
 
-      <Modal
+      <SafeAreaModal
         transparent
         animationType="fade"
         visible={languagePickerOpen}
         onRequestClose={onCloseLanguagePicker}
       >
         <Pressable style={styles.modalBackdrop} onPress={onCloseLanguagePicker}>
-          <Pressable style={styles.modalCard} onPress={() => undefined}>
+          <Pressable
+            style={[
+              styles.modalCard,
+              { paddingBottom: sheetBottomPadding(insets, spacing.lg) },
+            ]}
+            onPress={() => undefined}
+          >
             <AppText variant="titleMd" color={colors.primary} style={styles.modalTitle}>
               {t('preferredLanguage')}
             </AppText>
@@ -361,15 +377,21 @@ export function CompleteProfileView({
             />
           </Pressable>
         </Pressable>
-      </Modal>
-      <Modal
+      </SafeAreaModal>
+      <SafeAreaModal
         transparent
         animationType="fade"
         visible={statePickerOpen}
         onRequestClose={onCloseStatePicker}
       >
         <Pressable style={styles.modalBackdrop} onPress={onCloseStatePicker}>
-          <Pressable style={styles.stateModalCard} onPress={() => undefined}>
+          <Pressable
+            style={[
+              styles.stateModalCard,
+              { paddingBottom: sheetBottomPadding(insets, spacing.lg) },
+            ]}
+            onPress={() => undefined}
+          >
             <AppText variant="titleMd" color={colors.primary} style={styles.modalTitle}>
               {t('state')}
             </AppText>
@@ -405,7 +427,7 @@ export function CompleteProfileView({
             </ScrollView>
           </Pressable>
         </Pressable>
-      </Modal>
+      </SafeAreaModal>
     </View>
   );
 }
@@ -496,19 +518,22 @@ function LanguageOption({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.page,
+  },
+  scroll: {
+    flex: 1,
   },
   content: {
     paddingHorizontal: spacing.gutter,
-    paddingTop: spacing.md,
+    paddingTop: spacing.sm,
     paddingBottom: spacing.lg,
-    gap: spacing.lg,
+    gap: spacing.md,
     maxWidth: 448,
     width: '100%',
     alignSelf: 'center',
   },
   stepBlock: {
-    gap: spacing.md,
+    gap: spacing.sm,
   },
   progressTrack: {
     height: 4,
@@ -569,7 +594,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     borderWidth: 1.5,
     borderColor: colors.outline,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -581,7 +606,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.md,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
     borderRadius: radii.sm,
     padding: spacing.md,
     borderWidth: 1,
@@ -591,20 +616,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   footer: {
+    alignSelf: 'stretch',
+    paddingTop: spacing.sm,
     paddingHorizontal: spacing.gutter,
-    paddingTop: spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.outlineVariant,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
     gap: spacing.sm,
   },
   footerButton: {
     minHeight: 52,
     width: '100%',
-    borderRadius: radii.sm,
+    borderRadius: radii.button,
   },
   skipButton: {
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
   },
   modalBackdrop: {
     flex: 1,
@@ -612,7 +638,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalCard: {
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
     borderTopLeftRadius: radii.lg,
     borderTopRightRadius: radii.lg,
     padding: spacing.lg,
@@ -638,7 +664,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.outline,
     borderRadius: radii.sm,
@@ -656,7 +682,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   stateModalCard: {
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
     borderTopLeftRadius: radii.lg,
     borderTopRightRadius: radii.lg,
     padding: spacing.lg,

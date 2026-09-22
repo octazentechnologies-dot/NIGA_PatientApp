@@ -1,19 +1,5 @@
-import {
-  NotoSansDevanagari_400Regular,
-  NotoSansDevanagari_500Medium,
-  NotoSansDevanagari_600SemiBold,
-} from '@expo-google-fonts/noto-sans-devanagari';
-import {
-  PlusJakartaSans_400Regular,
-  PlusJakartaSans_500Medium,
-  PlusJakartaSans_600SemiBold,
-} from '@expo-google-fonts/plus-jakarta-sans';
-import {
-  SourceSerif4_400Regular,
-  SourceSerif4_600SemiBold,
-} from '@expo-google-fonts/source-serif-4';
 import { useFonts } from 'expo-font';
-import * as SplashScreen from 'expo-splash-screen';
+import { NavigationBar } from 'expo-navigation-bar';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
 import { useEffect } from 'react';
@@ -23,60 +9,72 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import {
+  SafeAreaProvider,
+  initialWindowMetrics,
+} from 'react-native-safe-area-context';
+
+import {
+  NotoSansDevanagari_400Regular,
+  NotoSansDevanagari_500Medium,
+  NotoSansDevanagari_600SemiBold,
+  NotoSansDevanagari_700Bold,
+} from '@expo-google-fonts/noto-sans-devanagari';
+import {
+  Poppins_400Regular,
+  Poppins_500Medium,
+  Poppins_600SemiBold,
+  Poppins_700Bold,
+} from '@expo-google-fonts/poppins';
 
 import { KeyboardStableInsets } from './components/KeyboardStableInsets';
+import { OfflineModeGate } from './components/OfflineModeGate';
 import { LocalizationProvider } from './localization/i18n';
 import { AppNavigator } from './navigation/AppNavigator';
+import { configureForegroundNotificationHandler } from './services/notifications';
 import { colors } from './theme/colors';
 
-const STATUS_BAR_COLOR = colors.surfaceContainerLowest;
+configureForegroundNotificationHandler();
 
-SplashScreen.preventAutoHideAsync().catch(() => undefined);
-SystemUI.setBackgroundColorAsync(STATUS_BAR_COLOR).catch(() => undefined);
-
-function applyAndroidStatusBar() {
-  if (Platform.OS !== 'android') {
-    return;
-  }
-  RNStatusBar.setBarStyle('dark-content', true);
-  RNStatusBar.setBackgroundColor(STATUS_BAR_COLOR, true);
-}
+const BOOT_COLOR = colors.page;
 
 export default function App() {
   const [fontsLoaded, fontError] = useFonts({
-    SourceSerif4_400Regular,
-    SourceSerif4_600SemiBold,
-    PlusJakartaSans_400Regular,
-    PlusJakartaSans_500Medium,
-    PlusJakartaSans_600SemiBold,
+    Poppins_400Regular,
+    Poppins_500Medium,
+    Poppins_600SemiBold,
+    Poppins_700Bold,
     NotoSansDevanagari_400Regular,
     NotoSansDevanagari_500Medium,
     NotoSansDevanagari_600SemiBold,
+    NotoSansDevanagari_700Bold,
   });
 
   useEffect(() => {
-    applyAndroidStatusBar();
-    SystemUI.setBackgroundColorAsync(STATUS_BAR_COLOR).catch(() => undefined);
+    SystemUI.setBackgroundColorAsync(BOOT_COLOR).catch(() => undefined);
+    if (Platform.OS === 'android') {
+      RNStatusBar.setBarStyle('dark-content', true);
+      RNStatusBar.setTranslucent(true);
+      RNStatusBar.setBackgroundColor(BOOT_COLOR, true);
+      NavigationBar.setStyle('dark');
+    }
   }, []);
 
-  useEffect(() => {
-    if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync().catch(() => undefined);
-    }
-  }, [fontsLoaded, fontError]);
-
   return (
-    <SafeAreaProvider style={styles.root}>
-      <View style={styles.root}>
+    <SafeAreaProvider style={styles.root} initialMetrics={initialWindowMetrics}>
+      <View style={styles.boot}>
         <RNStatusBar
           barStyle="dark-content"
-          backgroundColor={STATUS_BAR_COLOR}
+          backgroundColor={BOOT_COLOR}
+          translucent
         />
         <StatusBar style="dark" />
+        {Platform.OS === 'android' ? <NavigationBar style="dark" /> : null}
         <KeyboardStableInsets>
           <LocalizationProvider>
-            {fontsLoaded || fontError ? <AppNavigator /> : null}
+            <OfflineModeGate>
+              {fontsLoaded || fontError ? <AppNavigator /> : null}
+            </OfflineModeGate>
           </LocalizationProvider>
         </KeyboardStableInsets>
       </View>
@@ -87,6 +85,10 @@ export default function App() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: STATUS_BAR_COLOR,
+    backgroundColor: BOOT_COLOR,
+  },
+  boot: {
+    flex: 1,
+    backgroundColor: BOOT_COLOR,
   },
 });

@@ -7,7 +7,9 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { sheetBottomPadding } from '../utilities/sheetInset';
 
+import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
 import type { HealthTipSeed } from '../config/healthTips';
 import { images } from '../config/images';
@@ -21,7 +23,7 @@ const MUTED = '#595959';
 const HAIRLINE = '#E6E6E6';
 const CHIP_FILL = '#E6F5FE';
 const GREY_FILL = '#F2F2F2';
-const ICON_BLUE = '#3AA9E0';
+const ICON_BLUE = '#2A7BA3';
 
 export function HealthTipArticleView({
   t,
@@ -108,7 +110,7 @@ export function HealthTipArticleView({
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.body,
-          { paddingBottom: Math.max(insets.bottom, spacing.xl) },
+          { paddingBottom: sheetBottomPadding(insets, spacing.xl) },
         ]}
       >
         <Image source={tip.hero} resizeMode="contain" style={styles.hero} />
@@ -264,16 +266,12 @@ export function HealthTipArticleView({
           <AppText variant="bodyMd" color={MUTED} style={bodySize}>
             {t('tipTalkToDoctorBody')}
           </AppText>
-          <Pressable
-            accessibilityRole="button"
+          <AppButton
+            label={t(tip.findDoctorKey)}
             onPress={onFindDoctor}
-            style={({ pressed }) => [styles.ctaButton, pressed && styles.pressed]}
-          >
-            <AppText variant="bodyLg" color="#FFFFFF" weightOverride="600">
-              {t(tip.findDoctorKey)}
-            </AppText>
-            <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
-          </Pressable>
+            iconPosition="end"
+            icon={<Ionicons name="arrow-forward" size={18} color="#FFFFFF" />}
+          />
         </View>
 
         <AppText variant="headlineMd" color="#000000" style={styles.relatedTitle}>
@@ -367,7 +365,7 @@ function RelatedCard({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.page,
   },
   topBar: {
     minHeight: 48,
@@ -377,7 +375,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: HAIRLINE,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.card,
   },
   topActions: {
     flexDirection: 'row',
@@ -455,7 +453,8 @@ const styles = StyleSheet.create({
     gap: 6,
     borderWidth: 1.5,
     borderColor: ICON_BLUE,
-    borderRadius: radii.sm,
+    borderRadius: radii.button,
+    backgroundColor: colors.card,
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
@@ -522,8 +521,8 @@ const styles = StyleSheet.create({
   },
   ctaButton: {
     minHeight: 48,
-    backgroundColor: colors.primary,
-    borderRadius: radii.sm,
+    backgroundColor: colors.button,
+    borderRadius: radii.button,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -546,7 +545,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
     padding: spacing.sm,
     gap: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.card,
   },
   relatedImage: {
     width: '100%',
@@ -570,6 +569,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.full,
     borderWidth: 1.5,
     borderColor: ICON_BLUE,
+    backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },

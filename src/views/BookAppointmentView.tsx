@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import {
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   View,
 } from 'react-native';
+import { SafeAreaModal } from '../components/SafeAreaModal';
+
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '../components/AppText';
@@ -23,6 +24,7 @@ import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
 import { layout, spacing } from '../theme/spacing';
 import { scaleFont } from '../utilities/scale';
+import { sheetBottomPadding } from '../utilities/sheetInset';
 
 const MUTED = '#595959';
 const HAIRLINE = '#E6E6E6';
@@ -31,12 +33,13 @@ const GREY_FILL = '#F2F2F2';
 const AMBER_FILL = '#FCF3E4';
 const AMBER = '#8A5109';
 const AMBER_BORDER = '#F2C14E';
-const ICON_BLUE = '#3AA9E0';
+const ICON_BLUE = '#2A7BA3';
 
 const MODES: { id: ConsultMode; icon: keyof typeof Ionicons.glyphMap; labelKey: TranslationKey }[] =
   [
     { id: 'video', icon: 'videocam-outline', labelKey: 'bookVideo' },
     { id: 'audio', icon: 'call-outline', labelKey: 'bookAudio' },
+    { id: 'chat', icon: 'chatbubble-outline', labelKey: 'bookChat' },
     { id: 'clinic', icon: 'business-outline', labelKey: 'bookClinic' },
   ];
 
@@ -75,7 +78,7 @@ export function BookAppointmentView({
   onAddMember,
 }: BookAppointmentViewModel) {
   const insets = useSafeAreaInsets();
-  const footerReserve = 128 + Math.max(insets.bottom, spacing.md);
+  const footerReserve = 128 + sheetBottomPadding(insets, spacing.md);
   const consultingLabel = member.self
     ? t('bookMyself')
     : `${member.name} (${member.metaKey ? t(member.metaKey).replace(' • ', ', ') : ''})`;
@@ -84,7 +87,12 @@ export function BookAppointmentView({
 
   return (
     <View style={styles.root}>
-      <View style={{ paddingTop: Math.max(insets.top, spacing.sm) }}>
+      <View
+        style={{
+          paddingTop: Math.max(insets.top, spacing.sm),
+          backgroundColor: colors.card,
+        }}
+      >
         <View style={styles.topBar}>
           <Pressable
             accessibilityRole="button"
@@ -296,7 +304,7 @@ export function BookAppointmentView({
         </View>
       </ScrollView>
 
-      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
+      <View style={[styles.footer, { paddingBottom: sheetBottomPadding(insets, spacing.md) }]}>
         <View style={styles.flex}>
           <AppText variant="labelSm" color={MUTED}>
             {t('bookSummary')}
@@ -326,14 +334,20 @@ export function BookAppointmentView({
         </View>
       </View>
 
-      <Modal
+      <SafeAreaModal
         transparent
         animationType="slide"
         visible={memberPickerOpen}
         onRequestClose={onCloseMemberPicker}
       >
         <Pressable style={styles.sheetBackdrop} onPress={onCloseMemberPicker}>
-          <Pressable style={styles.sheet} onPress={() => undefined}>
+          <Pressable
+            style={[
+              styles.sheet,
+              { paddingBottom: sheetBottomPadding(insets, spacing.xl) },
+            ]}
+            onPress={() => undefined}
+          >
             <View style={styles.handle} />
             <View style={styles.sheetHead}>
               <AppText variant="headlineMd" color="#000000">
@@ -388,16 +402,22 @@ export function BookAppointmentView({
             </Pressable>
           </Pressable>
         </Pressable>
-      </Modal>
+      </SafeAreaModal>
 
-      <Modal
+      <SafeAreaModal
         transparent
         animationType="slide"
         visible={monthPickerOpen}
         onRequestClose={onCloseMonthPicker}
       >
         <Pressable style={styles.sheetBackdrop} onPress={onCloseMonthPicker}>
-          <Pressable style={styles.sheet} onPress={() => undefined}>
+          <Pressable
+            style={[
+              styles.sheet,
+              { paddingBottom: sheetBottomPadding(insets, spacing.xl) },
+            ]}
+            onPress={() => undefined}
+          >
             <View style={styles.handle} />
             <View style={styles.sheetHead}>
               <AppText variant="headlineMd" color="#000000">
@@ -438,7 +458,7 @@ export function BookAppointmentView({
             </View>
           </Pressable>
         </Pressable>
-      </Modal>
+      </SafeAreaModal>
     </View>
   );
 }
@@ -541,9 +561,10 @@ function SlotGroup({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.page,
   },
   topBar: {
+    backgroundColor: colors.card,
     minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
@@ -553,7 +574,7 @@ const styles = StyleSheet.create({
   },
   title: {
     flex: 1,
-    textAlign: 'center',
+    textAlign: 'left',
     fontSize: scaleFont(22),
     lineHeight: scaleFont(30),
   },
@@ -626,7 +647,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.card,
   },
   modeCardSelected: {
     backgroundColor: CHIP_FILL,
@@ -671,7 +692,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 10,
     paddingHorizontal: 4,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.card,
     gap: 2,
   },
   monthCellSelected: {
@@ -692,7 +713,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 2,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.card,
   },
   dateChipSelected: {
     backgroundColor: CHIP_FILL,
@@ -744,7 +765,7 @@ const styles = StyleSheet.create({
   },
   waitButton: {
     minHeight: 48,
-    borderRadius: radii.sm,
+    borderRadius: radii.button,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
@@ -771,7 +792,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 4,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.card,
   },
   slotSelected: {
     backgroundColor: colors.primary,
@@ -799,9 +820,9 @@ const styles = StyleSheet.create({
     bottom: 0,
     borderTopWidth: 1,
     borderTopColor: HAIRLINE,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.card,
     paddingHorizontal: spacing.gutter,
-    paddingTop: 12,
+    paddingTop: spacing.sm,
     gap: 8,
   },
   summary: {
@@ -818,7 +839,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 48,
     maxWidth: 180,
-    borderRadius: radii.sm,
+    borderRadius: radii.button,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
@@ -830,7 +851,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.card,
     borderTopLeftRadius: radii.md,
     borderTopRightRadius: radii.md,
     padding: spacing.md,

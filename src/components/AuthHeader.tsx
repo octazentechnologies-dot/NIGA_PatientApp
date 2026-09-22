@@ -126,16 +126,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.gutter,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.outlineVariant,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: spacing.xs,
     flexShrink: 1,
   },
   backButton: {
-    width: layout.buttonHeight,
+    width: 40,
     height: layout.buttonHeight,
     alignItems: 'center',
     justifyContent: 'center',
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
   languageSwitch: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
     borderWidth: 1.5,
     borderColor: colors.button,
     borderRadius: radii.full,

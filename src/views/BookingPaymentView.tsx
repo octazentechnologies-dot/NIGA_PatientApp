@@ -1,15 +1,17 @@
 import { type ReactNode } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import {
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaModal } from '../components/SafeAreaModal';
+
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
 import type { BookingPaymentViewModel } from '../controllers/useBookingPaymentController';
 import { colors } from '../theme/colors';
@@ -17,10 +19,11 @@ import { radii } from '../theme/radii';
 import { layout, spacing } from '../theme/spacing';
 import { fontFamilyFor } from '../utilities/fonts';
 import { scaleFont } from '../utilities/scale';
+import { sheetBottomPadding } from '../utilities/sheetInset';
 
 const MUTED = '#595959';
 const HAIRLINE = '#E6E6E6';
-const ICON_BLUE = '#3AA9E0';
+const ICON_BLUE = '#2A7BA3';
 const SELECT_FILL = '#F4FAFD';
 const AMBER_FILL = '#FCF3E4';
 const AMBER = '#8A5109';
@@ -61,11 +64,16 @@ export function BookingPaymentView({
   onPay,
 }: BookingPaymentViewModel) {
   const insets = useSafeAreaInsets();
-  const footerReserve = 88 + Math.max(insets.bottom, spacing.md);
+  const footerReserve = 88 + sheetBottomPadding(insets, spacing.md);
 
   return (
     <View style={styles.root}>
-      <View style={{ paddingTop: Math.max(insets.top, spacing.sm) }}>
+      <View
+        style={{
+          paddingTop: Math.max(insets.top, spacing.sm),
+          backgroundColor: colors.card,
+        }}
+      >
         <View style={styles.topBar}>
           <Pressable
             accessibilityRole="button"
@@ -269,17 +277,12 @@ export function BookingPaymentView({
         </View>
       </ScrollView>
 
-      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
-        <Pressable
-          accessibilityRole="button"
+      <View style={[styles.footer, { paddingBottom: sheetBottomPadding(insets, spacing.sm) }]}>
+        <AppButton
+          label={payLabel}
           onPress={onPay}
-          style={({ pressed }) => [styles.payButton, pressed && styles.pressed]}
-        >
-          <Ionicons name="lock-closed" size={16} color="#FFFFFF" />
-          <AppText variant="titleMd" color="#FFFFFF">
-            {payLabel}
-          </AppText>
-        </Pressable>
+          icon={<Ionicons name="lock-closed" size={16} color="#FFFFFF" />}
+        />
       </View>
 
       <PickerSheet
@@ -428,10 +431,17 @@ function PickerSheet({
   onClose: () => void;
   onSelect: (id: string) => void;
 }) {
+  const insets = useSafeAreaInsets();
   return (
-    <Modal transparent animationType="slide" visible={visible} onRequestClose={onClose}>
+    <SafeAreaModal transparent animationType="slide" visible={visible} onRequestClose={onClose}>
       <Pressable style={styles.sheetBackdrop} onPress={onClose}>
-        <Pressable style={styles.sheet} onPress={() => undefined}>
+        <Pressable
+          style={[
+            styles.sheet,
+            { paddingBottom: sheetBottomPadding(insets, spacing.xl) },
+          ]}
+          onPress={() => undefined}
+        >
           <View style={styles.handle} />
           <View style={styles.sheetHead}>
             <AppText variant="headlineMd" color="#000000">
@@ -457,16 +467,17 @@ function PickerSheet({
           ))}
         </Pressable>
       </Pressable>
-    </Modal>
+    </SafeAreaModal>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.page,
   },
   topBar: {
+    backgroundColor: colors.card,
     minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
@@ -476,7 +487,7 @@ const styles = StyleSheet.create({
   },
   title: {
     flex: 1,
-    textAlign: 'center',
+    textAlign: 'left',
     fontSize: scaleFont(22),
     lineHeight: scaleFont(30),
   },
@@ -510,7 +521,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.card,
   },
   amount: {
     fontSize: scaleFont(32),
@@ -550,7 +561,7 @@ const styles = StyleSheet.create({
     borderColor: HAIRLINE,
     borderRadius: radii.sm,
     overflow: 'hidden',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.card,
   },
   groupHead: {
     flexDirection: 'row',
@@ -621,7 +632,7 @@ const styles = StyleSheet.create({
     borderColor: PLACEHOLDER,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.card,
   },
   cardMark: {
     width: 40,
@@ -631,7 +642,7 @@ const styles = StyleSheet.create({
     borderColor: HAIRLINE,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.card,
   },
   circleMark: {
     width: 40,
@@ -641,7 +652,7 @@ const styles = StyleSheet.create({
     borderColor: HAIRLINE,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.card,
   },
   addCard: {
     flexDirection: 'row',
@@ -672,7 +683,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: HAIRLINE,
     borderRadius: radii.sm,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.card,
   },
   trust: {
     flexDirection: 'row',
@@ -708,18 +719,9 @@ const styles = StyleSheet.create({
     bottom: 0,
     borderTopWidth: 1,
     borderTopColor: HAIRLINE,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.card,
     paddingHorizontal: spacing.gutter,
-    paddingTop: 12,
-  },
-  payButton: {
-    minHeight: layout.buttonHeight,
-    borderRadius: radii.full,
-    backgroundColor: colors.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
+    paddingTop: spacing.sm,
   },
   sheetBackdrop: {
     flex: 1,
@@ -727,7 +729,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.card,
     borderTopLeftRadius: radii.md,
     borderTopRightRadius: radii.md,
     padding: spacing.md,

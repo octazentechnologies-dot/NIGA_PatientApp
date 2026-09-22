@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import type { DoctorProfileSeed } from '../config/doctorProfiles';
+import type { PatientDocument } from '../config/patientDocuments';
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
 
@@ -21,6 +22,11 @@ export type BookingReviewViewModel = BookingReviewDraft & {
   t: (key: TranslationKey) => string;
   reason: string;
   attached: boolean;
+  attachedLabel: string;
+  libraryDocuments: PatientDocument[];
+  selectedLibraryId: string | null;
+  uploadOpen: boolean;
+  selectSheetOpen: boolean;
   shareRecords: boolean;
   reminders: boolean;
   policyOpen: boolean;
@@ -30,7 +36,13 @@ export type BookingReviewViewModel = BookingReviewDraft & {
   onChangeMode: () => void;
   onChangePatient: () => void;
   onChangeReason: (value: string) => void;
-  onToggleAttach: () => void;
+  onPressAttach: () => void;
+  onRemoveAttach: () => void;
+  onCloseSelectSheet: () => void;
+  onSelectExistingDocument: (id: string) => void;
+  onUploadNewFromSheet: () => void;
+  onCloseUpload: () => void;
+  onUploadSaved: (files: PatientDocument[]) => void;
   onToggleShareRecords: () => void;
   onToggleReminders: () => void;
   onTogglePolicy: () => void;
@@ -51,7 +63,12 @@ export function useBookingReviewController({
 }): BookingReviewViewModel {
   const { language, t } = useLocalization();
   const [reason, setReason] = useState('');
-  const [attached, setAttached] = useState(false);
+  const [libraryDocuments, setLibraryDocuments] = useState<PatientDocument[]>(
+    [],
+  );
+  const [attachedId, setAttachedId] = useState<string | null>(null);
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [selectSheetOpen, setSelectSheetOpen] = useState(false);
   const [shareRecords, setShareRecords] = useState(true);
   const [reminders, setReminders] = useState(false);
   const [policyOpen, setPolicyOpen] = useState(true);
@@ -60,7 +77,10 @@ export function useBookingReviewController({
   useEffect(() => {
     if (!active) {
       setReason('');
-      setAttached(false);
+      setLibraryDocuments([]);
+      setAttachedId(null);
+      setUploadOpen(false);
+      setSelectSheetOpen(false);
       setShareRecords(true);
       setReminders(false);
       setPolicyOpen(true);
@@ -68,12 +88,22 @@ export function useBookingReviewController({
     }
   }, [active, draft.profile.id]);
 
+  const attachedDoc = useMemo(
+    () => libraryDocuments.find((doc) => doc.id === attachedId) ?? null,
+    [libraryDocuments, attachedId],
+  );
+
   return {
     language,
     t,
     ...draft,
     reason,
-    attached,
+    attached: Boolean(attachedDoc),
+    attachedLabel: attachedDoc?.name ?? t('reviewAttachFile'),
+    libraryDocuments,
+    selectedLibraryId: attachedId,
+    uploadOpen,
+    selectSheetOpen,
     shareRecords,
     reminders,
     policyOpen,
@@ -83,7 +113,44 @@ export function useBookingReviewController({
     onChangeMode: onBack,
     onChangePatient: onBack,
     onChangeReason: setReason,
-    onToggleAttach: () => setAttached((current) => !current),
+    onPressAttach: () => {
+      if (attachedId) {
+        setAttachedId(null);
+        return;
+      }
+      if (libraryDocuments.length > 0) {
+        setSelectSheetOpen(true);
+        return;
+      }
+      setUploadOpen(true);
+    },
+    onRemoveAttach: () => setAttachedId(null),
+    onCloseSelectSheet: () => setSelectSheetOpen(false),
+    onSelectExistingDocument: (id) => {
+      setAttachedId(id);
+      setSelectSheetOpen(false);
+    },
+    onUploadNewFromSheet: () => {
+      setSelectSheetOpen(false);
+      setUploadOpen(true);
+    },
+    onCloseUpload: () => setUploadOpen(false),
+    onUploadSaved: (files) => {
+      setLibraryDocuments((prev) => {
+        const next = [...prev];
+        files.forEach((file) => {
+          if (!next.some((item) => item.id === file.id)) {
+            next.push({ ...file, status: 'ready', progress: 1 });
+          }
+        });
+        return next;
+      });
+      const first = files[0];
+      if (first) {
+        setAttachedId(first.id);
+      }
+      setUploadOpen(false);
+    },
     onToggleShareRecords: () => setShareRecords((current) => !current),
     onToggleReminders: () => setReminders((current) => !current),
     onTogglePolicy: () => setPolicyOpen((current) => !current),

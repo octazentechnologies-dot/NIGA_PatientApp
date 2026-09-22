@@ -4,13 +4,14 @@ import {
   BackHandler,
   Image,
   Keyboard,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaModal } from '../components/SafeAreaModal';
+
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppButton } from '../components/AppButton';
@@ -22,6 +23,7 @@ import { radii } from '../theme/radii';
 import { layout, spacing } from '../theme/spacing';
 import { fontFamilyFor } from '../utilities/fonts';
 import { scaleFont } from '../utilities/scale';
+import { sheetBottomPadding } from '../utilities/sheetInset';
 
 export function SearchDoctorsView({
   language,
@@ -305,14 +307,20 @@ export function SearchDoctorsView({
         </View>
       </ScrollView>
 
-      <Modal
+      <SafeAreaModal
         transparent
         animationType="fade"
         visible={cityPickerOpen}
         onRequestClose={onCloseCityPicker}
       >
         <Pressable style={styles.modalBackdrop} onPress={onCloseCityPicker}>
-          <Pressable style={styles.modalCard} onPress={() => undefined}>
+          <Pressable
+            style={[
+              styles.modalCard,
+              { paddingBottom: sheetBottomPadding(insets, spacing.lg) },
+            ]}
+            onPress={() => undefined}
+          >
             <AppText variant="titleMd" color={colors.primary}>
               {t('searchLocation')}
             </AppText>
@@ -340,7 +348,7 @@ export function SearchDoctorsView({
             })}
           </Pressable>
         </Pressable>
-      </Modal>
+      </SafeAreaModal>
     </View>
   );
 }
@@ -441,7 +449,7 @@ function DoctorRow({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.page,
   },
   header: {
     minHeight: 56,
@@ -449,7 +457,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.sm,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
   },
   headerSide: {
     width: layout.buttonHeight,
@@ -471,7 +479,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     minHeight: 48,
-    backgroundColor: colors.surfaceContainerLowest,
+    marginTop: spacing.md,
+    backgroundColor: colors.card,
     borderRadius: radii.sm,
     borderWidth: 1,
     borderColor: colors.outlineVariant,
@@ -509,12 +518,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     paddingHorizontal: spacing.md,
   },
   availabilityCard: {
+    backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
@@ -529,7 +540,7 @@ const styles = StyleSheet.create({
   availabilityButton: {
     minHeight: 48,
     width: '100%',
-    borderRadius: radii.sm,
+    borderRadius: radii.button,
   },
   careGrid: {
     flexDirection: 'row',
@@ -539,6 +550,7 @@ const styles = StyleSheet.create({
   careCard: {
     width: '47%',
     flexGrow: 1,
+    backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
@@ -579,6 +591,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
+    backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
@@ -615,7 +628,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalCard: {
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
     borderTopLeftRadius: radii.md,
     borderTopRightRadius: radii.md,
     padding: spacing.lg,

@@ -1,7 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { sheetBottomPadding } from '../utilities/sheetInset';
 
+import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
 import type { ProfileTab } from '../config/doctorProfiles';
 import type { DoctorProfileViewModel } from '../controllers/useDoctorProfileController';
@@ -19,7 +21,7 @@ const HAIRLINE = '#E6E6E6';
 const CHIP_FILL = '#E6F5FE';
 const STAR = '#fca144';
 const STAR_FILL = '#FCF3E4';
-const ICON_BLUE = '#3AA9E0';
+const ICON_BLUE = '#2A7BA3';
 
 const TABS: { id: ProfileTab; labelKey: TranslationKey }[] = [
   { id: 'about', labelKey: 'profileTabAbout' },
@@ -43,11 +45,16 @@ export function DoctorProfileView({
   onBook,
 }: DoctorProfileViewModel) {
   const insets = useSafeAreaInsets();
-  const footerReserve = 118 + Math.max(insets.bottom, spacing.md);
+  const footerReserve = 118 + sheetBottomPadding(insets, spacing.md);
 
   return (
     <View style={styles.root}>
-      <View style={{ paddingTop: Math.max(insets.top, spacing.sm) }}>
+      <View
+        style={{
+          paddingTop: Math.max(insets.top, spacing.sm),
+          backgroundColor: colors.card,
+        }}
+      >
         <View style={styles.topBar}>
           <Pressable
             accessibilityRole="button"
@@ -190,7 +197,7 @@ export function DoctorProfileView({
       <View
         style={[
           styles.footer,
-          { paddingBottom: Math.max(insets.bottom, spacing.md) },
+          { paddingBottom: sheetBottomPadding(insets, spacing.md) },
         ]}
       >
         <View style={styles.nextBanner}>
@@ -208,18 +215,11 @@ export function DoctorProfileView({
               {t(profile.feeKey)}
             </AppText>
           </View>
-          <Pressable
-            accessibilityRole="button"
+          <AppButton
+            label={t('profileBookConsultation')}
             onPress={onBook}
-            style={({ pressed }) => [
-              styles.bookButton,
-              pressed && styles.bookPressed,
-            ]}
-          >
-            <AppText variant="bodyLg" color="#FFFFFF" weightOverride="600">
-              {t('profileBookConsultation')}
-            </AppText>
-          </Pressable>
+            style={styles.bookButton}
+          />
         </View>
       </View>
     </View>
@@ -466,9 +466,10 @@ function CheckLine({ text }: { text: string }) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.page,
   },
   topBar: {
+    backgroundColor: colors.card,
     minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
@@ -521,7 +522,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: radii.full,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -578,6 +579,7 @@ const styles = StyleSheet.create({
   tabs: {
     borderBottomWidth: 1,
     borderBottomColor: HAIRLINE,
+    backgroundColor: colors.card,
   },
   tabsRow: {
     paddingHorizontal: spacing.gutter,
@@ -614,7 +616,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
     padding: spacing.md,
     gap: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.card,
   },
   verifyHead: {
     flexDirection: 'row',
@@ -693,7 +695,7 @@ const styles = StyleSheet.create({
     borderColor: HAIRLINE,
     borderRadius: radii.sm,
     padding: spacing.md,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.card,
   },
   consultRow: {
     flexDirection: 'row',
@@ -732,6 +734,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
     padding: spacing.md,
     gap: spacing.sm,
+    backgroundColor: colors.card,
   },
   ratingDots: {
     flexDirection: 'row',
@@ -754,7 +757,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     borderTopWidth: 1,
     borderTopColor: HAIRLINE,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.card,
   },
   nextBanner: {
     flexDirection: 'row',
@@ -790,13 +793,6 @@ const styles = StyleSheet.create({
   bookButton: {
     minHeight: 48,
     paddingHorizontal: 24,
-    borderRadius: radii.sm,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bookPressed: {
-    opacity: 0.85,
   },
   flex: {
     flex: 1,

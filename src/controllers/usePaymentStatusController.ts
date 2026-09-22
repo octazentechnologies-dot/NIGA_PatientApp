@@ -1,7 +1,13 @@
 import { useEffect, useRef } from 'react';
 
 import { formatHoldTime } from '../config/bookingPayment';
-import { SEED_ATTEMPT_ID, SEED_PAYMENT_ID } from '../config/bookedAppointments';
+import type { ConsultMode } from '../config/appointmentSlots';
+import {
+  makeBookingId,
+  SEED_ATTEMPT_ID,
+  SEED_PAYMENT_ID,
+  SEED_REASON_KEY,
+} from '../config/bookedAppointments';
 import type { BookedAppointment } from '../config/bookedAppointments';
 import type { PaymentStatus } from './useBookAppointmentController';
 import { getDoctorProfile } from '../config/doctorProfiles';
@@ -15,6 +21,11 @@ export type PaymentStatusDraft = {
   doctorInitials: string;
   experienceKey: TranslationKey;
   whenLabel: string;
+  dateLine: string;
+  timeLine: string;
+  startsAt: string;
+  bookedOnLabel: string;
+  mode: ConsultMode;
   slotTimeLabel: string;
   modeConsultLabel: string;
   patientLabel: string;
@@ -82,16 +93,32 @@ export function usePaymentStatusController({
     const profile = getDoctorProfile(draft.doctorId);
     onConfirmBooking({
       id: `${draft.doctorId}-${draft.whenLabel}-${draft.patientLabel}`,
+      bookingId: makeBookingId(),
       doctorId: draft.doctorId,
       doctorNameKey: profile.nameKey,
       doctorInitials: draft.doctorInitials,
+      credentialsKey: profile.credentialsKey,
       experienceKey: draft.experienceKey,
       whenLabel: draft.whenLabel,
+      dateLine: draft.dateLine,
+      timeLine: draft.timeLine,
+      startsAt: draft.startsAt,
+      bookedOnLabel: draft.bookedOnLabel,
+      mode: draft.mode,
       modeConsultLabel: draft.modeConsultLabel,
       patientLabel: draft.patientLabel,
       feeLabel: draft.totalLabel,
       paymentId: SEED_PAYMENT_ID,
+      reasonKey: SEED_REASON_KEY,
       status: 'waiting_acceptance',
+      ...(draft.mode === 'chat'
+        ? {
+            chatClosesAt: new Date(
+              Date.now() + 7 * 24 * 60 * 60 * 1000,
+            ).toISOString(),
+            linkedConsultationLabel: draft.dateLine,
+          }
+        : {}),
     });
   }, [active, draft, onConfirmBooking]);
 

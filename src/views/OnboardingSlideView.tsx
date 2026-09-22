@@ -6,11 +6,11 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
 import { PaginationDots } from '../components/PaginationDots';
+import { Screen } from '../components/Screen';
 import { SlideStrip } from '../components/SlideStrip';
 import type {
   OnboardingSlideContent,
@@ -29,18 +29,12 @@ export function OnboardingSlideView({
   onGetStarted,
   onHaveAccount,
 }: OnboardingViewModel) {
-  const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const illustrationSize = Math.min(width - spacing.gutter * 2, 360);
 
   return (
-    <View style={styles.root}>
-      <View
-        style={[
-          styles.skipRow,
-          { paddingTop: Math.max(insets.top, spacing.sm) },
-        ]}
-      >
+    <Screen style={styles.root}>
+      <View style={[styles.skipRow, { paddingTop: spacing.sm }]}>
         <Pressable
           accessibilityRole="button"
           hitSlop={8}
@@ -51,6 +45,9 @@ export function OnboardingSlideView({
             {t('skip')}
           </AppText>
         </Pressable>
+        <View style={styles.dotsWrap}>
+          <PaginationDots count={pageCount} activeIndex={activePageIndex} />
+        </View>
       </View>
 
       <View style={styles.stage}>
@@ -67,13 +64,7 @@ export function OnboardingSlideView({
         </SlideStrip>
       </View>
 
-      <View
-        style={[
-          styles.footer,
-          { paddingBottom: Math.max(insets.bottom, spacing.lg) },
-        ]}
-      >
-        <PaginationDots count={pageCount} activeIndex={activePageIndex} />
+      <View style={[styles.footer, { paddingBottom: spacing.lg }]}>
         <View style={styles.actions}>
           <AppButton
             label={t('getStarted')}
@@ -90,7 +81,7 @@ export function OnboardingSlideView({
           />
         </View>
       </View>
-    </View>
+    </Screen>
   );
 }
 
@@ -145,17 +136,21 @@ function OnboardingSlideBody({
 
 const styles = StyleSheet.create({
   root: {
-    flex: 1,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.page,
   },
   skipRow: {
     alignItems: 'flex-end',
     paddingHorizontal: spacing.gutter,
+    gap: spacing.xs,
   },
   skipButton: {
     minHeight: 40,
     paddingHorizontal: spacing.md,
     justifyContent: 'center',
+  },
+  dotsWrap: {
+    paddingRight: spacing.md,
+    paddingBottom: spacing.xs,
   },
   stage: {
     flex: 1,
@@ -169,9 +164,11 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingHorizontal: spacing.gutter,
+    paddingTop: spacing.sm,
     maxWidth: 448,
     width: '100%',
     alignSelf: 'center',
+    backgroundColor: colors.card,
   },
   illustrationWrap: {
     flexGrow: 1,
@@ -183,7 +180,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
@@ -205,11 +202,10 @@ const styles = StyleSheet.create({
   },
   actions: {
     gap: spacing.md,
-    marginTop: spacing.lg,
   },
   actionButton: {
     minHeight: 52,
     width: '100%',
-    borderRadius: radii.sm,
+    borderRadius: radii.button,
   },
 });

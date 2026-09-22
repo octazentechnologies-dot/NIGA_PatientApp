@@ -1,35 +1,34 @@
 import type { AppLanguage } from '../localization/types';
 import type { TypographyVariant } from '../theme/typography';
 
-export type FontWeightToken = '400' | '500' | '600';
+export type FontWeightToken = '400' | '500' | '600' | '700';
+/** English uses Poppins for all roles; kept for call-site compatibility. */
 export type FontRole = 'serif' | 'sans';
 
 export const fontNames = {
-  serifRegular: 'SourceSerif4_400Regular',
-  serifSemiBold: 'SourceSerif4_600SemiBold',
-  sansRegular: 'PlusJakartaSans_400Regular',
-  sansMedium: 'PlusJakartaSans_500Medium',
-  sansSemiBold: 'PlusJakartaSans_600SemiBold',
+  /** English — Poppins (Velzon / NigaHomeopathy-UI) */
+  sansRegular: 'Poppins_400Regular',
+  sansMedium: 'Poppins_500Medium',
+  sansSemiBold: 'Poppins_600SemiBold',
+  sansBold: 'Poppins_700Bold',
+  /** Marathi — Noto Sans Devanagari everywhere */
   devanagariRegular: 'NotoSansDevanagari_400Regular',
   devanagariMedium: 'NotoSansDevanagari_500Medium',
   devanagariSemiBold: 'NotoSansDevanagari_600SemiBold',
+  devanagariBold: 'NotoSansDevanagari_700Bold',
+  /** System fallback if custom fonts fail to load */
+  fallback: 'sans-serif',
 } as const;
 
-export function fontRoleFor(variant: TypographyVariant): FontRole {
-  switch (variant) {
-    case 'displayLg':
-    case 'headlineLg':
-    case 'headlineMd':
-      return 'serif';
-    default:
-      return 'sans';
-  }
+/** Headings and body share Poppins (EN) / Noto Sans Devanagari (MR). */
+export function fontRoleFor(_variant: TypographyVariant): FontRole {
+  return 'sans';
 }
 
 export function fontFamilyFor(
   weight: FontWeightToken,
   language: AppLanguage,
-  role: FontRole,
+  _role: FontRole = 'sans',
 ): string {
   if (language === 'mr') {
     switch (weight) {
@@ -37,13 +36,11 @@ export function fontFamilyFor(
         return fontNames.devanagariMedium;
       case '600':
         return fontNames.devanagariSemiBold;
+      case '700':
+        return fontNames.devanagariBold;
       default:
         return fontNames.devanagariRegular;
     }
-  }
-
-  if (role === 'serif') {
-    return weight === '400' ? fontNames.serifRegular : fontNames.serifSemiBold;
   }
 
   switch (weight) {
@@ -51,6 +48,8 @@ export function fontFamilyFor(
       return fontNames.sansMedium;
     case '600':
       return fontNames.sansSemiBold;
+    case '700':
+      return fontNames.sansBold;
     default:
       return fontNames.sansRegular;
   }

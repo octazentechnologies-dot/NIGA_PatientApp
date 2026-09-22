@@ -7,6 +7,7 @@ import type { TranslationKey } from '../localization/types';
 import { radii } from '../theme/radii';
 import { spacing } from '../theme/spacing';
 import { scaleFont } from '../utilities/scale';
+import { colors } from '../theme/colors';
 
 const SUCCESS = '#0F7A4E';
 const SUCCESS_FILL = '#E9F5EF';
@@ -18,7 +19,7 @@ const GREY_FILL = '#F2F2F2';
 const MUTED = '#595959';
 const HAIRLINE = '#E6E6E6';
 const CHIP_FILL = '#E6F5FE';
-const ICON_BLUE = '#3AA9E0';
+const ICON_BLUE = '#2A7BA3';
 
 type Translate = (key: TranslationKey) => string;
 
@@ -237,7 +238,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: HAIRLINE,
     borderRadius: radii.sm,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.card,
   },
   identityAvatar: {
     width: 48,
@@ -294,7 +295,7 @@ const styles = StyleSheet.create({
     lineHeight: scaleFont(20),
   },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: HAIRLINE,
     borderRadius: radii.sm,
@@ -337,7 +338,8 @@ const styles = StyleSheet.create({
     marginTop: 8,
     borderWidth: 1.5,
     borderColor: ICON_BLUE,
-    borderRadius: radii.sm,
+    borderRadius: radii.button,
+    backgroundColor: colors.card,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

@@ -12,4 +12,7 @@ export const images = {
   categoryChildCare: require('../../assets/image/baby.png'),
   doctorPortrait: require('../../assets/image/woman-avatar.png'),
   healthTipHero: require('../../assets/image/screen.png'),
+  doctorNotAvailable: require('../../assets/image/doctor_not_available.png'),
+  noRecordsFound: require('../../assets/image/no_record_found.png'),
+  diaryEmpty: require('../../assets/image/diary_empty.png'),
 } as const;

@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import {
   Linking,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -14,7 +13,8 @@ import { AppText } from '../components/AppText';
 import { DoctorFiltersSheet } from '../components/DoctorFiltersSheet';
 import { EmptyDoctorsIllustration } from '../components/EmptyDoctorsIllustration';
 import { FacebookLoader } from '../components/FacebookLoader';
-import { PatientTabBar } from '../components/PatientTabBar';
+import { PatientTabBar, usePatientTabScrollInset } from '../components/PatientTabBar';
+import { WhyOrderSheet, type WhyOrderChip } from '../components/WhyOrderSheet';
 import type { HomeTab } from '../controllers/useHomeController';
 import type { SearchResultsViewModel } from '../controllers/useSearchResultsController';
 import type { DoctorSearchResult } from '../models/search';
@@ -89,7 +89,31 @@ export function SearchResultsView({
   onSelectTab,
 }: SearchResultsViewProps) {
   const insets = useSafeAreaInsets();
+  const tabScrollInset = usePatientTabScrollInset();
   const isEmpty = !loading && results.length === 0;
+
+  const whyOrderChips: WhyOrderChip[] = [
+    {
+      id: 'skin',
+      label: t('searchCareSkin'),
+      onRemove: onRemoveSpecialtyFilter,
+    },
+    {
+      id: 'marathi',
+      label: t('searchFilterMarathi'),
+      onRemove: onRemoveMarathiFilter,
+    },
+    {
+      id: 'video',
+      label: t('searchFilterVideo'),
+      onRemove: onRemoveVideoFilter,
+    },
+    {
+      id: 'distance',
+      label: t('searchWhyOrderDistanceChip'),
+      onRemove: () => undefined,
+    },
+  ];
 
   return (
     <View style={styles.root}>
@@ -350,7 +374,7 @@ export function SearchResultsView({
         <ScrollView
           bounces={false}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, { paddingBottom: tabScrollInset }]}
         >
           <View style={styles.summaryRow}>
             <AppText variant="bodyMd" color={MUTED}>
@@ -408,28 +432,12 @@ export function SearchResultsView({
         onSelectCustomDate={onSelectCustomDate}
       />
 
-      <Modal
-        transparent
-        animationType="fade"
+      <WhyOrderSheet
         visible={whyOrderOpen}
-        onRequestClose={onCloseWhyOrder}
-      >
-        <Pressable style={styles.modalBackdrop} onPress={onCloseWhyOrder}>
-          <Pressable style={styles.modalCard} onPress={() => undefined}>
-            <AppText variant="titleMd" color={colors.primary}>
-              {t('searchResultsWhyOrder')}
-            </AppText>
-            <AppText variant="bodyMd" color={colors.onSurface}>
-              {t('searchResultsWhyOrderBody')}
-            </AppText>
-            <AppButton
-              label={t('close')}
-              textVariant="titleMd"
-              onPress={onCloseWhyOrder}
-            />
-          </Pressable>
-        </Pressable>
-      </Modal>
+        t={t}
+        chips={whyOrderChips}
+        onClose={onCloseWhyOrder}
+      />
     </View>
   );
 }
@@ -590,14 +598,14 @@ function DoctorResultCard({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.page,
   },
   header: {
     minHeight: 56,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.sm,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: HAIRLINE,
   },
@@ -609,6 +617,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     flex: 1,
+      textAlign: 'left',
   },
   languageButton: {
     minHeight: 40,
@@ -626,7 +635,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   toolbar: {
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: HAIRLINE,
     paddingVertical: spacing.sm,
@@ -648,7 +657,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.full,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
   },
   filterBadge: {
     position: 'absolute',
@@ -685,7 +694,6 @@ const styles = StyleSheet.create({
   list: {
     padding: spacing.gutter,
     gap: spacing.md,
-    paddingBottom: spacing.xl,
   },
   summaryRow: {
     flexDirection: 'row',
@@ -706,7 +714,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: HAIRLINE,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.sm,
@@ -723,7 +731,7 @@ const styles = StyleSheet.create({
   emptyButton: {
     width: '100%',
     minHeight: 52,
-    borderRadius: radii.sm,
+    borderRadius: radii.button,
   },
   centerText: {
     textAlign: 'center',
@@ -732,7 +740,7 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
   card: {
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: HAIRLINE,
     borderRadius: 12,
@@ -855,22 +863,10 @@ const styles = StyleSheet.create({
   bookButton: {
     minHeight: 48,
     minWidth: 84,
-    borderRadius: radii.sm,
+    borderRadius: radii.button,
     paddingHorizontal: spacing.lg,
   },
   flex: {
     flex: 1,
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(24, 28, 27, 0.4)',
-    justifyContent: 'flex-end',
-  },
-  modalCard: {
-    backgroundColor: colors.surfaceContainerLowest,
-    borderTopLeftRadius: radii.md,
-    borderTopRightRadius: radii.md,
-    padding: spacing.lg,
-    gap: spacing.md,
   },
 });

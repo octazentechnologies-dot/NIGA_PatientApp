@@ -2,7 +2,6 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { type ComponentProps } from 'react';
 import {
   Image,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -11,17 +10,28 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AccountView } from './AccountView';
+import { HealthRecordsView } from './HealthRecordsView';
+import { MedicinesView } from './MedicinesView';
 import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
-import { PatientTabBar } from '../components/PatientTabBar';
+import { PatientTabBar, usePatientTabScrollInset } from '../components/PatientTabBar';
+import { Screen } from '../components/Screen';
+import { WhoForMemberSheet } from '../components/WhoForMemberSheet';
+import { formatRupees } from '../config/appointmentSlots';
 import { CARE_CATEGORIES } from '../config/careCategories';
+import {
+  CONSULT_NOW_AVAILABLE_DOCTORS,
+  CONSULT_NOW_FEE_RUPEES,
+  CONSULT_NOW_WAIT_MAX,
+  CONSULT_NOW_WAIT_MIN,
+} from '../config/consultNow';
 import { getHomeHealthTips } from '../config/healthTips';
 import { images } from '../config/images';
 import type { HomeViewModel } from '../controllers/useHomeController';
 import type { TranslationKey } from '../localization/types';
 import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
-import { layout, spacing } from '../theme/spacing';
+import { spacing } from '../theme/spacing';
 import { scaleFont } from '../utilities/scale';
 
 const QUICK_ACTIONS: {
@@ -53,23 +63,33 @@ export function HomeView({
   onOpenMemberPicker,
   onCloseMemberPicker,
   onSelectMember,
+  onAddMember,
   onSelectLanguage,
   onOpenNotifications,
   onJoinConsultation,
+  onOpenConsultNow,
   onOpenHealthTip,
+  onTrackOrder,
   appointments,
+  onOpenAppointment,
+  followUpPlanAvailable,
+  onOpenFollowUpPlan,
+  onOpenOrderMedicines,
+  medicineOrderPlaced,
+  onOpenOrderDetails,
   account,
 }: HomeViewModel) {
   const insets = useSafeAreaInsets();
+  const tabScrollInset = usePatientTabScrollInset();
 
   return (
-    <View style={styles.root}>
+    <Screen edges={['left', 'right']} style={styles.root}>
       {selectedTab === 'home' ? (
         <ScrollView
           bounces={false}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={{ paddingBottom: tabScrollInset }}
         >
           <View
             style={[
@@ -154,77 +174,155 @@ export function HomeView({
 
           <View style={styles.body}>
             <View style={styles.consultCard}>
-              <View style={styles.doctorRow}>
-                <View style={styles.flex}>
-                  <View style={styles.nameRow}>
-                    <AppText
-                      variant="titleMd"
-                      color={colors.onSurface}
-                      style={styles.doctorName}
-                    >
-                      {t('homeDoctorName')}
+              <View style={styles.consultTop}>
+                <View style={styles.doctorRow}>
+                  <View style={styles.flex}>
+                    <View style={styles.nameRow}>
+                      <AppText
+                        variant="titleMd"
+                        color={colors.onSurface}
+                        style={styles.doctorName}
+                      >
+                        {t('homeDoctorName')}
+                      </AppText>
+                      <View
+                        accessibilityLabel={t('homeVerified')}
+                        style={styles.verifiedBadge}
+                      >
+                        <Ionicons
+                          name="shield-checkmark"
+                          size={14}
+                          color="#000000"
+                        />
+                      </View>
+                    </View>
+                    <AppText variant="bodyMd" color={colors.onSurfaceVariant}>
+                      {t('homeDoctorQualification')}
                     </AppText>
-                    <View
-                      accessibilityLabel={t('homeVerified')}
-                      style={styles.verifiedBadge}
-                    >
-                      <Ionicons
-                        name="shield-checkmark"
-                        size={14}
-                        color="#000000"
-                      />
+                  </View>
+                  <Image
+                    source={images.doctorPortrait}
+                    resizeMode="cover"
+                    style={styles.doctorPhoto}
+                  />
+                </View>
+
+                <View style={styles.metaRow}>
+                  <Ionicons
+                    name="calendar-outline"
+                    size={16}
+                    color={colors.onSurfaceVariant}
+                  />
+                  <AppText variant="bodyMd" color={colors.onSurface}>
+                    {t('homeConsultDate')}
+                  </AppText>
+                </View>
+                <View style={styles.metaRow}>
+                  <Ionicons
+                    name="videocam-outline"
+                    size={16}
+                    color={colors.onSurfaceVariant}
+                  />
+                  <AppText variant="bodyMd" color={colors.onSurface}>
+                    {t('homeConsultMode')}
+                  </AppText>
+                </View>
+              </View>
+
+              <View style={styles.consultBottom}>
+                <View style={styles.startsBanner}>
+                  <Ionicons
+                    name="time-outline"
+                    size={16}
+                    color={colors.onSurfaceVariant}
+                  />
+                  <AppText variant="bodyMd" color={colors.onSurface}>
+                    {t('homeStartsIn')}
+                  </AppText>
+                </View>
+
+                <AppButton
+                  label={t('homeJoinConsultation')}
+                  textVariant="titleMd"
+                  onPress={onJoinConsultation}
+                  style={styles.joinButton}
+                />
+              </View>
+            </View>
+
+            {followUpPlanAvailable ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={onOpenFollowUpPlan}
+                style={styles.followUpCard}
+              >
+                <View style={styles.followUpIcon}>
+                  <Ionicons name="clipboard-outline" size={22} color={colors.primary} />
+                </View>
+                <View style={styles.flex}>
+                  <AppText variant="titleMd" color="#1F1F1F">
+                    {t('homeFollowUpCardTitle')}
+                  </AppText>
+                  <AppText variant="bodyMd" color={colors.onSurfaceVariant}>
+                    {t('homeFollowUpCardMeta')}
+                  </AppText>
+                </View>
+                <AppText variant="labelMd" color={colors.primary} weightOverride="600">
+                  {t('homeFollowUpCardAction')}
+                </AppText>
+              </Pressable>
+            ) : null}
+
+            <Pressable
+              accessibilityRole="button"
+              onPress={onOpenConsultNow}
+              style={styles.instantCard}
+            >
+              <View style={styles.instantHead}>
+                <View style={styles.instantIcon}>
+                  <MaterialCommunityIcons
+                    name="lightning-bolt"
+                    size={22}
+                    color={colors.primary}
+                  />
+                </View>
+                <View style={styles.flex}>
+                  <View style={styles.instantTitleRow}>
+                    <AppText variant="titleMd" color="#000000" style={styles.flex}>
+                      {t('homeInstantAdvice')}
+                    </AppText>
+                    <View style={styles.instantPill}>
+                      <AppText variant="labelSm" color="#8A5109" weightOverride="600">
+                        {t('homeInstantBadge')}
+                      </AppText>
                     </View>
                   </View>
                   <AppText variant="bodyMd" color={colors.onSurfaceVariant}>
-                    {t('homeDoctorQualification')}
+                    {t('homeInstantCardWait')
+                      .replace(
+                        '{count}',
+                        language === 'mr'
+                          ? '१४'
+                          : String(CONSULT_NOW_AVAILABLE_DOCTORS),
+                      )
+                      .replace(
+                        '{min}',
+                        language === 'mr' ? '४' : String(CONSULT_NOW_WAIT_MIN),
+                      )
+                      .replace(
+                        '{max}',
+                        language === 'mr' ? '८' : String(CONSULT_NOW_WAIT_MAX),
+                      )}
                   </AppText>
                 </View>
-                <Image
-                  source={images.doctorPortrait}
-                  resizeMode="cover"
-                  style={styles.doctorPhoto}
-                />
               </View>
-
-              <View style={styles.metaRow}>
-                <Ionicons
-                  name="calendar-outline"
-                  size={16}
-                  color={colors.onSurfaceVariant}
-                />
-                <AppText variant="bodyMd" color={colors.onSurface}>
-                  {t('homeConsultDate')}
-                </AppText>
-              </View>
-              <View style={styles.metaRow}>
-                <Ionicons
-                  name="videocam-outline"
-                  size={16}
-                  color={colors.onSurfaceVariant}
-                />
-                <AppText variant="bodyMd" color={colors.onSurface}>
-                  {t('homeConsultMode')}
-                </AppText>
-              </View>
-
-              <View style={styles.startsBanner}>
-                <Ionicons
-                  name="time-outline"
-                  size={16}
-                  color={colors.onSurfaceVariant}
-                />
-                <AppText variant="bodyMd" color={colors.onSurface}>
-                  {t('homeStartsIn')}
-                </AppText>
-              </View>
-
-              <AppButton
-                label={t('homeJoinConsultation')}
-                textVariant="titleMd"
-                onPress={onJoinConsultation}
-                style={styles.joinButton}
-              />
-            </View>
+              <AppText variant="labelSm" color="#8A5109">
+                {t('homeInstantCardPaid').replace(
+                  '{fee}',
+                  formatRupees(CONSULT_NOW_FEE_RUPEES.video, language),
+                )}
+              </AppText>
+            </Pressable>
 
             <AppText variant="headlineMd" color={colors.onSurface}>
               {t('homeQuickActions')}
@@ -234,6 +332,13 @@ export function HomeView({
                 <Pressable
                   key={action.labelKey}
                   accessibilityRole="button"
+                  onPress={
+                    action.labelKey === 'homeInstantAdvice'
+                      ? onOpenConsultNow
+                      : action.labelKey === 'homeBookConsultation'
+                        ? onOpenSearch
+                        : undefined
+                  }
                   style={styles.quickCard}
                 >
                   {action.badgeKey ? (
@@ -261,6 +366,15 @@ export function HomeView({
                   >
                     {t(action.labelKey)}
                   </AppText>
+                  {action.labelKey === 'homeInstantAdvice' ? (
+                    <AppText
+                      variant="labelSm"
+                      color="#8A5109"
+                      style={styles.centerText}
+                    >
+                      {formatRupees(CONSULT_NOW_FEE_RUPEES.video, language)}
+                    </AppText>
+                  ) : null}
                 </Pressable>
               ))}
             </View>
@@ -340,16 +454,53 @@ export function HomeView({
           </View>
         </ScrollView>
       ) : selectedTab === 'doctors' ? (
-        <View
-          style={[
-            styles.doctorsTab,
-            { paddingTop: Math.max(insets.top, spacing.sm) + spacing.sm },
-          ]}
-        >
-          <View style={styles.header}>
-            <AppText variant="titleMd" color="#000000" style={styles.greeting}>
-              {t('homeTabDoctors')}
-            </AppText>
+        <View style={styles.doctorsTab}>
+          <View
+            style={[
+              styles.header,
+              { paddingTop: Math.max(insets.top, spacing.sm) + spacing.sm },
+            ]}
+          >
+            <View style={styles.doctorsHeaderTop}>
+              <AppText
+                variant="titleMd"
+                color="#1F1F1F"
+                style={[styles.greeting, styles.flex]}
+              >
+                {t('homeTabDoctors')}
+              </AppText>
+              <View style={styles.headerActions}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t('languageLabel')}
+                  onPress={() =>
+                    onSelectLanguage(language === 'en' ? 'mr' : 'en')
+                  }
+                  style={styles.languageButton}
+                >
+                  <AppText
+                    variant="labelMd"
+                    color={colors.onSurface}
+                    languageOverride={language === 'en' ? 'en' : 'mr'}
+                  >
+                    {language === 'en' ? 'EN' : 'मराठी'}
+                  </AppText>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t('homeNotifications')}
+                  onPress={onOpenNotifications}
+                  style={styles.bellButton}
+                >
+                  <Ionicons
+                    name="notifications-outline"
+                    size={22}
+                    color={colors.onSurface}
+                  />
+                  <View style={styles.bellDot} />
+                </Pressable>
+              </View>
+            </View>
             <AppText variant="bodyMd" color={colors.onSurfaceVariant}>
               {t('doctorsTabSubtitle')}
             </AppText>
@@ -370,63 +521,133 @@ export function HomeView({
               </AppText>
             </Pressable>
           </View>
+
           <ScrollView
+            style={styles.doctorsBody}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.bookingsList}
+            contentContainerStyle={[
+              styles.bookingsList,
+              { paddingBottom: tabScrollInset },
+            ]}
           >
-            <AppText variant="headlineMd" color="#000000">
+            <AppText variant="headlineMd" color="#1F1F1F">
               {t('doctorsBookings')}
             </AppText>
             {appointments.length === 0 ? (
-              <AppText variant="bodyMd" color={colors.onSurfaceVariant}>
-                {t('doctorsNoBookings')}
-              </AppText>
+              <View style={styles.bookingsEmpty}>
+                <AppText variant="bodyMd" color={colors.onSurfaceVariant}>
+                  {t('doctorsNoBookings')}
+                </AppText>
+              </View>
             ) : (
               appointments.map((item) => (
-                <View key={item.id} style={styles.bookingCard}>
+                <Pressable
+                  key={item.id}
+                  accessibilityRole="button"
+                  onPress={() => onOpenAppointment(item.id)}
+                  style={({ pressed }) => [
+                    styles.bookingCard,
+                    pressed && styles.pressed,
+                  ]}
+                >
                   <View style={styles.bookingHead}>
                     <View style={styles.bookingAvatar}>
-                      <AppText variant="titleMd" color={colors.primary} languageOverride="en">
+                      <AppText
+                        variant="titleMd"
+                        color={colors.primary}
+                        languageOverride="en"
+                      >
                         {item.doctorInitials}
                       </AppText>
                     </View>
                     <View style={styles.flex}>
-                      <AppText variant="titleMd" color="#000000">
+                      <AppText variant="titleMd" color="#1F1F1F">
                         {t(item.doctorNameKey)}
                       </AppText>
                       <AppText variant="bodyMd" color={colors.onSurfaceVariant}>
                         {`${t('payStatusHomeopath')} · ${t(item.experienceKey)}`}
                       </AppText>
-                      <View style={styles.waitingBadge}>
-                        <AppText variant="labelSm" color="#8A5109" weightOverride="600">
-                          {t('doctorsWaitingAcceptance')}
+                      <View
+                        style={[
+                          styles.waitingBadge,
+                          item.status === 'confirmed' && styles.confirmedBadge,
+                        ]}
+                      >
+                        <AppText
+                          variant="labelSm"
+                          color={
+                            item.status === 'confirmed' ? '#0F7A4E' : '#8A5109'
+                          }
+                          weightOverride="600"
+                        >
+                          {t(
+                            item.status === 'confirmed'
+                              ? 'doctorsConfirmed'
+                              : 'doctorsWaitingAcceptance',
+                          )}
                         </AppText>
                       </View>
                     </View>
                   </View>
                   <View style={styles.bookingMeta}>
-                    <Ionicons name="calendar-outline" size={16} color={colors.primary} />
-                    <AppText variant="bodyMd" color="#000000" style={styles.flex}>
+                    <Ionicons
+                      name="calendar-outline"
+                      size={16}
+                      color={colors.primary}
+                    />
+                    <AppText variant="bodyMd" color="#1F1F1F" style={styles.flex}>
                       {item.whenLabel}
                     </AppText>
                   </View>
                   <View style={styles.bookingMeta}>
-                    <Ionicons name="videocam-outline" size={16} color={colors.primary} />
-                    <AppText variant="bodyMd" color="#000000" style={styles.flex}>
+                    <Ionicons
+                      name={
+                        item.mode === 'audio'
+                          ? 'call-outline'
+                          : item.mode === 'clinic'
+                            ? 'business-outline'
+                            : item.mode === 'chat'
+                              ? 'chatbubble-outline'
+                              : 'videocam-outline'
+                      }
+                      size={16}
+                      color={colors.primary}
+                    />
+                    <AppText variant="bodyMd" color="#1F1F1F" style={styles.flex}>
                       {item.modeConsultLabel}
                     </AppText>
                   </View>
                   <View style={styles.bookingMeta}>
-                    <Ionicons name="person-outline" size={16} color={colors.primary} />
-                    <AppText variant="bodyMd" color="#000000" style={styles.flex}>
+                    <Ionicons
+                      name="person-outline"
+                      size={16}
+                      color={colors.primary}
+                    />
+                    <AppText variant="bodyMd" color="#1F1F1F" style={styles.flex}>
                       {item.patientLabel}
                     </AppText>
                   </View>
-                </View>
+                </Pressable>
               ))
             )}
           </ScrollView>
         </View>
+      ) : selectedTab === 'records' ? (
+        <HealthRecordsView
+          onOpenFollowUpPlan={onOpenFollowUpPlan}
+          onOpenOrderMedicines={onOpenOrderMedicines}
+          onOpenNotifications={onOpenNotifications}
+        />
+      ) : selectedTab === 'medicines' ? (
+        <MedicinesView
+          onBookFollowUp={onOpenSearch}
+          onSeePrescriptions={() => onSelectTab('records')}
+          onTrackOrder={onTrackOrder}
+          onOrderRx={() => onOpenOrderMedicines()}
+          onOpenPastOrder={onOpenOrderDetails}
+          onOpenNotifications={onOpenNotifications}
+          forceHasOrders={medicineOrderPlaced}
+        />
       ) : selectedTab === 'account' ? (
         <AccountView {...account} />
       ) : (
@@ -442,13 +663,7 @@ export function HomeView({
             color={colors.onSurfaceVariant}
           />
           <AppText variant="titleMd" color={colors.onSurface}>
-            {t(
-              selectedTab === 'records'
-                ? 'homeTabRecords'
-                : selectedTab === 'medicines'
-                  ? 'homeTabMedicines'
-                  : 'homeTabAccount',
-            )}
+            {t('homeTabAccount')}
           </AppText>
           <AppText variant="bodyMd" color={colors.onSurfaceVariant}>
             {t('homeComingSoon')}
@@ -462,63 +677,31 @@ export function HomeView({
         onSelectTab={onSelectTab}
       />
 
-      <Modal
-        transparent
-        animationType="fade"
+      <WhoForMemberSheet
         visible={memberPickerOpen}
-        onRequestClose={onCloseMemberPicker}
-      >
-        <Pressable style={styles.modalBackdrop} onPress={onCloseMemberPicker}>
-          <Pressable style={styles.modalCard} onPress={() => undefined}>
-            <AppText variant="titleMd" color={colors.primary}>
-              {t('homeForWhom')}
-            </AppText>
-            {memberOptions.map((option) => {
-              const label = option.nameKey
-                ? t(option.nameKey)
-                : (option.name ?? '');
-              const selected = option.id === selectedMemberId;
-              return (
-                <Pressable
-                  key={option.id}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected }}
-                  onPress={() => onSelectMember(option.id)}
-                  style={[
-                    styles.pickerOption,
-                    selected && styles.pickerOptionSelected,
-                  ]}
-                >
-                  <AppText
-                    variant="bodyMd"
-                    color={selected ? colors.primary : colors.onSurface}
-                    languageOverride={option.name ? 'en' : undefined}
-                  >
-                    {label}
-                  </AppText>
-                </Pressable>
-              );
-            })}
-          </Pressable>
-        </Pressable>
-      </Modal>
-    </View>
+        members={memberOptions}
+        selectedMemberId={selectedMemberId}
+        t={t}
+        onClose={onCloseMemberPicker}
+        onSelectMember={onSelectMember}
+        onAddMember={onAddMember}
+      />
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.surfaceContainerLowest,
-  },
-  scrollContent: {
-    paddingBottom: spacing.xl,
+    backgroundColor: colors.page,
   },
   header: {
     paddingHorizontal: spacing.gutter,
     paddingBottom: spacing.md,
     gap: spacing.md,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
+    borderBottomLeftRadius: radii.default,
+    borderBottomRightRadius: radii.default,
   },
   headerTop: {
     flexDirection: 'row',
@@ -579,11 +762,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     minHeight: 48,
-    backgroundColor: colors.surfaceContainerLowest,
-    borderRadius: radii.sm,
+    backgroundColor: colors.card,
+    borderTopLeftRadius: radii.default,
+    borderTopRightRadius: radii.default,
+    borderBottomLeftRadius: radii.default,
+    borderBottomRightRadius: radii.default,
     borderWidth: 1,
     borderColor: colors.outlineVariant,
     paddingHorizontal: spacing.md,
+    overflow: 'hidden',
   },
   searchPlaceholder: {
     flex: 1,
@@ -593,18 +780,44 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   consultCard: {
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     padding: spacing.md,
+    marginTop: spacing.md,
+    minHeight: 280,
+    justifyContent: 'space-between',
+  },
+  followUpCard: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
+    borderRadius: radii.sm,
+    padding: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    minHeight: 72,
+  },
+  followUpIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: radii.full,
+    backgroundColor: colors.chipBackground,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  consultTop: {
+    gap: spacing.sm,
+  },
+  consultBottom: {
     gap: spacing.sm,
   },
   doctorRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.md,
-    marginBottom: spacing.xs,
   },
   nameRow: {
     flexDirection: 'row',
@@ -640,13 +853,45 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    marginTop: spacing.xs,
   },
   joinButton: {
     minHeight: 48,
     width: '100%',
+    borderRadius: radii.button,
+  },
+  instantCard: {
+    backgroundColor: '#FCF3E4',
+    borderWidth: 1,
+    borderColor: '#F2C14E',
     borderRadius: radii.sm,
-    marginTop: spacing.xs,
+    padding: spacing.md,
+    gap: 8,
+  },
+  instantHead: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  instantIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.sm,
+    backgroundColor: colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  instantTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  instantPill: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: '#F2C14E',
+    borderRadius: radii.full,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
   },
   quickGrid: {
     flexDirection: 'row',
@@ -657,7 +902,7 @@ const styles = StyleSheet.create({
     width: '47%',
     flexGrow: 1,
     minHeight: 112,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
@@ -705,7 +950,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: radii.sm,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.outlineVariant,
     alignItems: 'center',
@@ -728,7 +973,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
     padding: spacing.md,
     gap: spacing.sm,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
   },
   tipImage: {
     width: '100%',
@@ -749,12 +994,27 @@ const styles = StyleSheet.create({
   },
   doctorsTab: {
     flex: 1,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.page,
+  },
+  doctorsHeaderTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  doctorsBody: {
+    flex: 1,
   },
   bookingsList: {
     paddingHorizontal: spacing.gutter,
-    paddingBottom: spacing.xl,
+    paddingTop: spacing.lg,
     gap: spacing.md,
+  },
+  bookingsEmpty: {
+    borderRadius: radii.default,
+    borderWidth: 1,
+    borderColor: '#DDDFE2',
+    backgroundColor: colors.card,
+    padding: spacing.md,
   },
   bookingCard: {
     borderWidth: 1,
@@ -762,7 +1022,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
     padding: spacing.md,
     gap: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.card,
   },
   bookingHead: {
     flexDirection: 'row',
@@ -787,6 +1047,13 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     marginTop: 6,
   },
+  confirmedBadge: {
+    backgroundColor: '#E9F5EF',
+    borderColor: '#CDE8DA',
+  },
+  pressed: {
+    opacity: 0.88,
+  },
   bookingMeta: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -801,29 +1068,5 @@ const styles = StyleSheet.create({
   },
   flex: {
     flex: 1,
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(24, 28, 27, 0.4)',
-    justifyContent: 'flex-end',
-  },
-  modalCard: {
-    backgroundColor: colors.surfaceContainerLowest,
-    borderTopLeftRadius: radii.md,
-    borderTopRightRadius: radii.md,
-    padding: spacing.lg,
-    gap: spacing.sm,
-  },
-  pickerOption: {
-    minHeight: layout.buttonHeight,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    borderColor: colors.outlineVariant,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.md,
-  },
-  pickerOptionSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.languageSelectedFill,
   },
 });

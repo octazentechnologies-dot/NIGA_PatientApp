@@ -1,16 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { SafeAreaModal } from '../components/SafeAreaModal';
+
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AddFamilyMemberSheet } from '../components/AddFamilyMemberSheet';
 import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
-import { DatePickerSheet } from '../components/DatePickerSheet';
 import type { FamilyMembersViewModel } from '../controllers/useFamilyMembersController';
 import type { FamilyMember, FamilyMemberStatus } from '../models/family';
 import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
 import { layout, spacing } from '../theme/spacing';
+import { sheetBottomPadding } from '../utilities/sheetInset';
 
 const PENDING_FILL = '#ffdcc0';
 const PENDING_TEXT = '#8d4f00';
@@ -20,6 +22,8 @@ const SUCCESS_TEXT = '#1B5E20';
 export function FamilyMembersView({
   language,
   t,
+  variant,
+  sheetMode,
   self,
   selfMeta,
   members,
@@ -45,6 +49,7 @@ export function FamilyMembersView({
   onOpenHelp,
   onCloseHelp,
   onChangeFullName,
+  onChangeDateOfBirth,
   onOpenDatePicker,
   onCloseDatePicker,
   onConfirmDateOfBirth,
@@ -57,6 +62,7 @@ export function FamilyMembersView({
   onSubmitMember,
   onOpenMemberMenu,
   onCloseMemberMenu,
+  onEditMember,
   onRemoveMember,
   onContinue,
   onSkip,
@@ -104,9 +110,15 @@ export function FamilyMembersView({
       </View>
 
       <ScrollView
+        style={styles.scroll}
         bounces={false}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          variant === 'account' && {
+            paddingBottom: sheetBottomPadding(insets, spacing.lg),
+          },
+        ]}
       >
         <Pressable
           accessibilityRole="button"
@@ -191,34 +203,39 @@ export function FamilyMembersView({
         />
       </ScrollView>
 
-      <View
-        style={[
-          styles.footer,
-          { paddingBottom: Math.max(insets.bottom, spacing.md) },
-        ]}
-      >
-        <AppButton
-          label={t('continue')}
-          textVariant="titleMd"
-          onPress={onContinue}
-          style={styles.footerButton}
-        />
-        <AppButton
-          variant="secondary"
-          label={t('skipForNow')}
-          textVariant="titleMd"
-          onPress={onSkip}
-          style={[styles.footerButton, styles.skipButton]}
-        />
-      </View>
+      {variant === 'onboarding' ? (
+        <View
+          style={[
+            styles.footer,
+            { paddingBottom: sheetBottomPadding(insets, spacing.md) },
+          ]}
+        >
+          <AppButton
+            label={t('continue')}
+            textVariant="titleMd"
+            onPress={onContinue}
+            style={styles.footerButton}
+          />
+          <AppButton
+            variant="secondary"
+            label={t('skipForNow')}
+            textVariant="titleMd"
+            onPress={onSkip}
+            style={[styles.footerButton, styles.skipButton]}
+          />
+        </View>
+      ) : null}
 
       <AddFamilyMemberSheet
         language={language}
         t={t}
+        sheetMode={sheetMode}
         addSheetOpen={addSheetOpen}
         relationshipPickerOpen={relationshipPickerOpen}
         fullName={fullName}
         dateOfBirth={dateOfBirth}
+        datePickerOpen={datePickerOpen}
+        datePickerValue={datePickerValue}
         gender={gender}
         relationship={relationship}
         mobileNumber={mobileNumber}
@@ -228,7 +245,10 @@ export function FamilyMembersView({
         relationshipLabel={relationshipLabel}
         onCloseAddSheet={onCloseAddSheet}
         onChangeFullName={onChangeFullName}
+        onChangeDateOfBirth={onChangeDateOfBirth}
         onOpenDatePicker={onOpenDatePicker}
+        onCloseDatePicker={onCloseDatePicker}
+        onConfirmDateOfBirth={onConfirmDateOfBirth}
         onSelectGender={onSelectGender}
         onOpenRelationshipPicker={onOpenRelationshipPicker}
         onCloseRelationshipPicker={onCloseRelationshipPicker}
@@ -238,26 +258,20 @@ export function FamilyMembersView({
         onSubmitMember={onSubmitMember}
       />
 
-      <DatePickerSheet
-        visible={datePickerOpen}
-        value={datePickerValue}
-        maximumDate={new Date()}
-        minimumDate={new Date(1900, 0, 1)}
-        locale={language === 'mr' ? 'mr-IN' : 'en-IN'}
-        cancelLabel={t('cancel')}
-        doneLabel={t('done')}
-        onCancel={onCloseDatePicker}
-        onConfirm={onConfirmDateOfBirth}
-      />
-
-      <Modal
+      <SafeAreaModal
         transparent
         animationType="fade"
         visible={helpOpen}
         onRequestClose={onCloseHelp}
       >
         <Pressable style={styles.modalBackdrop} onPress={onCloseHelp}>
-          <Pressable style={styles.modalCard} onPress={() => undefined}>
+          <Pressable
+            style={[
+              styles.modalCard,
+              { paddingBottom: sheetBottomPadding(insets, spacing.lg) },
+            ]}
+            onPress={() => undefined}
+          >
             <AppText variant="titleMd" color={colors.primary}>
               {t('familyHelp')}
             </AppText>
@@ -271,16 +285,22 @@ export function FamilyMembersView({
             />
           </Pressable>
         </Pressable>
-      </Modal>
+      </SafeAreaModal>
 
-      <Modal
+      <SafeAreaModal
         transparent
         animationType="fade"
         visible={Boolean(selectedMember)}
         onRequestClose={onCloseMemberMenu}
       >
         <Pressable style={styles.modalBackdrop} onPress={onCloseMemberMenu}>
-          <Pressable style={styles.modalCard} onPress={() => undefined}>
+          <Pressable
+            style={[
+              styles.modalCard,
+              { paddingBottom: sheetBottomPadding(insets, spacing.lg) },
+            ]}
+            onPress={() => undefined}
+          >
             <AppText
               variant="titleMd"
               color={colors.primary}
@@ -288,6 +308,15 @@ export function FamilyMembersView({
             >
               {selectedMember?.name ?? t('familyMoreOptions')}
             </AppText>
+            <Pressable
+              accessibilityRole="button"
+              onPress={onEditMember}
+              style={styles.menuOption}
+            >
+              <AppText variant="bodyMd" color={colors.onSurface}>
+                {t('familyEditMember')}
+              </AppText>
+            </Pressable>
             <Pressable
               accessibilityRole="button"
               onPress={onRemoveMember}
@@ -305,7 +334,7 @@ export function FamilyMembersView({
             />
           </Pressable>
         </Pressable>
-      </Modal>
+      </SafeAreaModal>
     </View>
   );
 }
@@ -396,7 +425,7 @@ function StatusBadge({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.page,
   },
   header: {
     minHeight: 56,
@@ -406,7 +435,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.outlineVariant,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
   },
   headerSide: {
     width: layout.buttonHeight,
@@ -416,7 +445,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     flex: 1,
-    textAlign: 'center',
+    textAlign: 'left',
   },
   helpCircle: {
     width: 32,
@@ -426,10 +455,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  scroll: {
+    flex: 1,
+  },
   content: {
     paddingHorizontal: spacing.gutter,
     paddingTop: spacing.md,
-    paddingBottom: spacing.xl,
+    paddingBottom: spacing.lg,
     gap: spacing.md,
     maxWidth: 448,
     width: '100%',
@@ -439,7 +471,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
@@ -527,23 +559,24 @@ const styles = StyleSheet.create({
   addButton: {
     minHeight: 52,
     width: '100%',
-    borderRadius: radii.sm,
+    borderRadius: radii.button,
   },
   footer: {
+    alignSelf: 'stretch',
+    paddingTop: spacing.sm,
     paddingHorizontal: spacing.gutter,
-    paddingTop: spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.outlineVariant,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
     gap: spacing.sm,
   },
   footerButton: {
     minHeight: 52,
     width: '100%',
-    borderRadius: radii.sm,
+    borderRadius: radii.button,
   },
   skipButton: {
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
   },
   flex: {
     flex: 1,
@@ -554,7 +587,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalCard: {
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
     borderTopLeftRadius: radii.lg,
     borderTopRightRadius: radii.lg,
     padding: spacing.lg,

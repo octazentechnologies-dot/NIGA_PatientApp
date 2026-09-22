@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   hiddenInput: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     opacity: 0.02,
     color: colors.onSurface,
   },

@@ -1,7 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { sheetBottomPadding } from '../utilities/sheetInset';
 
+import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
 import type { PaymentStatusViewModel } from '../controllers/usePaymentStatusController';
 import { colors } from '../theme/colors';
@@ -11,7 +13,7 @@ import { scaleFont } from '../utilities/scale';
 
 const MUTED = '#595959';
 const HAIRLINE = '#E6E6E6';
-const ICON_BLUE = '#3AA9E0';
+const ICON_BLUE = '#2A7BA3';
 const SUCCESS = '#0F7A4E';
 const SUCCESS_FILL = '#E9F5EF';
 const ERROR = '#A3231A';
@@ -49,7 +51,12 @@ function SuccessStatus({
   const insets = useSafeAreaInsets();
   return (
     <View style={styles.root}>
-      <View style={{ paddingTop: Math.max(insets.top, spacing.sm) }}>
+      <View
+        style={[
+          styles.successHeader,
+          { paddingTop: Math.max(insets.top, spacing.sm) },
+        ]}
+      >
         <View style={styles.topBarPlain}>
           <Pressable
             accessibilityRole="button"
@@ -60,14 +67,6 @@ function SuccessStatus({
             <Ionicons name="close" size={24} color="#000000" />
           </Pressable>
         </View>
-      </View>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.body,
-          { paddingBottom: 28 + Math.max(insets.bottom, spacing.md) },
-        ]}
-      >
         <View style={styles.hero}>
           <View style={styles.successRing}>
             <View style={styles.successCore}>
@@ -81,7 +80,14 @@ function SuccessStatus({
             {successMeta}
           </AppText>
         </View>
-
+      </View>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[
+          styles.body,
+          { paddingBottom: 28 + sheetBottomPadding(insets, spacing.md) },
+        ]}
+      >
         <View style={styles.card}>
           <View style={styles.doctorRow}>
             <View style={styles.avatar}>
@@ -111,26 +117,17 @@ function SuccessStatus({
         </View>
       </ScrollView>
 
-      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
-        <Pressable
-          accessibilityRole="button"
+      <View style={[styles.footer, { paddingBottom: sheetBottomPadding(insets, spacing.md) }]}>
+        <AppButton
+          label={t('payStatusAddCalendar')}
           onPress={onAddCalendar}
-          style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]}
-        >
-          <Ionicons name="calendar-outline" size={18} color="#FFFFFF" />
-          <AppText variant="bodyLg" color="#FFFFFF" weightOverride="600">
-            {t('payStatusAddCalendar')}
-          </AppText>
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
+          icon={<Ionicons name="calendar-outline" size={18} color="#FFFFFF" />}
+        />
+        <AppButton
+          variant="secondary"
+          label={t('payStatusViewAppointment')}
           onPress={onViewAppointment}
-          style={({ pressed }) => [styles.outlineBtn, pressed && styles.pressed]}
-        >
-          <AppText variant="bodyLg" color={ICON_BLUE} weightOverride="600">
-            {t('payStatusViewAppointment')}
-          </AppText>
-        </Pressable>
+        />
         <Pressable accessibilityRole="button" onPress={onDownloadReceipt} style={styles.linkBtn}>
           <Ionicons name="download-outline" size={16} color={ICON_BLUE} />
           <AppText variant="labelSm" color={ICON_BLUE} weightOverride="600">
@@ -153,27 +150,30 @@ function FailedStatus({
   const insets = useSafeAreaInsets();
   return (
     <View style={styles.root}>
-      <View style={{ paddingTop: Math.max(insets.top, spacing.sm) }}>
-        <View style={styles.topBar}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t('back')}
-            onPress={onRetry}
-            style={styles.iconButton}
-          >
-            <Ionicons name="arrow-back" size={24} color="#000000" />
-          </Pressable>
-          <AppText variant="headlineMd" color="#000000" style={styles.title}>
-            {t('payStatusSecure')}
-          </AppText>
-          <View style={styles.iconButton}>
-            <Ionicons name="lock-closed" size={18} color="#000000" />
-          </View>
+      <View
+        style={[
+          styles.topBar,
+          { paddingTop: Math.max(insets.top, spacing.sm) },
+        ]}
+      >
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('back')}
+          onPress={onRetry}
+          style={styles.iconButton}
+        >
+          <Ionicons name="arrow-back" size={24} color="#000000" />
+        </Pressable>
+        <AppText variant="headlineMd" color="#000000" style={styles.title}>
+          {t('payStatusSecure')}
+        </AppText>
+        <View style={styles.iconButton}>
+          <Ionicons name="lock-closed" size={18} color="#000000" />
         </View>
       </View>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.failedBody, { paddingBottom: Math.max(insets.bottom, spacing.xl) }]}
+        contentContainerStyle={[styles.failedBody, { paddingBottom: sheetBottomPadding(insets, spacing.xl) }]}
       >
         <View style={styles.failIcon}>
           <Ionicons name="alert-circle" size={48} color={ERROR} />
@@ -209,25 +209,16 @@ function FailedStatus({
             {holdMoreLabel}
           </AppText>
         </View>
-        <Pressable
-          accessibilityRole="button"
+        <AppButton
+          label={t('payStatusRetry')}
           onPress={onRetry}
-          style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]}
-        >
-          <Ionicons name="refresh" size={18} color="#FFFFFF" />
-          <AppText variant="bodyLg" color="#FFFFFF" weightOverride="600">
-            {t('payStatusRetry')}
-          </AppText>
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
+          icon={<Ionicons name="refresh" size={18} color="#FFFFFF" />}
+        />
+        <AppButton
+          variant="secondary"
+          label={t('payStatusOtherMethod')}
           onPress={onChooseMethod}
-          style={({ pressed }) => [styles.outlineBtn, pressed && styles.pressed]}
-        >
-          <AppText variant="bodyLg" color={ICON_BLUE} weightOverride="600">
-            {t('payStatusOtherMethod')}
-          </AppText>
-        </Pressable>
+        />
         <Pressable accessibilityRole="button" onPress={onChooseSlot} style={styles.linkBtn}>
           <AppText variant="labelSm" color={MUTED} weightOverride="600">
             {t('payStatusOtherSlot')}
@@ -246,8 +237,13 @@ function PendingStatus({
 }: PaymentStatusViewModel) {
   const insets = useSafeAreaInsets();
   return (
-    <View style={[styles.root, styles.pendingRoot, { paddingTop: Math.max(insets.top, spacing.sm) }]}>
-      <View style={styles.topBarPlain}>
+    <View style={[styles.root, styles.pendingRoot]}>
+      <View
+        style={[
+          styles.topBarPlain,
+          { paddingTop: Math.max(insets.top, spacing.sm) },
+        ]}
+      >
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t('back')}
@@ -274,24 +270,12 @@ function PendingStatus({
           <Step active label={t('payStatusBankConfirming')} />
           <Step label={t('payStatusConfirmed')} />
         </View>
-        <Pressable
-          accessibilityRole="button"
-          onPress={onCheckStatus}
-          style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]}
-        >
-          <AppText variant="titleMd" color="#FFFFFF">
-            {t('payStatusCheck')}
-          </AppText>
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
+        <AppButton label={t('payStatusCheck')} onPress={onCheckStatus} />
+        <AppButton
+          variant="secondary"
+          label={t('payStatusSupport')}
           onPress={onContactSupport}
-          style={({ pressed }) => [styles.outlineBtn, pressed && styles.pressed]}
-        >
-          <AppText variant="titleMd" color={ICON_BLUE}>
-            {t('payStatusSupport')}
-          </AppText>
-        </Pressable>
+        />
         <View style={styles.notifyRow}>
           <Ionicons name="warning-outline" size={14} color={MUTED} />
           <AppText variant="labelSm" color={MUTED} style={styles.flex}>
@@ -363,12 +347,19 @@ function Step({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.page,
   },
   pendingRoot: {
     flex: 1,
   },
+  successHeader: {
+    backgroundColor: colors.card,
+    borderBottomWidth: 1,
+    borderBottomColor: HAIRLINE,
+    paddingBottom: spacing.md,
+  },
   topBar: {
+    backgroundColor: colors.card,
     minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
@@ -377,6 +368,7 @@ const styles = StyleSheet.create({
     borderBottomColor: HAIRLINE,
   },
   topBarPlain: {
+    backgroundColor: colors.card,
     minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
@@ -384,7 +376,7 @@ const styles = StyleSheet.create({
   },
   title: {
     flex: 1,
-    textAlign: 'center',
+    textAlign: 'left',
     fontSize: scaleFont(22),
     lineHeight: scaleFont(30),
   },
@@ -396,6 +388,7 @@ const styles = StyleSheet.create({
   },
   body: {
     paddingHorizontal: spacing.gutter,
+    paddingTop: spacing.md,
     gap: spacing.md,
   },
   failedBody: {
@@ -414,8 +407,7 @@ const styles = StyleSheet.create({
   hero: {
     alignItems: 'center',
     gap: 8,
-    marginTop: spacing.sm,
-    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.gutter,
   },
   heroTitle: {
     textAlign: 'center',
@@ -448,7 +440,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
     padding: spacing.md,
     gap: 14,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.card,
   },
   doctorRow: {
     flexDirection: 'row',
@@ -494,15 +486,15 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: HAIRLINE,
     paddingHorizontal: spacing.gutter,
-    paddingTop: 12,
+    paddingTop: spacing.sm,
     gap: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.card,
   },
   primaryBtn: {
     alignSelf: 'stretch',
     minHeight: layout.buttonHeight,
-    borderRadius: radii.full,
-    backgroundColor: colors.primary,
+    borderRadius: radii.button,
+    backgroundColor: colors.button,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -511,12 +503,12 @@ const styles = StyleSheet.create({
   outlineBtn: {
     alignSelf: 'stretch',
     minHeight: layout.buttonHeight,
-    borderRadius: radii.full,
-    borderWidth: 1,
+    borderRadius: radii.button,
+    borderWidth: 1.5,
     borderColor: ICON_BLUE,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.card,
   },
   linkBtn: {
     minHeight: 40,

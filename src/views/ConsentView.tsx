@@ -1,20 +1,23 @@
 import { Ionicons } from '@expo/vector-icons';
 import {
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   View,
 } from 'react-native';
+import { SafeAreaModal } from '../components/SafeAreaModal';
+
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppButton } from '../components/AppButton';
+import { AppSwitch } from '../components/AppSwitch';
 import { AppText } from '../components/AppText';
 import { AuthHeader } from '../components/AuthHeader';
 import type { ConsentViewModel } from '../controllers/useConsentController';
 import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
 import { spacing } from '../theme/spacing';
+import { sheetBottomPadding } from '../utilities/sheetInset';
 
 export function ConsentView({
   language,
@@ -46,6 +49,7 @@ export function ConsentView({
       />
 
       <ScrollView
+        style={styles.scroll}
         bounces={false}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
@@ -129,7 +133,7 @@ export function ConsentView({
       <View
         style={[
           styles.footer,
-          { paddingBottom: Math.max(insets.bottom, spacing.md) },
+          { paddingBottom: sheetBottomPadding(insets, spacing.md) },
         ]}
       >
         <AppButton
@@ -147,14 +151,20 @@ export function ConsentView({
         />
       </View>
 
-      <Modal
+      <SafeAreaModal
         transparent
         animationType="fade"
         visible={noticeOpen}
         onRequestClose={onCloseNotice}
       >
         <Pressable style={styles.modalBackdrop} onPress={onCloseNotice}>
-          <Pressable style={styles.modalCard} onPress={() => undefined}>
+          <Pressable
+            style={[
+              styles.modalCard,
+              { paddingBottom: sheetBottomPadding(insets, spacing.lg) },
+            ]}
+            onPress={() => undefined}
+          >
             <AppText
               variant="titleMd"
               color="#000000"
@@ -180,7 +190,7 @@ export function ConsentView({
             />
           </Pressable>
         </Pressable>
-      </Modal>
+      </SafeAreaModal>
     </View>
   );
 }
@@ -217,7 +227,11 @@ function ConsentCard({
               </AppText>
             </View>
           ) : null}
-          <ConsentToggle value={value} locked={locked} onToggle={onToggle} />
+          <AppSwitch
+            value={value}
+            disabled={locked}
+            onToggle={onToggle}
+          />
         </View>
         <AppText variant="bodyMd" color={colors.onSurfaceVariant}>
           {body}
@@ -227,45 +241,13 @@ function ConsentCard({
   );
 }
 
-function ConsentToggle({
-  value,
-  locked,
-  onToggle,
-}: {
-  value: boolean;
-  locked: boolean;
-  onToggle?: () => void;
-}) {
-  return (
-    <Pressable
-      accessibilityRole="switch"
-      accessibilityState={{ checked: value, disabled: locked }}
-      disabled={locked}
-      onPress={onToggle}
-      style={[
-        styles.toggleTrack,
-        value ? styles.toggleTrackOn : styles.toggleTrackOff,
-        locked && styles.toggleLocked,
-      ]}
-    >
-      <View
-        style={[
-          styles.toggleThumb,
-          value ? styles.toggleThumbOn : styles.toggleThumbOff,
-        ]}
-      >
-        {value ? (
-          <Ionicons name="checkmark" size={12} color={colors.onPrimary} />
-        ) : null}
-      </View>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.page,
+  },
+  scroll: {
+    flex: 1,
   },
   content: {
     paddingHorizontal: spacing.gutter,
@@ -344,37 +326,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 14,
   },
-  toggleTrack: {
-    width: 48,
-    height: 26,
-    borderRadius: radii.full,
-    paddingHorizontal: 3,
-    justifyContent: 'center',
-  },
-  toggleTrackOff: {
-    backgroundColor: colors.outlineVariant,
-    alignItems: 'flex-start',
-  },
-  toggleTrackOn: {
-    backgroundColor: colors.buttonFill,
-    alignItems: 'flex-end',
-  },
-  toggleLocked: {
-    opacity: 0.95,
-  },
-  toggleThumb: {
-    width: 20,
-    height: 20,
-    borderRadius: radii.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  toggleThumbOn: {
-    backgroundColor: colors.primary,
-  },
-  toggleThumbOff: {
-    backgroundColor: colors.outline,
-  },
   recordingNote: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -386,20 +337,22 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   footer: {
+    alignSelf: 'stretch',
+    paddingTop: spacing.sm,
     paddingHorizontal: spacing.gutter,
-    paddingTop: spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.outlineVariant,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
     gap: spacing.sm,
   },
   footerButton: {
     minHeight: 52,
     width: '100%',
-    borderRadius: radii.sm,
+    borderRadius: radii.button,
   },
   secondaryButton: {
-    backgroundColor: colors.surfaceContainerLowest,
+    borderRadius: radii.button,
+    backgroundColor: colors.card,
   },
   modalBackdrop: {
     flex: 1,
@@ -407,7 +360,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalCard: {
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
     borderTopLeftRadius: radii.lg,
     borderTopRightRadius: radii.lg,
     padding: spacing.lg,
@@ -421,6 +374,6 @@ const styles = StyleSheet.create({
   },
   modalClose: {
     marginTop: spacing.sm,
-    borderRadius: radii.sm,
+    borderRadius: radii.button,
   },
 });

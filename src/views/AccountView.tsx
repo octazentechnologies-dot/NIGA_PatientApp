@@ -2,30 +2,30 @@ import { Ionicons } from '@expo/vector-icons';
 import { type ReactNode } from 'react';
 import {
   Image,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   View,
 } from 'react-native';
+import { SafeAreaModal } from '../components/SafeAreaModal';
+
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppButton } from '../components/AppButton';
+import { AppSwitch } from '../components/AppSwitch';
 import { AppText } from '../components/AppText';
+import { usePatientTabScrollInset } from '../components/PatientTabBar';
 import { images } from '../config/images';
 import type { AccountViewModel } from '../controllers/useAccountController';
 import type { TranslationKey } from '../localization/types';
 import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
 import { layout, spacing } from '../theme/spacing';
+import { sheetBottomPadding } from '../utilities/sheetInset';
 
 const SUCCESS_FILL = '#E8F5E9';
 const SUCCESS_TEXT = '#1B5E20';
 const WARNING_FILL = '#ffdcc0';
 const WARNING_TEXT = '#8d4f00';
-const ASTRO_FILL = '#f3eefa';
-const ASTRO_TEXT = '#6b3fa0';
 
 type BadgeTone = 'neutral' | 'success' | 'warning' | 'muted';
 
@@ -41,6 +41,11 @@ type RowConfig = {
 
 const MY_CARE_ROWS: RowConfig[] = [
   {
+    id: 'reviews',
+    icon: 'star-outline',
+    labelKey: 'accountMyReviews',
+  },
+  {
     id: 'family',
     icon: 'people-outline',
     labelKey: 'accountFamilyMembers',
@@ -50,19 +55,11 @@ const MY_CARE_ROWS: RowConfig[] = [
   { id: 'prescriptions', icon: 'medkit-outline', labelKey: 'accountPrescriptions' },
   { id: 'records', icon: 'folder-outline', labelKey: 'accountHealthRecords' },
   { id: 'insights', icon: 'stats-chart-outline', labelKey: 'accountHealthInsights' },
-  { id: 'pain', icon: 'body-outline', labelKey: 'accountPainPoints' },
   {
     id: 'reminders',
     icon: 'notifications-outline',
     labelKey: 'accountReminders',
     badgeKey: 'accountRemindersBadge',
-    badgeTone: 'success',
-  },
-  {
-    id: 'carelink',
-    icon: 'link-outline',
-    labelKey: 'accountCareLink',
-    badgeKey: 'accountCareLinkBadge',
     badgeTone: 'success',
   },
 ];
@@ -112,6 +109,11 @@ const PRIVACY_ROWS: RowConfig[] = [
 const HELP_ROWS: RowConfig[] = [
   { id: 'help', icon: 'help-circle-outline', labelKey: 'accountHelpCentre' },
   {
+    id: 'book-help',
+    icon: 'headset-outline',
+    labelKey: 'accountBookWithHelp',
+  },
+  {
     id: 'tickets',
     icon: 'ticket-outline',
     labelKey: 'accountSupportTickets',
@@ -128,14 +130,13 @@ export function AccountView({
   profileName,
   profileInitials,
   profilePhone,
-  astroEnabled,
   lowDataMode,
   languagePickerOpen,
   languageValue,
   appVersionLabel,
+  appReleaseNotes,
   onEditProfile,
   onOpenRow,
-  onToggleAstro,
   onToggleLowData,
   onOpenLanguagePicker,
   onCloseLanguagePicker,
@@ -144,53 +145,61 @@ export function AccountView({
   onDeleteAccount,
 }: AccountViewModel) {
   const insets = useSafeAreaInsets();
+  const tabScrollInset = usePatientTabScrollInset();
 
   return (
-    <ScrollView
-      bounces={false}
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: Math.max(insets.top, spacing.sm) + spacing.sm },
-      ]}
-    >
-      <View style={styles.profileRow}>
-        <View>
-          <View style={styles.avatar}>
-            <AppText variant="titleMd" color={colors.primary} languageOverride="en">
-              {profileInitials}
+    <View style={styles.root}>
+      <View
+        style={[
+          styles.profileCard,
+          { paddingTop: Math.max(insets.top, spacing.sm) + spacing.sm },
+        ]}
+      >
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('accountEditProfile')}
+          onPress={onEditProfile}
+          style={styles.profileRow}
+        >
+          <View>
+            <View style={styles.avatar}>
+              <AppText
+                variant="titleMd"
+                color={colors.primary}
+                languageOverride="en"
+              >
+                {profileInitials}
+              </AppText>
+            </View>
+            <View style={styles.avatarEdit}>
+              <Ionicons name="pencil" size={12} color={colors.onPrimary} />
+            </View>
+          </View>
+          <View style={styles.profileCopy}>
+            <AppText
+              variant="titleMd"
+              color="#1F1F1F"
+              languageOverride="en"
+            >
+              {profileName}
+            </AppText>
+            <AppText
+              variant="bodyMd"
+              color={colors.onSurfaceVariant}
+              languageOverride="en"
+            >
+              {profilePhone}
             </AppText>
           </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t('accountEditProfile')}
-            onPress={onEditProfile}
-            style={styles.avatarEdit}
-          >
-            <Ionicons name="pencil" size={12} color={colors.onPrimary} />
-          </Pressable>
-        </View>
-        <View style={styles.profileCopy}>
-          <AppText
-            variant="titleMd"
-            color={colors.onSurface}
-            languageOverride="en"
-          >
-            {profileName}
-          </AppText>
-          <AppText variant="bodyMd" color={colors.onSurfaceVariant} languageOverride="en">
-            {profilePhone}
-          </AppText>
-        </View>
-        <AppButton
-          variant="secondary"
-          label={t('accountEditProfile')}
-          textVariant="labelSm"
-          onPress={onEditProfile}
-          style={styles.editButton}
-        />
+          <Ionicons name="chevron-forward" size={20} color={colors.onSurfaceVariant} />
+        </Pressable>
       </View>
 
+      <ScrollView
+        bounces={false}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[styles.content, { paddingBottom: tabScrollInset }]}
+      >
       <Section title={t('accountSectionMyCare')}>
         {MY_CARE_ROWS.map((row) => (
           <AccountRow
@@ -204,38 +213,6 @@ export function AccountView({
         ))}
       </Section>
 
-      <Section
-        title={t('accountSectionWellness')}
-        headerRight={
-          <View style={styles.nonClinicalBadge}>
-            <AppText variant="labelSm" color={ASTRO_TEXT} style={styles.badgeText}>
-              {t('accountNonClinical')}
-            </AppText>
-          </View>
-        }
-      >
-        <AccountRow
-          icon="planet-outline"
-          label={t('accountAstroWellness')}
-          helper={t('accountAstroHelper')}
-          chevron={false}
-          trailing={
-            <Switch
-              value={astroEnabled}
-              onValueChange={onToggleAstro}
-              trackColor={{ false: colors.outlineVariant, true: colors.primary }}
-              thumbColor={colors.surfaceContainerLowest}
-              ios_backgroundColor={colors.outlineVariant}
-            />
-          }
-        />
-        <AccountRow
-          icon="gift-outline"
-          label={t('accountBirthDetails')}
-          onPress={() => onOpenRow('birth')}
-        />
-      </Section>
-
       <Section title={t('accountSectionPreferences')}>
         <AccountRow
           icon="globe-outline"
@@ -245,14 +222,8 @@ export function AccountView({
         />
         <AccountRow
           icon="notifications-outline"
-          label={t('homeNotifications')}
+          label={t('accountNotificationSettings')}
           onPress={() => onOpenRow('notifications')}
-        />
-        <AccountRow
-          icon="accessibility-outline"
-          label={t('accountAccessibility')}
-          value={t('accountAccessibilityValue')}
-          onPress={() => onOpenRow('accessibility')}
         />
         <AccountRow
           icon="cloud-offline-outline"
@@ -260,13 +231,7 @@ export function AccountView({
           helper={t('accountLowDataHelper')}
           chevron={false}
           trailing={
-            <Switch
-              value={lowDataMode}
-              onValueChange={onToggleLowData}
-              trackColor={{ false: colors.outlineVariant, true: colors.primary }}
-              thumbColor={colors.surfaceContainerLowest}
-              ios_backgroundColor={colors.outlineVariant}
-            />
+            <AppSwitch value={lowDataMode} onValueChange={onToggleLowData} />
           }
         />
       </Section>
@@ -341,21 +306,33 @@ export function AccountView({
       <AppText variant="labelSm" color={colors.onSurfaceVariant} style={styles.version}>
         {appVersionLabel}
       </AppText>
+      {appReleaseNotes ? (
+        <AppText variant="labelSm" color={colors.onSurfaceVariant} style={styles.releaseNotes}>
+          {appReleaseNotes}
+        </AppText>
+      ) : null}
       <Image
         source={images.favicon}
         style={styles.footerMark}
         resizeMode="contain"
         accessibilityLabel={t('brandName')}
       />
+      </ScrollView>
 
-      <Modal
+      <SafeAreaModal
         transparent
         animationType="fade"
         visible={languagePickerOpen}
         onRequestClose={onCloseLanguagePicker}
       >
         <Pressable style={styles.modalBackdrop} onPress={onCloseLanguagePicker}>
-          <Pressable style={styles.modalCard} onPress={() => undefined}>
+          <Pressable
+            style={[
+              styles.modalCard,
+              { paddingBottom: sheetBottomPadding(insets, spacing.lg) },
+            ]}
+            onPress={() => undefined}
+          >
             <AppText variant="titleMd" color={colors.primary}>
               {t('languageLabel')}
             </AppText>
@@ -395,8 +372,8 @@ export function AccountView({
             </Pressable>
           </Pressable>
         </Pressable>
-      </Modal>
-    </ScrollView>
+      </SafeAreaModal>
+    </View>
   );
 }
 
@@ -448,7 +425,7 @@ function AccountRow({
       <Ionicons name={icon} size={22} color={colors.primary} />
       <View style={styles.rowCopy}>
         <View style={styles.rowTop}>
-          <AppText variant="bodyMd" color={colors.onSurface} style={styles.flex}>
+          <AppText variant="titleMd" color={colors.onSurface} style={styles.flex}>
             {label}
           </AppText>
           {badge ? <Badge label={badge} tone={badgeTone} /> : null}
@@ -506,15 +483,27 @@ function Badge({ label, tone }: { label: string; tone: BadgeTone }) {
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: colors.page,
+  },
+  profileCard: {
+    backgroundColor: colors.card,
+    borderBottomLeftRadius: radii.default,
+    borderBottomRightRadius: radii.default,
+    paddingHorizontal: spacing.gutter,
+    paddingBottom: spacing.md,
+  },
   content: {
     paddingHorizontal: spacing.gutter,
-    paddingBottom: spacing.xl,
+    paddingTop: spacing.lg,
     gap: spacing.lg,
   },
   profileRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
+    minHeight: 48,
   },
   avatar: {
     width: 64,
@@ -535,16 +524,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: colors.surfaceContainerLowest,
+    borderColor: colors.card,
   },
   profileCopy: {
     flex: 1,
     gap: 2,
-  },
-  editButton: {
-    minHeight: 36,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radii.sm,
   },
   section: {
     gap: spacing.sm,
@@ -560,6 +544,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   sectionCard: {
+    backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
@@ -594,12 +579,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 14,
   },
-  nonClinicalBadge: {
-    backgroundColor: ASTRO_FILL,
-    borderRadius: radii.full,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-  },
   footerAction: {
     minHeight: layout.buttonHeight,
     alignItems: 'center',
@@ -612,6 +591,11 @@ const styles = StyleSheet.create({
   version: {
     textAlign: 'center',
     marginTop: spacing.sm,
+  },
+  releaseNotes: {
+    textAlign: 'center',
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.xs,
   },
   footerMark: {
     width: 28,
@@ -629,7 +613,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalCard: {
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
     borderTopLeftRadius: radii.md,
     borderTopRightRadius: radii.md,
     padding: spacing.lg,

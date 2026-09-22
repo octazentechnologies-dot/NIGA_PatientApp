@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { sheetBottomPadding } from '../utilities/sheetInset';
 
 import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
@@ -62,7 +63,7 @@ export function OtpVerificationView({
         contentContainerStyle={[
           styles.content,
           contentMinHeight != null && { minHeight: contentMinHeight },
-          { paddingBottom: Math.max(insets.bottom, spacing.xl) },
+          { paddingBottom: sheetBottomPadding(insets, spacing.xl) },
         ]}
       >
         <View style={styles.copy}>
@@ -183,7 +184,7 @@ export function OtpVerificationView({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.page,
   },
   content: {
     flexGrow: 1,
@@ -204,7 +205,7 @@ const styles = StyleSheet.create({
   actionButton: {
     minHeight: 52,
     width: '100%',
-    borderRadius: radii.sm,
+    borderRadius: radii.button,
   },
   secondaryActions: {
     gap: spacing.md,

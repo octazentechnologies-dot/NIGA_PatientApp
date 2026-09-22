@@ -20,6 +20,7 @@ import {
   type ConsultMode,
   type TimeSlot,
 } from '../config/appointmentSlots';
+import { formatBookedOn, slotStartIso } from '../config/bookedAppointments';
 import { getDoctorProfile, type DoctorProfileSeed } from '../config/doctorProfiles';
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
@@ -52,6 +53,10 @@ export type BookAppointmentViewModel = {
   paymentOpen: boolean;
   paymentStatus: PaymentStatus | null;
   whenLabel: string;
+  dateLine: string;
+  timeLine: string;
+  startsAt: string;
+  bookedOnLabel: string;
   slotTimeLabel: string;
   paymentSummaryLine: string;
   modeConsultLabel: string;
@@ -183,7 +188,13 @@ export function useBookAppointmentController({
   const isFull = selectedDay?.status === 'full';
   const feeLabel = t(mode === 'clinic' ? profile.clinicFeeKey : profile.feeKey);
   const modeLabel = t(
-    mode === 'audio' ? 'bookAudio' : mode === 'clinic' ? 'bookClinic' : 'bookVideo',
+    mode === 'audio'
+      ? 'bookAudio'
+      : mode === 'clinic'
+        ? 'bookClinic'
+        : mode === 'chat'
+          ? 'bookChat'
+          : 'bookVideo',
   );
   const selectedSlot: TimeSlot | undefined = selectedDay
     ? [...selectedDay.morning, ...selectedDay.afternoon, ...selectedDay.evening].find(
@@ -196,7 +207,9 @@ export function useBookAppointmentController({
       ? 'reviewAudioConsult'
       : mode === 'clinic'
         ? 'reviewClinicVisit'
-        : 'reviewVideoConsult',
+        : mode === 'chat'
+          ? 'reviewChatConsult'
+          : 'reviewVideoConsult',
   );
   const totalRupees = consultFeeRupees(profile.id, mode);
   const doctorFeeRupees = Math.max(0, totalRupees - PLATFORM_FEE_RUPEES - TAX_RUPEES);
@@ -205,9 +218,13 @@ export function useBookAppointmentController({
     ? member.name
     : `${member.name} (${member.metaKey ? t(member.metaKey).replace(' • ', ', ') : ''})`;
   const slotTimeLabel = selectedSlot ? t(selectedSlot.labelKey) : '';
-  const whenLabel = selectedSlot
-    ? `${daySummary} · ${slotTimeLabel} IST`
-    : daySummary;
+  const timeLine = slotTimeLabel ? `${slotTimeLabel} IST` : '';
+  const whenLabel = selectedSlot ? `${daySummary} · ${timeLine}` : daySummary;
+  const startsAt =
+    selectedDay && selectedSlot
+      ? slotStartIso(selectedDay.year, selectedDay.month, selectedDay.day, selectedSlot.id)
+      : new Date().toISOString();
+  const bookedOnLabel = formatBookedOn(today, language, t(MONTH_KEYS[today.getMonth()]));
   const shortWhen =
     selectedDay && selectedSlot
       ? `${weekdayLabel(selectedDay, t)} ${selectedDay.day} ${
@@ -254,6 +271,10 @@ export function useBookAppointmentController({
     paymentOpen,
     paymentStatus,
     whenLabel,
+    dateLine: daySummary,
+    timeLine,
+    startsAt,
+    bookedOnLabel,
     slotTimeLabel,
     paymentSummaryLine,
     modeConsultLabel,

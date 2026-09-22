@@ -12,5 +12,7 @@ export class ApiError extends Error {
 export type ApiRequestOptions = {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
+  /** Optional extra headers (e.g. Authorization once auth is wired). */
+  headers?: Record<string, string>;
   signal?: AbortSignal;
 };

@@ -1,13 +1,14 @@
 import { type ReactNode } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import {
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaModal } from './SafeAreaModal';
+
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { TranslationKey } from '../localization/types';
@@ -23,6 +24,7 @@ import { radii } from '../theme/radii';
 import { layout, spacing } from '../theme/spacing';
 import { fontFamilyFor } from '../utilities/fonts';
 import { scaleFont } from '../utilities/scale';
+import { sheetBottomPadding } from '../utilities/sheetInset';
 import { AppButton } from './AppButton';
 import { AppText } from './AppText';
 import { DatePickerSheet } from './DatePickerSheet';
@@ -138,7 +140,7 @@ export function DoctorFiltersSheet({
   });
 
   return (
-    <Modal
+    <SafeAreaModal
       transparent
       animationType="slide"
       visible={visible}
@@ -149,7 +151,7 @@ export function DoctorFiltersSheet({
         <View
           style={[
             styles.sheet,
-            { paddingBottom: Math.max(insets.bottom, spacing.sm) },
+            { paddingBottom: sheetBottomPadding(insets, spacing.sm) },
           ]}
         >
           <View style={styles.handle} />
@@ -396,7 +398,7 @@ export function DoctorFiltersSheet({
         onCancel={onCloseDatePicker}
         onConfirm={onSelectCustomDate}
       />
-    </Modal>
+    </SafeAreaModal>
   );
 }
 
@@ -491,12 +493,12 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(48, 49, 46, 0.4)',
   },
   sheet: {
     height: '90%',
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
     borderTopLeftRadius: radii.default,
     borderTopRightRadius: radii.default,
     borderWidth: 1,
@@ -560,7 +562,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.full,
     borderWidth: 1,
     borderColor: HAIRLINE,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
   },
   chipCompact: {
     minHeight: 36,
@@ -628,19 +630,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.md,
     paddingHorizontal: spacing.gutter,
-    paddingTop: spacing.md,
+    paddingTop: spacing.sm,
     borderTopWidth: 1,
     borderTopColor: HAIRLINE,
   },
   footerClear: {
     flex: 1,
     minHeight: 52,
-    borderRadius: radii.full,
+    borderRadius: radii.button,
   },
   footerApply: {
     flex: 2,
     minHeight: 52,
-    borderRadius: radii.full,
+    borderRadius: radii.button,
   },
   flex: {
     flex: 1,

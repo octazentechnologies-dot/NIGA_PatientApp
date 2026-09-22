@@ -1,6 +1,8 @@
+import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useRef, type PropsWithChildren } from 'react';
 import { Animated, Easing, Image, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { sheetBottomPadding } from '../utilities/sheetInset';
 
 import { AppText } from '../components/AppText';
 import { images } from '../config/images';
@@ -79,6 +81,15 @@ export function SplashView({
 }: SplashViewModel) {
   const insets = useSafeAreaInsets();
   const wash = useRef(new Animated.Value(0)).current;
+  const nativeSplashHidden = useRef(false);
+
+  function hideNativeSplash() {
+    if (nativeSplashHidden.current) {
+      return;
+    }
+    nativeSplashHidden.current = true;
+    SplashScreen.hideAsync().catch(() => undefined);
+  }
 
   useEffect(() => {
     const drift = Animated.loop(
@@ -103,28 +114,26 @@ export function SplashView({
 
   const washOpacity = wash.interpolate({
     inputRange: [0, 1],
-    outputRange: [0.08, 0.2],
+    outputRange: [0, 0.2],
   });
 
   return (
-    <View style={styles.root}>
+    <View style={styles.root} onLayout={hideNativeSplash}>
       <Animated.View
         pointerEvents="none"
         style={[styles.wash, { opacity: washOpacity }]}
       />
 
       <View style={styles.center}>
-        <FadeInUp delayMs={0}>
-          <Image
-            source={images.favicon}
-            accessibilityRole="image"
-            accessibilityLabel={brandName}
-            resizeMode="contain"
-            style={styles.mark}
-          />
-        </FadeInUp>
+        <Image
+          source={images.favicon}
+          accessibilityRole="image"
+          accessibilityLabel={brandName}
+          resizeMode="contain"
+          style={styles.mark}
+        />
         <FadeInUp delayMs={100} style={styles.brandWrap}>
-          <AppText variant="headlineLg" color="#000000" style={styles.brand}>
+          <AppText variant="displayLg" color="#000000" style={styles.brand}>
             {brandName}
           </AppText>
         </FadeInUp>
@@ -137,7 +146,7 @@ export function SplashView({
 
       <FadeInUp
         delayMs={500}
-        style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.lg) + spacing.md }]}
+        style={[styles.footer, { paddingBottom: sheetBottomPadding(insets, spacing.lg) }]}
       >
         <Pulsing>
           <AppText
@@ -165,10 +174,10 @@ export function SplashView({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.page,
   },
   wash: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: colors.primaryFixed,
   },
   center: {

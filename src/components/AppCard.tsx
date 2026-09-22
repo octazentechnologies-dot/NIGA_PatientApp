@@ -2,7 +2,7 @@ import { StyleSheet, View, type ViewProps } from 'react-native';
 
 import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
-import { spacing } from '../theme/spacing';
+import { layout, spacing } from '../theme/spacing';
 
 export function AppCard({ style, ...props }: ViewProps) {
   return <View {...props} style={[styles.card, style]} />;
@@ -10,10 +10,11 @@ export function AppCard({ style, ...props }: ViewProps) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
     borderColor: colors.outlineVariant,
     borderWidth: 1,
-    borderRadius: radii.lg,
-    padding: spacing.lg,
+    borderRadius: radii.default,
+    padding: layout.cardPadding,
+    gap: spacing.ms,
   },
 });

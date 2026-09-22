@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
     borderColor: colors.button,
   },
   rowIdle: {
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
     borderWidth: 1.5,
     borderColor: colors.outlineVariant,
   },

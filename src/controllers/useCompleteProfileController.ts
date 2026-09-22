@@ -10,6 +10,10 @@ export type PreferredLanguageOption = 'mr' | 'en' | 'hi';
 export type CompleteProfileViewModel = {
   language: AppLanguage;
   t: (key: TranslationKey) => string;
+  mode: 'onboarding' | 'edit';
+  screenTitle: string;
+  primaryActionLabel: string;
+  showSkip: boolean;
   fullName: string;
   dateOfBirth: string;
   gender: GenderOption | null;
@@ -92,24 +96,29 @@ export function useCompleteProfileController({
   onBack,
   onContinue,
   onSkip,
+  mode = 'onboarding',
 }: {
   onBack: () => void;
   onContinue: () => void;
   onSkip: () => void;
+  mode?: 'onboarding' | 'edit';
 }): CompleteProfileViewModel {
   const { language, setLanguage, t } = useLocalization();
-  const [fullName, setFullName] = useState('');
-  const [dateOfBirth, setDateOfBirth] = useState('');
-  const [gender, setGender] = useState<GenderOption | null>(null);
+  const isEdit = mode === 'edit';
+  const [fullName, setFullName] = useState(isEdit ? 'Pranav Kulkarni' : '');
+  const [dateOfBirth, setDateOfBirth] = useState(isEdit ? '14/03/1992' : '');
+  const [gender, setGender] = useState<GenderOption | null>(isEdit ? 'male' : null);
   const [preferredLanguage, setPreferredLanguage] =
-    useState<PreferredLanguageOption | null>(null);
-  const [cityTaluka, setCityTaluka] = useState('');
-  const [address, setAddress] = useState('');
-  const [stateId, setStateId] = useState<string | null>(null);
-  const [alternateMobile, setAlternateMobile] = useState('');
-  const [email, setEmail] = useState('');
-  const [referredBy, setReferredBy] = useState('');
-  const [pincode, setPincode] = useState('');
+    useState<PreferredLanguageOption | null>(isEdit ? 'en' : null);
+  const [cityTaluka, setCityTaluka] = useState(isEdit ? 'Pune' : '');
+  const [address, setAddress] = useState(isEdit ? 'Kothrud, Pune' : '');
+  const [stateId, setStateId] = useState<string | null>(
+    isEdit ? 'maharashtra' : null,
+  );
+  const [alternateMobile, setAlternateMobile] = useState(isEdit ? '9876543210' : '');
+  const [email, setEmail] = useState(isEdit ? 'pranav@example.com' : '');
+  const [referredBy, setReferredBy] = useState(isEdit ? '' : '');
+  const [pincode, setPincode] = useState(isEdit ? '411038' : '');
   const [preferAudio, setPreferAudio] = useState(false);
   const [needLargeText, setNeedLargeText] = useState(false);
   const [needCallAssistance, setNeedCallAssistance] = useState(false);
@@ -136,6 +145,10 @@ export function useCompleteProfileController({
   return {
     language,
     t,
+    mode,
+    screenTitle: isEdit ? t('accountEditProfile') : t('profileTitle'),
+    primaryActionLabel: isEdit ? t('profileSave') : t('continue'),
+    showSkip: !isEdit,
     fullName,
     dateOfBirth,
     gender,

@@ -7,36 +7,50 @@ import {
   type PressableProps,
 } from 'react-native';
 
+import { toUiLabel } from '../utilities/textCase';
 import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
 import { layout, spacing } from '../theme/spacing';
-import type { TypographyVariant } from '../theme/typography';
 import { AppText } from './AppText';
 
 type AppButtonProps = PressableProps & {
   label: string;
+  /** `primary` = filled; `secondary` = outline; `ghost` = text only. */
   variant?: 'primary' | 'secondary' | 'ghost';
-  textVariant?: TypographyVariant;
   loading?: boolean;
   icon?: ReactNode;
   iconPosition?: 'start' | 'end';
+  /**
+   * @deprecated Label size is fixed for uniformity (titleMd — matches Doctor app).
+   * Kept so existing call sites compile; ignored.
+   */
+  textVariant?: string;
 };
 
+/** @deprecated Prefer `toUiLabel` from utilities/textCase. */
+export const toButtonLabel = toUiLabel;
+
+/**
+ * Canonical patient-app action button.
+ * Filled: `#2A7BA3` + white label. Outline: `#2A7BA3` border + label.
+ * Pill corners, titleMd (18 SemiBold) label — same as Doctor app buttons.
+ */
 export function AppButton({
   label,
   variant = 'primary',
-  textVariant = 'labelLg',
   loading = false,
   icon,
   iconPosition = 'start',
   disabled,
   style,
+  textVariant: _textVariant,
   ...props
 }: AppButtonProps) {
   const isPrimary = variant === 'primary';
   const isGhost = variant === 'ghost';
   const isDisabled = disabled || loading;
   const labelColor = isPrimary ? colors.onButton : colors.button;
+  const displayLabel = toUiLabel(label);
 
   return (
     <Pressable
@@ -50,6 +64,8 @@ export function AppButton({
         isDisabled && styles.disabled,
         state.pressed && !isDisabled && styles.pressed,
         typeof style === 'function' ? style(state) : style,
+        // Keep shape uniform even if callers pass a conflicting radius.
+        styles.pill,
       ]}
       {...props}
     >
@@ -59,12 +75,14 @@ export function AppButton({
         <View style={styles.content}>
           {iconPosition === 'start' ? icon : null}
           <AppText
-            variant={textVariant === 'titleMd' ? 'labelLg' : textVariant}
+            variant="titleMd"
             color={labelColor}
+            weightOverride="600"
             style={styles.label}
             numberOfLines={2}
+            raw
           >
-            {label}
+            {displayLabel}
           </AppText>
           {iconPosition === 'end' ? icon : null}
         </View>
@@ -78,9 +96,12 @@ const styles = StyleSheet.create({
     minHeight: layout.buttonHeight,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
-    borderRadius: radii.full,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  pill: {
+    borderRadius: radii.button,
+    overflow: 'hidden',
   },
   content: {
     flexDirection: 'row',
@@ -96,7 +117,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.button,
   },
   secondary: {
-    backgroundColor: 'transparent',
+    backgroundColor: colors.card,
     borderWidth: 1.5,
     borderColor: colors.button,
   },

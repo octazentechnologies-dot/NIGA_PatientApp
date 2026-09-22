@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.lg,
   },
   card: {
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     marginTop: spacing.md,
-    paddingTop: spacing.md,
+    paddingTop: spacing.sm,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.outlineVariant,
     flexDirection: 'row',

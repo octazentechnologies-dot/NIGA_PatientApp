@@ -1,10 +1,19 @@
 import { useEffect, useState } from 'react';
-import { Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
+import {
+  Platform,
+  Pressable,
+  StyleSheet,
+  View,
+} from 'react-native';
+import { SafeAreaModal } from './SafeAreaModal';
+
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
 import { spacing } from '../theme/spacing';
+import { sheetBottomPadding } from '../utilities/sheetInset';
 import { AppText } from './AppText';
 
 type DatePickerSheetProps = {
@@ -30,6 +39,7 @@ export function DatePickerSheet({
   onCancel,
   onConfirm,
 }: DatePickerSheetProps) {
+  const insets = useSafeAreaInsets();
   const [draft, setDraft] = useState(value);
 
   useEffect(() => {
@@ -57,9 +67,12 @@ export function DatePickerSheet({
   }
 
   return (
-    <Modal transparent animationType="fade" visible onRequestClose={onCancel}>
+    <SafeAreaModal transparent animationType="fade" visible onRequestClose={onCancel}>
       <Pressable style={styles.backdrop} onPress={onCancel}>
-        <Pressable style={styles.sheet} onPress={() => undefined}>
+        <Pressable
+          style={[styles.sheet, { paddingBottom: sheetBottomPadding(insets, spacing.lg) }]}
+          onPress={() => undefined}
+        >
           <View style={styles.toolbar}>
             <Pressable accessibilityRole="button" onPress={onCancel} hitSlop={8}>
               <AppText variant="labelMd" color={colors.onSurfaceVariant}>
@@ -89,7 +102,7 @@ export function DatePickerSheet({
           />
         </Pressable>
       </Pressable>
-    </Modal>
+    </SafeAreaModal>
   );
 }
 
@@ -100,10 +113,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(24, 28, 27, 0.4)',
   },
   sheet: {
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
     borderTopLeftRadius: radii.lg,
     borderTopRightRadius: radii.lg,
-    paddingBottom: spacing.lg,
   },
   toolbar: {
     flexDirection: 'row',

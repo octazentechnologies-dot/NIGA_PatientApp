@@ -1,6 +1,6 @@
 import type { TranslationKey } from '../localization/types';
 
-export type ConsultMode = 'video' | 'audio' | 'clinic';
+export type ConsultMode = 'video' | 'audio' | 'clinic' | 'chat';
 
 export type BookingMember = {
   id: string;
@@ -112,9 +112,9 @@ export const PLATFORM_FEE_RUPEES = 90;
 export const TAX_RUPEES = 0;
 
 const CONSULT_FEE_RUPEES: Record<string, Record<ConsultMode, number>> = {
-  anjali: { video: 600, audio: 600, clinic: 500 },
-  rajesh: { video: 400, audio: 400, clinic: 400 },
-  sunita: { video: 800, audio: 800, clinic: 700 },
+  anjali: { video: 600, audio: 600, clinic: 500, chat: 400 },
+  rajesh: { video: 400, audio: 400, clinic: 400, chat: 300 },
+  sunita: { video: 800, audio: 800, clinic: 700, chat: 500 },
 };
 
 export function consultFeeRupees(doctorId: string, mode: ConsultMode): number {

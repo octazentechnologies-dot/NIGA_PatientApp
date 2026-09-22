@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Keyboard } from 'react-native';
 
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
@@ -13,6 +14,7 @@ import {
   defaultBirthDate,
   formatDateOfBirth,
   initialsFromName,
+  maskDateOfBirth,
   parseDateOfBirth,
 } from '../utilities/dateOfBirth';
 
@@ -64,6 +66,8 @@ const SEED_MEMBERS: FamilyMember[] = [
 export type FamilyMembersViewModel = {
   language: AppLanguage;
   t: (key: TranslationKey) => string;
+  variant: 'onboarding' | 'account';
+  sheetMode: 'add' | 'edit';
   self: FamilySelf;
   selfMeta: string;
   members: FamilyMember[];
@@ -88,6 +92,7 @@ export type FamilyMembersViewModel = {
   onOpenHelp: () => void;
   onCloseHelp: () => void;
   onChangeFullName: (value: string) => void;
+  onChangeDateOfBirth: (value: string) => void;
   onOpenDatePicker: () => void;
   onCloseDatePicker: () => void;
   onConfirmDateOfBirth: (date: Date) => void;
@@ -100,6 +105,7 @@ export type FamilyMembersViewModel = {
   onSubmitMember: () => void;
   onOpenMemberMenu: (memberId: string) => void;
   onCloseMemberMenu: () => void;
+  onEditMember: () => void;
   onRemoveMember: () => void;
   onSelectLanguage: (language: AppLanguage) => void;
   onContinue: () => void;
@@ -151,14 +157,18 @@ export function useFamilyMembersController({
   onBack,
   onContinue,
   onSkip,
+  variant = 'onboarding',
 }: {
   onBack: () => void;
   onContinue: () => void;
   onSkip: () => void;
+  variant?: 'onboarding' | 'account';
 }): FamilyMembersViewModel {
   const { language, setLanguage, t } = useLocalization();
   const [members, setMembers] = useState<FamilyMember[]>(SEED_MEMBERS);
   const [addSheetOpen, setAddSheetOpen] = useState(false);
+  const [sheetMode, setSheetMode] = useState<'add' | 'edit'>('add');
+  const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [relationshipPickerOpen, setRelationshipPickerOpen] = useState(false);
@@ -208,6 +218,8 @@ export function useFamilyMembersController({
   return {
     language,
     t,
+    variant,
+    sheetMode,
     self: SEED_SELF,
     selfMeta,
     members,
@@ -228,17 +240,32 @@ export function useFamilyMembersController({
     authorizedToManage,
     canSubmit,
     relationships: RELATIONSHIPS,
-    onOpenAddSheet: () => setAddSheetOpen(true),
+    onOpenAddSheet: () => {
+      setSheetMode('add');
+      setEditingMemberId(null);
+      resetForm();
+      setAddSheetOpen(true);
+    },
     onCloseAddSheet: () => {
       setAddSheetOpen(false);
+      setEditingMemberId(null);
+      setSheetMode('add');
       resetForm();
     },
     onOpenHelp: () => setHelpOpen(true),
     onCloseHelp: () => setHelpOpen(false),
     onChangeFullName: setFullName,
-    onOpenDatePicker: () => setDatePickerOpen(true),
+    onChangeDateOfBirth: (value) => setDateOfBirth(maskDateOfBirth(value)),
+    onOpenDatePicker: () => {
+      Keyboard.dismiss();
+      setDatePickerOpen(true);
+    },
     onCloseDatePicker: () => setDatePickerOpen(false),
     onConfirmDateOfBirth: (date) => {
+      if (!date) {
+        setDatePickerOpen(false);
+        return;
+      }
       setDateOfBirth(formatDateOfBirth(date));
       setDatePickerOpen(false);
     },
@@ -258,23 +285,64 @@ export function useFamilyMembersController({
         return;
       }
       const name = fullName.trim();
-      setMembers((current) => [
-        ...current,
-        {
-          id: `member-${Date.now()}`,
-          name,
-          initials: initialsFromName(name),
-          age,
-          gender,
-          relationship,
-          status: isAdult ? 'pending' : 'guardian',
-        },
-      ]);
+      if (sheetMode === 'edit' && editingMemberId) {
+        setMembers((current) =>
+          current.map((member) =>
+            member.id === editingMemberId
+              ? {
+                  ...member,
+                  name,
+                  initials: initialsFromName(name),
+                  age,
+                  gender,
+                  relationship,
+                  status: isAdult ? member.status : 'guardian',
+                }
+              : member,
+          ),
+        );
+      } else {
+        setMembers((current) => [
+          ...current,
+          {
+            id: `member-${Date.now()}`,
+            name,
+            initials: initialsFromName(name),
+            age,
+            gender,
+            relationship,
+            status: isAdult ? 'pending' : 'guardian',
+          },
+        ]);
+      }
       setAddSheetOpen(false);
+      setEditingMemberId(null);
+      setSheetMode('add');
       resetForm();
     },
     onOpenMemberMenu: setMemberMenuId,
     onCloseMemberMenu: () => setMemberMenuId(null),
+    onEditMember: () => {
+      if (!memberMenuId) {
+        return;
+      }
+      const member = members.find((item) => item.id === memberMenuId);
+      if (!member) {
+        return;
+      }
+      const approx = new Date();
+      approx.setFullYear(approx.getFullYear() - member.age);
+      setSheetMode('edit');
+      setEditingMemberId(member.id);
+      setFullName(member.name);
+      setDateOfBirth(formatDateOfBirth(approx));
+      setGender(member.gender);
+      setRelationship(member.relationship);
+      setMobileNumber('');
+      setAuthorizedToManage(true);
+      setMemberMenuId(null);
+      setAddSheetOpen(true);
+    },
     onRemoveMember: () => {
       if (!memberMenuId) {
         return;

@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { sheetBottomPadding } from '../utilities/sheetInset';
 
 import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
@@ -49,6 +50,7 @@ export function SignInView({
       />
 
       <ScrollView
+        style={styles.scroll}
         bounces={false}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
@@ -61,6 +63,7 @@ export function SignInView({
         contentContainerStyle={[
           styles.content,
           contentMinHeight != null && { minHeight: contentMinHeight },
+          { paddingBottom: sheetBottomPadding(insets, spacing.xl) },
         ]}
       >
         <View style={styles.copy}>
@@ -176,12 +179,7 @@ export function SignInView({
           </AppText>
         </View>
 
-        <View
-          style={[
-            styles.footer,
-            { paddingBottom: Math.max(insets.bottom, spacing.lg) },
-          ]}
-        >
+        <View style={styles.footer}>
           <AppText
             variant="labelSm"
             color={colors.onSurfaceVariant}
@@ -198,14 +196,17 @@ export function SignInView({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.page,
+  },
+  scroll: {
+    flex: 1,
   },
   content: {
     flexGrow: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     alignItems: 'center',
     paddingHorizontal: spacing.gutter,
-    paddingVertical: spacing.xl,
+    paddingTop: spacing.lg,
     maxWidth: 448,
     width: '100%',
     alignSelf: 'center',
@@ -227,7 +228,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
@@ -262,7 +263,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     borderWidth: 1.5,
     borderColor: colors.outline,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -276,10 +277,11 @@ const styles = StyleSheet.create({
   actionButton: {
     minHeight: 52,
     width: '100%',
-    borderRadius: radii.sm,
+    borderRadius: radii.button,
   },
   helplineButton: {
-    backgroundColor: colors.surfaceContainerLowest,
+    borderRadius: radii.button,
+    backgroundColor: colors.card,
   },
   orRow: {
     flexDirection: 'row',
@@ -297,8 +299,6 @@ const styles = StyleSheet.create({
   footer: {
     marginTop: 'auto',
     alignSelf: 'stretch',
-    paddingTop: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.outlineVariant,
+    paddingTop: spacing.sm,
   },
 });

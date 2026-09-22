@@ -5,11 +5,11 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
 import { LanguageChoiceRow } from '../components/LanguageChoiceRow';
+import { Screen } from '../components/Screen';
 import { images } from '../config/images';
 import type { FirstLaunchViewModel } from '../controllers/useFirstLaunchController';
 import { colors } from '../theme/colors';
@@ -23,19 +23,18 @@ export function FirstLaunchView({
   onSelectLanguage,
   onContinue,
 }: FirstLaunchViewModel) {
-  const insets = useSafeAreaInsets();
   const markSize = moderateScale(88);
 
   return (
-    <View style={styles.root}>
+    <Screen style={styles.root}>
       <ScrollView
         bounces={false}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.content,
           {
-            paddingTop: Math.max(insets.top, spacing.md) + spacing.lg,
-            paddingBottom: Math.max(insets.bottom, spacing.md),
+            paddingTop: spacing.md + spacing.lg,
+            paddingBottom: spacing.md,
           },
         ]}
       >
@@ -48,7 +47,7 @@ export function FirstLaunchView({
             accessibilityLabel={t('brandName')}
           />
           <AppText
-            variant="headlineLg"
+            variant="displayLg"
             color="#000000"
             style={styles.brand}
           >
@@ -62,7 +61,7 @@ export function FirstLaunchView({
             {t('byline')}
           </AppText>
           <AppText
-            variant="headlineMd"
+            variant="bodyLg"
             color="#000000"
             style={styles.headline}
           >
@@ -117,14 +116,14 @@ export function FirstLaunchView({
           </View>
         </View>
       </ScrollView>
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.page,
   },
   content: {
     flexGrow: 1,
@@ -132,7 +131,7 @@ const styles = StyleSheet.create({
     maxWidth: 448,
     alignSelf: 'center',
     paddingHorizontal: spacing.gutter,
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     gap: spacing.lg,
   },
   header: {
@@ -151,7 +150,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   card: {
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
     borderColor: colors.outlineVariant,
     borderWidth: 1,
     borderRadius: radii.sm,
@@ -164,26 +163,28 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   footer: {
+    marginTop: 'auto',
     gap: spacing.lg,
+    paddingTop: spacing.lg,
   },
   continueButton: {
     width: '100%',
-    borderRadius: radii.sm,
+    borderRadius: radii.button,
   },
   disclaimer: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.surfaceContainerLow,
+    backgroundColor: colors.card,
     borderColor: colors.outlineVariant,
     borderWidth: 1,
     borderRadius: radii.sm,
     padding: 12,
   },
-  disclaimerIcon: {
-    marginTop: 1,
-  },
+  disclaimerIcon: {},
   disclaimerText: {
-    flex: 1,
+    flexShrink: 1,
+    textAlign: 'center',
   },
 });

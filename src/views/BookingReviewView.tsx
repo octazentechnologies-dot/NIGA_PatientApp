@@ -7,19 +7,25 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaModal } from '../components/SafeAreaModal';
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { sheetBottomPadding } from '../utilities/sheetInset';
+
+import { SelectExistingDocumentSheet } from '../components/SelectExistingDocumentSheet';
 import { AppText } from '../components/AppText';
 import type { BookingReviewViewModel } from '../controllers/useBookingReviewController';
+import { useUploadDocumentController } from '../controllers/useUploadDocumentController';
 import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
 import { layout, spacing } from '../theme/spacing';
 import { fontFamilyFor } from '../utilities/fonts';
 import { scaleFont } from '../utilities/scale';
+import { UploadDocumentView } from './UploadDocumentView';
 
 const MUTED = '#595959';
 const HAIRLINE = '#E6E6E6';
-const ICON_BLUE = '#3AA9E0';
+const ICON_BLUE = '#2A7BA3';
 const GREY_FILL = '#F2F2F2';
 const PLACEHOLDER = '#8A8A8A';
 
@@ -37,6 +43,11 @@ export function BookingReviewView({
   totalLabel,
   reason,
   attached,
+  attachedLabel,
+  libraryDocuments,
+  selectedLibraryId,
+  uploadOpen,
+  selectSheetOpen,
   shareRecords,
   reminders,
   policyOpen,
@@ -46,7 +57,12 @@ export function BookingReviewView({
   onChangeMode,
   onChangePatient,
   onChangeReason,
-  onToggleAttach,
+  onPressAttach,
+  onCloseSelectSheet,
+  onSelectExistingDocument,
+  onUploadNewFromSheet,
+  onCloseUpload,
+  onUploadSaved,
   onToggleShareRecords,
   onToggleReminders,
   onTogglePolicy,
@@ -54,25 +70,50 @@ export function BookingReviewView({
   onProceedPay,
 }: BookingReviewViewModel) {
   const insets = useSafeAreaInsets();
-  const footerReserve = 108 + Math.max(insets.bottom, spacing.md);
+  const footerReserve = 108 + sheetBottomPadding(insets, spacing.md);
+  const upload = useUploadDocumentController({
+    active: uploadOpen,
+    onClose: onCloseUpload,
+    onSaved: onUploadSaved,
+  });
 
   return (
     <View style={styles.root}>
-      <View style={{ paddingTop: Math.max(insets.top, spacing.sm) }}>
-        <View style={styles.topBar}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t('back')}
-            onPress={onBack}
-            style={styles.iconButton}
-          >
-            <Ionicons name="arrow-back" size={24} color="#000000" />
-          </Pressable>
-          <AppText variant="headlineMd" color="#000000" style={styles.title}>
-            {t('reviewTitle')}
-          </AppText>
-          <View style={styles.iconButton} />
-        </View>
+      <SafeAreaModal
+        visible={uploadOpen}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={onCloseUpload}
+      >
+        <UploadDocumentView {...upload} />
+      </SafeAreaModal>
+      <SelectExistingDocumentSheet
+        open={selectSheetOpen}
+        documents={libraryDocuments}
+        selectedId={selectedLibraryId}
+        t={t}
+        onClose={onCloseSelectSheet}
+        onSelect={onSelectExistingDocument}
+        onUploadNew={onUploadNewFromSheet}
+      />
+      <View
+        style={[
+          styles.topBar,
+          { paddingTop: Math.max(insets.top, spacing.sm) },
+        ]}
+      >
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('back')}
+          onPress={onBack}
+          style={styles.iconButton}
+        >
+          <Ionicons name="arrow-back" size={24} color="#000000" />
+        </Pressable>
+        <AppText variant="headlineMd" color="#000000" style={styles.title}>
+          {t('reviewTitle')}
+        </AppText>
+        <View style={styles.iconButton} />
       </View>
 
       <ScrollView
@@ -138,7 +179,7 @@ export function BookingReviewView({
           />
           <Pressable
             accessibilityRole="button"
-            onPress={onToggleAttach}
+            onPress={onPressAttach}
             style={({ pressed }) => [styles.attach, pressed && styles.pressed]}
           >
             <Ionicons
@@ -147,7 +188,7 @@ export function BookingReviewView({
               color={ICON_BLUE}
             />
             <AppText variant="bodyMd" color={ICON_BLUE} weightOverride="600" style={styles.flex}>
-              {attached ? t('reviewAttachFile') : t('reviewAttach')}
+              {attached ? attachedLabel : t('reviewAttach')}
             </AppText>
             {attached ? (
               <AppText variant="labelSm" color={MUTED}>
@@ -253,7 +294,7 @@ export function BookingReviewView({
         </View>
       </ScrollView>
 
-      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
+      <View style={[styles.footer, { paddingBottom: sheetBottomPadding(insets, spacing.md) }]}>
         <View>
           <AppText variant="labelSm" color={MUTED} style={styles.totalCap}>
             {t('reviewTotalAmount')}
@@ -407,9 +448,10 @@ function Accordion({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.page,
   },
   topBar: {
+    backgroundColor: colors.card,
     minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
@@ -419,7 +461,7 @@ const styles = StyleSheet.create({
   },
   title: {
     flex: 1,
-    textAlign: 'center',
+    textAlign: 'left',
     fontSize: scaleFont(22),
     lineHeight: scaleFont(30),
   },
@@ -442,13 +484,13 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
     padding: spacing.md,
     gap: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.card,
   },
   cardFlush: {
     borderWidth: 1,
     borderColor: HAIRLINE,
     borderRadius: radii.sm,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.card,
     overflow: 'hidden',
   },
   doctorRow: {
@@ -501,7 +543,7 @@ const styles = StyleSheet.create({
     fontSize: scaleFont(14),
     lineHeight: scaleFont(20),
     color: '#000000',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.card,
   },
   attach: {
     minHeight: 48,
@@ -572,7 +614,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     borderWidth: 1.5,
     borderColor: PLACEHOLDER,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -640,9 +682,9 @@ const styles = StyleSheet.create({
     bottom: 0,
     borderTopWidth: 1,
     borderTopColor: HAIRLINE,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.card,
     paddingHorizontal: spacing.gutter,
-    paddingTop: 12,
+    paddingTop: spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -660,8 +702,8 @@ const styles = StyleSheet.create({
     flex: 1,
     maxWidth: 200,
     minHeight: 48,
-    borderRadius: radii.full,
-    backgroundColor: colors.primary,
+    borderRadius: radii.button,
+    backgroundColor: colors.button,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,

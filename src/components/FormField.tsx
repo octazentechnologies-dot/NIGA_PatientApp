@@ -31,6 +31,7 @@ type FormFieldProps = {
   autoComplete?: 'email' | 'tel' | 'name' | 'off' | 'postal-code' | 'street-address';
   onChangeText?: (value: string) => void;
   onPress?: () => void;
+  onIconPress?: () => void;
 };
 
 export function FormField({
@@ -48,8 +49,23 @@ export function FormField({
   autoComplete,
   onChangeText,
   onPress,
+  onIconPress,
 }: FormFieldProps) {
   useWindowDimensions();
+  const icon = rightIcon ? (
+    onIconPress ? (
+      <Pressable
+        accessibilityRole="button"
+        hitSlop={8}
+        onPress={onIconPress}
+        style={styles.rightIcon}
+      >
+        {rightIcon}
+      </Pressable>
+    ) : (
+      <View style={styles.rightIcon}>{rightIcon}</View>
+    )
+  ) : null;
   const input = (
     <TextInput
       value={value}
@@ -85,12 +101,12 @@ export function FormField({
       {onPress ? (
         <Pressable accessibilityRole="button" onPress={onPress}>
           {input}
-          {rightIcon ? <View style={styles.rightIcon}>{rightIcon}</View> : null}
+          {icon}
         </Pressable>
       ) : (
         <View>
           {input}
-          {rightIcon ? <View style={styles.rightIcon}>{rightIcon}</View> : null}
+          {icon}
         </View>
       )}
       {hint ? (
@@ -100,6 +116,7 @@ export function FormField({
             variant="labelSm"
             color={colors.onSurfaceVariant}
             style={styles.hint}
+            raw
           >
             {hint}
           </AppText>
@@ -120,7 +137,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
     paddingHorizontal: spacing.md,
     color: colors.onSurface,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.card,
   },
   inputWithIcon: {
     paddingRight: 44,
