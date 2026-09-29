@@ -17,9 +17,11 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.nigahomeocentrum.patient",
       "buildNumber": "1",
+      "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "NSSpeechRecognitionUsageDescription": "Allow HelloHomeo to convert your speech to text for doctor search.",
-        "NSMicrophoneUsageDescription": "Allow HelloHomeo to use the microphone for voice search."
+        "NSCameraUsageDescription": "Allow HelloHomeo to use the camera for video consultations.",
+        "NSMicrophoneUsageDescription": "Allow HelloHomeo to use the microphone for consultations and voice search."
       }
     },
     "android": {
@@ -35,7 +37,8 @@
       "predictiveBackGestureEnabled": false,
       "softwareKeyboardLayoutMode": "resize",
       "permissions": [
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.CAMERA"
       ]
     },
     "androidNavigationBar": {
@@ -47,9 +50,18 @@
     },
     "plugins": [
       [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow HelloHomeo to use the camera for video consultations.",
+          "microphonePermission": "Allow HelloHomeo to use the microphone for consultations and voice search.",
+          "recordAudioAndroid": true,
+          "barcodeScannerEnabled": false
+        }
+      ],
+      [
         "expo-speech-recognition",
         {
-          "microphonePermission": "Allow HelloHomeo to use the microphone for voice search.",
+          "microphonePermission": "Allow HelloHomeo to use the microphone for consultations and voice search.",
           "speechRecognitionPermission": "Allow HelloHomeo to convert your speech to text for doctor search.",
           "androidSpeechServicePackages": [
             "com.google.android.googlequicksearchbox"
@@ -81,6 +93,18 @@
         {
           "color": "#2A7BA3",
           "defaultChannel": "default"
+        }
+      ],
+      "@react-native-firebase/app",
+      "@react-native-firebase/crashlytics",
+      "./plugins/withCrashlyticsMainThread",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static",
+            "forceStaticLinking": ["RNFBApp", "RNFBCrashlytics"]
+          }
         }
       ]
     ],

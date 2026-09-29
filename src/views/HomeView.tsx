@@ -14,6 +14,7 @@ import { HealthRecordsView } from './HealthRecordsView';
 import { MedicinesView } from './MedicinesView';
 import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
+import { NotificationBell } from '../components/NotificationBell';
 import { PatientTabBar, usePatientTabScrollInset } from '../components/PatientTabBar';
 import { Screen } from '../components/Screen';
 import { WhoForMemberSheet } from '../components/WhoForMemberSheet';
@@ -78,19 +79,15 @@ export function HomeView({
   medicineOrderPlaced,
   onOpenOrderDetails,
   account,
-}: HomeViewModel) {
+  notificationCount,
+}: HomeViewModel & { notificationCount: number }) {
   const insets = useSafeAreaInsets();
   const tabScrollInset = usePatientTabScrollInset();
 
   return (
     <Screen edges={['left', 'right']} style={styles.root}>
       {selectedTab === 'home' ? (
-        <ScrollView
-          bounces={false}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: tabScrollInset }}
-        >
+        <View style={styles.homeTab}>
           <View
             style={[
               styles.header,
@@ -138,19 +135,11 @@ export function HomeView({
                     {language === 'en' ? 'EN' : 'मराठी'}
                   </AppText>
                 </Pressable>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={t('homeNotifications')}
+                <NotificationBell
+                  count={notificationCount}
+                  label={t('homeNotifications')}
                   onPress={onOpenNotifications}
-                  style={styles.bellButton}
-                >
-                  <Ionicons
-                    name="notifications-outline"
-                    size={24}
-                    color={colors.onSurface}
-                  />
-                  <View style={styles.bellDot} />
-                </Pressable>
+                />
               </View>
             </View>
 
@@ -172,6 +161,13 @@ export function HomeView({
             </Pressable>
           </View>
 
+          <ScrollView
+            style={styles.homeBody}
+            bounces={false}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: tabScrollInset }}
+          >
           <View style={styles.body}>
             <View style={styles.consultCard}>
               <View style={styles.consultTop}>
@@ -452,7 +448,8 @@ export function HomeView({
               ))}
             </ScrollView>
           </View>
-        </ScrollView>
+          </ScrollView>
+        </View>
       ) : selectedTab === 'doctors' ? (
         <View style={styles.doctorsTab}>
           <View
@@ -486,19 +483,11 @@ export function HomeView({
                     {language === 'en' ? 'EN' : 'मराठी'}
                   </AppText>
                 </Pressable>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={t('homeNotifications')}
+                <NotificationBell
+                  count={notificationCount}
+                  label={t('homeNotifications')}
                   onPress={onOpenNotifications}
-                  style={styles.bellButton}
-                >
-                  <Ionicons
-                    name="notifications-outline"
-                    size={22}
-                    color={colors.onSurface}
-                  />
-                  <View style={styles.bellDot} />
-                </Pressable>
+                />
               </View>
             </View>
             <AppText variant="bodyMd" color={colors.onSurfaceVariant}>
@@ -637,6 +626,7 @@ export function HomeView({
           onOpenFollowUpPlan={onOpenFollowUpPlan}
           onOpenOrderMedicines={onOpenOrderMedicines}
           onOpenNotifications={onOpenNotifications}
+          notificationCount={notificationCount}
         />
       ) : selectedTab === 'medicines' ? (
         <MedicinesView
@@ -646,6 +636,7 @@ export function HomeView({
           onOrderRx={() => onOpenOrderMedicines()}
           onOpenPastOrder={onOpenOrderDetails}
           onOpenNotifications={onOpenNotifications}
+          notificationCount={notificationCount}
           forceHasOrders={medicineOrderPlaced}
         />
       ) : selectedTab === 'account' ? (
@@ -741,21 +732,6 @@ const styles = StyleSheet.create({
     borderColor: colors.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  bellButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bellDot: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 8,
-    height: 8,
-    borderRadius: radii.full,
-    backgroundColor: colors.error,
   },
   searchWrap: {
     flexDirection: 'row',
@@ -991,6 +967,12 @@ const styles = StyleSheet.create({
   tipTitle: {
     fontSize: scaleFont(16),
     lineHeight: scaleFont(22),
+  },
+  homeTab: {
+    flex: 1,
+  },
+  homeBody: {
+    flex: 1,
   },
   doctorsTab: {
     flex: 1,

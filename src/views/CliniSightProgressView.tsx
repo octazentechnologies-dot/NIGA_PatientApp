@@ -54,14 +54,7 @@ export function CliniSightProgressView(vm: CliniSightProgressViewModel) {
           >
             {vm.t('cliniSightTitle')}
           </AppText>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={vm.t('cliniSightTranslate')}
-            onPress={vm.onToggleLanguage}
-            style={styles.iconHit}
-          >
-            <Ionicons name="language-outline" size={22} color={INK} />
-          </Pressable>
+          <View style={styles.iconHit} />
         </View>
       </View>
 

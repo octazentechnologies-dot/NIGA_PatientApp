@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
+import { NotificationBell } from '../components/NotificationBell';
 import { usePatientTabScrollInset } from '../components/PatientTabBar';
 import {
   useMedicinesController,
@@ -34,6 +35,7 @@ export function MedicinesView({
   onOrderRx,
   onOpenPastOrder,
   onOpenNotifications,
+  notificationCount = 0,
   forceHasOrders,
 }: {
   onBookFollowUp?: () => void;
@@ -42,6 +44,7 @@ export function MedicinesView({
   onOrderRx?: (id: string) => void;
   onOpenPastOrder?: (id: string) => void;
   onOpenNotifications?: () => void;
+  notificationCount?: number;
   forceHasOrders?: boolean;
 } = {}) {
   const vm = useMedicinesController({
@@ -59,7 +62,11 @@ export function MedicinesView({
   return (
     <View style={styles.root}>
       <View style={[styles.header, { paddingTop: Math.max(insets.top, spacing.sm) }]}>
-        {vm.hasOrders ? <ListHeader vm={vm} /> : <EmptyHeader vm={vm} />}
+        {vm.hasOrders ? (
+          <ListHeader vm={vm} notificationCount={notificationCount} />
+        ) : (
+          <EmptyHeader vm={vm} notificationCount={notificationCount} />
+        )}
       </View>
 
       {vm.hasOrders ? (
@@ -102,7 +109,13 @@ export function MedicinesView({
   );
 }
 
-function HeaderActions({ vm }: { vm: MedicinesViewModel }) {
+function HeaderActions({
+  vm,
+  notificationCount,
+}: {
+  vm: MedicinesViewModel;
+  notificationCount: number;
+}) {
   return (
     <View style={styles.headerActions}>
       <Pressable
@@ -119,20 +132,22 @@ function HeaderActions({ vm }: { vm: MedicinesViewModel }) {
           {vm.language === 'en' ? 'EN' : 'मराठी'}
         </AppText>
       </Pressable>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={vm.t('homeNotifications')}
+      <NotificationBell
+        count={notificationCount}
+        label={vm.t('homeNotifications')}
         onPress={vm.onOpenNotifications}
-        style={styles.bellButton}
-      >
-        <Ionicons name="notifications-outline" size={22} color={INK} />
-        <View style={styles.bellDot} />
-      </Pressable>
+      />
     </View>
   );
 }
 
-function ListHeader({ vm }: { vm: MedicinesViewModel }) {
+function ListHeader({
+  vm,
+  notificationCount,
+}: {
+  vm: MedicinesViewModel;
+  notificationCount: number;
+}) {
   return (
     <View style={styles.headerRow}>
       <View style={styles.flex}>
@@ -143,12 +158,18 @@ function ListHeader({ vm }: { vm: MedicinesViewModel }) {
           {vm.t('medsSubtitle')}
         </AppText>
       </View>
-      <HeaderActions vm={vm} />
+      <HeaderActions vm={vm} notificationCount={notificationCount} />
     </View>
   );
 }
 
-function EmptyHeader({ vm }: { vm: MedicinesViewModel }) {
+function EmptyHeader({
+  vm,
+  notificationCount,
+}: {
+  vm: MedicinesViewModel;
+  notificationCount: number;
+}) {
   return (
     <View style={styles.headerRow}>
       <Pressable
@@ -166,7 +187,7 @@ function EmptyHeader({ vm }: { vm: MedicinesViewModel }) {
           {vm.t('medsAllFamily')}
         </AppText>
       </Pressable>
-      <HeaderActions vm={vm} />
+      <HeaderActions vm={vm} notificationCount={notificationCount} />
     </View>
   );
 }
@@ -546,21 +567,6 @@ const styles = StyleSheet.create({
     borderColor: HAIRLINE,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  bellButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bellDot: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 8,
-    height: 8,
-    borderRadius: radii.full,
-    backgroundColor: colors.error,
   },
   avatar: {
     width: 40,

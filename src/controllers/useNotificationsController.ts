@@ -36,6 +36,7 @@ export type NotificationsViewModel = {
   onReveal: (id: string | null) => void;
   onMarkRead: (id: string) => void;
   onDelete: (id: string) => void;
+  unreadCount: number;
 };
 
 const FILTERS: NotificationsViewModel['filters'] = [
@@ -139,6 +140,8 @@ export function useNotificationsController({
       .filter((group) => group.items.length > 0);
   }, [filter, items]);
 
+  const unreadCount = items.filter((item) => item.unread).length;
+
   return {
     language,
     t,
@@ -170,5 +173,6 @@ export function useNotificationsController({
       setItems((prev) => prev.filter((item) => item.id !== id));
       setRevealedId(null);
     },
+    unreadCount,
   };
 }

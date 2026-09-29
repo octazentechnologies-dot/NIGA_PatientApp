@@ -19,6 +19,7 @@ import { useBookingPaymentController } from '../controllers/useBookingPaymentCon
 import { useBookingReviewController } from '../controllers/useBookingReviewController';
 import { useAppointmentDetailController } from '../controllers/useAppointmentDetailController';
 import { useDeviceCheckController } from '../controllers/useDeviceCheckController';
+import { usePhoneSetupController } from '../controllers/usePhoneSetupController';
 import { useJoinFailedController } from '../controllers/useJoinFailedController';
 import { useConsultationChatController } from '../controllers/useConsultationChatController';
 import { useConsultationCompleteController } from '../controllers/useConsultationCompleteController';
@@ -90,6 +91,7 @@ import { ClinicAppointmentView } from '../views/ClinicAppointmentView';
 import { ClinicCheckInView } from '../views/ClinicCheckInView';
 import { CancelledConfirmationView } from '../views/CancelledConfirmationView';
 import { DeviceCheckView } from '../views/DeviceCheckView';
+import { PhoneSetupView } from '../views/PhoneSetupView';
 import { JoinFailedView } from '../views/JoinFailedView';
 import { ConsultationChatView } from '../views/ConsultationChatView';
 import { ConsultationCompleteView } from '../views/ConsultationCompleteView';
@@ -110,6 +112,7 @@ type AppStep =
   | 'otp'
   | 'completeProfile'
   | 'consent'
+  | 'phoneSetup'
   | 'familyMembers'
   | 'home';
 
@@ -120,6 +123,7 @@ const SLIDE_STEPS = [
   'otp',
   'completeProfile',
   'consent',
+  'phoneSetup',
   'familyMembers',
   'home',
 ] as const;
@@ -200,6 +204,19 @@ function ConsentRoute({
     onManageLater: onFinished,
   });
   return <ConsentView {...consent} />;
+}
+
+function PhoneSetupRoute({
+  active,
+  onBack,
+  onContinue,
+}: {
+  active: boolean;
+  onBack: () => void;
+  onContinue: () => void;
+}) {
+  const phoneSetup = usePhoneSetupController({ active, onBack, onContinue });
+  return <PhoneSetupView {...phoneSetup} />;
 }
 
 function FamilyMembersRoute({
@@ -683,6 +700,7 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
         }
         onOpenFollowUpPlan={home.onOpenFollowUpPlan}
         onOpenOrderMedicines={home.onOpenOrderMedicines}
+        notificationCount={notifications.unreadCount}
       />
     );
   }
@@ -792,7 +810,7 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
     return <SearchDoctorsView {...search} />;
   }
 
-  return <HomeView {...home} />;
+  return <HomeView {...home} notificationCount={notifications.unreadCount} />;
 }
 
 export function AppNavigator() {
@@ -811,8 +829,10 @@ export function AppNavigator() {
   const backFromProfile = useCallback(() => setStep('otp'), []);
   const openConsent = useCallback(() => setStep('consent'), []);
   const backFromConsent = useCallback(() => setStep('completeProfile'), []);
+  const openPhoneSetup = useCallback(() => setStep('phoneSetup'), []);
+  const backFromPhoneSetup = useCallback(() => setStep('consent'), []);
   const openFamilyMembers = useCallback(() => setStep('familyMembers'), []);
-  const backFromFamilyMembers = useCallback(() => setStep('consent'), []);
+  const backFromFamilyMembers = useCallback(() => setStep('phoneSetup'), []);
   const openHome = useCallback(() => setStep('home'), []);
   const slideIndex = useMemo(
     () => Math.max(0, SLIDE_STEPS.indexOf(step as (typeof SLIDE_STEPS)[number])),
@@ -828,6 +848,7 @@ export function AppNavigator() {
     step === 'otp' ||
     step === 'completeProfile' ||
     step === 'consent' ||
+    step === 'phoneSetup' ||
     step === 'familyMembers';
   const statusBarCanvas = pageStatusBar ? colors.page : colors.card;
 
@@ -864,7 +885,12 @@ export function AppNavigator() {
           onContinue={openConsent}
           onSkip={openConsent}
         />
-        <ConsentRoute onBack={backFromConsent} onFinished={openFamilyMembers} />
+        <ConsentRoute onBack={backFromConsent} onFinished={openPhoneSetup} />
+        <PhoneSetupRoute
+          active={step === 'phoneSetup'}
+          onBack={backFromPhoneSetup}
+          onContinue={openFamilyMembers}
+        />
         <FamilyMembersRoute
           onBack={backFromFamilyMembers}
           onContinue={openHome}

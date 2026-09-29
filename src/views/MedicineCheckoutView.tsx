@@ -44,14 +44,7 @@ export function MedicineCheckoutView(vm: MedicineCheckoutViewModel) {
           >
             {vm.t('checkoutTitle')}
           </AppText>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={vm.t('languageLabel')}
-            onPress={vm.onToggleLanguage}
-            style={styles.iconHit}
-          >
-            <Ionicons name="language-outline" size={22} color={INK} />
-          </Pressable>
+          <View style={styles.iconHit} />
         </View>
       </View>
 

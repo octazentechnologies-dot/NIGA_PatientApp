@@ -157,7 +157,7 @@ export function useDeviceCheckController({
       setTimeout(() => setSpeakerTesting(false), 1200);
     },
     onOpenSettings: () => {
-      void Linking.openSettings();
+      void Linking.openSettings().catch(() => undefined);
     },
     onSelectMode: setConsultMode,
     onJoinWaitingRoom: () =>

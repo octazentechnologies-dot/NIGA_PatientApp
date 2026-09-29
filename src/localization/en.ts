@@ -928,6 +928,28 @@ export const en: TranslationMap = {
   noDoctorCallbackHint: 'From Our Helpline',
   noDoctorCallbackDone: "Requested — we'll call you soon",
   noDoctorNotCharged: 'You Have Not Been Charged.',
+  phoneSetupTitle: 'Set Up Your Phone',
+  phoneSetupStep: 'Step 2 Of 2',
+  phoneSetupBody:
+    'Four permissions, each for one job. You can change any of them later in Account.',
+  phoneSetupNotifications: 'Notifications',
+  phoneSetupNotificationsHint:
+    'So you know when your doctor is ready, an appointment changes, or a medicine update arrives.',
+  phoneSetupMic: 'Microphone',
+  phoneSetupMicHint: 'For audio and video consultations.',
+  phoneSetupCamera: 'Camera',
+  phoneSetupCameraHint:
+    'For video consultations. You can consult by audio instead.',
+  phoneSetupBattery: 'Battery Optimisation',
+  phoneSetupBatteryHint:
+    "So Android doesn't silence a consultation alert while your phone is idle.",
+  phoneSetupBatteryNote: "This one opens your phone's own settings screen.",
+  phoneSetupNotSet: 'Not Set',
+  phoneSetupAllow: 'Allow',
+  phoneSetupAllowed: 'Allowed',
+  phoneSetupSettings: 'Settings',
+  phoneSetupContinue: 'Continue',
+  phoneSetupLater: "I'll Do This Later",
   deviceCheckTitle: 'Check Your Setup',
   deviceCheckSubtitle: 'Consultation with {name} at {time}',
   deviceCheckDate: 'Date: {date}',

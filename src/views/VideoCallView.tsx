@@ -1,10 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import {
   Image,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StatusBar,
   StyleSheet,
+  TextInput,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,6 +20,7 @@ import type { VideoCallViewModel } from '../controllers/useVideoCallController';
 import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
 import { spacing } from '../theme/spacing';
+import { fontFamilyFor } from '../utilities/fonts';
 import { scaleFont } from '../utilities/scale';
 
 const CALL_SURFACE = '#101816';
@@ -209,6 +213,102 @@ export function VideoCallView(vm: VideoCallViewModel) {
       {vm.recordingConsentOpen ? (
         <RecordingConsentSheet vm={vm} bottomInset={systemBottomInset(insets)} />
       ) : null}
+      {vm.chatOpen ? <InCallChatSheet vm={vm} /> : null}
+    </View>
+  );
+}
+
+function InCallChatSheet({ vm }: { vm: VideoCallViewModel }) {
+  const insets = useSafeAreaInsets();
+  const inputFont = fontFamilyFor('400', vm.language, 'sans');
+
+  return (
+    <View style={styles.chatRoot}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={vm.t('close')}
+        onPress={vm.onCloseChat}
+        style={styles.consentScrim}
+      />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.chatSheet}
+      >
+        <View style={styles.consentHandle} />
+        <View style={styles.chatHeader}>
+          <Image source={images.doctorPortrait} style={styles.chatAvatar} />
+          <View style={styles.flex}>
+            <AppText variant="titleMd" color={INK} numberOfLines={1}>
+              {vm.doctorName}
+            </AppText>
+            <AppText variant="labelSm" color={SHEET_MUTED} numberOfLines={1}>
+              {vm.t('videoCallChat')}
+            </AppText>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={vm.t('close')}
+            onPress={vm.onCloseChat}
+            style={styles.chatClose}
+          >
+            <Ionicons name="close" size={22} color={INK} />
+          </Pressable>
+        </View>
+        <ScrollView
+          style={styles.chatThread}
+          contentContainerStyle={styles.chatThreadContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {vm.chatMessages.map((message) => {
+            const mine = message.from === 'patient';
+            return (
+              <View
+                key={message.id}
+                style={[styles.chatBubbleWrap, mine ? styles.chatMine : styles.chatTheirs]}
+              >
+                <View style={[styles.chatBubble, mine ? styles.chatBubbleMine : styles.chatBubbleTheirs]}>
+                  <AppText variant="bodyMd" color={mine ? colors.onButton : INK}>
+                    {message.body}
+                  </AppText>
+                  <AppText
+                    variant="labelSm"
+                    color={mine ? 'rgba(255,255,255,0.85)' : SHEET_MUTED}
+                  >
+                    {message.timeLabel}
+                  </AppText>
+                </View>
+              </View>
+            );
+          })}
+        </ScrollView>
+        <View
+          style={[
+            styles.chatComposer,
+            { paddingBottom: sheetBottomPadding(insets, spacing.sm) },
+          ]}
+        >
+          <View style={styles.chatInputWrap}>
+            <TextInput
+              value={vm.chatDraft}
+              onChangeText={vm.onChangeChatDraft}
+              placeholder={vm.t('chatPlaceholder')}
+              placeholderTextColor={SHEET_MUTED}
+              style={[styles.chatInput, { fontFamily: inputFont }]}
+              multiline
+            />
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={vm.t('chatSend')}
+            onPress={vm.onSendChat}
+            disabled={!vm.canSendChat}
+            style={[styles.chatSend, !vm.canSendChat && styles.chatSendOff]}
+          >
+            <Ionicons name="send" size={20} color={colors.onButton} />
+          </Pressable>
+        </View>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -1317,6 +1417,111 @@ const styles = StyleSheet.create({
   },
   consentBtn: {
     flex: 1,
+  },
+  chatRoot: {
+    ...StyleSheet.absoluteFill,
+    zIndex: 70,
+    justifyContent: 'flex-end',
+  },
+  chatSheet: {
+    maxHeight: '82%',
+    height: '82%',
+    backgroundColor: colors.page,
+    borderTopLeftRadius: radii.lg,
+    borderTopRightRadius: radii.lg,
+    overflow: 'hidden',
+  },
+  chatHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.sm,
+    backgroundColor: colors.card,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: HAIRLINE,
+  },
+  chatAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.full,
+    backgroundColor: HAIRLINE,
+  },
+  chatClose: {
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chatThread: {
+    flex: 1,
+  },
+  chatThreadContent: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    gap: spacing.sm,
+  },
+  chatBubbleWrap: {
+    maxWidth: '82%',
+  },
+  chatMine: {
+    alignSelf: 'flex-end',
+  },
+  chatTheirs: {
+    alignSelf: 'flex-start',
+  },
+  chatBubble: {
+    borderRadius: radii.default,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: spacing.xs,
+  },
+  chatBubbleMine: {
+    backgroundColor: colors.primary,
+  },
+  chatBubbleTheirs: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: HAIRLINE,
+  },
+  chatComposer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    backgroundColor: colors.card,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: HAIRLINE,
+  },
+  chatInputWrap: {
+    flex: 1,
+    minHeight: 48,
+    maxHeight: 120,
+    borderWidth: 1,
+    borderColor: HAIRLINE,
+    borderRadius: radii.default,
+    backgroundColor: colors.card,
+    paddingHorizontal: spacing.md,
+    justifyContent: 'center',
+  },
+  chatInput: {
+    color: INK,
+    fontSize: 16,
+    lineHeight: 22,
+    paddingVertical: spacing.sm,
+    maxHeight: 100,
+  },
+  chatSend: {
+    width: 48,
+    height: 48,
+    borderRadius: radii.full,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chatSendOff: {
+    opacity: 0.45,
   },
   noticeLink: {
     alignSelf: 'center',

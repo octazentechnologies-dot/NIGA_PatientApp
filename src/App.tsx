@@ -32,9 +32,15 @@ import { OfflineModeGate } from './components/OfflineModeGate';
 import { LocalizationProvider } from './localization/i18n';
 import { AppNavigator } from './navigation/AppNavigator';
 import { configureForegroundNotificationHandler } from './services/notifications';
+import { CrashlyticsTestPanel } from './services/crashReporting/CrashlyticsTestPanel';
+import {
+  CrashErrorBoundary,
+  initializeCrashReporting,
+} from './services/crashReporting/crashReporting';
 import { colors } from './theme/colors';
 
 configureForegroundNotificationHandler();
+initializeCrashReporting();
 
 const BOOT_COLOR = colors.page;
 
@@ -73,7 +79,10 @@ export default function App() {
         <KeyboardStableInsets>
           <LocalizationProvider>
             <OfflineModeGate>
-              {fontsLoaded || fontError ? <AppNavigator /> : null}
+              <CrashErrorBoundary>
+                {fontsLoaded || fontError ? <AppNavigator /> : null}
+                <CrashlyticsTestPanel />
+              </CrashErrorBoundary>
             </OfflineModeGate>
           </LocalizationProvider>
         </KeyboardStableInsets>

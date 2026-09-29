@@ -43,5 +43,8 @@ yarn-error.*
 # Firebase service account private keys
 *firebase-adminsdk*.json
 
+# Ignore GoogleService-Info.plist anywhere in the project
+**/GoogleService-Info.plist
+
 # apk files
 *.apk

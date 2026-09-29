@@ -1,10 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { BookedAppointment } from '../config/bookedAppointments';
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
 
 export type CallConnectionOverlay = 'none' | 'reconnecting' | 'doctorDisconnected';
+
+export type InCallChatMessage = {
+  id: string;
+  from: 'doctor' | 'patient';
+  body: string;
+  timeLabel: string;
+};
 
 export type VideoCallViewModel = {
   language: AppLanguage;
@@ -30,6 +37,13 @@ export type VideoCallViewModel = {
   recordingConsentChecked: boolean;
   recordingActive: boolean;
   recordingElapsedLabel: string;
+  chatOpen: boolean;
+  chatMessages: InCallChatMessage[];
+  chatDraft: string;
+  canSendChat: boolean;
+  onCloseChat: () => void;
+  onChangeChatDraft: (value: string) => void;
+  onSendChat: () => void;
   onToggleMic: () => void;
   onToggleCamera: () => void;
   onSwitchAudioOnly: () => void;
@@ -60,6 +74,28 @@ function localizeDigits(value: string, language: AppLanguage): string {
     return value;
   }
   return value.replace(/\d/g, (digit) => '०१२३४५६७८९'[Number(digit)] ?? digit);
+}
+
+function inCallChatSeed(language: AppLanguage): InCallChatMessage[] {
+  const today = language === 'en';
+  return [
+    {
+      id: 'seed-1',
+      from: 'doctor',
+      body: today
+        ? 'I can see the rash clearly. Is the itching worse at night?'
+        : 'पुरळ स्पष्ट दिसत आहे. खाज रात्री जास्त होते का?',
+      timeLabel: localizeDigits('10:04 AM', language),
+    },
+    {
+      id: 'seed-2',
+      from: 'doctor',
+      body: today
+        ? 'You can reply here while we stay on the call.'
+        : 'कॉल सुरू असताना आपण येथे उत्तर देऊ शकता.',
+      timeLabel: localizeDigits('10:06 AM', language),
+    },
+  ];
 }
 
 function pad2(value: number): string {
@@ -98,7 +134,11 @@ export function useVideoCallController({
   const [cameraOn, setCameraOn] = useState(true);
   const [audioOnly, setAudioOnly] = useState(false);
   const [speaking, setSpeaking] = useState(true);
-  const [chatUnread] = useState(2);
+  const [chatUnread, setChatUnread] = useState(2);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatDraft, setChatDraft] = useState('');
+  const [chatExtras, setChatExtras] = useState<InCallChatMessage[]>([]);
+  const chatReplyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [connectionOverlay, setConnectionOverlay] =
@@ -132,6 +172,14 @@ export function useVideoCallController({
       setRecordingConsentShown(false);
       setRecordingActive(false);
       setRecordingElapsedSec(0);
+      setChatOpen(false);
+      setChatUnread(2);
+      setChatDraft('');
+      setChatExtras([]);
+      if (chatReplyTimer.current) {
+        clearTimeout(chatReplyTimer.current);
+        chatReplyTimer.current = null;
+      }
       return;
     }
 
@@ -258,6 +306,21 @@ export function useVideoCallController({
   const doctorWaitLabel = formatClock(doctorWaitSec, language);
   const doctorWaitProgress = Math.min(1, doctorWaitSec / DOCTOR_WAIT_BUDGET_SEC);
   const recordingElapsedLabel = formatClock(recordingElapsedSec, language);
+  const chatSeed = useMemo(
+    () => inCallChatSeed(language),
+    [language],
+  );
+  const chatMessages = [...chatSeed, ...chatExtras];
+
+  const timeNow = () => {
+    const now = new Date();
+    return localizeDigits(
+      `${((now.getHours() + 11) % 12) + 1}:${pad2(now.getMinutes())} ${
+        now.getHours() >= 12 ? 'PM' : 'AM'
+      }`,
+      language,
+    );
+  };
 
   const enterAudioOnly = () => {
     setAudioOnly(true);
@@ -289,6 +352,41 @@ export function useVideoCallController({
     recordingConsentChecked,
     recordingActive,
     recordingElapsedLabel,
+    chatOpen,
+    chatMessages,
+    chatDraft,
+    canSendChat: chatDraft.trim().length > 0,
+    onCloseChat: () => setChatOpen(false),
+    onChangeChatDraft: setChatDraft,
+    onSendChat: () => {
+      const text = chatDraft.trim();
+      if (!text) {
+        return;
+      }
+      const timeLabel = timeNow();
+      setChatExtras((prev) => [
+        ...prev,
+        { id: `p-${Date.now()}`, from: 'patient', body: text, timeLabel },
+      ]);
+      setChatDraft('');
+      if (chatReplyTimer.current) {
+        clearTimeout(chatReplyTimer.current);
+      }
+      chatReplyTimer.current = setTimeout(() => {
+        setChatExtras((prev) => [
+          ...prev,
+          {
+            id: `d-${Date.now()}`,
+            from: 'doctor',
+            body:
+              language === 'en'
+                ? 'Noted. Tell me a little more, and we can continue on this call.'
+                : 'नोंद घेतली. थोडे अधिक सांगा, आपण या कॉलवर सुरू ठेवू.',
+            timeLabel: timeNow(),
+          },
+        ]);
+      }, 700);
+    },
     onToggleMic: () => setMicOn((prev) => !prev),
     onToggleCamera: () => {
       if (audioOnly) {
@@ -311,7 +409,10 @@ export function useVideoCallController({
       setAudioOnly(false);
       setCameraOn(true);
     },
-    onOpenChat: () => undefined,
+    onOpenChat: () => {
+      setChatUnread(0);
+      setChatOpen(true);
+    },
     onAttach: () => undefined,
     onFlipCamera: () => undefined,
     onEndCall: () => onEndCall(elapsedSec),

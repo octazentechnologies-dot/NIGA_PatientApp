@@ -13,6 +13,7 @@ import { sheetBottomPadding } from '../utilities/sheetInset';
 
 import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
+import { NotificationBell } from '../components/NotificationBell';
 import { images } from '../config/images';
 import { usePatientTabScrollInset } from '../components/PatientTabBar';
 import { useConsultationRecordController } from '../controllers/useConsultationRecordController';
@@ -48,6 +49,7 @@ export function HealthRecordsView({
   onOpenFollowUpPlan,
   onOpenOrderMedicines,
   onOpenNotifications,
+  notificationCount = 0,
   onBack,
   initialFilter = 'all',
   titleKey,
@@ -55,6 +57,7 @@ export function HealthRecordsView({
   onOpenFollowUpPlan?: () => void;
   onOpenOrderMedicines?: () => void;
   onOpenNotifications?: () => void;
+  notificationCount?: number;
   onBack?: () => void;
   initialFilter?: RecordsFilterId;
   titleKey?: TranslationKey;
@@ -147,15 +150,11 @@ export function HealthRecordsView({
                 {vm.language === 'en' ? 'EN' : 'मराठी'}
               </AppText>
             </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={vm.t('homeNotifications')}
+            <NotificationBell
+              count={notificationCount}
+              label={vm.t('homeNotifications')}
               onPress={vm.onOpenNotifications}
-              style={styles.bellButton}
-            >
-              <Ionicons name="notifications-outline" size={22} color={INK} />
-              <View style={styles.bellDot} />
-            </Pressable>
+            />
           </View>
         </View>
 
@@ -717,21 +716,6 @@ const styles = StyleSheet.create({
     borderColor: HAIRLINE,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  bellButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bellDot: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 8,
-    height: 8,
-    borderRadius: radii.full,
-    backgroundColor: colors.error,
   },
   brandIcon: {
     width: 40,
