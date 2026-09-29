@@ -32,7 +32,6 @@ import { OfflineModeGate } from './components/OfflineModeGate';
 import { LocalizationProvider } from './localization/i18n';
 import { AppNavigator } from './navigation/AppNavigator';
 import { configureForegroundNotificationHandler } from './services/notifications';
-import { CrashlyticsTestPanel } from './services/crashReporting/CrashlyticsTestPanel';
 import {
   CrashErrorBoundary,
   initializeCrashReporting,
@@ -81,7 +80,6 @@ export default function App() {
             <OfflineModeGate>
               <CrashErrorBoundary>
                 {fontsLoaded || fontError ? <AppNavigator /> : null}
-                <CrashlyticsTestPanel />
               </CrashErrorBoundary>
             </OfflineModeGate>
           </LocalizationProvider>

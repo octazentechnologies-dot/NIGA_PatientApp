@@ -11,9 +11,6 @@
     "preview": {
       "distribution": "internal",
       "autoIncrement": true,
-      "env": {
-        "EXPO_PUBLIC_CRASHLYTICS_TEST": "1"
-      },
       "android": {
         "buildType": "apk"
       }

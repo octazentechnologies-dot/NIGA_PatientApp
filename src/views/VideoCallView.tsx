@@ -1,4 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import { useEffect, useState } from 'react';
 import {
   Image,
   KeyboardAvoidingView,
@@ -49,6 +51,14 @@ const ERROR_FILL = '#FBEBE9';
 
 export function VideoCallView(vm: VideoCallViewModel) {
   const insets = useSafeAreaInsets();
+  const [facing, setFacing] = useState<'front' | 'back'>('front');
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const showLocalCamera = vm.cameraOn && !vm.audioOnly;
+
+  useEffect(() => {
+    if (!showLocalCamera || cameraPermission?.granted) return;
+    void requestCameraPermission();
+  }, [showLocalCamera, cameraPermission?.granted, requestCameraPermission]);
 
   return (
     <View style={styles.root}>
@@ -70,16 +80,20 @@ export function VideoCallView(vm: VideoCallViewModel) {
       )}
 
       {!vm.audioOnly ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={vm.t('videoCallFlipCamera')}
-          onPress={vm.onFlipCamera}
+        <View
           style={[
             styles.pip,
             { top: Math.max(insets.top, spacing.sm) + 72 },
           ]}
         >
-          {vm.cameraOn ? (
+          {showLocalCamera && cameraPermission?.granted === true ? (
+            <CameraView
+              style={StyleSheet.absoluteFill}
+              facing={facing}
+              mode="video"
+              mirror={facing === 'front'}
+            />
+          ) : vm.cameraOn ? (
             <View style={styles.pipPlaceholder}>
               <AppText variant="titleMd" color={CALL_ICON}>
                 {vm.t('videoCallYou')}
@@ -90,10 +104,17 @@ export function VideoCallView(vm: VideoCallViewModel) {
               <Ionicons name="videocam-off" size={28} color={CALL_ICON} />
             </View>
           )}
-          <View style={styles.pipFlipHint}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={vm.t('videoCallFlipCamera')}
+            onPress={() =>
+              setFacing((current) => (current === 'front' ? 'back' : 'front'))
+            }
+            style={styles.pipFlipHint}
+          >
             <Ionicons name="camera-reverse-outline" size={18} color={CALL_ICON} />
-          </View>
-        </Pressable>
+          </Pressable>
+        </View>
       ) : null}
 
       {vm.toastVisible && vm.connectionOverlay === 'none' ? (
@@ -107,35 +128,6 @@ export function VideoCallView(vm: VideoCallViewModel) {
           <AppText variant="bodyMd" color={WHITE} style={styles.toastText}>
             {vm.toastMessage}
           </AppText>
-        </View>
-      ) : null}
-
-      {vm.recordingActive ? (
-        <View
-          style={[
-            styles.recordingPill,
-            {
-              top: Math.max(insets.top, spacing.sm) + (vm.audioOnly ? 56 : 64),
-            },
-          ]}
-        >
-          <View style={styles.recordingDot} />
-          <AppText variant="labelMd" color={WHITE} weightOverride="600">
-            {vm.t('recordActiveLabel')}
-          </AppText>
-          <AppText variant="labelSm" color={WHITE}>
-            {vm.recordingElapsedLabel}
-          </AppText>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={vm.t('recordStop')}
-            onPress={vm.onStopRecording}
-            style={styles.recordingStop}
-          >
-            <AppText variant="labelMd" color={WHITE} weightOverride="600">
-              {vm.t('recordStop')}
-            </AppText>
-          </Pressable>
         </View>
       ) : null}
 
@@ -409,6 +401,7 @@ function AudioOnlyHeader({
           </AppText>
         </View>
       </Pressable>
+      {vm.recordingActive ? <RecordingChip vm={vm} /> : null}
       <Pressable
         style={styles.iconHit}
         accessibilityRole="button"
@@ -416,6 +409,31 @@ function AudioOnlyHeader({
         delayLongPress={600}
       >
         <Ionicons name="ellipsis-vertical" size={20} color={WHITE} />
+      </Pressable>
+    </View>
+  );
+}
+
+function RecordingChip({ vm }: { vm: VideoCallViewModel }) {
+  return (
+    <View style={styles.recordingPill}>
+      <View style={styles.recordingDot} />
+      <AppText
+        variant="labelMd"
+        color={WHITE}
+        weightOverride="600"
+        languageOverride="en"
+        raw
+      >
+        {vm.recordingElapsedLabel}
+      </AppText>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={vm.t('recordStop')}
+        onPress={vm.onStopRecording}
+        style={styles.recordingStop}
+      >
+        <Ionicons name="stop" size={16} color={WHITE} />
       </Pressable>
     </View>
   );
@@ -466,6 +484,8 @@ function VideoTopBar({
           </View>
         </View>
       </Pressable>
+
+      {vm.recordingActive ? <RecordingChip vm={vm} /> : null}
 
       <Pressable
         accessibilityRole="button"
@@ -937,7 +957,8 @@ const styles = StyleSheet.create({
     borderRadius: radii.full,
     paddingVertical: 6,
     paddingHorizontal: 10,
-    maxWidth: '72%',
+    flexShrink: 1,
+    maxWidth: '58%',
   },
   avatar: {
     width: 32,
@@ -1285,31 +1306,26 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   recordingPill: {
-    position: 'absolute',
-    alignSelf: 'center',
-    zIndex: 35,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: 'rgba(26, 26, 26, 0.92)',
+    gap: 8,
+    backgroundColor: CALL_OVERLAY,
     borderWidth: 1,
     borderColor: CALL_BORDER,
     borderRadius: radii.full,
-    paddingLeft: spacing.md,
-    paddingRight: spacing.xs,
-    paddingVertical: spacing.xs,
-    minHeight: 40,
+    paddingLeft: 12,
+    paddingRight: 6,
+    minHeight: 48,
   },
   recordingDot: {
-    width: 10,
-    height: 10,
+    width: 8,
+    height: 8,
     borderRadius: radii.full,
     backgroundColor: REC_FILL,
   },
   recordingStop: {
-    minHeight: 36,
-    minWidth: 56,
-    paddingHorizontal: spacing.md,
+    width: 36,
+    height: 36,
     borderRadius: radii.full,
     backgroundColor: REC_FILL,
     alignItems: 'center',
