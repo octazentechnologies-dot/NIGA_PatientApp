@@ -109,7 +109,8 @@
             ]
           }
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "extra": {
       "apiBaseUrl": "https://api1.homeocentrum.com/api",

@@ -1,0 +1,26 @@
+---
+description: Screen APIs use Redux Toolkit and RTK Query, one endpoint file per screen.
+alwaysApply: true
+---
+
+# API integration
+
+Every screen API uses the existing Redux Toolkit store and RTK Query. Do not add a new `fetch` client or a screen-local `useEffect` request for a documented endpoint.
+
+## Which API
+
+- `https://devapi2.homeocentrum.com/` → `newBaseApi` (`src/store/api/new/newBaseApi.ts`)
+- `https://devapi1.homeocentrum.com/` → `legacyBaseApi` (`src/store/api/legacy/legacyBaseApi.ts`)
+
+`prepareAuthHeaders` already sends `Authorization: Bearer <token>` when a token is stored. Endpoints that do not require auth still use that helper. Do not attach a token by hand.
+
+## One screen, one file
+
+Add endpoints with `injectEndpoints` in a file named for the screen:
+
+- `src/store/api/new/<screen>Api.ts`
+- `src/store/api/legacy/<screen>Api.ts`
+
+Do not declare endpoints inside the base API file. Import the screen file from `src/store/index.ts` so the cache is registered.
+
+The screen controller reads the generated hook (`useGet…Query` / `use…Mutation`). The view only renders the view model.

@@ -18,8 +18,9 @@ import { spacing } from '../theme/spacing';
 import { moderateScale } from '../utilities/scale';
 
 export function FirstLaunchView({
-  language,
   t,
+  languages,
+  selectedLanguageId,
   onSelectLanguage,
   onContinue,
 }: FirstLaunchViewModel) {
@@ -74,20 +75,16 @@ export function FirstLaunchView({
             {t('chooseLanguageTitle')}
           </AppText>
           <View style={styles.options}>
-            <LanguageChoiceRow
-              languageCode="mr"
-              title={t('languageNameMarathi')}
-              subtitle={t('continueInMarathi')}
-              selected={language === 'mr'}
-              onPress={() => onSelectLanguage('mr')}
-            />
-            <LanguageChoiceRow
-              languageCode="en"
-              title={t('languageNameEnglish')}
-              subtitle={t('continueInEnglish')}
-              selected={language === 'en'}
-              onPress={() => onSelectLanguage('en')}
-            />
+            {languages.map((item) => (
+              <LanguageChoiceRow
+                key={item.id}
+                languageCode={item.code ?? 'en'}
+                title={item.name}
+                subtitle={item.description}
+                selected={item.id === selectedLanguageId}
+                onPress={() => onSelectLanguage(item.id)}
+              />
+            ))}
           </View>
         </View>
 

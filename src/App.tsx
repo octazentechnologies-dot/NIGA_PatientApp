@@ -3,6 +3,7 @@ import { NavigationBar } from 'expo-navigation-bar';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
 import { useEffect } from 'react';
+import { Provider } from 'react-redux';
 import {
   Platform,
   StatusBar as RNStatusBar,
@@ -36,6 +37,7 @@ import {
   CrashErrorBoundary,
   initializeCrashReporting,
 } from './services/crashReporting/crashReporting';
+import { store } from './store';
 import { colors } from './theme/colors';
 
 configureForegroundNotificationHandler();
@@ -66,7 +68,8 @@ export default function App() {
   }, []);
 
   return (
-    <SafeAreaProvider style={styles.root} initialMetrics={initialWindowMetrics}>
+    <Provider store={store}>
+      <SafeAreaProvider style={styles.root} initialMetrics={initialWindowMetrics}>
       <View style={styles.boot}>
         <RNStatusBar
           barStyle="dark-content"
@@ -85,7 +88,8 @@ export default function App() {
           </LocalizationProvider>
         </KeyboardStableInsets>
       </View>
-    </SafeAreaProvider>
+      </SafeAreaProvider>
+    </Provider>
   );
 }
 

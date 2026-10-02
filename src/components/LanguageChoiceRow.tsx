@@ -43,13 +43,15 @@ export function LanguageChoiceRow({
         >
           {title}
         </AppText>
-        <AppText
-          variant="labelSm"
-          color={colors.onSurfaceVariant}
-          languageOverride={languageCode}
-        >
-          {subtitle}
-        </AppText>
+        {subtitle.trim().length > 0 ? (
+          <AppText
+            variant="labelSm"
+            color={colors.onSurfaceVariant}
+            languageOverride={languageCode}
+          >
+            {subtitle}
+          </AppText>
+        ) : null}
       </View>
     </Pressable>
   );
