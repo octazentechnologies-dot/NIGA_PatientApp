@@ -48,3 +48,5 @@ yarn-error.*
 
 # apk files
 *.apk
+
+Notes.txt

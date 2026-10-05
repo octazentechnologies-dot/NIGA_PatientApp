@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,7 +16,6 @@ import { AppText } from '../components/AppText';
 import { AuthHeader } from '../components/AuthHeader';
 import { DatePickerSheet } from '../components/DatePickerSheet';
 import { FormField } from '../components/FormField';
-import { INDIAN_STATES } from '../config/indianStates';
 import type { CompleteProfileViewModel } from '../controllers/useCompleteProfileController';
 import type { AppLanguage } from '../localization/types';
 import { colors } from '../theme/colors';
@@ -31,15 +31,36 @@ export function CompleteProfileView({
   screenTitle,
   primaryActionLabel,
   showSkip,
+  mobileNumber,
+  countryCode,
   fullName,
   dateOfBirth,
   gender,
   preferredLanguage,
-  cityTaluka,
   address,
-  stateId,
+  selectedCountryId,
+  countryLabel,
+  selectedStateId,
   stateLabel,
-  alternateMobile,
+  selectedDistrictId,
+  districtLabel,
+  selectedCityId,
+  cityLabel,
+  countries,
+  states,
+  districts,
+  cities,
+  isCountriesLoading,
+  isStatesLoading,
+  isDistrictsLoading,
+  isCitiesLoading,
+  canSelectState,
+  canSelectDistrict,
+  canSelectCity,
+  countryPickerOpen,
+  statePickerOpen,
+  districtPickerOpen,
+  cityPickerOpen,
   email,
   referredBy,
   pincode,
@@ -47,7 +68,6 @@ export function CompleteProfileView({
   needLargeText,
   needCallAssistance,
   languagePickerOpen,
-  statePickerOpen,
   datePickerOpen,
   datePickerValue,
   preferredLanguageLabel,
@@ -59,12 +79,19 @@ export function CompleteProfileView({
   onOpenLanguagePicker,
   onCloseLanguagePicker,
   onSelectPreferredLanguage,
-  onChangeCityTaluka,
-  onChangeAddress,
+  onOpenCountryPicker,
+  onCloseCountryPicker,
+  onSelectCountry,
   onOpenStatePicker,
   onCloseStatePicker,
   onSelectState,
-  onChangeAlternateMobile,
+  onOpenDistrictPicker,
+  onCloseDistrictPicker,
+  onSelectDistrict,
+  onOpenCityPicker,
+  onCloseCityPicker,
+  onSelectCity,
+  onChangeAddress,
   onChangeEmail,
   onChangeReferredBy,
   onChangePincode,
@@ -175,13 +202,86 @@ export function CompleteProfileView({
             onPress={onOpenLanguagePicker}
           />
 
+          {/* Country */}
           <FormField
-            label={t('cityTaluka')}
-            value={cityTaluka}
-            placeholder={t('cityTalukaPlaceholder')}
+            label={t('country')}
+            value={countryLabel}
+            placeholder={t('countryPlaceholder')}
             language={language}
-            onChangeText={onChangeCityTaluka}
+            rightIcon={
+              isCountriesLoading ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <Ionicons
+                  name="chevron-down"
+                  size={20}
+                  color={colors.onSurfaceVariant}
+                />
+              )
+            }
+            onPress={isCountriesLoading ? undefined : onOpenCountryPicker}
           />
+
+          {/* State */}
+          <FormField
+            label={t('state')}
+            value={stateLabel}
+            placeholder={t('statePlaceholder')}
+            language={language}
+            rightIcon={
+              isStatesLoading ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <Ionicons
+                  name="chevron-down"
+                  size={20}
+                  color={canSelectState ? colors.onSurfaceVariant : colors.outlineVariant}
+                />
+              )
+            }
+            onPress={canSelectState && !isStatesLoading ? onOpenStatePicker : undefined}
+          />
+
+          {/* District */}
+          <FormField
+            label={t('district')}
+            value={districtLabel}
+            placeholder={t('districtPlaceholder')}
+            language={language}
+            rightIcon={
+              isDistrictsLoading ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <Ionicons
+                  name="chevron-down"
+                  size={20}
+                  color={canSelectDistrict ? colors.onSurfaceVariant : colors.outlineVariant}
+                />
+              )
+            }
+            onPress={canSelectDistrict && !isDistrictsLoading ? onOpenDistrictPicker : undefined}
+          />
+
+          {/* City */}
+          <FormField
+            label={t('city')}
+            value={cityLabel}
+            placeholder={t('cityPlaceholder')}
+            language={language}
+            rightIcon={
+              isCitiesLoading ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <Ionicons
+                  name="chevron-down"
+                  size={20}
+                  color={canSelectCity ? colors.onSurfaceVariant : colors.outlineVariant}
+                />
+              )
+            }
+            onPress={canSelectCity && !isCitiesLoading ? onOpenCityPicker : undefined}
+          />
+
           <FormField
             label={t('address')}
             value={address}
@@ -190,46 +290,51 @@ export function CompleteProfileView({
             multiline
             onChangeText={onChangeAddress}
           />
-          <FormField
-            label={t('state')}
-            value={stateLabel}
-            placeholder={t('statePlaceholder')}
-            language={language}
-            rightIcon={
-              <Ionicons
-                name="chevron-down"
-                size={20}
-                color={colors.onSurfaceVariant}
-              />
-            }
-            onPress={onOpenStatePicker}
-          />
 
           <View style={styles.fieldGroup}>
-            <AppText variant="labelSm" color={colors.onSurface}>
-              {t('alternateMobile')}
-            </AppText>
-            <View style={styles.phoneWrap}>
+            <View style={styles.fieldLabelRow}>
+              <AppText variant="labelSm" color={colors.onSurface}>
+                {t('mobileNumberPlaceholder')}
+              </AppText>
+              <View style={styles.verifiedBadge}>
+                <Ionicons
+                  name="checkmark-circle"
+                  size={14}
+                  color={colors.primary}
+                />
+                <AppText
+                  variant="labelSm"
+                  color={colors.primary}
+                  style={styles.verifiedText}
+                >
+                  Verified
+                </AppText>
+              </View>
+            </View>
+            <View style={[styles.phoneWrap, styles.phoneWrapDisabled]}>
               <AppText variant="bodyLg" color={colors.onSurfaceVariant}>
-                {t('countryCode')}
+                {countryCode}
               </AppText>
               <View style={styles.phoneDivider} />
               <TextInput
-                value={alternateMobile}
-                onChangeText={onChangeAlternateMobile}
+                value={mobileNumber}
+                editable={false}
                 placeholder={t('mobileNumberPlaceholder')}
                 placeholderTextColor={colors.outline}
-                keyboardType="number-pad"
-                maxLength={10}
-                autoComplete="tel"
-                accessibilityLabel={t('alternateMobile')}
+                accessibilityLabel={t('mobileNumberPlaceholder')}
                 style={[
                   styles.phoneInput,
+                  styles.phoneInputDisabled,
                   {
                     fontFamily: fontFamilyFor('400', language, 'sans'),
                     fontSize: scaleFont(15),
                   },
                 ]}
+              />
+              <Ionicons
+                name="lock-closed-outline"
+                size={16}
+                color={colors.outline}
               />
             </View>
           </View>
@@ -378,56 +483,42 @@ export function CompleteProfileView({
           </Pressable>
         </Pressable>
       </SafeAreaModal>
-      <SafeAreaModal
-        transparent
-        animationType="fade"
+      <LocationPickerModal
+        visible={countryPickerOpen}
+        title={t('country')}
+        loading={isCountriesLoading}
+        options={countries}
+        selectedId={selectedCountryId}
+        onClose={onCloseCountryPicker}
+        onSelect={onSelectCountry}
+      />
+      <LocationPickerModal
         visible={statePickerOpen}
-        onRequestClose={onCloseStatePicker}
-      >
-        <Pressable style={styles.modalBackdrop} onPress={onCloseStatePicker}>
-          <Pressable
-            style={[
-              styles.stateModalCard,
-              { paddingBottom: sheetBottomPadding(insets, spacing.lg) },
-            ]}
-            onPress={() => undefined}
-          >
-            <AppText variant="titleMd" color={colors.primary} style={styles.modalTitle}>
-              {t('state')}
-            </AppText>
-            <ScrollView
-              keyboardShouldPersistTaps="handled"
-              style={styles.stateList}
-              contentContainerStyle={styles.stateListContent}
-            >
-              {INDIAN_STATES.map((item) => {
-                const label = language === 'mr' ? item.mr : item.en;
-                const selected = item.id === stateId;
-                return (
-                  <Pressable
-                    key={item.id}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected }}
-                    onPress={() => onSelectState(item.id)}
-                    style={[
-                      styles.languageOption,
-                      selected && styles.languageOptionSelected,
-                    ]}
-                  >
-                    <AppText
-                      variant="bodyMd"
-                      languageOverride={language === 'mr' ? 'mr' : 'en'}
-                      color={selected ? colors.primary : colors.onSurface}
-                    >
-                      {label}
-                    </AppText>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </Pressable>
-        </Pressable>
-      </SafeAreaModal>
+        title={t('state')}
+        loading={isStatesLoading}
+        options={states}
+        selectedId={selectedStateId}
+        onClose={onCloseStatePicker}
+        onSelect={onSelectState}
+      />
+      <LocationPickerModal
+        visible={districtPickerOpen}
+        title={t('district')}
+        loading={isDistrictsLoading}
+        options={districts}
+        selectedId={selectedDistrictId}
+        onClose={onCloseDistrictPicker}
+        onSelect={onSelectDistrict}
+      />
+      <LocationPickerModal
+        visible={cityPickerOpen}
+        title={t('city')}
+        loading={isCitiesLoading}
+        options={cities}
+        selectedId={selectedCityId}
+        onClose={onCloseCityPicker}
+        onSelect={onSelectCity}
+      />
     </View>
   );
 }
@@ -512,6 +603,93 @@ function LanguageOption({
         {label}
       </AppText>
     </Pressable>
+  );
+}
+
+function LocationPickerModal({
+  visible,
+  title,
+  loading,
+  options,
+  selectedId,
+  onClose,
+  onSelect,
+}: {
+  visible: boolean;
+  title: string;
+  loading?: boolean;
+  options: { id: number; name: string }[];
+  selectedId: number | null;
+  onClose: () => void;
+  onSelect: (id: number) => void;
+}) {
+  const insets = useSafeAreaInsets();
+
+  return (
+    <SafeAreaModal
+      transparent
+      animationType="fade"
+      visible={visible}
+      onRequestClose={onClose}
+    >
+      <Pressable style={styles.modalBackdrop} onPress={onClose}>
+        <Pressable
+          style={[
+            styles.stateModalCard,
+            { paddingBottom: sheetBottomPadding(insets, spacing.lg) },
+          ]}
+          onPress={() => undefined}
+        >
+          <AppText variant="titleMd" color={colors.primary} style={styles.modalTitle}>
+            {title}
+          </AppText>
+          {loading ? (
+            <ActivityIndicator
+              size="small"
+              color={colors.primary}
+              style={{ marginVertical: spacing.xl }}
+            />
+          ) : options.length === 0 ? (
+            <AppText
+              variant="bodyMd"
+              color={colors.onSurfaceVariant}
+              style={{ textAlign: 'center', marginVertical: spacing.lg }}
+            >
+              No options available
+            </AppText>
+          ) : (
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              style={styles.stateList}
+              contentContainerStyle={styles.stateListContent}
+            >
+              {options.map((item) => {
+                const selected = item.id === selectedId;
+                return (
+                  <Pressable
+                    key={item.id}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    onPress={() => onSelect(item.id)}
+                    style={[
+                      styles.languageOption,
+                      selected && styles.languageOptionSelected,
+                    ]}
+                  >
+                    <AppText
+                      variant="bodyMd"
+                      color={selected ? colors.primary : colors.onSurface}
+                    >
+                      {item.name}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          )}
+        </Pressable>
+      </Pressable>
+    </SafeAreaModal>
   );
 }
 
@@ -680,6 +858,26 @@ const styles = StyleSheet.create({
     minHeight: layout.buttonHeight,
     color: colors.onSurface,
     paddingVertical: spacing.sm,
+  },
+  fieldLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  verifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  verifiedText: {
+    fontWeight: '600',
+  },
+  phoneWrapDisabled: {
+    backgroundColor: '#F5F6F7',
+    borderColor: colors.outlineVariant,
+  },
+  phoneInputDisabled: {
+    color: colors.onSurface,
   },
   stateModalCard: {
     backgroundColor: colors.card,

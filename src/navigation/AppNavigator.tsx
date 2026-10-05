@@ -152,7 +152,12 @@ function SignInRoute({
   onOtpRequested,
 }: {
   onBack: () => void;
-  onOtpRequested: (mobileNumber: string) => void;
+  onOtpRequested: (
+    mobileNumber: string,
+    devCode?: string,
+    isUserRegistered?: boolean,
+    countryCode?: string,
+  ) => void;
 }) {
   const signIn = useSignInController({ onBack, onOtpRequested });
   return <SignInView {...signIn} />;
@@ -160,17 +165,23 @@ function SignInRoute({
 
 function OtpRoute({
   mobileNumber,
+  devOtp,
+  isUserRegistered,
   active,
   onBack,
   onVerified,
 }: {
   mobileNumber: string;
+  devOtp?: string;
+  isUserRegistered?: boolean;
   active: boolean;
   onBack: () => void;
-  onVerified: () => void;
+  onVerified: (isRegistered?: boolean) => void;
 }) {
   const otp = useOtpVerificationController({
     mobileNumber,
+    initialDevOtp: devOtp,
+    initialIsUserRegistered: isUserRegistered,
     active,
     onBack,
     onVerified,
@@ -179,15 +190,25 @@ function OtpRoute({
 }
 
 function CompleteProfileRoute({
+  mobileNumber,
+  countryCode,
   onBack,
   onContinue,
   onSkip,
 }: {
+  mobileNumber?: string;
+  countryCode?: string;
   onBack: () => void;
   onContinue: () => void;
   onSkip: () => void;
 }) {
-  const profile = useCompleteProfileController({ onBack, onContinue, onSkip });
+  const profile = useCompleteProfileController({
+    initialMobileNumber: mobileNumber,
+    initialCountryCode: countryCode,
+    onBack,
+    onContinue,
+    onSkip,
+  });
   return <CompleteProfileView {...profile} />;
 }
 
@@ -816,14 +837,30 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
 export function AppNavigator() {
   const [step, setStep] = useState<AppStep>('splash');
   const [mobileNumber, setMobileNumber] = useState('');
+  const [countryCode, setCountryCode] = useState('+91');
+  const [devOtp, setDevOtp] = useState<string | undefined>();
+  const [isUserRegistered, setIsUserRegistered] = useState(false);
   const finishSplash = useCallback(() => setStep('firstLaunch'), []);
   const finishFirstLaunch = useCallback(() => setStep('onboarding'), []);
   const finishOnboarding = useCallback(() => setStep('signIn'), []);
   const backFromSignIn = useCallback(() => setStep('onboarding'), []);
-  const openOtp = useCallback((number: string) => {
-    setMobileNumber(number);
-    setStep('otp');
-  }, []);
+  const openOtp = useCallback(
+    (
+      number: string,
+      code?: string,
+      registered?: boolean,
+      selectedCountryCode?: string,
+    ) => {
+      setMobileNumber(number);
+      if (selectedCountryCode) {
+        setCountryCode(selectedCountryCode);
+      }
+      setDevOtp(code);
+      setIsUserRegistered(Boolean(registered));
+      setStep('otp');
+    },
+    [],
+  );
   const backFromOtp = useCallback(() => setStep('signIn'), []);
   const openCompleteProfile = useCallback(() => setStep('completeProfile'), []);
   const backFromProfile = useCallback(() => setStep('otp'), []);
@@ -834,6 +871,17 @@ export function AppNavigator() {
   const openFamilyMembers = useCallback(() => setStep('familyMembers'), []);
   const backFromFamilyMembers = useCallback(() => setStep('phoneSetup'), []);
   const openHome = useCallback(() => setStep('home'), []);
+  const handleOtpVerified = useCallback(
+    (registeredOverride?: boolean) => {
+      const registered = registeredOverride ?? isUserRegistered;
+      if (registered) {
+        openHome();
+      } else {
+        openCompleteProfile();
+      }
+    },
+    [isUserRegistered, openHome, openCompleteProfile],
+  );
   const slideIndex = useMemo(
     () => Math.max(0, SLIDE_STEPS.indexOf(step as (typeof SLIDE_STEPS)[number])),
     [step],
@@ -876,11 +924,16 @@ export function AppNavigator() {
         <SignInRoute onBack={backFromSignIn} onOtpRequested={openOtp} />
         <OtpRoute
           mobileNumber={mobileNumber}
+          devOtp={devOtp}
+          isUserRegistered={isUserRegistered}
           active={step === 'otp'}
           onBack={backFromOtp}
-          onVerified={openCompleteProfile}
+          onVerified={handleOtpVerified}
         />
         <CompleteProfileRoute
+          key={mobileNumber ? `complete-${mobileNumber}` : 'complete-profile'}
+          mobileNumber={mobileNumber}
+          countryCode={countryCode}
           onBack={backFromProfile}
           onContinue={openConsent}
           onSkip={openConsent}

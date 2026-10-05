@@ -25,9 +25,12 @@ export function OtpVerificationView({
   formattedMobile,
   code,
   canVerify,
+  isVerifying,
+  errorMessage,
   autoFocus,
   canResend,
   resendCountdown,
+  devOtp,
   onChangeCode,
   onVerify,
   onResend,
@@ -95,10 +98,40 @@ export function OtpVerificationView({
           onChange={onChangeCode}
         />
 
+        {devOtp ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`OTP ${devOtp}. Tap to auto-fill`}
+            onPress={() => onChangeCode(devOtp)}
+            style={styles.devOtpContainer}
+          >
+            <AppText variant="bodyMd" color={colors.primary}>
+              OTP:{' '}
+              <AppText
+                variant="titleMd"
+                color={colors.primary}
+                weightOverride="700"
+              >
+                {devOtp}
+              </AppText>
+            </AppText>
+            <AppText variant="labelSm" color={colors.onSurfaceVariant}>
+              (Tap to fill)
+            </AppText>
+          </Pressable>
+        ) : null}
+
+        {errorMessage ? (
+          <AppText variant="labelSm" color={colors.error} style={styles.center}>
+            {errorMessage}
+          </AppText>
+        ) : null}
+
         <AppButton
           label={t('verify')}
           textVariant="titleMd"
           disabled={!canVerify}
+          loading={isVerifying}
           onPress={onVerify}
           style={styles.actionButton}
         />
@@ -220,5 +253,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.xs,
     marginTop: spacing.sm,
+  },
+  devOtpContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.chipBackground,
+    borderRadius: radii.sm,
+    alignSelf: 'center',
   },
 });

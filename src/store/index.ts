@@ -3,6 +3,9 @@ import { configureStore } from '@reduxjs/toolkit';
 import { legacyBaseApi } from './api/legacy/legacyBaseApi';
 import { newBaseApi } from './api/new/newBaseApi';
 import './api/new/firstLaunchApi';
+import './api/new/signInApi';
+import './api/new/otpVerificationApi';
+import './api/new/completeProfileApi';
 import { authReducer } from './slices/authSlice';
 
 export const store = configureStore({

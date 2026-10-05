@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,7 +14,9 @@ import { sheetBottomPadding } from '../utilities/sheetInset';
 import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
 import { AuthHeader } from '../components/AuthHeader';
+import { SafeAreaModal } from '../components/SafeAreaModal';
 import type { SignInViewModel } from '../controllers/useSignInController';
+import type { Country } from '../store/api/new/completeProfileApi';
 import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
 import { layout, spacing } from '../theme/spacing';
@@ -27,8 +30,16 @@ export function SignInView({
   errorMessage,
   agreedToWhatsApp,
   canSendOtp,
+  selectedCountryCode,
+  selectedCountryName,
+  isCountryPickerOpen,
+  countries,
+  isCountriesLoading,
   onChangeMobileNumber,
   onToggleWhatsAppConsent,
+  onOpenCountryPicker,
+  onCloseCountryPicker,
+  onSelectCountry,
   onSendOtp,
   onCallHelpline,
   onSelectLanguage,
@@ -86,9 +97,25 @@ export function SignInView({
               hasError && highlightInputError && styles.inputWrapError,
             ]}
           >
-            <AppText variant="bodyLg" color={colors.onSurfaceVariant}>
-              {t('countryCode')}
-            </AppText>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={
+                selectedCountryName
+                  ? `${selectedCountryName} ${selectedCountryCode}`
+                  : selectedCountryCode
+              }
+              onPress={onOpenCountryPicker}
+              style={styles.countryCodePickerButton}
+            >
+              <AppText variant="bodyLg" color={colors.onSurface}>
+                {selectedCountryCode}
+              </AppText>
+              <Ionicons
+                name="chevron-down"
+                size={14}
+                color={colors.onSurfaceVariant}
+              />
+            </Pressable>
             <View style={styles.inputDivider} />
             <TextInput
               value={mobileNumber}
@@ -96,7 +123,7 @@ export function SignInView({
               placeholder={t('mobileNumberPlaceholder')}
               placeholderTextColor={colors.outlineVariant}
               keyboardType="number-pad"
-              maxLength={10}
+              maxLength={selectedCountryCode === '+91' ? 10 : 15}
               autoComplete="tel"
               textContentType="telephoneNumber"
               accessibilityLabel={t('mobileNumberPlaceholder')}
@@ -189,7 +216,167 @@ export function SignInView({
           </AppText>
         </View>
       </ScrollView>
+
+      <CountryPickerModal
+        visible={isCountryPickerOpen}
+        title={t('country')}
+        loading={isCountriesLoading}
+        options={countries}
+        selectedCode={selectedCountryCode}
+        onClose={onCloseCountryPicker}
+        onSelect={onSelectCountry}
+      />
     </View>
+  );
+}
+
+function CountryPickerModal({
+  visible,
+  title,
+  loading,
+  options,
+  selectedCode,
+  onClose,
+  onSelect,
+}: {
+  visible: boolean;
+  title: string;
+  loading?: boolean;
+  options: Country[];
+  selectedCode: string;
+  onClose: () => void;
+  onSelect: (country: Country) => void;
+}) {
+  const insets = useSafeAreaInsets();
+  const [search, setSearch] = useState('');
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) {
+      return options;
+    }
+    return options.filter((c) => {
+      if (!c) {
+        return false;
+      }
+      const name = c.countryName?.toLowerCase() ?? '';
+      const code = c.countryCode?.toLowerCase() ?? '';
+      const iso2 = c.iso2Code?.toLowerCase() ?? '';
+      const iso3 = c.iso3Code?.toLowerCase() ?? '';
+      return (
+        name.includes(q) ||
+        code.includes(q) ||
+        iso2.includes(q) ||
+        iso3.includes(q)
+      );
+    });
+  }, [options, search]);
+
+  return (
+    <SafeAreaModal
+      transparent
+      animationType="fade"
+      visible={visible}
+      onRequestClose={onClose}
+    >
+      <Pressable style={styles.modalBackdrop} onPress={onClose}>
+        <Pressable
+          style={[
+            styles.modalCard,
+            { paddingBottom: sheetBottomPadding(insets, spacing.lg) },
+          ]}
+          onPress={() => undefined}
+        >
+          <View style={styles.modalHeader}>
+            <AppText
+              variant="titleMd"
+              color={colors.primary}
+              style={styles.modalTitle}
+            >
+              {title}
+            </AppText>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Close"
+              onPress={onClose}
+              hitSlop={8}
+            >
+              <Ionicons name="close" size={22} color={colors.onSurfaceVariant} />
+            </Pressable>
+          </View>
+
+          <View style={styles.searchBar}>
+            <Ionicons name="search" size={18} color={colors.outline} />
+            <TextInput
+              value={search}
+              onChangeText={setSearch}
+              placeholder="Search country..."
+              placeholderTextColor={colors.outline}
+              style={styles.searchInput}
+            />
+            {search.length > 0 ? (
+              <Pressable onPress={() => setSearch('')} hitSlop={8}>
+                <Ionicons name="close-circle" size={16} color={colors.outline} />
+              </Pressable>
+            ) : null}
+          </View>
+
+          {loading ? (
+            <ActivityIndicator
+              size="small"
+              color={colors.primary}
+              style={{ marginVertical: spacing.xl }}
+            />
+          ) : filtered.length === 0 ? (
+            <AppText
+              variant="bodyMd"
+              color={colors.onSurfaceVariant}
+              style={styles.emptyText}
+            >
+              No countries found
+            </AppText>
+          ) : (
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              style={styles.countryList}
+              contentContainerStyle={styles.countryListContent}
+            >
+              {filtered.map((item) => {
+                const selected = item.countryCode === selectedCode;
+                return (
+                  <Pressable
+                    key={item.countryId}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    onPress={() => onSelect(item)}
+                    style={[
+                      styles.countryOption,
+                      selected && styles.countryOptionSelected,
+                    ]}
+                  >
+                    <AppText
+                      variant="bodyMd"
+                      color={selected ? colors.primary : colors.onSurface}
+                      style={styles.countryOptionName}
+                    >
+                      {item.countryName ?? ''}
+                    </AppText>
+                    <AppText
+                      variant="labelMd"
+                      color={
+                        selected ? colors.primary : colors.onSurfaceVariant
+                      }
+                    >
+                      {item.countryCode ?? ''}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          )}
+        </Pressable>
+      </Pressable>
+    </SafeAreaModal>
   );
 }
 
@@ -300,5 +487,75 @@ const styles = StyleSheet.create({
     marginTop: 'auto',
     alignSelf: 'stretch',
     paddingTop: spacing.sm,
+  },
+  countryCodePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: 2,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    justifyContent: 'flex-end',
+  },
+  modalCard: {
+    backgroundColor: colors.card,
+    borderTopLeftRadius: radii.lg,
+    borderTopRightRadius: radii.lg,
+    paddingHorizontal: spacing.gutter,
+    paddingTop: spacing.lg,
+    maxHeight: '80%',
+    gap: spacing.md,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  modalTitle: {
+    fontWeight: '700',
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.page,
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.md,
+    height: 44,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: scaleFont(14),
+    color: colors.onSurface,
+  },
+  countryList: {
+    maxHeight: 320,
+  },
+  countryListContent: {
+    gap: spacing.xs,
+    paddingBottom: spacing.md,
+  },
+  countryOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.sm,
+    backgroundColor: colors.card,
+  },
+  countryOptionSelected: {
+    backgroundColor: '#EBF4F8',
+  },
+  countryOptionName: {
+    flex: 1,
+    marginRight: spacing.md,
+  },
+  emptyText: {
+    textAlign: 'center',
+    marginVertical: spacing.lg,
   },
 });
