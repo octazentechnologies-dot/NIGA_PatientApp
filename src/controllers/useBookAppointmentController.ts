@@ -12,6 +12,7 @@ import {
   consultFeeRupees,
   firstSelectableDay,
   formatRupees,
+  resolveBookingMembers,
   todayStart,
   upcomingMonths,
   type BookingDay,
@@ -24,6 +25,7 @@ import { formatBookedOn, slotStartIso } from '../config/bookedAppointments';
 import { getDoctorProfile, type DoctorProfileSeed } from '../config/doctorProfiles';
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import { useAppSelector } from '../store/hooks';
 
 export type PaymentStatus = 'success' | 'failed' | 'pending';
 
@@ -182,9 +184,19 @@ export function useBookAppointmentController({
     return () => clearTimeout(timer);
   }, [paymentStatus]);
 
+  const authUser = useAppSelector((state) => state.auth.user);
+  const patientFullName =
+    authUser?.patientName ||
+    [authUser?.firstName, authUser?.lastName].filter(Boolean).join(' ');
+
+  const members = useMemo(
+    () => resolveBookingMembers(patientFullName),
+    [patientFullName],
+  );
+
   const selectedDay = days.find((day) => day.id === dayId) ?? firstSelectableDay(days) ?? days[0];
   const member =
-    BOOKING_MEMBERS.find((item) => item.id === memberId) ?? BOOKING_MEMBERS[1];
+    members.find((item) => item.id === memberId) ?? members[0];
   const isFull = selectedDay?.status === 'full';
   const feeLabel = t(mode === 'clinic' ? profile.clinicFeeKey : profile.feeKey);
   const modeLabel = t(
@@ -251,7 +263,7 @@ export function useBookAppointmentController({
     profile,
     shortCredsKey: shortCredsFor(profile.id),
     member,
-    members: BOOKING_MEMBERS,
+    members,
     memberPickerOpen,
     monthPickerOpen,
     mode,

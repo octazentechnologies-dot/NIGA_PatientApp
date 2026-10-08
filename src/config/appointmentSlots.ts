@@ -1,4 +1,5 @@
 import type { TranslationKey } from '../localization/types';
+import type { ApiFamilyMember } from '../store/api/new/familyApi';
 
 export type ConsultMode = 'video' | 'audio' | 'clinic' | 'chat';
 
@@ -8,6 +9,9 @@ export type BookingMember = {
   initials: string;
   icon: 'person' | 'child' | 'woman';
   metaKey?: TranslationKey;
+  relationshipName?: string;
+  age?: number;
+  gender?: number | string;
   self?: boolean;
 };
 
@@ -39,10 +43,79 @@ export type BookingMonthOption = {
 };
 
 export const BOOKING_MEMBERS: BookingMember[] = [
-  { id: 'self', name: 'Pranav Kulkarni', initials: 'PK', icon: 'person', self: true },
-  { id: 'aarav', name: 'Aarav Kulkarni', initials: 'AK', icon: 'child', metaKey: 'bookAaravMeta' },
-  { id: 'meera', name: 'Meera Kulkarni', initials: 'MK', icon: 'woman', metaKey: 'bookMeeraMeta' },
+  { id: 'self', name: 'Self', initials: 'ME', icon: 'person', self: true },
 ];
+
+export function resolveBookingMembers(
+  userName?: string | null,
+  userInitials?: string | null,
+  familyMembers?: ApiFamilyMember[] | null,
+): BookingMember[] {
+  const cleanName = userName?.trim() || 'Self';
+  const initials =
+    userInitials?.trim() ||
+    cleanName
+      .split(' ')
+      .filter(Boolean)
+      .map((w) => w[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase() ||
+    'ME';
+
+  const selfMember: BookingMember = {
+    id: 'self',
+    name: cleanName,
+    initials,
+    icon: 'person',
+    self: true,
+  };
+
+  if (!familyMembers || !Array.isArray(familyMembers) || familyMembers.length === 0) {
+    return [selfMember];
+  }
+
+  const mappedMembers: BookingMember[] = familyMembers.map((m, index) => {
+    const id = String(m.familyMemberId ?? m.id ?? m.memberPatientId ?? `fam_${index}`);
+    const mName = (m.patientName || m.fullName || m.name || '').trim();
+    const mInitials = mName
+      ? mName
+          .split(' ')
+          .filter(Boolean)
+          .map((w) => w[0])
+          .join('')
+          .slice(0, 2)
+          .toUpperCase()
+      : 'FM';
+    const rel = (m.relation || m.relationName || m.relationship || '').trim();
+    const age = typeof m.age === 'number' ? m.age : undefined;
+    const isChild =
+      (age !== undefined && age < 18) ||
+      rel.toLowerCase().includes('child') ||
+      rel.toLowerCase().includes('son') ||
+      rel.toLowerCase().includes('daughter');
+    const isWoman =
+      m.gender === 1 ||
+      m.gender === 'female' ||
+      m.gender === 'Female' ||
+      rel.toLowerCase().includes('mother') ||
+      rel.toLowerCase().includes('wife') ||
+      rel.toLowerCase().includes('sister');
+    const icon = isChild ? 'child' : isWoman ? 'woman' : 'person';
+
+    return {
+      id,
+      name: mName || `Member ${index + 1}`,
+      initials: mInitials,
+      icon,
+      relationshipName: rel,
+      age,
+      self: false,
+    };
+  });
+
+  return [selfMember, ...mappedMembers];
+}
 
 export const WEEKDAY_KEYS: TranslationKey[] = [
   'bookSun',

@@ -6,10 +6,10 @@ export function logNotifications(message: string, detail?: string): void {
     return;
   }
   if (detail) {
-    console.log(`[Notifications] ${message}`, detail);
+    // console.log(`[Notifications] ${message}`, detail);
     return;
   }
-  console.log(`[Notifications] ${message}`);
+  // console.log(`[Notifications] ${message}`);
 }
 
 /** Truncate Expo push tokens for safe debug output. */

@@ -44,13 +44,11 @@ export function ageFromDate(date: Date, today = new Date()): number {
   return Math.max(0, age);
 }
 
-export function defaultBirthDate(yearsAgo = 25): Date {
-  const date = new Date();
-  date.setFullYear(date.getFullYear() - yearsAgo);
-  return date;
+export function defaultBirthDate(): Date {
+  return new Date();
 }
 
-export function initialsFromName(name: string): string {
+export function initialsFromName(name: any): any {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) {
     return '';

@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { appReleaseNotes, appVersionLabel } from '../config/release';
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import { useAppSelector } from '../store/hooks';
+import { useGetPatientProfileQuery } from '../store/api/new/patientProfileApi';
 
 export type AccountViewModel = {
   language: AppLanguage;
@@ -65,12 +67,51 @@ export function useAccountController({
   const [lowDataMode, setLowDataMode] = useState(true);
   const [languagePickerOpen, setLanguagePickerOpen] = useState(false);
 
+  const authUser = useAppSelector((state) => state.auth.user);
+  const authMobile = useAppSelector((state) => state.auth.mobile);
+
+  const { data: profileQueryResponse } = useGetPatientProfileQuery();
+  const apiProfile = profileQueryResponse?.data;
+
+  const profileName =
+    apiProfile?.patientName ||
+    [apiProfile?.firstName, apiProfile?.lastName].filter(Boolean).join(' ') ||
+    authUser?.patientName ||
+    [authUser?.firstName, authUser?.lastName].filter(Boolean).join(' ') ||
+    t('homeTabAccount');
+
+  const profileInitials =
+    apiProfile?.patientName || (apiProfile?.firstName || apiProfile?.lastName)
+      ? profileName
+          .split(' ')
+          .filter(Boolean)
+          .map((w) => w[0])
+          .join('')
+          .slice(0, 2)
+          .toUpperCase()
+      : authUser?.patientName || (authUser?.firstName || authUser?.lastName)
+        ? profileName
+            .split(' ')
+            .filter(Boolean)
+            .map((w) => w[0])
+            .join('')
+            .slice(0, 2)
+            .toUpperCase()
+        : 'P';
+
+  const profilePhone =
+    apiProfile?.mobileNo ||
+    authUser?.mobile ||
+    authUser?.mobileNo ||
+    authMobile ||
+    '';
+
   return {
     language,
     t,
-    profileName: 'Pranav Kulkarni',
-    profileInitials: 'PK',
-    profilePhone: '+91 98765 43210',
+    profileName,
+    profileInitials,
+    profilePhone,
     astroEnabled,
     lowDataMode,
     languagePickerOpen,

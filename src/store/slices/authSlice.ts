@@ -5,8 +5,28 @@ import { createSlice } from '@reduxjs/toolkit';
  * `user` stays null until an auth response contract exists.
  */
 export type AuthUser = {
+  patientId?: number;
+  userId?: number;
+  userName?: string;
+  firstName?: string;
+  lastName?: string;
+  patientName?: string;
+  role?: string;
+  roleId?: number;
   mobile?: string;
+  mobileNo?: string;
+  email?: string;
+  dateOfBirth?: string;
+  gender?: number;
+  addressLine1?: string;
+  address?: string;
+  countryId?: number;
+  stateId?: number;
+  districtId?: number;
+  cityId?: number;
+  pinCodeId?: number | string;
   bookingSessionId?: number;
+  [key: string]: unknown;
 } | null;
 
 export type DetectedGeoLocation = {
@@ -21,6 +41,9 @@ export type DetectedGeoLocation = {
 type AuthState = {
   isAuthenticated: boolean;
   isInitialized: boolean;
+  token: string | null;
+  patientId: number | null;
+  userId: number | null;
   bookingSessionId: number | null;
   mobile: string | null;
   countryCode: string | null;
@@ -32,6 +55,9 @@ type AuthState = {
 const initialState: AuthState = {
   isAuthenticated: false,
   isInitialized: false,
+  token: null,
+  patientId: null,
+  userId: null,
   bookingSessionId: null,
   mobile: null,
   countryCode: null,
@@ -51,8 +77,38 @@ const authSlice = createSlice({
       state.isAuthenticated = action.payload;
       if (!action.payload) {
         state.user = null;
+        state.token = null;
+        state.patientId = null;
+        state.userId = null;
         state.bookingSessionId = null;
         state.mobile = null;
+      }
+    },
+    setAuthUser(
+      state,
+      action: {
+        payload: {
+          user: AuthUser;
+          token?: string | null;
+          patientId?: number;
+          userId?: number;
+          mobile?: string;
+        };
+      },
+    ) {
+      state.isAuthenticated = true;
+      state.user = action.payload.user;
+      if (action.payload.token) {
+        state.token = action.payload.token;
+      }
+      if (action.payload.patientId !== undefined) {
+        state.patientId = action.payload.patientId;
+      }
+      if (action.payload.userId !== undefined) {
+        state.userId = action.payload.userId;
+      }
+      if (action.payload.mobile) {
+        state.mobile = action.payload.mobile;
       }
     },
     setAuthMobile(
@@ -108,6 +164,7 @@ const authSlice = createSlice({
 export const {
   markAuthInitialized,
   setAuthenticated,
+  setAuthUser,
   setAuthMobile,
   setDetectedLocation,
   setBookingSession,
@@ -115,4 +172,3 @@ export const {
 } = authSlice.actions;
 
 export const authReducer = authSlice.reducer;
-

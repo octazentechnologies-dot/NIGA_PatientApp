@@ -7,7 +7,9 @@ import {
 } from 'react-native';
 import { SafeAreaModal } from './SafeAreaModal';
 
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePicker, {
+  DateTimePickerAndroid,
+} from '@react-native-community/datetimepicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors } from '../theme/colors';
@@ -19,9 +21,9 @@ import { AppText } from './AppText';
 type DatePickerSheetProps = {
   visible: boolean;
   value: Date;
-  maximumDate: Date;
-  minimumDate: Date;
-  locale: string;
+  maximumDate?: Date;
+  minimumDate?: Date;
+  locale?: string;
   cancelLabel: string;
   doneLabel: string;
   onCancel: () => void;
@@ -33,7 +35,7 @@ export function DatePickerSheet({
   value,
   maximumDate,
   minimumDate,
-  locale,
+  locale = 'en-IN',
   cancelLabel,
   doneLabel,
   onCancel,
@@ -48,22 +50,36 @@ export function DatePickerSheet({
     }
   }, [visible, value]);
 
-  if (!visible) {
-    return null;
-  }
+  useEffect(() => {
+    if (Platform.OS === 'android' && visible) {
+      DateTimePickerAndroid.open({
+        value,
+        mode: 'date',
+        display: 'default',
+        maximumDate,
+        minimumDate,
+        onChange: (event, selectedDate) => {
+          if (event.type === 'set' && selectedDate) {
+            onConfirm(selectedDate);
+          } else {
+            onCancel();
+          }
+        },
+      });
+    }
+    return () => {
+      if (Platform.OS === 'android') {
+        try {
+          DateTimePickerAndroid.dismiss('date');
+        } catch {
+          // ignore
+        }
+      }
+    };
+  }, [visible]);
 
-  if (Platform.OS === 'android') {
-    return (
-      <DateTimePicker
-        value={value}
-        mode="date"
-        display="calendar"
-        maximumDate={maximumDate}
-        minimumDate={minimumDate}
-        onValueChange={(_event, next) => onConfirm(next)}
-        onDismiss={onCancel}
-      />
-    );
+  if (!visible || Platform.OS === 'android') {
+    return null;
   }
 
   return (

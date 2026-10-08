@@ -4,14 +4,25 @@ import * as Location from 'expo-location';
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
 import {
+  type CreatePatientRequest,
+  useCreatePatientMutation,
   useGetCitiesByDistrictQuery,
   useGetCountriesQuery,
   useGetDistrictsByStateQuery,
+  useGetGendersQuery,
   useGetStatesByCountryQuery,
 } from '../store/api/new/completeProfileApi';
+import {
+  type PatientProfileData,
+  type UpdatePatientProfileRequest,
+  useGetPatientProfileQuery,
+  useUpdatePatientProfileMutation,
+} from '../store/api/new/patientProfileApi';
+import { saveAccessToken, saveAuthUserData } from '../services/secureStorage';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
   type DetectedGeoLocation,
+  setAuthUser,
   setDetectedLocation,
 } from '../store/slices/authSlice';
 
@@ -22,7 +33,6 @@ function normalizeLocationString(val: string | null | undefined): string {
   return val
     .toLowerCase()
     .replace(/\b(state|province|district|division|city|region|of)\b/gi, '')
-    .replace(/[^a-z0-9]/gi, '')
     .trim();
 }
 
@@ -58,12 +68,23 @@ export type CompleteProfileViewModel = {
   mode: 'onboarding' | 'edit';
   screenTitle: string;
   primaryActionLabel: string;
-  showSkip: boolean;
+  isContinueDisabled: boolean;
+  isSubmitting: boolean;
+  isProfileLoading?: boolean;
+  toastVisible?: boolean;
+  toastMessage?: string;
+  toastVariant?: 'success' | 'error';
+  showSkip?: boolean;
   mobileNumber: string;
   countryCode: string;
   fullName: string;
   dateOfBirth: string;
   gender: GenderOption | null;
+  selectedGenderId: number | null;
+  genderLabel: string;
+  genders: { id: number; name: string }[];
+  isGendersLoading: boolean;
+  genderPickerOpen: boolean;
   preferredLanguage: PreferredLanguageOption | null;
   cityTaluka: string;
   address: string;
@@ -105,22 +126,24 @@ export type CompleteProfileViewModel = {
   onOpenDatePicker: () => void;
   onCloseDatePicker: () => void;
   onConfirmDateOfBirth: (date: Date) => void;
-  onSelectGender: (value: GenderOption) => void;
+  onOpenGenderPicker: () => void;
+  onCloseGenderPicker: () => void;
+  onSelectGender: (id: number) => void;
   onOpenLanguagePicker: () => void;
   onCloseLanguagePicker: () => void;
   onSelectPreferredLanguage: (value: PreferredLanguageOption) => void;
   onOpenCountryPicker: () => void;
   onCloseCountryPicker: () => void;
-  onSelectCountry: (countryId: number) => void;
+  onSelectCountry: (id: number) => void;
   onOpenStatePicker: () => void;
   onCloseStatePicker: () => void;
-  onSelectState: (stateId: number) => void;
+  onSelectState: (id: number) => void;
   onOpenDistrictPicker: () => void;
   onCloseDistrictPicker: () => void;
-  onSelectDistrict: (districtId: number) => void;
+  onSelectDistrict: (id: number) => void;
   onOpenCityPicker: () => void;
   onCloseCityPicker: () => void;
-  onSelectCity: (cityId: number) => void;
+  onSelectCity: (id: number) => void;
   onChangeCityTaluka: (value: string) => void;
   onChangeAddress: (value: string) => void;
   onChangeEmail: (value: string) => void;
@@ -135,36 +158,78 @@ export type CompleteProfileViewModel = {
   onBack: () => void;
 };
 
-function parseDateOfBirth(value: string): Date | null {
-  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value);
-  if (!match) {
+function parseApiDate(input: string | null | undefined): Date | null {
+  if (!input) return null;
+  const isoMatch = input.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    const year = Number(isoMatch[1]);
+    const month = Number(isoMatch[2]) - 1;
+    const day = Number(isoMatch[3]);
+    const d = new Date(year, month, day);
+    if (!Number.isNaN(d.getTime())) return d;
+  }
+  const d = new Date(input);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function calculateAge(birthDate: Date): number {
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return Math.max(age, 0);
+}
+
+function parseDateOfBirth(input: string): Date | null {
+  if (!input) {
     return null;
   }
-  const day = Number(match[1]);
-  const month = Number(match[2]) - 1;
-  const year = Number(match[3]);
-  const date = new Date(year, month, day);
-  if (
-    date.getFullYear() !== year ||
-    date.getMonth() !== month ||
-    date.getDate() !== day
-  ) {
-    return null;
+  const parts = input.split('/');
+  if (parts.length === 3) {
+    const day = Number(parts[0]);
+    const month = Number(parts[1]) - 1;
+    const year = Number(parts[2]);
+    if (
+      Number.isNaN(day) ||
+      Number.isNaN(month) ||
+      Number.isNaN(year) ||
+      day < 1 ||
+      day > 31 ||
+      month < 0 ||
+      month > 11 ||
+      year < 1900 ||
+      year > new Date().getFullYear()
+    ) {
+      return null;
+    }
+    const date = new Date(year, month, day);
+    return date.getDate() === day &&
+      date.getMonth() === month &&
+      date.getFullYear() === year
+      ? date
+      : null;
   }
-  return date;
+  return parseApiDate(input);
 }
 
 function formatDateOfBirth(date: Date): string {
   const day = String(date.getDate()).padStart(2, '0');
   const month = String(date.getMonth() + 1).padStart(2, '0');
-  const year = String(date.getFullYear());
+  const year = date.getFullYear();
   return `${day}/${month}/${year}`;
 }
 
+function formatDateToYMD(date: Date): string {
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${year}-${month}-${day}`;
+}
+
 function defaultBirthDate(): Date {
-  const date = new Date();
-  date.setFullYear(date.getFullYear() - 25);
-  return date;
+  return new Date(2000, 0, 1);
 }
 
 export function useCompleteProfileController({
@@ -184,6 +249,7 @@ export function useCompleteProfileController({
 }): CompleteProfileViewModel {
   const { language, setLanguage, t } = useLocalization();
   const dispatch = useAppDispatch();
+  const authUser = useAppSelector((state) => state.auth.user);
   const reduxMobile = useAppSelector((state) => state.auth.mobile);
   const reduxCountryCode = useAppSelector((state) => state.auth.countryCode);
   const reduxDetectedLocation = useAppSelector(
@@ -194,8 +260,7 @@ export function useCompleteProfileController({
   const resolvedMobileNumber =
     (initialMobileNumber && initialMobileNumber.trim().length > 0
       ? initialMobileNumber.trim()
-      : reduxMobile?.trim()) ||
-    (isEdit ? '9028898963' : '');
+      : reduxMobile?.trim() || authUser?.mobile || authUser?.mobileNo || '') || '';
 
   const resolvedCountryCode =
     (initialCountryCode && initialCountryCode.trim().length > 0
@@ -216,17 +281,43 @@ export function useCompleteProfileController({
       setCountryCode(resolvedCountryCode);
     }
   }, [resolvedCountryCode]);
-  const [fullName, setFullName] = useState(isEdit ? 'Pranav Kulkarni' : '');
-  const [dateOfBirth, setDateOfBirth] = useState(isEdit ? '14/03/1992' : '');
-  const [gender, setGender] = useState<GenderOption | null>(isEdit ? 'male' : null);
+
+  const initialFullName = isEdit
+    ? authUser?.patientName ||
+      [authUser?.firstName, authUser?.lastName].filter(Boolean).join(' ') ||
+      ''
+    : '';
+
+  const [fullName, setFullName] = useState(initialFullName);
+  const [dateOfBirth, setDateOfBirth] = useState(
+    isEdit && authUser?.dateOfBirth ? authUser.dateOfBirth : '',
+  );
+  const [selectedGenderId, setSelectedGenderId] = useState<number | null>(
+    isEdit && authUser?.gender != null ? authUser.gender : null,
+  );
+  const [genderPickerOpen, setGenderPickerOpen] = useState(false);
   const [preferredLanguage, setPreferredLanguage] =
     useState<PreferredLanguageOption | null>(isEdit ? 'en' : null);
-  const [cityTaluka, setCityTaluka] = useState(isEdit ? 'Pune' : '');
-  const [address, setAddress] = useState(isEdit ? 'Kothrud, Pune' : '');
-  const [selectedCountryId, setSelectedCountryId] = useState<number | null>(null);
-  const [selectedStateId, setSelectedStateId] = useState<number | null>(null);
-  const [selectedDistrictId, setSelectedDistrictId] = useState<number | null>(null);
-  const [selectedCityId, setSelectedCityId] = useState<number | null>(null);
+  const [cityTaluka, setCityTaluka] = useState(
+    isEdit && authUser?.cityId != null ? String(authUser.cityId) : '',
+  );
+  const [address, setAddress] = useState(
+    isEdit && (authUser?.addressLine1 || authUser?.address)
+      ? (authUser.addressLine1 || authUser.address || '')
+      : '',
+  );
+  const [selectedCountryId, setSelectedCountryId] = useState<number | null>(
+    isEdit && authUser?.countryId != null ? authUser.countryId : null,
+  );
+  const [selectedStateId, setSelectedStateId] = useState<number | null>(
+    isEdit && authUser?.stateId != null ? authUser.stateId : null,
+  );
+  const [selectedDistrictId, setSelectedDistrictId] = useState<number | null>(
+    isEdit && authUser?.districtId != null ? authUser.districtId : null,
+  );
+  const [selectedCityId, setSelectedCityId] = useState<number | null>(
+    isEdit && authUser?.cityId != null ? authUser.cityId : null,
+  );
 
   const [detectedGeoLocation, setDetectedGeoLocation] =
     useState<DetectedGeoLocation | null>(reduxDetectedLocation ?? null);
@@ -245,6 +336,147 @@ export function useCompleteProfileController({
   const [statePickerOpen, setStatePickerOpen] = useState(false);
   const [districtPickerOpen, setDistrictPickerOpen] = useState(false);
   const [cityPickerOpen, setCityPickerOpen] = useState(false);
+
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastVariant, setToastVariant] = useState<'success' | 'error'>('success');
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = (message: string, variant: 'success' | 'error' = 'success') => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
+    setToastMessage(message);
+    setToastVariant(variant);
+    setToastVisible(true);
+    toastTimerRef.current = setTimeout(() => {
+      setToastVisible(false);
+    }, 3000);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+      }
+    };
+  }, []);
+
+  const [createPatient, { isLoading: isCreatingPatient }] =
+    useCreatePatientMutation();
+  const [updatePatientProfile, { isLoading: isUpdatingProfile }] =
+    useUpdatePatientProfileMutation();
+
+  const isSubmitting = isEdit ? isUpdatingProfile : isCreatingPatient;
+
+  const {
+    data: profileQueryResponse,
+    isLoading: isProfileQueryLoading,
+    isFetching: isProfileQueryFetching,
+    error: profileQueryError,
+  } = useGetPatientProfileQuery(undefined, {
+    skip: !isEdit,
+    refetchOnMountOrArgChange: true,
+  });
+
+  const [profileData, setProfileData] = useState<PatientProfileData | null>(null);
+  const hasLoadedProfileRef = useRef(false);
+
+  const isProfileLoading =
+    isEdit && (isProfileQueryLoading || (isProfileQueryFetching && !hasLoadedProfileRef.current));
+
+  useEffect(() => {
+    if (!isEdit || !profileQueryResponse?.data) {
+      return;
+    }
+    const data = profileQueryResponse.data;
+    hasLoadedProfileRef.current = true;
+    setProfileData(data);
+
+    const name =
+      data.patientName?.trim() ||
+      [data.firstName, data.lastName].filter(Boolean).join(' ').trim();
+    if (name) {
+      setFullName(name);
+    }
+    if (data.dateOfBirth) {
+      const parsed = parseApiDate(data.dateOfBirth);
+      if (parsed) {
+        setDateOfBirth(formatDateOfBirth(parsed));
+      }
+    }
+    if (data.gender != null) {
+      setSelectedGenderId(data.gender);
+    }
+    if (data.email) {
+      setEmail(data.email);
+    }
+    if (data.mobileNo) {
+      setMobileNumber(data.mobileNo);
+    }
+    if (data.preferredLanguageId != null) {
+      if (data.preferredLanguageId === 1) {
+        setPreferredLanguage('en');
+      } else if (data.preferredLanguageId === 2) {
+        setPreferredLanguage('mr');
+      } else if (data.preferredLanguageId === 3) {
+        setPreferredLanguage('hi');
+      }
+    }
+  }, [isEdit, profileQueryResponse]);
+
+  useEffect(() => {
+    if (isEdit && profileQueryError && !hasLoadedProfileRef.current) {
+      let errorMsg =
+        language === 'mr'
+          ? 'माहिती लोड करण्यात अयशस्वी. कृपया पुन्हा प्रयत्न करा.'
+          : 'Failed to load profile. Please try again.';
+      if (
+        typeof profileQueryError === 'object' &&
+        profileQueryError !== null &&
+        'data' in profileQueryError &&
+        typeof (profileQueryError as { data: unknown }).data === 'object' &&
+        (profileQueryError as { data: unknown }).data !== null
+      ) {
+        const d = (profileQueryError as { data: { message?: string; errorMessage?: string } }).data;
+        if (d.message) errorMsg = d.message;
+        else if (d.errorMessage) errorMsg = d.errorMessage;
+      }
+      showToast(errorMsg, 'error');
+    }
+  }, [isEdit, profileQueryError, language]);
+  const { data: gendersResponse, isLoading: isGendersLoading } =
+    useGetGendersQuery();
+  const genders = useMemo(
+    () =>
+      (gendersResponse ?? []).map((g) => {
+        let name = g.genderName ?? '';
+        if (language === 'mr') {
+          const lower = name.toLowerCase();
+          if (lower === 'male') name = t('genderMale');
+          else if (lower === 'female') name = t('genderFemale');
+          else if (lower === 'other') name = t('genderOther');
+          else if (lower === 'unknown') name = t('genderUnknown');
+        }
+        return {
+          id: g.genderId,
+          name,
+        };
+      }),
+    [gendersResponse, language, t],
+  );
+
+  const selectedGenderObj = genders.find((g) => g.id === selectedGenderId);
+  const genderLabel = selectedGenderObj?.name ?? '';
+
+  const gender: GenderOption | null =
+    selectedGenderId === 0
+      ? 'male'
+      : selectedGenderId === 1
+        ? 'female'
+        : selectedGenderId === 2
+          ? 'other'
+          : null;
 
   const { data: countriesResponse, isLoading: isCountriesLoading } =
     useGetCountriesQuery();
@@ -314,7 +546,6 @@ export function useCompleteProfileController({
 
   // Safe background device location detection or reuse
   useEffect(() => {
-    // If location was already detected during Login, reuse it directly!
     if (reduxDetectedLocation) {
       setDetectedGeoLocation(reduxDetectedLocation);
       return;
@@ -519,9 +750,13 @@ export function useCompleteProfileController({
     }
   }, [citiesResponse, detectedGeoLocation, selectedCityId, selectedDistrictId]);
 
-  const [email, setEmail] = useState(isEdit ? 'pranav@example.com' : '');
-  const [referredBy, setReferredBy] = useState(isEdit ? '' : '');
-  const [pincode, setPincode] = useState(isEdit ? '411038' : '');
+  const [email, setEmail] = useState(
+    isEdit && authUser?.email ? authUser.email : '',
+  );
+  const [referredBy, setReferredBy] = useState('');
+  const [pincode, setPincode] = useState(
+    isEdit && authUser?.pinCodeId != null ? String(authUser.pinCodeId) : '',
+  );
   const [preferAudio, setPreferAudio] = useState(false);
   const [needLargeText, setNeedLargeText] = useState(false);
   const [needCallAssistance, setNeedCallAssistance] = useState(false);
@@ -537,18 +772,250 @@ export function useCompleteProfileController({
           ? t('languageHindi')
           : '';
 
+  const isContinueDisabled =
+    !fullName.trim() ||
+    !dateOfBirth.trim() ||
+    !parseDateOfBirth(dateOfBirth) ||
+    isSubmitting;
+
+  const handleContinue = async () => {
+    if (isContinueDisabled || isSubmitting) {
+      return;
+    }
+
+    const trimmedFullName = fullName.trim();
+    if (!trimmedFullName) {
+      showToast(
+        language === 'mr' ? 'कृपया पूर्ण नाव प्रविष्ट करा' : 'Please enter full name',
+        'error',
+      );
+      return;
+    }
+
+    const dobDate = parseDateOfBirth(dateOfBirth);
+    if (!dobDate) {
+      showToast(
+        language === 'mr'
+          ? 'कृपया वैध जन्मतारीख प्रविष्ट करा'
+          : 'Please enter a valid date of birth',
+        'error',
+      );
+      return;
+    }
+
+    const cleanMobile = (mobileNumber || resolvedMobileNumber).trim();
+    if (!cleanMobile) {
+      showToast(
+        language === 'mr' ? 'कृपया मोबाईल नंबर प्रविष्ट करा' : 'Please enter mobile number',
+        'error',
+      );
+      return;
+    }
+
+    const trimmedEmail = email.trim();
+    if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      showToast(
+        language === 'mr'
+          ? 'कृपया वैध ईमेल प्रविष्ट करा'
+          : 'Please enter a valid email address',
+        'error',
+      );
+      return;
+    }
+
+    if (isEdit) {
+      const nameParts = trimmedFullName.split(/\s+/);
+      const firstName = nameParts[0] || trimmedFullName;
+      const lastName =
+        nameParts.length > 1
+          ? nameParts.slice(1).join(' ')
+          : profileData?.lastName || '';
+      const patientName = trimmedFullName;
+      const age = calculateAge(dobDate);
+
+      const reqPatientId =
+        profileData?.userId ??
+        profileData?.patientId ??
+        authUser?.userId ??
+        authUser?.patientId ??
+        0;
+
+      const putPayload: UpdatePatientProfileRequest = {
+        firstName,
+        lastName,
+        patientName,
+        dateOfBirth: dobDate.toISOString(),
+        gender: selectedGenderId ?? profileData?.gender ?? 0,
+        age,
+        mobileNo: cleanMobile,
+        email: trimmedEmail,
+        preferredLanguageId:
+          preferredLanguage === 'en'
+            ? 1
+            : preferredLanguage === 'mr'
+              ? 2
+              : preferredLanguage === 'hi'
+                ? 3
+                : profileData?.preferredLanguageId ?? null,
+        welcomeVersionSeen: profileData?.welcomeVersionSeen ?? '1.0',
+        patientId: reqPatientId,
+      };
+
+      try {
+        const updateRes = await updatePatientProfile(putPayload).unwrap();
+        const resData = updateRes.data;
+        if (resData) {
+          setProfileData(resData);
+          const updatedUser = {
+            ...authUser,
+            userId: resData.userId,
+            patientId: resData.patientId,
+            firstName: resData.firstName,
+            lastName: resData.lastName,
+            patientName: resData.patientName,
+            mobile: resData.mobileNo,
+            mobileNo: resData.mobileNo,
+            email: resData.email,
+            dateOfBirth: resData.dateOfBirth,
+            gender: resData.gender,
+          };
+          await saveAuthUserData(updatedUser);
+          dispatch(
+            setAuthUser({
+              user: updatedUser,
+              patientId: resData.patientId,
+              userId: resData.userId,
+              mobile: resData.mobileNo,
+            }),
+          );
+        }
+
+        showToast(
+          language === 'mr'
+            ? 'प्रोफाइल यशस्वीरित्या अपडेट केली'
+            : 'Profile updated successfully',
+          'success',
+        );
+
+        setTimeout(() => {
+          onContinue();
+        }, 1200);
+      } catch (err: unknown) {
+        let errorMsg =
+          language === 'mr'
+            ? 'प्रोफाइल अपडेट करण्यात अयशस्वी. कृपया पुन्हा प्रयत्न करा.'
+            : 'Failed to update profile. Please try again.';
+        if (
+          typeof err === 'object' &&
+          err !== null &&
+          'data' in err &&
+          typeof (err as { data: unknown }).data === 'object' &&
+          (err as { data: unknown }).data !== null
+        ) {
+          const dataObj = (err as { data: { message?: string; errorMessage?: string } }).data;
+          if (dataObj.message) {
+            errorMsg = dataObj.message;
+          } else if (dataObj.errorMessage) {
+            errorMsg = dataObj.errorMessage;
+          }
+        }
+        showToast(errorMsg, 'error');
+      }
+      return;
+    }
+
+    const patientPayload: CreatePatientRequest = {
+      entityType: 'PatientMobile',
+      patientID: authUser?.patientId ?? 0,
+      patientName: trimmedFullName,
+      mobileNo: cleanMobile,
+      email: trimmedEmail,
+      dateOfBirth: formatDateToYMD(dobDate),
+      gender: selectedGenderId ?? 0,
+      addressLine1: address.trim(),
+      countryId: selectedCountryId ?? 0,
+      stateId: selectedStateId ?? 0,
+      isWhatsAppOptIn: false,
+    };
+
+    console.log('[api/patient] Request Payload:', JSON.stringify(patientPayload, null, 2));
+
+    try {
+      const response = await createPatient(patientPayload).unwrap();
+      console.log('[api/patient] Response:', JSON.stringify(response, null, 2));
+
+      const userToSave = {
+        patientId: response.patientID,
+        userId: response.userId,
+        patientName: response.patientName ?? trimmedFullName,
+        mobile: response.mobileNo ?? cleanMobile,
+        email: response.email ?? trimmedEmail,
+        addressLine1: response.addressLine1 ?? address.trim(),
+        dateOfBirth:
+          response.dateOfBirth ??
+          formatDateToYMD(dobDate),
+        gender: response.gender ?? selectedGenderId ?? undefined,
+        countryId: response.countryId ?? selectedCountryId ?? undefined,
+        stateId: response.stateId ?? selectedStateId ?? undefined,
+        districtId: response.districtId ?? selectedDistrictId ?? undefined,
+        cityId: response.cityId ?? selectedCityId ?? undefined,
+        pinCodeId:
+          response.pinCodeId ?? (pincode ? pincode.trim() : undefined),
+      };
+
+      // Save token & user in SecureStore for persistent session
+      if (response.token) {
+        await saveAccessToken(response.token);
+      }
+      await saveAuthUserData(userToSave);
+
+      // Save user and token in Redux for future API calls
+      dispatch(
+        setAuthUser({
+          user: userToSave,
+          token: response.token ?? undefined,
+          patientId: response.patientID,
+          userId: response.userId,
+          mobile: response.mobileNo ?? cleanMobile,
+        }),
+      );
+
+      // Navigate to next screen
+      onContinue();
+    } catch (error) {
+      console.error('[api/patient] Error:', error);
+      showToast(
+        language === 'mr'
+          ? 'नोंदणी करण्यात अयशस्वी. कृपया पुन्हा प्रयत्न करा.'
+          : 'Failed to create patient profile. Please try again.',
+        'error',
+      );
+    }
+  };
+
   return {
     language,
     t,
     mode,
     screenTitle: isEdit ? t('accountEditProfile') : t('profileTitle'),
     primaryActionLabel: isEdit ? t('profileSave') : t('continue'),
-    showSkip: !isEdit,
+    isContinueDisabled,
+    isSubmitting,
+    isProfileLoading,
+    toastVisible,
+    toastMessage,
+    toastVariant,
+    showSkip: false,
     mobileNumber: mobileNumber || resolvedMobileNumber,
     countryCode: countryCode || resolvedCountryCode,
     fullName,
     dateOfBirth,
     gender,
+    selectedGenderId,
+    genderLabel,
+    genders,
+    isGendersLoading,
+    genderPickerOpen,
     preferredLanguage,
     cityTaluka: cityLabel || cityTaluka,
     address,
@@ -593,7 +1060,12 @@ export function useCompleteProfileController({
       setDateOfBirth(formatDateOfBirth(date));
       setDatePickerOpen(false);
     },
-    onSelectGender: setGender,
+    onOpenGenderPicker: () => setGenderPickerOpen(true),
+    onCloseGenderPicker: () => setGenderPickerOpen(false),
+    onSelectGender: (id: number) => {
+      setSelectedGenderId(id);
+      setGenderPickerOpen(false);
+    },
     onOpenLanguagePicker: () => setLanguagePickerOpen(true),
     onCloseLanguagePicker: () => setLanguagePickerOpen(false),
     onSelectPreferredLanguage: (value) => {
@@ -667,7 +1139,7 @@ export function useCompleteProfileController({
     onToggleNeedCallAssistance: () =>
       setNeedCallAssistance((current) => !current),
     onSelectLanguage: setLanguage,
-    onContinue,
+    onContinue: handleContinue,
     onSkip,
     onBack,
   };

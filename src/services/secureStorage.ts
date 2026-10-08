@@ -39,6 +39,66 @@ export function deleteRefreshToken(): Promise<void> {
   return deleteSecret(REFRESH_TOKEN_KEY);
 }
 
-export async function clearAuthCredentials(): Promise<void> {
-  await Promise.all([deleteAccessToken(), deleteRefreshToken()]);
+const AUTH_USER_KEY = 'auth.userData';
+
+export function saveAuthUserData(user: unknown): Promise<void> {
+  if (user) {
+    return saveSecret(AUTH_USER_KEY, JSON.stringify(user));
+  }
+  return deleteSecret(AUTH_USER_KEY);
 }
+
+export async function getAuthUserData<T = unknown>(): Promise<T | null> {
+  const raw = await readSecret(AUTH_USER_KEY);
+  if (!raw) {
+    return null;
+  }
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+
+export function deleteAuthUserData(): Promise<void> {
+  return deleteSecret(AUTH_USER_KEY);
+}
+
+export async function clearAuthCredentials(): Promise<void> {
+  await Promise.all([
+    deleteAccessToken(),
+    deleteRefreshToken(),
+    deleteAuthUserData(),
+  ]);
+}
+
+const LANGUAGE_SELECTED_KEY = 'app.hasSelectedLanguage';
+const ONBOARDING_COMPLETED_KEY = 'app.hasCompletedOnboarding';
+const SELECTED_LANGUAGE_KEY = 'app.selectedLanguage';
+
+export function setLanguageSelectionCompleted(): Promise<void> {
+  return saveSecret(LANGUAGE_SELECTED_KEY, 'true');
+}
+
+export async function hasLanguageSelectionCompleted(): Promise<boolean> {
+  const val = await readSecret(LANGUAGE_SELECTED_KEY);
+  return val === 'true';
+}
+
+export function setOnboardingCompleted(): Promise<void> {
+  return saveSecret(ONBOARDING_COMPLETED_KEY, 'true');
+}
+
+export async function hasOnboardingCompleted(): Promise<boolean> {
+  const val = await readSecret(ONBOARDING_COMPLETED_KEY);
+  return val === 'true';
+}
+
+export function saveSelectedLanguage(lang: string): Promise<void> {
+  return saveSecret(SELECTED_LANGUAGE_KEY, lang);
+}
+
+export async function getSelectedLanguage(): Promise<string | null> {
+  return readSecret(SELECTED_LANGUAGE_KEY);
+}
+
