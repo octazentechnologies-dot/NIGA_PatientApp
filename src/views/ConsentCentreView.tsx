@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -11,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppSwitch } from '../components/AppSwitch';
 import { AppText } from '../components/AppText';
+import type { ConsentItem } from '../store/api/new/consentApi';
 import type {
   ConsentCentreViewModel,
 } from '../controllers/useConsentCentreController';
@@ -137,64 +139,38 @@ export function ConsentCentreView(vm: ConsentCentreViewModel) {
           {vm.t('consentCentreActive')}
         </AppText>
 
-        <ConsentCard
-          title={vm.t('consentCentreTeleTitle')}
-          body={vm.t('consentCentreTeleBody')}
-          meta={vm.t('consentCentreTeleGranted')}
-          badge={vm.t('consentCentreTeleBadge')}
-          warning={vm.t('consentCentreTeleWarn')}
-          value={vm.toggles.teleconsult}
-          onToggle={() => vm.onToggle('teleconsult')}
-        />
-        <ConsentCard
-          title={vm.t('consentCentreShareTitle')}
-          body={vm.t('consentCentreShareBody')}
-          value={vm.toggles.shareRecords}
-          onToggle={() => vm.onToggle('shareRecords')}
-        />
-        <ConsentCard
-          title={vm.t('consentCentreCareLinkTitle')}
-          body={vm.t('consentCentreCareLinkBody')}
-          badge={vm.t('consentCentreCareLinkBadge')}
-          badgeTone="danger"
-          linkLabel={vm.t('consentCentreCareLinkLink')}
-          onLink={vm.onSeeCareLinkShared}
-          value={vm.toggles.carelink}
-          onToggle={() => vm.onToggle('carelink')}
-        />
-        <ConsentCard
-          title={vm.t('consentCentreFulfilTitle')}
-          body={vm.t('consentCentreFulfilBody')}
-          badge={vm.t('consentCentreFulfilBadge')}
-          muted
-        />
-        <ConsentCard
-          title={vm.t('consentCentreRecordTitle')}
-          body={vm.t('consentCentreRecordBody')}
-          value={vm.toggles.recording}
-          onToggle={() => vm.onToggle('recording')}
-        />
-        <ConsentCard
-          title={vm.t('consentCentreAstroTitle')}
-          body={vm.t('consentCentreAstroBody')}
-          badge={vm.t('consentCentreAstroBadge')}
-          badgeTone="astro"
-          note={vm.t('consentCentreAstroNote')}
-          value={vm.toggles.astro}
-          onToggle={() => vm.onToggle('astro')}
-          astro
-        />
-        <ConsentCard
-          title={vm.t('consentCentreAstroDoctorTitle')}
-          body={vm.t('consentCentreAstroDoctorBody')}
-          value={vm.toggles.astroDoctor}
-          onToggle={() => vm.onToggle('astroDoctor')}
-        />
-        <ConsentCard
-          title={vm.t('consentCentreUpdatesTitle')}
-          value={vm.toggles.updates}
-          onToggle={() => vm.onToggle('updates')}
-        />
+        {vm.isLoading && vm.consents.length === 0 ? (
+          <View style={styles.loaderWrap}>
+            <ActivityIndicator size="large" color={ACTION} />
+          </View>
+        ) : vm.isError && vm.consents.length === 0 ? (
+          <View style={styles.errorWrap}>
+            <AppText variant="bodyMd" color={DANGER}>
+              Failed to load consents.
+            </AppText>
+            <Pressable
+              accessibilityRole="button"
+              onPress={vm.onRetry}
+              style={styles.retryBtn}
+            >
+              <AppText variant="labelMd" color={ACTION} weightOverride="600">
+                Retry
+              </AppText>
+            </Pressable>
+          </View>
+        ) : (
+          vm.consents.map((item) => (
+            <ConsentCard
+              key={item.consentTypeId}
+              title={item.title}
+              body={item.description}
+              meta={formatGrantedMeta(item)}
+              value={item.granted}
+              isToggling={vm.togglingConsentId === item.consentTypeId}
+              onToggle={() => vm.onToggleConsent(item.consentTypeId)}
+            />
+          ))
+        )}
 
         <AppText
           variant="labelSm"
@@ -275,6 +251,25 @@ export function ConsentCentreView(vm: ConsentCentreViewModel) {
   );
 }
 
+function formatGrantedMeta(item: ConsentItem): string | undefined {
+  if (item.granted && item.grantedAt) {
+    try {
+      const d = new Date(item.grantedAt);
+      if (!isNaN(d.getTime())) {
+        const formatted = d.toLocaleDateString('en-GB', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+        });
+        return `Granted ${formatted}`;
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return undefined;
+}
+
 function ConsentCard({
   title,
   body,
@@ -286,6 +281,7 @@ function ConsentCard({
   linkLabel,
   onLink,
   value,
+  isToggling = false,
   onToggle,
   muted,
   astro,
@@ -300,6 +296,7 @@ function ConsentCard({
   linkLabel?: string;
   onLink?: () => void;
   value?: boolean;
+  isToggling?: boolean;
   onToggle?: () => void;
   muted?: boolean;
   astro?: boolean;
@@ -326,7 +323,11 @@ function ConsentCard({
             </AppText>
           ) : null}
         </View>
-        {onToggle ? (
+        {isToggling ? (
+          <View style={styles.switchLoader}>
+            <ActivityIndicator size="small" color={ACTION} />
+          </View>
+        ) : onToggle ? (
           <AppSwitch value={Boolean(value)} onValueChange={onToggle} />
         ) : null}
       </View>
@@ -626,5 +627,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: HAIRLINE,
+  },
+  loaderWrap: {
+    paddingVertical: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  errorWrap: {
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  retryBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  switchLoader: {
+    width: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

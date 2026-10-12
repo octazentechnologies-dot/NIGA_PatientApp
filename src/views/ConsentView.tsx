@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -22,13 +23,13 @@ import { sheetBottomPadding } from '../utilities/sheetInset';
 export function ConsentView({
   language,
   t,
-  shareHealthRecords,
-  medicineFulfilment,
-  updatesAndTips,
+  consents,
+  isLoading,
+  isError,
+  togglingConsentId,
   noticeOpen,
-  onToggleShareHealthRecords,
-  onToggleMedicineFulfilment,
-  onToggleUpdatesAndTips,
+  onToggleConsent,
+  onRetry,
   onReadNotice,
   onCloseNotice,
   onAgree,
@@ -83,35 +84,35 @@ export function ConsentView({
         </View>
 
         <View style={styles.list}>
-          <ConsentCard
-            icon="videocam"
-            title={t('consentTeleconsultTitle')}
-            body={t('consentTeleconsultBody')}
-            requiredLabel={t('consentRequired')}
-            value
-            locked
-          />
-          <ConsentCard
-            icon="medkit"
-            title={t('consentRecordsTitle')}
-            body={t('consentRecordsBody')}
-            value={shareHealthRecords}
-            onToggle={onToggleShareHealthRecords}
-          />
-          <ConsentCard
-            icon="flask"
-            title={t('consentPharmacyTitle')}
-            body={t('consentPharmacyBody')}
-            value={medicineFulfilment}
-            onToggle={onToggleMedicineFulfilment}
-          />
-          <ConsentCard
-            icon="notifications"
-            title={t('consentUpdatesTitle')}
-            body={t('consentUpdatesBody')}
-            value={updatesAndTips}
-            onToggle={onToggleUpdatesAndTips}
-          />
+          {isLoading && consents.length === 0 ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+            </View>
+          ) : isError && consents.length === 0 ? (
+            <View style={styles.errorContainer}>
+              <AppText variant="bodyMd" color={colors.error}>
+                Failed to load consents.
+              </AppText>
+              <AppButton
+                label="Retry"
+                variant="secondary"
+                onPress={onRetry}
+                style={styles.retryButton}
+              />
+            </View>
+          ) : (
+            consents.map((item) => (
+              <ConsentCard
+                key={item.consentTypeId}
+                icon={getConsentIcon(item.code)}
+                title={item.title}
+                body={item.description}
+                value={item.granted}
+                isToggling={togglingConsentId === item.consentTypeId}
+                onToggle={() => onToggleConsent(item.consentTypeId)}
+              />
+            ))
+          )}
         </View>
 
         <View style={styles.recordingNote}>
@@ -195,21 +196,38 @@ export function ConsentView({
   );
 }
 
+function getConsentIcon(code: string): keyof typeof Ionicons.glyphMap {
+  switch (code?.toLowerCase()) {
+    case 'privacy':
+      return 'shield-checkmark';
+    case 'booking':
+      return 'calendar';
+    case 'telerecording':
+      return 'videocam';
+    case 'pharmacyshare':
+      return 'flask';
+    case 'marketing':
+      return 'notifications';
+    case 'caregiver':
+      return 'people';
+    default:
+      return 'document-text';
+  }
+}
+
 function ConsentCard({
   icon,
   title,
   body,
   value,
-  locked = false,
-  requiredLabel,
+  isToggling = false,
   onToggle,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   title: string;
   body: string;
   value: boolean;
-  locked?: boolean;
-  requiredLabel?: string;
+  isToggling?: boolean;
   onToggle?: () => void;
 }) {
   return (
@@ -220,18 +238,14 @@ function ConsentCard({
           <AppText variant="titleMd" color="#000000" style={styles.consentTitle}>
             {title}
           </AppText>
-          {requiredLabel ? (
-            <View style={styles.requiredBadge}>
-              <AppText variant="labelSm" color="#1B5E20" style={styles.requiredBadgeText}>
-                {requiredLabel}
-              </AppText>
-            </View>
-          ) : null}
-          <AppSwitch
-            value={value}
-            disabled={locked}
-            onToggle={onToggle}
-          />
+          {isToggling ? (
+            <ActivityIndicator size="small" color={colors.primary} style={styles.switchLoader} />
+          ) : (
+            <AppSwitch
+              value={value}
+              onToggle={onToggle}
+            />
+          )}
         </View>
         <AppText variant="bodyMd" color={colors.onSurfaceVariant}>
           {body}
@@ -291,6 +305,26 @@ const styles = StyleSheet.create({
     gap: 12,
     marginTop: spacing.xs,
   },
+  loadingContainer: {
+    paddingVertical: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  errorContainer: {
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  retryButton: {
+    minHeight: 40,
+    paddingHorizontal: spacing.lg,
+  },
+  switchLoader: {
+    width: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   consentCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -315,16 +349,6 @@ const styles = StyleSheet.create({
   },
   consentTitle: {
     flex: 1,
-  },
-  requiredBadge: {
-    backgroundColor: '#E8F5E9',
-    borderRadius: radii.full,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-  },
-  requiredBadgeText: {
-    fontSize: 10,
-    lineHeight: 14,
   },
   recordingNote: {
     flexDirection: 'row',

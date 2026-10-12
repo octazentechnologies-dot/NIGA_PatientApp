@@ -5,11 +5,27 @@ export type VerifyOtpRequest = {
   code: string;
 };
 
+export type PatientAuthUser = {
+  userId: number;
+  userName?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  mobileNo?: string;
+  role?: string;
+  roleId?: number;
+  patientId?: number;
+  patientName?: string;
+};
+
 export type VerifyOtpSuccessResponse = {
   success: true;
   bookingSessionId: number;
   mobile: string;
+  isUserAlreadyRegistered?: boolean;
   isUserRegistered?: boolean;
+  token?: string;
+  user?: PatientAuthUser;
 };
 
 export type VerifyOtpErrorResponse = {

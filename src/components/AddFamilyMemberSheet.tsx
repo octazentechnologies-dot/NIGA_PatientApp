@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -17,6 +18,10 @@ import { layout, spacing } from '../theme/spacing';
 import { fontFamilyFor } from '../utilities/fonts';
 import { scaleFont } from '../utilities/scale';
 import { sheetBottomPadding } from '../utilities/sheetInset';
+import {
+  getGenderDisplayName,
+  getRelationDisplayName,
+} from '../utilities/familyHelpers';
 import { AppButton } from './AppButton';
 import { AppText } from './AppText';
 import { DatePickerSheet } from './DatePickerSheet';
@@ -28,6 +33,9 @@ type AddFamilyMemberSheetProps = Pick<
   | 't'
   | 'sheetMode'
   | 'addSheetOpen'
+  | 'genderPickerOpen'
+  | 'onOpenGenderPicker'
+  | 'onCloseGenderPicker'
   | 'relationshipPickerOpen'
   | 'fullName'
   | 'dateOfBirth'
@@ -50,6 +58,15 @@ type AddFamilyMemberSheetProps = Pick<
   | 'onOpenRelationshipPicker'
   | 'onCloseRelationshipPicker'
   | 'onSelectRelationship'
+  | 'apiRelations'
+  | 'selectedRelationId'
+  | 'selectedRelationName'
+  | 'onSelectRelation'
+  | 'apiGenders'
+  | 'selectedGenderId'
+  | 'isRelationsLoading'
+  | 'isGendersLoading'
+  | 'isCreatingMember'
   | 'onChangeMobileNumber'
   | 'onToggleAuthorizedToManage'
   | 'onSubmitMember'
@@ -60,6 +77,9 @@ export function AddFamilyMemberSheet({
   t,
   sheetMode,
   addSheetOpen,
+  genderPickerOpen,
+  onOpenGenderPicker,
+  onCloseGenderPicker,
   relationshipPickerOpen,
   fullName,
   dateOfBirth,
@@ -82,19 +102,32 @@ export function AddFamilyMemberSheet({
   onOpenRelationshipPicker,
   onCloseRelationshipPicker,
   onSelectRelationship,
+  apiRelations = [],
+  selectedRelationId = null,
+  selectedRelationName = '',
+  onSelectRelation,
+  apiGenders = [],
+  selectedGenderId = null,
+  isRelationsLoading = false,
+  isGendersLoading = false,
+  isCreatingMember = false,
   onChangeMobileNumber,
   onToggleAuthorizedToManage,
   onSubmitMember,
 }: AddFamilyMemberSheetProps) {
   const insets = useSafeAreaInsets();
+  const selectedGenderObj = apiGenders.find(
+    (g) => g.genderId === selectedGenderId,
+  );
 
   return (
-    <SafeAreaModal
-      transparent
-      animationType="slide"
-      visible={addSheetOpen}
-      onRequestClose={onCloseAddSheet}
-    >
+    <>
+      <SafeAreaModal
+        transparent
+        animationType="slide"
+        visible={addSheetOpen}
+        onRequestClose={onCloseAddSheet}
+      >
       <View style={styles.overlay}>
         <Pressable style={styles.backdrop} onPress={onCloseAddSheet} />
         <View
@@ -136,6 +169,7 @@ export function AddFamilyMemberSheet({
           >
             <FormField
               label={t('fullName')}
+              required
               value={fullName}
               placeholder={t('fullNamePlaceholder')}
               language={language}
@@ -143,12 +177,14 @@ export function AddFamilyMemberSheet({
             />
             <FormField
               label={t('dateOfBirth')}
+              required
               value={dateOfBirth}
               placeholder={t('dateOfBirthPlaceholder')}
               language={language}
               keyboardType="number-pad"
               maxLength={10}
               onChangeText={onChangeDateOfBirth}
+              onPress={onOpenDatePicker}
               rightIcon={
                 <Ionicons
                   name="calendar-outline"
@@ -160,32 +196,118 @@ export function AddFamilyMemberSheet({
             />
 
             <View style={styles.fieldGroup}>
-              <AppText variant="labelSm" color={colors.onSurface}>
-                {t('gender')}
-              </AppText>
-              <View style={styles.genderTrack}>
-                <GenderSegment
-                  label={t('genderMale')}
-                  selected={gender === 'male'}
-                  onPress={() => onSelectGender('male')}
-                />
-                <GenderSegment
-                  label={t('genderFemale')}
-                  selected={gender === 'female'}
-                  onPress={() => onSelectGender('female')}
-                />
-                <GenderSegment
-                  label={t('genderOther')}
-                  selected={gender === 'other'}
-                  onPress={() => onSelectGender('other')}
-                />
-              </View>
+              <FormField
+                label={t('gender')}
+                value={
+                  selectedGenderObj
+                    ? getGenderDisplayName(selectedGenderObj.genderName, language)
+                    : gender
+                      ? getGenderDisplayName(gender, language)
+                      : ''
+                }
+                placeholder={t('genderPlaceholder')}
+                language={language}
+                rightIcon={
+                  <Ionicons
+                    name={genderPickerOpen ? 'chevron-up' : 'chevron-down'}
+                    size={20}
+                    color={
+                      genderPickerOpen
+                        ? colors.primary
+                        : colors.onSurfaceVariant
+                    }
+                  />
+                }
+                onPress={
+                  genderPickerOpen
+                    ? onCloseGenderPicker
+                    : onOpenGenderPicker
+                }
+              />
+              {genderPickerOpen ? (
+                <View style={styles.dropdownContainer}>
+                  {isGendersLoading && apiGenders.length === 0 ? (
+                    <View style={styles.dropdownLoading}>
+                      <ActivityIndicator size="small" color={colors.primary} />
+                    </View>
+                  ) : apiGenders && apiGenders.length > 0 ? (
+                    <ScrollView
+                      style={styles.dropdownScrollView}
+                      nestedScrollEnabled
+                      showsVerticalScrollIndicator
+                      keyboardShouldPersistTaps="handled"
+                    >
+                      {apiGenders.map((item) => {
+                        const isSelected =
+                          selectedGenderId === item.genderId ||
+                          (selectedGenderId === null &&
+                            gender !== null &&
+                            item.genderName.toLowerCase() === gender);
+                        return (
+                          <Pressable
+                            key={item.genderId}
+                            accessibilityRole="button"
+                            accessibilityState={{ selected: isSelected }}
+                            onPress={() => onSelectGender(item.genderId)}
+                            style={[
+                              styles.dropdownOption,
+                              isSelected && styles.dropdownOptionSelected,
+                            ]}
+                          >
+                            <AppText
+                              variant="bodyMd"
+                              color={
+                                isSelected ? colors.primary : colors.onSurface
+                              }
+                            >
+                              {getGenderDisplayName(item.genderName, language)}
+                            </AppText>
+                          </Pressable>
+                        );
+                      })}
+                    </ScrollView>
+                  ) : (
+                    <View style={styles.dropdownList}>
+                      {(['male', 'female', 'other'] as const).map((item) => {
+                        const isSelected = gender === item;
+                        return (
+                          <Pressable
+                            key={item}
+                            accessibilityRole="button"
+                            accessibilityState={{ selected: isSelected }}
+                            onPress={() => onSelectGender(item)}
+                            style={[
+                              styles.dropdownOption,
+                              isSelected && styles.dropdownOptionSelected,
+                            ]}
+                          >
+                            <AppText
+                              variant="bodyMd"
+                              color={
+                                isSelected ? colors.primary : colors.onSurface
+                              }
+                            >
+                              {getGenderDisplayName(item, language)}
+                            </AppText>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  )}
+                </View>
+              ) : null}
             </View>
 
             <View style={styles.fieldGroup}>
               <FormField
                 label={t('relationship')}
-                value={relationship ? relationshipLabel(relationship) : ''}
+                value={
+                  selectedRelationName
+                    ? getRelationDisplayName(selectedRelationName, language)
+                    : relationship
+                      ? relationshipLabel(relationship)
+                      : ''
+                }
                 placeholder={t('relationshipPlaceholder')}
                 language={language}
                 rightIcon={
@@ -206,31 +328,77 @@ export function AddFamilyMemberSheet({
                 }
               />
               {relationshipPickerOpen ? (
-                <View style={styles.dropdownList}>
-                  {relationships.map((item) => {
-                    const selected = item === relationship;
-                    return (
-                      <Pressable
-                        key={item}
-                        accessibilityRole="button"
-                        accessibilityState={{ selected }}
-                        onPress={() => onSelectRelationship(item)}
-                        style={[
-                          styles.dropdownOption,
-                          selected && styles.dropdownOptionSelected,
-                        ]}
-                      >
-                        <AppText
-                          variant="bodyMd"
-                          color={
-                            selected ? colors.primary : colors.onSurface
-                          }
-                        >
-                          {relationshipLabel(item)}
-                        </AppText>
-                      </Pressable>
-                    );
-                  })}
+                <View style={styles.dropdownContainer}>
+                  {isRelationsLoading && apiRelations.length === 0 ? (
+                    <View style={styles.dropdownLoading}>
+                      <ActivityIndicator size="small" color={colors.primary} />
+                    </View>
+                  ) : apiRelations.length > 0 ? (
+                    <ScrollView
+                      style={styles.dropdownScrollView}
+                      nestedScrollEnabled
+                      showsVerticalScrollIndicator
+                      keyboardShouldPersistTaps="handled"
+                    >
+                      {apiRelations.map((item) => {
+                        const selected =
+                          selectedRelationId === item.relationId ||
+                          selectedRelationName.toLowerCase() ===
+                          item.relationName.toLowerCase();
+                        return (
+                          <Pressable
+                            key={item.relationId}
+                            accessibilityRole="button"
+                            accessibilityState={{ selected }}
+                            onPress={() => onSelectRelation(item)}
+                            style={[
+                              styles.dropdownOption,
+                              selected && styles.dropdownOptionSelected,
+                            ]}
+                          >
+                            <AppText
+                              variant="bodyMd"
+                              color={
+                                selected ? colors.primary : colors.onSurface
+                              }
+                            >
+                              {getRelationDisplayName(
+                                item.relationName,
+                                language,
+                              )}
+                            </AppText>
+                          </Pressable>
+                        );
+                      })}
+                    </ScrollView>
+                  ) : (
+                    <View style={styles.dropdownList}>
+                      {relationships.map((item) => {
+                        const selected = item === relationship;
+                        return (
+                          <Pressable
+                            key={item}
+                            accessibilityRole="button"
+                            accessibilityState={{ selected }}
+                            onPress={() => onSelectRelationship(item)}
+                            style={[
+                              styles.dropdownOption,
+                              selected && styles.dropdownOptionSelected,
+                            ]}
+                          >
+                            <AppText
+                              variant="bodyMd"
+                              color={
+                                selected ? colors.primary : colors.onSurface
+                              }
+                            >
+                              {relationshipLabel(item)}
+                            </AppText>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  )}
                 </View>
               ) : null}
             </View>
@@ -293,6 +461,9 @@ export function AddFamilyMemberSheet({
                 style={styles.flex}
               >
                 {t('familyManageConsent')}
+                <AppText variant="bodyMd" color={colors.error} raw>
+                  {' *'}
+                </AppText>
               </AppText>
             </Pressable>
           </ScrollView>
@@ -301,17 +472,19 @@ export function AddFamilyMemberSheet({
             <AppButton
               label={t(
                 sheetMode === 'edit'
-                  ? 'familySaveMember'
-                  : 'familySendAuthRequest',
+                  ? 'familyEditMemberTitle'
+                  : 'familyAddMember',
               )}
               textVariant="titleMd"
-              disabled={!canSubmit}
+              disabled={!canSubmit || isCreatingMember}
+              loading={isCreatingMember}
               onPress={onSubmitMember}
               style={styles.submit}
             />
           </View>
         </View>
       </View>
+    </SafeAreaModal>
 
       <DatePickerSheet
         visible={datePickerOpen}
@@ -324,33 +497,7 @@ export function AddFamilyMemberSheet({
         onCancel={onCloseDatePicker}
         onConfirm={onConfirmDateOfBirth}
       />
-    </SafeAreaModal>
-  );
-}
-
-function GenderSegment({
-  label,
-  selected,
-  onPress,
-}: {
-  label: string;
-  selected: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
-      onPress={onPress}
-      style={[styles.genderSegment, selected && styles.genderSegmentSelected]}
-    >
-      <AppText
-        variant="bodyMd"
-        color={selected ? colors.onSurface : colors.onSurfaceVariant}
-      >
-        {label}
-      </AppText>
-    </Pressable>
+    </>
   );
 }
 
@@ -403,22 +550,6 @@ const styles = StyleSheet.create({
   },
   fieldGroup: {
     gap: spacing.sm,
-  },
-  genderTrack: {
-    flexDirection: 'row',
-    backgroundColor: colors.surfaceContainerHighest,
-    borderRadius: radii.sm,
-    padding: 4,
-    minHeight: layout.buttonHeight,
-  },
-  genderSegment: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.sm,
-  },
-  genderSegmentSelected: {
-    backgroundColor: colors.card,
   },
   phoneWrap: {
     minHeight: layout.buttonHeight,
@@ -481,8 +612,31 @@ const styles = StyleSheet.create({
     width: '100%',
     borderRadius: radii.button,
   },
+  genderLoading: {
+    padding: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dropdownContainer: {
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
+    backgroundColor: colors.card,
+    overflow: 'hidden',
+    marginTop: spacing.xs,
+  },
+  dropdownScrollView: {
+    maxHeight: 220,
+    padding: spacing.xs,
+  },
+  dropdownLoading: {
+    padding: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   dropdownList: {
-    gap: spacing.sm,
+    gap: spacing.xs,
+    padding: spacing.xs,
   },
   dropdownOption: {
     minHeight: layout.buttonHeight,
@@ -492,6 +646,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.md,
     backgroundColor: colors.card,
+    marginBottom: spacing.xs,
   },
   dropdownOptionSelected: {
     borderColor: colors.primary,

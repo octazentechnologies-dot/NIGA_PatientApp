@@ -11,6 +11,7 @@ export type RequestOtpSuccessResponse = {
   destinationMasked: string;
   devCode?: string;
   isUserRegistered?: boolean;
+  isUserAlreadyRegistered?: boolean;
 };
 
 export type RequestOtpErrorResponse = {

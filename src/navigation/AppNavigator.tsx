@@ -1,9 +1,25 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { SlideStrip } from '../components/SlideStrip';
 import { StatusBarBleed } from '../components/StatusBarBleed';
 import { usePushNotificationLifecycle } from '../hooks/usePushNotificationLifecycle';
+import {
+  getAccessToken,
+  getAuthUserData,
+  hasLanguageSelectionCompleted,
+  hasOnboardingCompleted,
+  setLanguageSelectionCompleted,
+  setOnboardingCompleted,
+} from '../services/secureStorage';
+import { useAppDispatch } from '../store/hooks';
+import { resetAuthenticatedSession } from '../store/session';
+import {
+  markAuthInitialized,
+  setAuthenticated,
+  setAuthUser,
+  type AuthUser,
+} from '../store/slices/authSlice';
 import { useCompleteProfileController } from '../controllers/useCompleteProfileController';
 import { useConsentController } from '../controllers/useConsentController';
 import { useFamilyMembersController } from '../controllers/useFamilyMembersController';
@@ -213,13 +229,16 @@ function CompleteProfileRoute({
 }
 
 function ConsentRoute({
+  active,
   onBack,
   onFinished,
 }: {
+  active: boolean;
   onBack: () => void;
   onFinished: () => void;
 }) {
   const consent = useConsentController({
+    active,
     onBack,
     onAgree: onFinished,
     onManageLater: onFinished,
@@ -501,6 +520,7 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
     },
   });
   const consentCentre = useConsentCentreController({
+    active: home.consentCentreOpen,
     onBack: home.onCloseConsentCentre,
   });
   const myReviews = useMyReviewsController({
@@ -834,15 +854,167 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
   return <HomeView {...home} notificationCount={notifications.unreadCount} />;
 }
 
+function decodeBase64(input: string): string {
+  if (typeof globalThis.atob === 'function') {
+    return globalThis.atob(input);
+  }
+  const chars =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+  let str = '';
+  let i = 0;
+  const clean = input.replace(/[^A-Za-z0-9+/=]/g, '');
+  while (i < clean.length) {
+    const enc1 = chars.indexOf(clean.charAt(i++));
+    const enc2 = chars.indexOf(clean.charAt(i++));
+    const enc3 = chars.indexOf(clean.charAt(i++));
+    const enc4 = chars.indexOf(clean.charAt(i++));
+
+    const chr1 = (enc1 << 2) | (enc2 >> 4);
+    const chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
+    const chr3 = ((enc3 & 3) << 6) | enc4;
+
+    str += String.fromCharCode(chr1);
+    if (enc3 !== 64 && enc3 !== -1) {
+      str += String.fromCharCode(chr2);
+    }
+    if (enc4 !== 64 && enc4 !== -1) {
+      str += String.fromCharCode(chr3);
+    }
+  }
+  return str;
+}
+
+function parseJwtClaims(
+  token: string,
+): { userId?: number; mobile?: string } | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length < 2) return null;
+    let base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    while (base64.length % 4) {
+      base64 += '=';
+    }
+    const jsonStr = decodeBase64(base64);
+    const parsed = JSON.parse(jsonStr);
+    const userId = Array.isArray(parsed.nameid)
+      ? Number(parsed.nameid[0])
+      : parsed.nameid
+        ? Number(parsed.nameid)
+        : undefined;
+    const mobile = parsed.unique_name ? String(parsed.unique_name) : undefined;
+    return { userId, mobile };
+  } catch {
+    return null;
+  }
+}
+
 export function AppNavigator() {
+  const dispatch = useAppDispatch();
   const [step, setStep] = useState<AppStep>('splash');
+  const [resolvedTargetStep, setResolvedTargetStep] = useState<AppStep | null>(
+    null,
+  );
+  const [isSplashDone, setIsSplashDone] = useState(false);
   const [mobileNumber, setMobileNumber] = useState('');
   const [countryCode, setCountryCode] = useState('+91');
   const [devOtp, setDevOtp] = useState<string | undefined>();
   const [isUserRegistered, setIsUserRegistered] = useState(false);
-  const finishSplash = useCallback(() => setStep('firstLaunch'), []);
-  const finishFirstLaunch = useCallback(() => setStep('onboarding'), []);
-  const finishOnboarding = useCallback(() => setStep('signIn'), []);
+  useEffect(() => {
+    let isMounted = true;
+
+    async function checkAuthAndFlow() {
+      try {
+        const token = await getAccessToken();
+        if (token) {
+          // Restore user data from SecureStore
+          const savedUser = await getAuthUserData<AuthUser>();
+          if (savedUser) {
+            dispatch(
+              setAuthUser({
+                user: savedUser,
+                token,
+                patientId: savedUser.patientId,
+                userId: savedUser.userId,
+                mobile: savedUser.mobile || savedUser.mobileNo,
+              }),
+            );
+          } else {
+            const claims = parseJwtClaims(token);
+            const fallbackUser: AuthUser = claims?.mobile
+              ? {
+                  mobile: claims.mobile,
+                  mobileNo: claims.mobile,
+                  userId: claims.userId,
+                }
+              : null;
+            dispatch(
+              setAuthUser({
+                user: fallbackUser,
+                token,
+                userId: claims?.userId,
+                mobile: claims?.mobile,
+              }),
+            );
+          }
+          dispatch(markAuthInitialized());
+          if (isMounted) {
+            setResolvedTargetStep('home');
+          }
+          return;
+        }
+
+        const [langDone, onboardingDone] = await Promise.all([
+          hasLanguageSelectionCompleted(),
+          hasOnboardingCompleted(),
+        ]);
+
+        if (!isMounted) {
+          return;
+        }
+
+        if (!langDone) {
+          // 1. Language selection is first time process
+          setResolvedTargetStep('firstLaunch');
+        } else if (!onboardingDone) {
+          // 2. Introductory slides is also one time process
+          setResolvedTargetStep('onboarding');
+        } else {
+          // Otherwise proceed directly to login
+          setResolvedTargetStep('signIn');
+        }
+      } catch {
+        if (isMounted) {
+          setResolvedTargetStep('firstLaunch');
+        }
+      }
+    }
+
+    void checkAuthAndFlow();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [dispatch]);
+
+  const finishSplash = useCallback(() => {
+    setIsSplashDone(true);
+  }, []);
+
+  useEffect(() => {
+    if (isSplashDone && resolvedTargetStep) {
+      setStep(resolvedTargetStep);
+    }
+  }, [isSplashDone, resolvedTargetStep]);
+
+  const finishFirstLaunch = useCallback(async () => {
+    await setLanguageSelectionCompleted();
+    setStep('onboarding');
+  }, []);
+
+  const finishOnboarding = useCallback(async () => {
+    await setOnboardingCompleted();
+    setStep('signIn');
+  }, []);
   const backFromSignIn = useCallback(() => setStep('onboarding'), []);
   const openOtp = useCallback(
     (
@@ -882,6 +1054,10 @@ export function AppNavigator() {
     },
     [isUserRegistered, openHome, openCompleteProfile],
   );
+  const handleLogOut = useCallback(async () => {
+    await resetAuthenticatedSession(dispatch);
+    setStep('signIn');
+  }, [dispatch]);
   const slideIndex = useMemo(
     () => Math.max(0, SLIDE_STEPS.indexOf(step as (typeof SLIDE_STEPS)[number])),
     [step],
@@ -938,7 +1114,11 @@ export function AppNavigator() {
           onContinue={openConsent}
           onSkip={openConsent}
         />
-        <ConsentRoute onBack={backFromConsent} onFinished={openPhoneSetup} />
+        <ConsentRoute
+          active={step === 'consent'}
+          onBack={backFromConsent}
+          onFinished={openPhoneSetup}
+        />
         <PhoneSetupRoute
           active={step === 'phoneSetup'}
           onBack={backFromPhoneSetup}
@@ -949,7 +1129,7 @@ export function AppNavigator() {
           onContinue={openHome}
           onSkip={openHome}
         />
-        <HomeRoute onLogOut={() => setStep('signIn')} />
+        <HomeRoute onLogOut={handleLogOut} />
       </SlideStrip>
     </View>
   );

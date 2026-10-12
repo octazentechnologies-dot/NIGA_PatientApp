@@ -2,11 +2,14 @@ import { useEffect, useMemo, useState } from 'react';
 
 import {
   BOOKING_MEMBERS,
+  resolveBookingMembers,
   type BookingMember,
 } from '../config/appointmentSlots';
 import type { PatientDocument } from '../config/patientDocuments';
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import { useGetFamilyQuery } from '../store/api/new/familyApi';
+import { useAppSelector } from '../store/hooks';
 
 export type UploadDocTypeId =
   | 'report'
@@ -152,8 +155,21 @@ export function useUploadDocumentController({
     });
   };
 
+  const authUser = useAppSelector((state) => state.auth.user);
+  const patientFullName =
+    authUser?.patientName ||
+    [authUser?.firstName, authUser?.lastName].filter(Boolean).join(' ');
+
+  const { data: familyResponse } = useGetFamilyQuery();
+  const apiFamily = familyResponse?.data;
+
+  const members = useMemo(
+    () => resolveBookingMembers(patientFullName, undefined, apiFamily),
+    [patientFullName, apiFamily],
+  );
+
   const member =
-    BOOKING_MEMBERS.find((item) => item.id === memberId) ?? BOOKING_MEMBERS[0];
+    members.find((item) => item.id === memberId) ?? members[0];
   const memberLabel = member.name;
 
   return {
@@ -161,7 +177,7 @@ export function useUploadDocumentController({
     t,
     memberId,
     memberLabel,
-    members: BOOKING_MEMBERS,
+    members,
     memberPickerOpen,
     files,
     readyCount,

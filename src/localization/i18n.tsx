@@ -3,6 +3,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type PropsWithChildren,
@@ -11,6 +12,8 @@ import {
 import { en } from './en';
 import { mr } from './mr';
 import type { AppLanguage, TranslationKey, TranslationMap } from './types';
+
+import { getSelectedLanguage, saveSelectedLanguage } from '../services/secureStorage';
 
 const dictionaries: Record<AppLanguage, TranslationMap> = { en, mr };
 
@@ -30,7 +33,22 @@ const LocalizationContext = createContext<LocalizationContextValue | null>(
 );
 
 export function LocalizationProvider({ children }: PropsWithChildren) {
-  const [language, setLanguage] = useState<AppLanguage>(deviceLanguage);
+  const [language, setLanguageState] = useState<AppLanguage>(deviceLanguage);
+
+  useEffect(() => {
+    getSelectedLanguage()
+      .then((saved) => {
+        if (saved === 'en' || saved === 'mr') {
+          setLanguageState(saved);
+        }
+      })
+      .catch(() => undefined);
+  }, []);
+
+  const setLanguage = useCallback((next: AppLanguage) => {
+    setLanguageState(next);
+    saveSelectedLanguage(next).catch(() => undefined);
+  }, []);
 
   const t = useCallback(
     (key: TranslationKey) => dictionaries[language][key],
@@ -39,7 +57,7 @@ export function LocalizationProvider({ children }: PropsWithChildren) {
 
   const value = useMemo(
     () => ({ language, setLanguage, t }),
-    [language, t],
+    [language, setLanguage, t],
   );
 
   return (

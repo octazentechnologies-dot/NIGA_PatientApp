@@ -30,12 +30,23 @@ export function CompleteProfileView({
   t,
   screenTitle,
   primaryActionLabel,
+  isContinueDisabled,
+  isSubmitting,
+  isProfileLoading,
+  toastVisible,
+  toastMessage,
+  toastVariant,
   showSkip,
   mobileNumber,
   countryCode,
   fullName,
   dateOfBirth,
   gender,
+  selectedGenderId,
+  genderLabel,
+  genders,
+  isGendersLoading,
+  genderPickerOpen,
   preferredLanguage,
   address,
   selectedCountryId,
@@ -75,6 +86,8 @@ export function CompleteProfileView({
   onOpenDatePicker,
   onCloseDatePicker,
   onConfirmDateOfBirth,
+  onOpenGenderPicker,
+  onCloseGenderPicker,
   onSelectGender,
   onOpenLanguagePicker,
   onCloseLanguagePicker,
@@ -105,8 +118,50 @@ export function CompleteProfileView({
 }: CompleteProfileViewModel) {
   const insets = useSafeAreaInsets();
 
+  if (isProfileLoading) {
+    return (
+      <View style={styles.root}>
+        <AuthHeader
+          language={language}
+          brandName={t('brandName')}
+          backLabel={t('back')}
+          onBack={onBack}
+          onSelectLanguage={onSelectLanguage}
+        />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <AppText
+            variant="bodyMd"
+            color={colors.onSurfaceVariant}
+            style={{ marginTop: spacing.md }}
+          >
+            {language === 'mr' ? 'माहिती लोड होत आहे...' : 'Loading profile...'}
+          </AppText>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.root}>
+      {toastVisible && (
+        <View
+          style={[
+            styles.toast,
+            { top: Math.max(insets.top, spacing.sm) + spacing.xs },
+            toastVariant === 'error' ? styles.toastError : styles.toastSuccess,
+          ]}
+        >
+          <Ionicons
+            name={toastVariant === 'error' ? 'alert-circle' : 'checkmark-circle'}
+            size={18}
+            color="#FFFFFF"
+          />
+          <AppText variant="bodyMd" color="#FFFFFF" style={styles.toastText}>
+            {toastMessage}
+          </AppText>
+        </View>
+      )}
       <AuthHeader
         language={language}
         brandName={t('brandName')}
@@ -125,9 +180,6 @@ export function CompleteProfileView({
         contentContainerStyle={styles.content}
       >
         <View style={styles.stepBlock}>
-          <View style={styles.progressTrack}>
-            <View style={styles.progressFill} />
-          </View>
           <AppText variant="headlineMd" color="#1F1F1F">
             {screenTitle}
           </AppText>
@@ -136,6 +188,7 @@ export function CompleteProfileView({
         <View style={styles.form}>
           <FormField
             label={t('fullName')}
+            required
             value={fullName}
             placeholder={t('fullNamePlaceholder')}
             language={language}
@@ -143,6 +196,7 @@ export function CompleteProfileView({
           />
           <FormField
             label={t('dateOfBirth')}
+            required
             value={dateOfBirth}
             placeholder={t('dateOfBirthPlaceholder')}
             language={language}
@@ -164,28 +218,25 @@ export function CompleteProfileView({
             onPress={onOpenDatePicker}
           />
 
-          <View style={styles.fieldGroup}>
-            <AppText variant="labelSm" color={colors.onSurface}>
-              {t('gender')}
-            </AppText>
-            <View style={styles.genderRow}>
-              <GenderChip
-                label={t('genderFemale')}
-                selected={gender === 'female'}
-                onPress={() => onSelectGender('female')}
-              />
-              <GenderChip
-                label={t('genderMale')}
-                selected={gender === 'male'}
-                onPress={() => onSelectGender('male')}
-              />
-              <GenderChip
-                label={t('genderOther')}
-                selected={gender === 'other'}
-                onPress={() => onSelectGender('other')}
-              />
-            </View>
-          </View>
+          {/* Gender */}
+          <FormField
+            label={t('gender')}
+            value={genderLabel}
+            placeholder={t('genderPlaceholder')}
+            language={language}
+            rightIcon={
+              isGendersLoading ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <Ionicons
+                  name="chevron-down"
+                  size={20}
+                  color={colors.onSurfaceVariant}
+                />
+              )
+            }
+            onPress={isGendersLoading ? undefined : onOpenGenderPicker}
+          />
 
           <FormField
             label={t('preferredLanguage')}
@@ -413,24 +464,11 @@ export function CompleteProfileView({
         <AppButton
           label={primaryActionLabel}
           textVariant="titleMd"
+          loading={isSubmitting}
+          disabled={isContinueDisabled || isSubmitting}
           onPress={onContinue}
           style={styles.footerButton}
-          iconPosition="end"
-          icon={
-            showSkip ? (
-              <Ionicons name="arrow-forward" size={20} color={colors.onButton} />
-            ) : undefined
-          }
         />
-        {showSkip ? (
-          <AppButton
-            variant="secondary"
-            label={t('skipForNow')}
-            textVariant="titleMd"
-            onPress={onSkip}
-            style={[styles.footerButton, styles.skipButton]}
-          />
-        ) : null}
       </View>
 
       <DatePickerSheet
@@ -511,6 +549,15 @@ export function CompleteProfileView({
         onSelect={onSelectDistrict}
       />
       <LocationPickerModal
+        visible={genderPickerOpen}
+        title={t('gender')}
+        loading={isGendersLoading}
+        options={genders}
+        selectedId={selectedGenderId}
+        onClose={onCloseGenderPicker}
+        onSelect={onSelectGender}
+      />
+      <LocationPickerModal
         visible={cityPickerOpen}
         title={t('city')}
         loading={isCitiesLoading}
@@ -520,32 +567,6 @@ export function CompleteProfileView({
         onSelect={onSelectCity}
       />
     </View>
-  );
-}
-
-function GenderChip({
-  label,
-  selected,
-  onPress,
-}: {
-  label: string;
-  selected: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
-      onPress={onPress}
-      style={[styles.genderChip, selected && styles.genderChipSelected]}
-    >
-      <AppText
-        variant="bodyMd"
-        color={selected ? colors.primary : colors.onSurface}
-      >
-        {label}
-      </AppText>
-    </Pressable>
   );
 }
 
@@ -731,23 +752,6 @@ const styles = StyleSheet.create({
   fieldGroup: {
     gap: spacing.sm,
   },
-  genderRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  genderChip: {
-    flex: 1,
-    minHeight: layout.buttonHeight,
-    borderWidth: 1,
-    borderColor: colors.outline,
-    borderRadius: radii.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  genderChipSelected: {
-    backgroundColor: colors.languageSelectedFill,
-    borderColor: colors.primary,
-  },
   accessibilityCard: {
     gap: spacing.sm,
     paddingTop: spacing.md,
@@ -892,5 +896,41 @@ const styles = StyleSheet.create({
   stateListContent: {
     gap: spacing.sm,
     paddingBottom: spacing.md,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.xl,
+  },
+  toast: {
+    position: 'absolute',
+    alignSelf: 'center',
+    left: spacing.gutter,
+    right: spacing.gutter,
+    zIndex: 99,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    borderRadius: radii.full,
+    paddingVertical: 10,
+    paddingHorizontal: spacing.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  toastSuccess: {
+    backgroundColor: '#0F766E',
+  },
+  toastError: {
+    backgroundColor: '#DC2626',
+  },
+  toastText: {
+    flexShrink: 1,
+    textAlign: 'center',
+    fontWeight: '500',
   },
 });

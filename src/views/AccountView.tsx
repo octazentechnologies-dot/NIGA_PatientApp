@@ -49,7 +49,6 @@ const MY_CARE_ROWS: RowConfig[] = [
     id: 'family',
     icon: 'people-outline',
     labelKey: 'accountFamilyMembers',
-    badgeKey: 'accountFamilyMembersBadge',
   },
   { id: 'appointments', icon: 'calendar-outline', labelKey: 'accountAppointments' },
   { id: 'prescriptions', icon: 'medkit-outline', labelKey: 'accountPrescriptions' },
@@ -90,7 +89,6 @@ const PRIVACY_ROWS: RowConfig[] = [
     id: 'consent',
     icon: 'shield-checkmark-outline',
     labelKey: 'accountConsentCentre',
-    badgeKey: 'accountConsentBadge',
   },
   {
     id: 'data-requests',
@@ -200,123 +198,123 @@ export function AccountView({
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.content, { paddingBottom: tabScrollInset }]}
       >
-      <Section title={t('accountSectionMyCare')}>
-        {MY_CARE_ROWS.map((row) => (
+        <Section title={t('accountSectionMyCare')}>
+          {MY_CARE_ROWS.map((row) => (
+            <AccountRow
+              key={row.id}
+              icon={row.icon}
+              label={t(row.labelKey)}
+              badge={row.badgeKey ? t(row.badgeKey) : undefined}
+              badgeTone={row.badgeTone}
+              onPress={() => onOpenRow(row.id)}
+            />
+          ))}
+        </Section>
+
+        <Section title={t('accountSectionPreferences')}>
           <AccountRow
-            key={row.id}
-            icon={row.icon}
-            label={t(row.labelKey)}
-            badge={row.badgeKey ? t(row.badgeKey) : undefined}
-            badgeTone={row.badgeTone}
-            onPress={() => onOpenRow(row.id)}
+            icon="globe-outline"
+            label={t('languageLabel')}
+            value={languageValue}
+            onPress={onOpenLanguagePicker}
           />
-        ))}
-      </Section>
-
-      <Section title={t('accountSectionPreferences')}>
-        <AccountRow
-          icon="globe-outline"
-          label={t('languageLabel')}
-          value={languageValue}
-          onPress={onOpenLanguagePicker}
-        />
-        <AccountRow
-          icon="notifications-outline"
-          label={t('accountNotificationSettings')}
-          onPress={() => onOpenRow('notifications')}
-        />
-        <AccountRow
-          icon="cloud-offline-outline"
-          label={t('accountLowDataMode')}
-          helper={t('accountLowDataHelper')}
-          chevron={false}
-          trailing={
-            <AppSwitch value={lowDataMode} onValueChange={onToggleLowData} />
-          }
-        />
-      </Section>
-
-      <Section title={t('accountSectionPayments')}>
-        {PAYMENT_ROWS.map((row) => (
           <AccountRow
-            key={row.id}
-            icon={row.icon}
-            label={t(row.labelKey)}
-            badge={row.badgeKey ? t(row.badgeKey) : undefined}
-            badgeTone={row.badgeTone}
-            onPress={() => onOpenRow(row.id)}
+            icon="notifications-outline"
+            label={t('accountNotificationSettings')}
+            onPress={() => onOpenRow('notifications')}
           />
-        ))}
-      </Section>
-
-      <Section title={t('accountSectionPrivacy')}>
-        {PRIVACY_ROWS.map((row) => (
           <AccountRow
-            key={row.id}
-            icon={row.icon}
-            label={t(row.labelKey)}
-            badge={row.badgeKey ? t(row.badgeKey) : undefined}
-            badgeTone={row.badgeTone}
-            onPress={() => onOpenRow(row.id)}
+            icon="cloud-offline-outline"
+            label={t('accountLowDataMode')}
+            helper={t('accountLowDataHelper')}
+            chevron={false}
+            trailing={
+              <AppSwitch value={lowDataMode} onValueChange={onToggleLowData} />
+            }
           />
-        ))}
-      </Section>
+        </Section>
 
-      <Section title={t('accountSectionHelp')}>
-        {HELP_ROWS.map((row) => (
+        <Section title={t('accountSectionPayments')}>
+          {PAYMENT_ROWS.map((row) => (
+            <AccountRow
+              key={row.id}
+              icon={row.icon}
+              label={t(row.labelKey)}
+              badge={row.badgeKey ? t(row.badgeKey) : undefined}
+              badgeTone={row.badgeTone}
+              onPress={() => onOpenRow(row.id)}
+            />
+          ))}
+        </Section>
+
+        <Section title={t('accountSectionPrivacy')}>
+          {PRIVACY_ROWS.map((row) => (
+            <AccountRow
+              key={row.id}
+              icon={row.icon}
+              label={t(row.labelKey)}
+              badge={row.badgeKey ? t(row.badgeKey) : undefined}
+              badgeTone={row.badgeTone}
+              onPress={() => onOpenRow(row.id)}
+            />
+          ))}
+        </Section>
+
+        <Section title={t('accountSectionHelp')}>
+          {HELP_ROWS.map((row) => (
+            <AccountRow
+              key={row.id}
+              icon={row.icon}
+              label={t(row.labelKey)}
+              badge={row.badgeKey ? t(row.badgeKey) : undefined}
+              badgeTone={row.badgeTone}
+              onPress={() => onOpenRow(row.id)}
+            />
+          ))}
           <AccountRow
-            key={row.id}
-            icon={row.icon}
-            label={t(row.labelKey)}
-            badge={row.badgeKey ? t(row.badgeKey) : undefined}
-            badgeTone={row.badgeTone}
-            onPress={() => onOpenRow(row.id)}
+            icon="shield-outline"
+            label={t('accountPrivacyNotice')}
+            value={t('accountPrivacyNoticeVersion')}
+            onPress={() => onOpenRow('privacy')}
           />
-        ))}
-        <AccountRow
-          icon="shield-outline"
-          label={t('accountPrivacyNotice')}
-          value={t('accountPrivacyNoticeVersion')}
-          onPress={() => onOpenRow('privacy')}
-        />
-      </Section>
+        </Section>
 
-      <Pressable accessibilityRole="button" onPress={onLogOut} style={styles.footerAction}>
-        <AppText variant="titleMd" color={colors.primary}>
-          {t('accountLogOut')}
+        <Pressable accessibilityRole="button" onPress={onLogOut} style={styles.footerAction}>
+          <AppText variant="titleMd" color={colors.primary}>
+            {t('accountLogOut')}
+          </AppText>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          onPress={onDeleteAccount}
+          style={styles.footerAction}
+        >
+          <AppText variant="titleMd" color={colors.error}>
+            {t('accountDeleteAccount')}
+          </AppText>
+        </Pressable>
+        <AppText
+          variant="labelSm"
+          color={colors.onSurfaceVariant}
+          style={styles.deleteNote}
+        >
+          {t('accountDeleteAccountNote')}
         </AppText>
-      </Pressable>
-      <Pressable
-        accessibilityRole="button"
-        onPress={onDeleteAccount}
-        style={styles.footerAction}
-      >
-        <AppText variant="titleMd" color={colors.error}>
-          {t('accountDeleteAccount')}
-        </AppText>
-      </Pressable>
-      <AppText
-        variant="labelSm"
-        color={colors.onSurfaceVariant}
-        style={styles.deleteNote}
-      >
-        {t('accountDeleteAccountNote')}
-      </AppText>
 
-      <AppText variant="labelSm" color={colors.onSurfaceVariant} style={styles.version}>
-        {appVersionLabel}
-      </AppText>
-      {appReleaseNotes ? (
-        <AppText variant="labelSm" color={colors.onSurfaceVariant} style={styles.releaseNotes}>
-          {appReleaseNotes}
+        <AppText variant="labelSm" color={colors.onSurfaceVariant} style={styles.version}>
+          {appVersionLabel}
         </AppText>
-      ) : null}
-      <Image
-        source={images.favicon}
-        style={styles.footerMark}
-        resizeMode="contain"
-        accessibilityLabel={t('brandName')}
-      />
+        {appReleaseNotes ? (
+          <AppText variant="labelSm" color={colors.onSurfaceVariant} style={styles.releaseNotes}>
+            {appReleaseNotes}
+          </AppText>
+        ) : null}
+        <Image
+          source={images.favicon}
+          style={styles.footerMark}
+          resizeMode="contain"
+          accessibilityLabel={t('brandName')}
+        />
       </ScrollView>
 
       <SafeAreaModal

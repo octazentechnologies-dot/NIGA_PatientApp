@@ -3,6 +3,7 @@ import { useState } from 'react';
 import type { BookedAppointment } from '../config/bookedAppointments';
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import { useAppSelector } from '../store/hooks';
 
 export type ConsultationCompleteViewModel = {
   language: AppLanguage;
@@ -67,8 +68,12 @@ export function useConsultationCompleteController({
   const modeLabel = appointment?.modeConsultLabel ?? t('reviewVideoConsult');
   const whenBase = appointment?.whenLabel ?? 'Today, 11 Sep 2026 · 6:00 PM IST';
   const whenLine = `${whenBase} · ${modeLabel}`;
+  const authUser = useAppSelector((state) => state.auth.user);
   const patientName =
-    appointment?.patientLabel?.split('(')[0]?.trim() ?? 'Aarav Kulkarni';
+    appointment?.patientLabel?.split('(')[0]?.trim() ||
+    authUser?.patientName ||
+    [authUser?.firstName, authUser?.lastName].filter(Boolean).join(' ') ||
+    '';
 
   const openPrescription = () => setPrescriptionOpen(true);
 

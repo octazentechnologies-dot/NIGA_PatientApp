@@ -18,6 +18,7 @@ import { AppText } from './AppText';
 
 type FormFieldProps = {
   label: string;
+  required?: boolean;
   value: string;
   placeholder: string;
   language: AppLanguage;
@@ -36,6 +37,7 @@ type FormFieldProps = {
 
 export function FormField({
   label,
+  required = false,
   value,
   placeholder,
   language,
@@ -95,9 +97,16 @@ export function FormField({
 
   return (
     <View style={styles.wrap}>
-      <AppText variant="labelSm" color={colors.onSurface}>
-        {label}
-      </AppText>
+      <View style={styles.labelRow}>
+        <AppText variant="labelSm" color={colors.onSurface}>
+          {label}
+        </AppText>
+        {required ? (
+          <AppText variant="labelSm" color={colors.error} raw>
+            {' *'}
+          </AppText>
+        ) : null}
+      </View>
       {onPress ? (
         <Pressable accessibilityRole="button" onPress={onPress}>
           {input}
@@ -129,6 +138,10 @@ export function FormField({
 const styles = StyleSheet.create({
   wrap: {
     gap: spacing.xs,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   input: {
     minHeight: layout.buttonHeight,

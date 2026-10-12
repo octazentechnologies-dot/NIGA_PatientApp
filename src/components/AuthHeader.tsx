@@ -37,7 +37,7 @@ export function AuthHeader({
       ]}
     >
       <View style={styles.headerLeft}>
-        <Pressable
+        {/* <Pressable
           accessibilityRole="button"
           accessibilityLabel={backLabel}
           hitSlop={8}
@@ -49,7 +49,7 @@ export function AuthHeader({
             size={24}
             color={colors.onSurfaceVariant}
           />
-        </Pressable>
+        </Pressable> */}
         <Image
           source={images.favicon}
           style={styles.brandMark}
@@ -65,7 +65,7 @@ export function AuthHeader({
           {brandName}
         </AppText>
       </View>
-      <View style={styles.languageSwitch}>
+      {/* <View style={styles.languageSwitch}>
         <LanguageChip
           label="EN"
           languageOverride="en"
@@ -78,7 +78,7 @@ export function AuthHeader({
           selected={language === 'mr'}
           onPress={() => onSelectLanguage('mr')}
         />
-      </View>
+      </View> */}
     </View>
   );
 }

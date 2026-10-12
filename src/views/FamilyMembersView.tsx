@@ -1,5 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import {
+  ActivityIndicator,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { SafeAreaModal } from '../components/SafeAreaModal';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,17 +15,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AddFamilyMemberSheet } from '../components/AddFamilyMemberSheet';
 import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
+import { ConfirmationModal } from '../components/ConfirmationModal';
 import type { FamilyMembersViewModel } from '../controllers/useFamilyMembersController';
-import type { FamilyMember, FamilyMemberStatus } from '../models/family';
+import type { FamilyMember } from '../models/family';
+import type { AppLanguage, TranslationKey } from '../localization/types';
 import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
 import { layout, spacing } from '../theme/spacing';
 import { sheetBottomPadding } from '../utilities/sheetInset';
-
-const PENDING_FILL = '#ffdcc0';
-const PENDING_TEXT = '#8d4f00';
-const SUCCESS_FILL = '#E8F5E9';
-const SUCCESS_TEXT = '#1B5E20';
+import { getRelationDisplayName } from '../utilities/familyHelpers';
 
 export function FamilyMembersView({
   language,
@@ -27,14 +33,11 @@ export function FamilyMembersView({
   self,
   selfMeta,
   members,
-  memberMeta,
-  statusLabel,
   addSheetOpen,
   helpOpen,
   datePickerOpen,
   datePickerValue,
   relationshipPickerOpen,
-  memberMenuId,
   fullName,
   dateOfBirth,
   gender,
@@ -53,26 +56,41 @@ export function FamilyMembersView({
   onOpenDatePicker,
   onCloseDatePicker,
   onConfirmDateOfBirth,
+  genderPickerOpen,
+  onOpenGenderPicker,
+  onCloseGenderPicker,
   onSelectGender,
   onOpenRelationshipPicker,
   onCloseRelationshipPicker,
   onSelectRelationship,
+  apiRelations = [],
+  selectedRelationId = null,
+  selectedRelationName = '',
+  onSelectRelation,
+  apiGenders = [],
+  selectedGenderId = null,
+  isRelationsLoading = false,
+  isGendersLoading = false,
+  isCreatingMember = false,
+  isDeletingMember = false,
   onChangeMobileNumber,
   onToggleAuthorizedToManage,
   onSubmitMember,
-  onOpenMemberMenu,
-  onCloseMemberMenu,
   onEditMember,
   onRemoveMember,
   onContinue,
   onSkip,
   onBack,
+  isFamilyLoading = false,
+  isFamilyError = false,
+  refetchFamily,
 }: FamilyMembersViewModel) {
-  const selectedMember = members.find((member) => member.id === memberMenuId);
+  const [memberToDelete, setMemberToDelete] = useState<FamilyMember | null>(null);
   const insets = useSafeAreaInsets();
 
   return (
     <View style={styles.root}>
+      {/* Top App Bar */}
       <View
         style={[
           styles.header,
@@ -113,6 +131,14 @@ export function FamilyMembersView({
         style={styles.scroll}
         bounces={false}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isFamilyLoading}
+            onRefresh={refetchFamily}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
+          />
+        }
         contentContainerStyle={[
           styles.content,
           variant === 'account' && {
@@ -120,55 +146,66 @@ export function FamilyMembersView({
           },
         ]}
       >
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => undefined}
-          style={styles.memberCard}
-        >
-          <View style={styles.memberMain}>
-            <View style={styles.avatarYou}>
+        {/* Primary Account ("You") Card - SaaS Style */}
+        <View style={styles.selfCard}>
+          <View style={styles.selfAvatar}>
+            <AppText
+              variant="titleMd"
+              color={colors.primary}
+              weightOverride="600"
+              languageOverride="en"
+            >
+              {self.initials}
+            </AppText>
+          </View>
+          <View style={styles.selfInfo}>
+            <View style={styles.selfNameRow}>
               <AppText
                 variant="titleMd"
-                color={colors.primary}
+                color={colors.onSurface}
+                weightOverride="600"
                 languageOverride="en"
+                style={styles.selfName}
+                numberOfLines={1}
               >
-                {self.initials}
+                {self.name}
               </AppText>
-            </View>
-            <View style={styles.memberCopy}>
-              <View style={styles.nameRow}>
-                <AppText
-                  variant="titleMd"
-                  color={colors.onSurface}
-                  languageOverride="en"
-                  style={styles.memberName}
-                >
-                  {self.name}
+              <View style={styles.primaryBadge}>
+                <Ionicons name="shield-checkmark" size={12} color={colors.primary} />
+                <AppText variant="labelSm" color={colors.primary} weightOverride="600">
+                  {t('familyYouBadge')}
                 </AppText>
-                <StatusBadge status="you" label={t('familyYouBadge')} />
               </View>
-              <AppText variant="bodyMd" color={colors.onSurfaceVariant}>
-                {selfMeta}
-              </AppText>
             </View>
+            <AppText variant="bodyMd" color={colors.onSurfaceVariant}>
+              {selfMeta}
+            </AppText>
           </View>
-          <Ionicons
-            name="chevron-forward"
-            size={22}
-            color={colors.outline}
-          />
-        </Pressable>
+        </View>
 
         <View style={styles.divider} />
 
-        <AppText variant="titleMd" color={colors.onSurface}>
-          {t('familyMembersYouManage')}
-        </AppText>
+        {/* Section Header */}
+        <View style={styles.sectionHeader}>
+          <View style={styles.sectionTitleRow}>
+            <AppText variant="titleMd" color={colors.onSurface} weightOverride="600">
+              {t('familyMembersYouManage')}
+            </AppText>
+            {members.length > 0 ? (
+              <View style={styles.countBadge}>
+                <AppText variant="labelSm" color={colors.primary} weightOverride="700">
+                  {String(members.length)}
+                </AppText>
+              </View>
+            ) : null}
+          </View>
+        </View>
 
+        {/* Info Banner */}
         <View style={styles.infoBanner}>
           <Ionicons
             name="information-circle"
-            size={22}
+            size={20}
             color={colors.primary}
           />
           <AppText
@@ -180,29 +217,84 @@ export function FamilyMembersView({
           </AppText>
         </View>
 
+        {/* Family Member Cards Listing */}
         <View style={styles.memberList}>
-          {members.map((member) => (
-            <MemberCard
-              key={member.id}
-              member={member}
-              meta={memberMeta(member)}
-              statusText={statusLabel(member)}
-              moreLabel={t('familyMoreOptions')}
-              onOpenMenu={() => onOpenMemberMenu(member.id)}
-            />
-          ))}
+          {isFamilyLoading && members.length === 0 ? (
+            <View style={styles.emptyMembersBox}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <AppText variant="bodyMd" color={colors.onSurfaceVariant}>
+                {t('loading')}
+              </AppText>
+            </View>
+          ) : isFamilyError && members.length === 0 ? (
+            <View style={styles.emptyMembersBox}>
+              <Ionicons name="alert-circle-outline" size={32} color={colors.error} />
+              <AppText
+                variant="bodyMd"
+                color="#1F1F1F"
+                style={styles.emptyMembersText}
+              >
+                {t('genericError')}
+              </AppText>
+              <AppButton
+                label={t('retry')}
+                variant="secondary"
+                onPress={refetchFamily}
+              />
+            </View>
+          ) : members.length === 0 ? (
+            <View style={styles.emptyMembersBox}>
+              <View style={styles.emptyIconCircle}>
+                <Ionicons
+                  name="people-outline"
+                  size={32}
+                  color={colors.primary}
+                />
+              </View>
+              <AppText
+                variant="titleMd"
+                color={colors.onSurface}
+                weightOverride="600"
+                style={styles.emptyMembersText}
+              >
+                {t('familyNoMembers')}
+              </AppText>
+              <AppText
+                variant="bodyMd"
+                color={colors.onSurfaceVariant}
+                style={styles.emptyMembersText}
+              >
+                {language === 'mr'
+                  ? 'तुमच्या कुटुंबातील सदस्यांची आरोग्यविषयक माहिती व्यवस्थापित करण्यासाठी सदस्य जोडा.'
+                  : 'Add family members to manage consultations, prescriptions, and health records.'}
+              </AppText>
+            </View>
+          ) : (
+            members.map((member) => (
+              <MemberCard
+                key={member.id}
+                member={member}
+                language={language}
+                t={t}
+                onEdit={() => onEditMember(member.id)}
+                onDelete={() => setMemberToDelete(member)}
+              />
+            ))
+          )}
         </View>
 
+        {/* Add Family Member Action */}
         <AppButton
           variant="secondary"
           label={t('familyAddMember')}
           textVariant="titleMd"
           onPress={onOpenAddSheet}
           style={styles.addButton}
-          icon={<Ionicons name="add" size={22} color={colors.button} />}
+          icon={<Ionicons name="person-add-outline" size={20} color={colors.primary} />}
         />
       </ScrollView>
 
+      {/* Onboarding Footer */}
       {variant === 'onboarding' ? (
         <View
           style={[
@@ -226,6 +318,7 @@ export function FamilyMembersView({
         </View>
       ) : null}
 
+      {/* Add / Edit Family Member Bottom Sheet */}
       <AddFamilyMemberSheet
         language={language}
         t={t}
@@ -249,15 +342,28 @@ export function FamilyMembersView({
         onOpenDatePicker={onOpenDatePicker}
         onCloseDatePicker={onCloseDatePicker}
         onConfirmDateOfBirth={onConfirmDateOfBirth}
+        genderPickerOpen={genderPickerOpen}
+        onOpenGenderPicker={onOpenGenderPicker}
+        onCloseGenderPicker={onCloseGenderPicker}
         onSelectGender={onSelectGender}
         onOpenRelationshipPicker={onOpenRelationshipPicker}
         onCloseRelationshipPicker={onCloseRelationshipPicker}
         onSelectRelationship={onSelectRelationship}
+        apiRelations={apiRelations}
+        selectedRelationId={selectedRelationId}
+        selectedRelationName={selectedRelationName}
+        onSelectRelation={onSelectRelation}
+        apiGenders={apiGenders}
+        selectedGenderId={selectedGenderId}
+        isRelationsLoading={isRelationsLoading}
+        isGendersLoading={isGendersLoading}
+        isCreatingMember={isCreatingMember}
         onChangeMobileNumber={onChangeMobileNumber}
         onToggleAuthorizedToManage={onToggleAuthorizedToManage}
         onSubmitMember={onSubmitMember}
       />
 
+      {/* Help Modal */}
       <SafeAreaModal
         transparent
         animationType="fade"
@@ -272,7 +378,7 @@ export function FamilyMembersView({
             ]}
             onPress={() => undefined}
           >
-            <AppText variant="titleMd" color={colors.primary}>
+            <AppText variant="titleMd" color={colors.primary} weightOverride="600">
               {t('familyHelp')}
             </AppText>
             <AppText variant="bodyMd" color={colors.onSurface}>
@@ -287,137 +393,130 @@ export function FamilyMembersView({
         </Pressable>
       </SafeAreaModal>
 
-      <SafeAreaModal
-        transparent
-        animationType="fade"
-        visible={Boolean(selectedMember)}
-        onRequestClose={onCloseMemberMenu}
-      >
-        <Pressable style={styles.modalBackdrop} onPress={onCloseMemberMenu}>
-          <Pressable
-            style={[
-              styles.modalCard,
-              { paddingBottom: sheetBottomPadding(insets, spacing.lg) },
-            ]}
-            onPress={() => undefined}
-          >
-            <AppText
-              variant="titleMd"
-              color={colors.primary}
-              languageOverride="en"
-            >
-              {selectedMember?.name ?? t('familyMoreOptions')}
-            </AppText>
-            <Pressable
-              accessibilityRole="button"
-              onPress={onEditMember}
-              style={styles.menuOption}
-            >
-              <AppText variant="bodyMd" color={colors.onSurface}>
-                {t('familyEditMember')}
-              </AppText>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              onPress={onRemoveMember}
-              style={styles.menuOption}
-            >
-              <AppText variant="bodyMd" color={colors.error}>
-                {t('familyRemoveMember')}
-              </AppText>
-            </Pressable>
-            <AppButton
-              variant="secondary"
-              label={t('close')}
-              textVariant="titleMd"
-              onPress={onCloseMemberMenu}
-            />
-          </Pressable>
-        </Pressable>
-      </SafeAreaModal>
+      {/* Reusable Themed Confirmation Modal */}
+      <ConfirmationModal
+        visible={Boolean(memberToDelete)}
+        variant="danger"
+        title={language === 'mr' ? 'सदस्य काढून टाका?' : 'Remove Member?'}
+        message={
+          language === 'mr'
+            ? `तुम्हाला खात्री आहे की तुम्ही "${memberToDelete?.name || ''}" या सदस्याला काढून टाकू इच्छिता?`
+            : `Are you sure you want to remove "${memberToDelete?.name || ''}" from your family members?`
+        }
+        confirmLabel={language === 'mr' ? 'काढून टाका' : 'Remove'}
+        cancelLabel={t('cancel')}
+        loading={isDeletingMember}
+        onCancel={() => setMemberToDelete(null)}
+        onConfirm={async () => {
+          if (memberToDelete) {
+            const id = memberToDelete.id;
+            setMemberToDelete(null);
+            await onRemoveMember(id);
+          }
+        }}
+      />
     </View>
   );
 }
 
 function MemberCard({
   member,
-  meta,
-  statusText,
-  moreLabel,
-  onOpenMenu,
+  language,
+  t,
+  onEdit,
+  onDelete,
 }: {
   member: FamilyMember;
-  meta: string;
-  statusText: string;
-  moreLabel: string;
-  onOpenMenu: () => void;
+  language: AppLanguage;
+  t: (key: TranslationKey) => string;
+  onEdit: () => void;
+  onDelete: () => void;
 }) {
-  const pending = member.status === 'pending';
+  const relationText = member.relationName
+    ? getRelationDisplayName(member.relationName, language)
+    : member.relationship
+      ? getRelationDisplayName(member.relationship, language)
+      : '';
 
   return (
-    <View style={[styles.memberCard, pending && styles.memberCardPending]}>
-      <View style={styles.memberMain}>
-        <View style={styles.avatarMember}>
+    <View style={styles.memberCard}>
+      {/* Avatar */}
+      <View style={styles.memberAvatar}>
+        <AppText
+          variant="titleMd"
+          color={colors.primary}
+          weightOverride="600"
+          languageOverride="en"
+        >
+          {member.initials}
+        </AppText>
+      </View>
+
+      {/* Member Info */}
+      <View style={styles.memberInfo}>
+        <View style={styles.nameRelationRow}>
           <AppText
             variant="titleMd"
-            color={colors.onSurfaceVariant}
+            color={colors.onSurface}
+            weightOverride="600"
             languageOverride="en"
+            style={styles.memberName}
+            numberOfLines={1}
           >
-            {member.initials}
+            {member.name}
           </AppText>
+          {relationText ? (
+            <View style={styles.relationPill}>
+              <AppText variant="labelSm" color={colors.primary} weightOverride="600">
+                {relationText}
+              </AppText>
+            </View>
+          ) : null}
         </View>
-        <View style={styles.memberCopy}>
-          <View style={styles.nameRow}>
-            <AppText
-              variant="titleMd"
-              color={colors.onSurface}
-              languageOverride="en"
-              style={styles.memberName}
-            >
-              {member.name}
+
+        <View style={styles.metaRow}>
+          {member.age > 0 ? (
+            <AppText variant="labelSm" color={colors.onSurfaceVariant}>
+              {`${member.age} ${t('yearsShort')}`}
             </AppText>
-            <StatusBadge status={member.status} label={statusText} />
-          </View>
-          <AppText variant="bodyMd" color={colors.onSurfaceVariant}>
-            {meta}
-          </AppText>
+          ) : null}
+          {member.age > 0 && member.mobileNo ? (
+            <AppText variant="labelSm" color={colors.outlineVariant}>
+              {' · '}
+            </AppText>
+          ) : null}
+          {member.mobileNo ? (
+            <View style={styles.phoneSnippet}>
+              <Ionicons name="call-outline" size={12} color={colors.onSurfaceVariant} />
+              <AppText variant="labelSm" color={colors.onSurfaceVariant}>
+                {member.mobileNo}
+              </AppText>
+            </View>
+          ) : null}
         </View>
       </View>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`${moreLabel}: ${member.name}`}
-        hitSlop={8}
-        onPress={onOpenMenu}
-        style={styles.moreButton}
-      >
-        <Ionicons
-          name="ellipsis-vertical"
-          size={20}
-          color={colors.onSurfaceVariant}
-        />
-      </Pressable>
-    </View>
-  );
-}
 
-function StatusBadge({
-  status,
-  label,
-}: {
-  status: FamilyMemberStatus | 'you';
-  label: string;
-}) {
-  const warm = status === 'pending' || status === 'guardian';
-
-  return (
-    <View style={[styles.badge, warm ? styles.badgeWarm : styles.badgeSuccess]}>
-      <AppText
-        variant="labelSm"
-        color={warm ? PENDING_TEXT : SUCCESS_TEXT}
-        style={styles.badgeText}
-      >
-        {label}
-      </AppText>
+      {/* Action Buttons: Direct Edit and Delete */}
+      <View style={styles.cardActions}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('familyEditMember')}
+          hitSlop={8}
+          onPress={onEdit}
+          style={styles.actionBtnEdit}
+        >
+          <Ionicons name="pencil-outline" size={16} color={colors.primary} />
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('familyRemoveMember')}
+          hitSlop={8}
+          onPress={onDelete}
+          style={styles.actionBtnDelete}
+        >
+          <Ionicons name="trash-outline" size={16} color={colors.error} />
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -467,100 +566,208 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
   },
-  memberCard: {
+
+  /* Self Card - SaaS Style */
+  selfCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
     backgroundColor: colors.card,
+    borderRadius: radii.md,
+    padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.outlineVariant,
-    borderRadius: radii.sm,
-    padding: spacing.md,
-  },
-  memberCardPending: {
-    opacity: 0.95,
-  },
-  memberMain: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: spacing.md,
   },
-  avatarYou: {
+  selfAvatar: {
     width: 48,
     height: 48,
     borderRadius: radii.full,
     backgroundColor: colors.buttonFill,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.surfaceContainerHighest,
   },
-  avatarMember: {
-    width: 48,
-    height: 48,
-    borderRadius: radii.full,
-    backgroundColor: colors.surfaceContainerHigh,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  memberCopy: {
+  selfInfo: {
     flex: 1,
     gap: 2,
   },
-  nameRow: {
+  selfNameRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     alignItems: 'center',
-    gap: spacing.sm,
+    flexWrap: 'wrap',
+    gap: spacing.xs,
   },
-  memberName: {
+  selfName: {
     flexShrink: 1,
   },
-  badge: {
-    borderRadius: radii.full,
+  primaryBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.buttonFill,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
+    borderRadius: radii.full,
+    borderWidth: 1,
+    borderColor: colors.primaryContainer,
   },
-  badgeSuccess: {
-    backgroundColor: SUCCESS_FILL,
-  },
-  badgeWarm: {
-    backgroundColor: PENDING_FILL,
-  },
-  badgeText: {
-    fontSize: 10,
-    lineHeight: 14,
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-  },
+
   divider: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: colors.outlineVariant,
     opacity: 0.5,
   },
+
+  /* Section Header */
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: spacing.xs,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  countBadge: {
+    backgroundColor: colors.buttonFill,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: radii.full,
+    borderWidth: 1,
+    borderColor: colors.primaryContainer,
+  },
+
+  /* Info Banner */
   infoBanner: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: spacing.md,
+    gap: spacing.sm,
     backgroundColor: colors.surfaceContainerLow,
     borderRadius: radii.sm,
     padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.outlineVariant,
   },
+
+  /* Listing */
   memberList: {
-    gap: 12,
+    gap: spacing.sm,
   },
-  moreButton: {
-    width: 40,
-    height: 40,
+  memberCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  memberAvatar: {
+    width: 46,
+    height: 46,
+    borderRadius: radii.full,
+    backgroundColor: colors.surfaceContainerLow,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.surfaceContainerHighest,
   },
+  memberInfo: {
+    flex: 1,
+    gap: 4,
+  },
+  nameRelationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  memberName: {
+    flexShrink: 1,
+  },
+  relationPill: {
+    backgroundColor: colors.buttonFill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radii.full,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.primary,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 4,
+  },
+  phoneSnippet: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+
+  /* Direct Action Buttons */
+  cardActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  actionBtnEdit: {
+    width: 36,
+    height: 36,
+    borderRadius: radii.full,
+    backgroundColor: colors.surfaceContainerLow,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
+  },
+  actionBtnDelete: {
+    width: 36,
+    height: 36,
+    borderRadius: radii.full,
+    backgroundColor: '#FDECEA',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#F8D7DA',
+  },
+
+  /* Empty State */
+  emptyMembersBox: {
+    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.card,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.outlineVariant,
+  },
+  emptyIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: radii.full,
+    backgroundColor: colors.buttonFill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xs,
+  },
+  emptyMembersText: {
+    textAlign: 'center',
+  },
+
   addButton: {
     minHeight: 52,
     width: '100%',
     borderRadius: radii.button,
   },
+
   footer: {
     alignSelf: 'stretch',
     paddingTop: spacing.sm,
@@ -581,6 +788,8 @@ const styles = StyleSheet.create({
   flex: {
     flex: 1,
   },
+
+  /* Modal Styles */
   modalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(24, 28, 27, 0.4)',
@@ -592,9 +801,5 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radii.lg,
     padding: spacing.lg,
     gap: spacing.md,
-  },
-  menuOption: {
-    minHeight: layout.buttonHeight,
-    justifyContent: 'center',
   },
 });

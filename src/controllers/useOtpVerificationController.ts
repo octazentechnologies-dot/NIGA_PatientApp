@@ -5,7 +5,12 @@ import type { AppLanguage, TranslationKey } from '../localization/types';
 import { useVerifyOtpMutation } from '../store/api/new/otpVerificationApi';
 import { useRequestOtpMutation } from '../store/api/new/signInApi';
 import { useAppDispatch } from '../store/hooks';
-import { setAuthenticated, setBookingSession } from '../store/slices/authSlice';
+import { saveAccessToken, saveAuthUserData } from '../services/secureStorage';
+import {
+  setAuthenticated,
+  setAuthUser,
+  setBookingSession,
+} from '../store/slices/authSlice';
 import { formatIndianMobileDisplay } from '../utilities/phone';
 
 const RESEND_SECONDS = 45;
@@ -116,7 +121,11 @@ export function useOtpVerificationController({
         }).unwrap();
 
         if (response.success) {
-          const registered = response.isUserRegistered ?? isUserRegistered;
+          const registered = Boolean(
+            response.isUserAlreadyRegistered ??
+              response.isUserRegistered ??
+              isUserRegistered,
+          );
           dispatch(
             setBookingSession({
               bookingSessionId: response.bookingSessionId,
@@ -124,6 +133,39 @@ export function useOtpVerificationController({
             }),
           );
           if (registered) {
+            const userToSave = response.user
+              ? {
+                  userId: response.user.userId,
+                  userName: response.user.userName,
+                  firstName: response.user.firstName,
+                  lastName: response.user.lastName,
+                  email: response.user.email,
+                  mobile: response.user.mobileNo ?? response.mobile,
+                  mobileNo: response.user.mobileNo ?? response.mobile,
+                  role: response.user.role,
+                  roleId: response.user.roleId,
+                  patientId: response.user.patientId,
+                  patientName: response.user.patientName,
+                }
+              : {
+                  mobile: response.mobile,
+                  mobileNo: response.mobile,
+                };
+
+            if (response.token) {
+              await saveAccessToken(response.token);
+            }
+            await saveAuthUserData(userToSave);
+
+            dispatch(
+              setAuthUser({
+                user: userToSave,
+                token: response.token ?? null,
+                patientId: response.user?.patientId,
+                userId: response.user?.userId,
+                mobile: response.user?.mobileNo ?? response.mobile,
+              }),
+            );
             dispatch(setAuthenticated(true));
           }
           setErrorMessage(null);
@@ -165,8 +207,10 @@ export function useOtpVerificationController({
           if (response.devCode) {
             setDevOtp(response.devCode);
           }
-          if (typeof response.isUserRegistered === 'boolean') {
-            setIsUserRegistered(response.isUserRegistered);
+          const reg =
+            response.isUserAlreadyRegistered ?? response.isUserRegistered;
+          if (typeof reg === 'boolean') {
+            setIsUserRegistered(reg);
           }
         }
       } catch {

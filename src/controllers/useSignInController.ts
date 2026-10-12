@@ -281,10 +281,12 @@ export function useSignInController({
           if (response.devCode) {
             setDevOtp(response.devCode);
           }
+          const isRegistered =
+            response.isUserRegistered ?? response.isUserAlreadyRegistered;
           onOtpRequested(
             mobileNumber,
             response.devCode,
-            response.isUserRegistered,
+            isRegistered,
             selectedCountryCode,
           );
         } else {

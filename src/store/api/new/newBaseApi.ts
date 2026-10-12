@@ -14,5 +14,6 @@ export const newBaseApi = createApi({
     baseUrl: API_CONFIG.new.baseUrl,
     prepareHeaders: prepareAuthHeaders,
   }),
+  tagTypes: ['Consents', 'Doctors', 'Family', 'PatientProfile'],
   endpoints: () => ({}),
 });

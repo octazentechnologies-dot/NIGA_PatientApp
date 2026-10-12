@@ -6,6 +6,7 @@ import {
   PLATFORM_FEE_RUPEES,
   TAX_RUPEES,
   formatRupees,
+  resolveBookingMembers,
   type BookingMember,
   type ConsultMode,
 } from '../config/appointmentSlots';
@@ -36,6 +37,7 @@ import {
 import { getDoctorProfile } from '../config/doctorProfiles';
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import { useAppSelector } from '../store/hooks';
 import type { PaymentStatus } from './useBookAppointmentController';
 
 export type ConsultNowMatchState = 'searching' | 'offer' | 'none';
@@ -325,8 +327,18 @@ export function useConsultNowController({
     return () => clearTimeout(timer);
   }, [paymentStatus]);
 
+  const authUser = useAppSelector((state) => state.auth.user);
+  const patientFullName =
+    authUser?.patientName ||
+    [authUser?.firstName, authUser?.lastName].filter(Boolean).join(' ');
+
+  const members = useMemo(
+    () => resolveBookingMembers(patientFullName),
+    [patientFullName],
+  );
+
   const member =
-    BOOKING_MEMBERS.find((item) => item.id === memberId) ?? BOOKING_MEMBERS[0];
+    members.find((item) => item.id === memberId) ?? members[0];
   const selectedNeed =
     CONSULT_NOW_NEEDS.find((item) => item.id === selectedNeedId) ?? CONSULT_NOW_NEEDS[0];
   const feeLabel = formatRupees(CONSULT_NOW_FEE_RUPEES[mode], language);
@@ -405,7 +417,7 @@ export function useConsultNowController({
     waitLabel: t('consultNowWait')
       .replace('{min}', language === 'mr' ? '४' : String(CONSULT_NOW_WAIT_MIN))
       .replace('{max}', language === 'mr' ? '८' : String(CONSULT_NOW_WAIT_MAX)),
-    members: BOOKING_MEMBERS,
+    members,
     member,
     selectedMemberLabel,
     memberPickerOpen,

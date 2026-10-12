@@ -17,6 +17,13 @@ export type FamilyMember = {
   gender: GenderOption;
   relationship: FamilyRelationship;
   status: FamilyMemberStatus;
+  relationName?: string;
+  relationId?: number;
+  genderId?: number;
+  mobileNo?: string;
+  memberPatientId?: number;
+  dateOfBirth?: string;
+  familyMemberId?: number;
 };
 
 export type FamilySelf = {

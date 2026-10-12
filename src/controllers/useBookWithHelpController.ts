@@ -3,6 +3,7 @@ import { Linking } from 'react-native';
 
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import { useAppSelector } from '../store/hooks';
 
 export type CallBackTimeId = 'now' | 'hour' | 'morning' | 'evening';
 
@@ -54,11 +55,25 @@ export function useBookWithHelpController({
     return t(key);
   }, [helpNeed, t]);
 
+  const authUser = useAppSelector((state) => state.auth.user);
+  const authMobile = useAppSelector((state) => state.auth.mobile);
+
+  const patientName =
+    authUser?.patientName ||
+    [authUser?.firstName, authUser?.lastName].filter(Boolean).join(' ') ||
+    '';
+
+  const mobileNumber =
+    authUser?.mobile ||
+    authUser?.mobileNo ||
+    authMobile ||
+    '';
+
   return {
     language,
     t,
-    patientName: 'Pranav Kulkarni',
-    mobileNumber: '+91 98765 43210',
+    patientName,
+    mobileNumber,
     callTime,
     helpNeed,
     helpNeedLabel,

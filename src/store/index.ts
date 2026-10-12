@@ -6,6 +6,10 @@ import './api/new/firstLaunchApi';
 import './api/new/signInApi';
 import './api/new/otpVerificationApi';
 import './api/new/completeProfileApi';
+import './api/new/consentApi';
+import './api/new/doctorsApi';
+import './api/new/familyApi';
+import './api/new/patientProfileApi';
 import { authReducer } from './slices/authSlice';
 
 export const store = configureStore({

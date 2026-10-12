@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useAccountController, type AccountViewModel } from './useAccountController';
 import type { HelpTopicId } from './useHelpCentreController';
@@ -8,9 +8,16 @@ import { createSeedFollowUpChat } from '../config/bookedAppointments';
 import {
   BOOKING_MEMBERS,
   type BookingMember,
+  resolveBookingMembers,
 } from '../config/appointmentSlots';
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import { useAppSelector } from '../store/hooks';
+import {
+  useGetDoctorsQuery,
+  type PublicDoctor,
+} from '../store/api/new/doctorsApi';
+import { useGetFamilyQuery } from '../store/api/new/familyApi';
 
 export type HomeTab =
   | 'home'
@@ -145,10 +152,12 @@ export type HomeViewModel = {
   orderDetailsId: string | null;
   onOpenOrderDetails: (orderId: string) => void;
   onCloseOrderDetails: () => void;
+  publicDoctors: PublicDoctor[];
+  isDoctorsLoading: boolean;
+  isDoctorsError: boolean;
+  refetchDoctors: () => void;
   account: AccountViewModel;
 };
-
-const PATIENT_FIRST_NAME = 'Pranav';
 
 export function useHomeController({
   onLogOut,
@@ -203,6 +212,19 @@ export function useHomeController({
   const [orderTrackingOpen, setOrderTrackingOpen] = useState(false);
   const [medicineOrderPlaced, setMedicineOrderPlaced] = useState(false);
   const [orderDetailsId, setOrderDetailsId] = useState<string | null>(null);
+
+  const {
+    data: publicDoctors = [],
+    isLoading: isDoctorsLoading,
+    isError: isDoctorsError,
+    refetch: refetchDoctors,
+  } = useGetDoctorsQuery(undefined);
+
+  useEffect(() => {
+    if (isDoctorsError) {
+      console.warn('[GET api/Public/Doctors] Request failed');
+    }
+  }, [isDoctorsError]);
 
   const closeAccountOverlays = () => {
     setEditProfileOpen(false);
@@ -379,7 +401,22 @@ export function useHomeController({
     setSelectedTab('doctors');
   }, []);
 
-  const memberOptions: HomeMemberOption[] = BOOKING_MEMBERS;
+  const authUser = useAppSelector((state) => state.auth.user);
+  const patientFullName =
+    authUser?.patientName ||
+    [authUser?.firstName, authUser?.lastName].filter(Boolean).join(' ');
+
+  const patientFirstName =
+    authUser?.firstName ||
+    (authUser?.patientName ? authUser.patientName.split(' ')[0] : '');
+
+  const { data: familyResponse } = useGetFamilyQuery();
+  const apiFamily = familyResponse?.data;
+
+  const memberOptions: HomeMemberOption[] = useMemo(
+    () => resolveBookingMembers(patientFullName, undefined, apiFamily),
+    [patientFullName, apiFamily],
+  );
 
   const selectedMember =
     memberOptions.find((option) => option.id === selectedMemberId) ??
@@ -388,11 +425,15 @@ export function useHomeController({
     ? t('bookMyself')
     : selectedMember.name.split(' ')[0];
 
+  const greeting = patientFirstName
+    ? `${t('homeHello')}, ${patientFirstName}`
+    : t('homeHello');
+
   return {
     language,
     t,
-    patientFirstName: PATIENT_FIRST_NAME,
-    greeting: `${t('homeHello')}, ${PATIENT_FIRST_NAME}`,
+    patientFirstName,
+    greeting,
     searchOpen,
     resultsOpen,
     resultsQuery,
@@ -727,6 +768,10 @@ export function useHomeController({
       setResultsOpen(true);
       setProfileDoctorId(null);
     },
+    publicDoctors,
+    isDoctorsLoading,
+    isDoctorsError,
+    refetchDoctors,
     account,
   };
 }
