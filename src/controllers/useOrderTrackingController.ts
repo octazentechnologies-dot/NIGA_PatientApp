@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import { useGetMedicineOrderTrackingQuery } from '../store/api/new/medicinesApi';
+import { useAppSelector } from '../store/hooks';
 
 export type OrderTrackingStatus =
   | 'verifying'
@@ -54,10 +56,31 @@ export function useOrderTrackingController({
   const [status, setStatus] = useState<OrderTrackingStatus>('out_for_delivery');
   const [rating, setRating] = useState(0);
 
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+  const { data: trackingResponse } = useGetMedicineOrderTrackingQuery(1209, {
+    skip: !isAuthenticated,
+    pollingInterval: 5000,
+  });
+
+  useEffect(() => {
+    if (trackingResponse?.data?.status) {
+      const serverStatus = trackingResponse.data.status;
+      if (serverStatus === 'DELIVERED') {
+        setStatus('delivered');
+      } else if (serverStatus === 'DISPATCHED') {
+        setStatus('out_for_delivery');
+      } else if (serverStatus === 'REJECTED') {
+        setStatus('failed');
+      } else {
+        setStatus('verifying');
+      }
+    }
+  }, [trackingResponse]);
+
   return {
     language,
     t,
-    orderId: '#HM-4821',
+    orderId: trackingResponse?.data?.medicineOrderId ? `#HM-${trackingResponse.data.medicineOrderId}` : '#HM-4821',
     status,
     otpDigits: language === 'mr' ? ['४', '७', '२', '९'] : OTP,
     partnerName: t('trackPartnerName'),

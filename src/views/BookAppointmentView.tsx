@@ -81,7 +81,11 @@ export function BookAppointmentView({
   const footerReserve = 128 + sheetBottomPadding(insets, spacing.md);
   const consultingLabel = member.self
     ? t('bookMyself')
-    : `${member.name} (${member.metaKey ? t(member.metaKey).replace(' • ', ', ') : ''})`;
+    : member.relationshipName
+      ? `${member.name} (${member.relationshipName})`
+      : member.metaKey
+        ? `${member.name} (${t(member.metaKey).replace(' • ', ', ')})`
+        : member.name;
   const modeFee = (id: ConsultMode) =>
     t(id === 'clinic' ? profile.clinicFeeKey : profile.feeKey);
 
@@ -380,10 +384,16 @@ export function BookAppointmentView({
                   </View>
                   <View style={styles.flex}>
                     <AppText variant="titleMd" color="#000000" style={styles.memberName}>
-                      {item.self ? t('bookMyself') : item.name.split(' ')[0]}
+                      {item.self ? t('bookMyself') : item.name}
                     </AppText>
                     <AppText variant="bodyMd" color={selected ? '#000000' : MUTED}>
-                      {item.self ? item.name : item.metaKey ? t(item.metaKey) : ''}
+                      {item.self
+                        ? item.name
+                        : item.relationshipName
+                          ? `${item.relationshipName}${item.age ? ` • ${item.age} yrs` : ''}`
+                          : item.metaKey
+                            ? t(item.metaKey)
+                            : ''}
                     </AppText>
                   </View>
                   {selected ? (

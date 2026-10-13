@@ -164,7 +164,7 @@ export function useRemindersCentreController({
   onBookConsultation?: () => void;
 }): RemindersCentreViewModel {
   const { language, t } = useLocalization();
-  const [memberId, setMemberId] = useState<ReminderMemberId>('aarav');
+  const [memberId, setMemberId] = useState<ReminderMemberId>('self');
   const [memberPickerOpen, setMemberPickerOpen] = useState(false);
   const [doctorItems, setDoctorItems] = useState(DOCTOR_SEED);
   const [selfCareItems, setSelfCareItems] = useState(SELF_CARE_SEED);
@@ -187,14 +187,14 @@ export function useRemindersCentreController({
 
   const members = useMemo(
     () => [
-      { id: 'aarav' as const, label: t('remMemberAarav') },
       { id: 'self' as const, label: t('remMemberSelf') },
+      { id: 'aarav' as const, label: t('remMemberAarav') },
     ],
     [t],
   );
 
   const memberLabel =
-    members.find((item) => item.id === memberId)?.label ?? t('remMemberAarav');
+    members.find((item) => item.id === memberId)?.label ?? t('remMemberSelf');
 
   const isEmpty = memberId === 'self';
   const todayDone = 1;

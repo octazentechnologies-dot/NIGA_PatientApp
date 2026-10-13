@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import {
   BOOKING_MEMBERS,
@@ -26,6 +26,10 @@ import { getDoctorProfile, type DoctorProfileSeed } from '../config/doctorProfil
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
 import { useAppSelector } from '../store/hooks';
+import { useGetFamilyQuery } from '../store/api/new/familyApi';
+import { useGetHomeDashboardQuery } from '../store/api/new/homeApi';
+import { useGetDoctorByIdQuery, useGetDoctorFeesQuery } from '../store/api/new/doctorsApi';
+import { useJoinWaitlistMutation } from '../store/api/new/bookingApi';
 
 export type PaymentStatus = 'success' | 'failed' | 'pending';
 
@@ -123,13 +127,42 @@ export function useBookAppointmentController({
   doctorId,
   active = true,
   onBack,
+  onAddMember,
 }: {
   doctorId: string;
   active?: boolean;
   onBack: () => void;
+  onAddMember?: () => void;
 }): BookAppointmentViewModel {
   const { language, t } = useLocalization();
-  const profile = useMemo(() => getDoctorProfile(doctorId), [doctorId]);
+  const isNumeric = !isNaN(Number(doctorId));
+  const { data: doctorDetailResponse } = useGetDoctorByIdQuery(doctorId, {
+    skip: !isNumeric,
+  });
+  const baseProfile = useMemo(() => getDoctorProfile(doctorId), [doctorId]);
+  const profile = useMemo(() => {
+    if (!doctorDetailResponse?.data) return baseProfile;
+    const doc = doctorDetailResponse.data;
+    const docName = doc.displayName || 'Doctor';
+    const initials = docName
+      .split(' ')
+      .filter(Boolean)
+      .map((w) => w[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase() || baseProfile.initials;
+
+    return {
+      ...baseProfile,
+      id: String(doc.doctorId),
+      nameKey: docName as TranslationKey,
+      credentialsKey: (doc.qualification || t(baseProfile.credentialsKey)) as TranslationKey,
+      initials,
+      verified: doc.isVerified ?? baseProfile.verified,
+      feeKey: doc.consultFeeTele ? (`₹${doc.consultFeeTele}` as TranslationKey) : baseProfile.feeKey,
+      clinicFeeKey: doc.consultFeeInClinic ? (`₹${doc.consultFeeInClinic}` as TranslationKey) : baseProfile.clinicFeeKey,
+    };
+  }, [baseProfile, doctorDetailResponse?.data, t]);
   const today = todayStart();
   const monthOptions = useMemo(() => upcomingMonths(12), []);
   const [memberId, setMemberId] = useState(DEFAULT_MEMBER_ID);
@@ -176,29 +209,84 @@ export function useBookAppointmentController({
     }
   }, [active]);
 
-  useEffect(() => {
-    if (paymentStatus !== 'pending') {
-      return;
-    }
-    const timer = setTimeout(() => setPaymentStatus('success'), 2500);
-    return () => clearTimeout(timer);
-  }, [paymentStatus]);
+  const isNumericDoctorId = !isNaN(Number(doctorId));
+  const { data: doctorFeesResponse } = useGetDoctorFeesQuery(doctorId, {
+    skip: !isNumericDoctorId,
+  });
 
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const authUser = useAppSelector((state) => state.auth.user);
+  const authMobile = useAppSelector((state) => state.auth.mobile);
+  const [joinWaitlistMutation] = useJoinWaitlistMutation();
+  const [waitlistJoined, setWaitlistJoined] = useState(false);
+
+  const { data: homeDashboardResponse } = useGetHomeDashboardQuery(undefined, {
+    skip: !isAuthenticated,
+  });
+  const homeDashboardData = homeDashboardResponse?.data;
+
   const patientFullName =
+    homeDashboardData?.patientName ||
     authUser?.patientName ||
     [authUser?.firstName, authUser?.lastName].filter(Boolean).join(' ');
 
+  const { data: familyResponse } = useGetFamilyQuery(undefined, {
+    skip: !isAuthenticated,
+  });
+  const apiFamily = familyResponse?.data;
+
   const members = useMemo(
-    () => resolveBookingMembers(patientFullName),
-    [patientFullName],
+    () => resolveBookingMembers(patientFullName, undefined, apiFamily),
+    [patientFullName, apiFamily],
   );
 
-  const selectedDay = days.find((day) => day.id === dayId) ?? firstSelectableDay(days) ?? days[0];
+  const selectedDay =
+    days.find((day) => day.id === dayId) ?? firstSelectableDay(days) ?? days[0];
+
+  const handleJoinWaitlist = useCallback(async () => {
+    if (waitlistJoined) return;
+    const docIdNum = Number(profile.id) || 104;
+    const phone =
+      authUser?.mobile ||
+      authUser?.mobileNo ||
+      authMobile ||
+      '9876500011';
+    const patientName =
+      authUser?.patientName ||
+      [authUser?.firstName, authUser?.lastName].filter(Boolean).join(' ') ||
+      'Patient';
+
+    try {
+      await joinWaitlistMutation({
+        doctorId: docIdNum,
+        patientId: authUser?.patientId,
+        requestedDate: selectedDay?.id || dayId || '',
+        consultMode: mode === 'clinic' ? 'InClinic' : 'Tele',
+        contactName: patientName,
+        contactMobile: phone,
+      }).unwrap();
+      setWaitlistJoined(true);
+    } catch (err) {
+      console.warn('[POST api/Waitlist/Join] Failed to join waitlist:', err);
+    }
+  }, [
+    waitlistJoined,
+    profile.id,
+    authUser,
+    authMobile,
+    selectedDay?.id,
+    dayId,
+    mode,
+    joinWaitlistMutation,
+  ]);
+
   const member =
     members.find((item) => item.id === memberId) ?? members[0];
   const isFull = selectedDay?.status === 'full';
-  const feeLabel = t(mode === 'clinic' ? profile.clinicFeeKey : profile.feeKey);
+  const realFee = doctorFeesResponse?.data;
+  const feeLabel = realFee
+    ? formatRupees(mode === 'clinic' ? realFee.inClinicFee : realFee.teleFee, language)
+    : t(mode === 'clinic' ? profile.clinicFeeKey : profile.feeKey);
   const modeLabel = t(
     mode === 'audio'
       ? 'bookAudio'
@@ -228,7 +316,11 @@ export function useBookAppointmentController({
   const canContinue = Boolean(selectedSlot) && !isFull;
   const patientLabel = member.self
     ? member.name
-    : `${member.name} (${member.metaKey ? t(member.metaKey).replace(' • ', ', ') : ''})`;
+    : member.relationshipName
+      ? `${member.name} (${member.relationshipName}${member.age ? `, ${member.age} yrs` : ''})`
+      : member.metaKey
+        ? `${member.name} (${t(member.metaKey).replace(' • ', ', ')})`
+        : member.name;
   const slotTimeLabel = selectedSlot ? t(selectedSlot.labelKey) : '';
   const timeLine = slotTimeLabel ? `${slotTimeLabel} IST` : '';
   const whenLabel = selectedSlot ? `${daySummary} · ${timeLine}` : daySummary;
@@ -261,7 +353,9 @@ export function useBookAppointmentController({
     language,
     t,
     profile,
-    shortCredsKey: shortCredsFor(profile.id),
+    shortCredsKey: doctorDetailResponse?.data?.qualification
+      ? (doctorDetailResponse.data.qualification as TranslationKey)
+      : shortCredsFor(profile.id),
     member,
     members,
     memberPickerOpen,
@@ -361,7 +455,10 @@ export function useBookAppointmentController({
       }
       setReviewOpen(true);
     },
-    onJoinWaitlist: () => undefined,
-    onAddMember: () => undefined,
+    onJoinWaitlist: handleJoinWaitlist,
+    onAddMember: () => {
+      setMemberPickerOpen(false);
+      onAddMember?.();
+    },
   };
 }

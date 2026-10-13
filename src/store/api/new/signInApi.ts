@@ -26,13 +26,13 @@ export type RequestOtpResponse =
 
 /** SignInView — POST api/PatientAuth/RequestOtp. Auth not required. */
 export const signInApi = newBaseApi.injectEndpoints({
+  overrideExisting: true,
   endpoints: (build) => ({
     requestOtp: build.mutation<RequestOtpResponse, RequestOtpRequest>({
       query: (body) => ({
         url: 'api/PatientAuth/RequestOtp',
         method: 'POST',
         body,
-        params: body,
       }),
     }),
   }),

@@ -3,11 +3,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAccountController, type AccountViewModel } from './useAccountController';
 import type { HelpTopicId } from './useHelpCentreController';
 import type { LegalDocId } from './useLegalDocumentController';
-import type { BookedAppointment } from '../config/bookedAppointments';
-import { createSeedFollowUpChat } from '../config/bookedAppointments';
+import {
+  type AppointmentRequestStatus,
+  type BookedAppointment,
+  createSeedFollowUpChat,
+} from '../config/bookedAppointments';
 import {
   BOOKING_MEMBERS,
   type BookingMember,
+  type ConsultMode,
   resolveBookingMembers,
 } from '../config/appointmentSlots';
 import { useLocalization } from '../localization/i18n';
@@ -18,6 +22,8 @@ import {
   type PublicDoctor,
 } from '../store/api/new/doctorsApi';
 import { useGetFamilyQuery } from '../store/api/new/familyApi';
+import { useGetHomeDashboardQuery } from '../store/api/new/homeApi';
+import { useGetPatientVisitsQuery } from '../store/api/new/visitsApi';
 
 export type HomeTab =
   | 'home'
@@ -176,9 +182,7 @@ export function useHomeController({
   const [healthTipId, setHealthTipId] = useState<string | null>(null);
   const [selectedMemberId, setSelectedMemberId] = useState('self');
   const [memberPickerOpen, setMemberPickerOpen] = useState(false);
-  const [appointments, setAppointments] = useState<BookedAppointment[]>(() => [
-    createSeedFollowUpChat(),
-  ]);
+  const [appointments, setAppointments] = useState<BookedAppointment[]>([]);
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(
     null,
   );
@@ -401,17 +405,116 @@ export function useHomeController({
     setSelectedTab('doctors');
   }, []);
 
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const authUser = useAppSelector((state) => state.auth.user);
+
+  const { data: homeDashboardResponse } = useGetHomeDashboardQuery(undefined, {
+    skip: !isAuthenticated,
+  });
+  const homeDashboardData = homeDashboardResponse?.data;
+
   const patientFullName =
+    homeDashboardData?.patientName ||
     authUser?.patientName ||
     [authUser?.firstName, authUser?.lastName].filter(Boolean).join(' ');
 
   const patientFirstName =
     authUser?.firstName ||
-    (authUser?.patientName ? authUser.patientName.split(' ')[0] : '');
+    (patientFullName ? patientFullName.split(' ')[0] : '');
 
-  const { data: familyResponse } = useGetFamilyQuery();
+  const { data: familyResponse } = useGetFamilyQuery(undefined, {
+    skip: !isAuthenticated,
+  });
   const apiFamily = familyResponse?.data;
+
+  const { data: visitsResponse } = useGetPatientVisitsQuery(undefined, {
+    skip: !isAuthenticated,
+  });
+  const apiVisits = visitsResponse?.data;
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    type RawVisit = {
+      patientAppId: number;
+      doctorId: number;
+      doctorName?: string;
+      appointmentDate?: string;
+      appointmentTime?: string;
+      status: string;
+      isTele?: boolean;
+      consultMode?: string;
+      visitType?: string;
+      bookingToken?: string;
+      patientName?: string;
+    };
+
+    const dashboardApps = (homeDashboardData?.nextAppointments || []) as RawVisit[];
+    const serverVisits = (apiVisits || []) as RawVisit[];
+
+    // Combine visits from dashboard and visits endpoint, deduplicating by patientAppId
+    const combinedMap = new Map<number, RawVisit>();
+    for (const item of dashboardApps) {
+      combinedMap.set(item.patientAppId, item);
+    }
+    for (const item of serverVisits) {
+      if (!combinedMap.has(item.patientAppId)) {
+        combinedMap.set(item.patientAppId, item);
+      }
+    }
+
+    const activeList = Array.from(combinedMap.values()).filter(
+      (a) => a.status !== 'CANCELLED' && a.status !== 'COMPLETED',
+    );
+
+    const mapped: BookedAppointment[] = activeList.map((a) => {
+      const mode: ConsultMode =
+        a.isTele || a.visitType === 'Tele' || a.consultMode === 'Tele'
+          ? 'video'
+          : 'clinic';
+      const docName = a.doctorName || 'Doctor';
+      const initials = docName
+        .split(' ')
+        .filter(Boolean)
+        .map((w) => w[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase();
+
+      return {
+        id: String(a.patientAppId),
+        bookingId: a.bookingToken || `APT-${a.patientAppId}`,
+        doctorId: String(a.doctorId),
+        doctorNameKey: docName as TranslationKey,
+        doctorInitials: initials || 'DR',
+        credentialsKey: 'doctorCredentials' as TranslationKey,
+        experienceKey: 'doctorExperienceYears' as TranslationKey,
+        whenLabel: `${a.appointmentDate ? a.appointmentDate.slice(0, 10) : ''} · ${a.appointmentTime || ''}`,
+        dateLine: a.appointmentDate ? a.appointmentDate.slice(0, 10) : '',
+        timeLine: a.appointmentTime || '',
+        startsAt: a.appointmentDate || new Date().toISOString(),
+        bookedOnLabel: a.appointmentDate ? a.appointmentDate.slice(0, 10) : '',
+        mode,
+        modeConsultLabel: mode === 'video' ? 'Video Consultation' : 'In Clinic',
+        patientLabel: a.patientName || patientFullName,
+        feeLabel: '₹500',
+        paymentId: a.bookingToken || 'ONLINE',
+        reasonKey: 'aptReasonCough' as TranslationKey,
+        status:
+          a.status === 'NOT ARRIVED' || a.status === 'WAITING' || a.status === 'E-CONSULT'
+            ? ('confirmed' as AppointmentRequestStatus)
+            : ('waiting_acceptance' as AppointmentRequestStatus),
+      };
+    });
+
+    setAppointments((current) => {
+      // Keep any newly placed bookings from this session that might not yet be in server response
+      const clientOnly = current.filter(
+        (c) => c.id !== 'seed-followup-chat' && !mapped.some((m) => m.id === c.id),
+      );
+      return [...mapped, ...clientOnly];
+    });
+  }, [homeDashboardData?.nextAppointments, apiVisits, isAuthenticated, patientFullName]);
 
   const memberOptions: HomeMemberOption[] = useMemo(
     () => resolveBookingMembers(patientFullName, undefined, apiFamily),

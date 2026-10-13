@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import { useAppSelector } from '../store/hooks';
 
 export type ReviewOrderItem = {
   id: string;
@@ -79,6 +80,17 @@ export function useReviewOrderController({
   const [policyOpen, setPolicyOpen] = useState(false);
   const [deliveryInstructions, setDeliveryInstructions] = useState('');
 
+  const authUser = useAppSelector((state) => state.auth.user);
+  const authMobile = useAppSelector((state) => state.auth.mobile);
+  const patientDisplayName =
+    authUser?.patientName ||
+    [authUser?.firstName, authUser?.lastName].filter(Boolean).join(' ');
+  const userPhone = authUser?.mobile || authUser?.mobileNo || authMobile;
+  const recipientLine =
+    patientDisplayName && userPhone
+      ? `${patientDisplayName} · +91 ${userPhone}`
+      : t('reviewOrderRecipient');
+
   const name = pharmacyName ?? t('pharmacyShreeName');
 
   return {
@@ -94,7 +106,7 @@ export function useReviewOrderController({
     taxes: '₹0',
     totalPayable: '₹310',
     addressLine: t('orderMedsAddress'),
-    recipientLine: t('reviewOrderRecipient'),
+    recipientLine,
     deliveryEta: t('reviewOrderEta'),
     deliveryInstructions,
     consentChecked,

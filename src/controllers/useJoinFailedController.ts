@@ -3,6 +3,8 @@ import { useMemo, useState } from 'react';
 import type { BookedAppointment } from '../config/bookedAppointments';
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import { useReportJoinFailureMutation } from '../store/api/new/teleApi';
+import { useAppSelector } from '../store/hooks';
 import type { ConsultModeChoice, NetworkQuality } from './useDeviceCheckController';
 
 export type JoinFailedViewModel = {
@@ -72,6 +74,18 @@ export function useJoinFailedController({
 }): JoinFailedViewModel {
   const { language, t } = useLocalization();
   const [joining, setJoining] = useState(false);
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+  const [reportJoinFailureApi] = useReportJoinFailureMutation();
+
+  const teleSessionId = (appointment as unknown as { teleSessionId?: number })?.teleSessionId;
+  useState(() => {
+    if (isAuthenticated && teleSessionId) {
+      reportJoinFailureApi({
+        teleSessionId,
+        body: { code: internetWeak ? 'NETWORK_ERROR' : 'DEVICE_DENIED' },
+      }).catch((e) => console.warn('[reportJoinFailureApi] Error:', e));
+    }
+  });
 
   const bookingId = appointment?.bookingId ?? 'APT-2026-88214';
   const mbpsLabel = localizeDigits(mbps.toFixed(1), language);

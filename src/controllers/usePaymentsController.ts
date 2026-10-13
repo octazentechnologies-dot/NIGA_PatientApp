@@ -1,7 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import {
+  useGetPaymentsHistoryQuery,
+  type PaymentHistoryItem,
+} from '../store/api/new/paymentsApi';
+import { useAppSelector } from '../store/hooks';
 
 export type PaymentFilter =
   | 'all'
@@ -139,14 +144,62 @@ export function usePaymentsController({
 }): PaymentsViewModel {
   const { language, t } = useLocalization();
   const [filter, setFilter] = useState<PaymentFilter>('all');
-  const [hasPayments, setHasPayments] = useState(true);
+  const [demoToggle, setDemoToggle] = useState<boolean | null>(null);
   const [refundOpen, setRefundOpen] = useState(false);
+
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+  const { data: historyResponse } = useGetPaymentsHistoryQuery(undefined, {
+    skip: !isAuthenticated,
+  });
+
+  const serverPayments: PaymentItem[] = useMemo(() => {
+    if (!isAuthenticated) {
+      return PAYMENTS;
+    }
+    if (!historyResponse?.data || !Array.isArray(historyResponse.data)) {
+      return [];
+    }
+    return historyResponse.data.map((order: PaymentHistoryItem) => {
+      const isMedicine = order.stream === 'MEDICINE';
+      const isRefunded =
+        order.status === 'REFUNDED' || order.status === 'REFUND_PENDING';
+      const dateStr = order.createdAt ? order.createdAt.slice(0, 10) : '';
+      const methodStr = order.method || 'Online';
+      return {
+        id: String(order.paymentOrderId),
+        kind: (isMedicine ? 'medicines' : 'consultation') as PaymentKind,
+        titleKey: (isMedicine
+          ? 'payHistItemMeds'
+          : 'payHistItemConsult') as TranslationKey,
+        amountLabel: `₹${order.amount}`,
+        metaKey: `${dateStr} · ${methodStr} · #${order.paymentOrderId}` as TranslationKey,
+        status: (isRefunded ? 'refunded' : 'paid') as PaymentStatus,
+        noteKey: isRefunded ? ('payHistNoteRefund' as TranslationKey) : undefined,
+        monthKey: 'payHistMonthAug2026' as TranslationKey,
+      };
+    });
+  }, [historyResponse, isAuthenticated]);
+
+  const hasPayments = useMemo(() => {
+    if (demoToggle !== null) {
+      return demoToggle;
+    }
+    if (historyResponse?.data) {
+      return historyResponse.data.length > 0;
+    }
+    return true;
+  }, [demoToggle, historyResponse]);
 
   const payments = useMemo(() => {
     if (!hasPayments) {
       return [];
     }
-    return PAYMENTS.filter((item) => {
+    const source =
+      historyResponse?.data && historyResponse.data.length > 0
+        ? serverPayments
+        : PAYMENTS;
+
+    return source.filter((item) => {
       switch (filter) {
         case 'consultations':
           return item.kind === 'consultation' && item.status === 'paid';
@@ -160,7 +213,7 @@ export function usePaymentsController({
           return true;
       }
     });
-  }, [filter, hasPayments]);
+  }, [filter, hasPayments, historyResponse?.data, serverPayments]);
 
   return {
     language,
@@ -203,7 +256,7 @@ export function usePaymentsController({
     onBookConsultation: () => onBookConsultation?.(),
     onToggleEmptyDemo: () => {
       setRefundOpen(false);
-      setHasPayments((prev) => !prev);
+      setDemoToggle((prev) => (prev === null ? false : !prev));
       setFilter('all');
     },
   };

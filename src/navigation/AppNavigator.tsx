@@ -5,21 +5,29 @@ import { SlideStrip } from '../components/SlideStrip';
 import { StatusBarBleed } from '../components/StatusBarBleed';
 import { usePushNotificationLifecycle } from '../hooks/usePushNotificationLifecycle';
 import {
+  clearAuthCredentials,
   getAccessToken,
   getAuthUserData,
   hasLanguageSelectionCompleted,
   hasOnboardingCompleted,
+  saveAccessToken,
+  saveAuthUserData,
   setLanguageSelectionCompleted,
   setOnboardingCompleted,
 } from '../services/secureStorage';
-import { useAppDispatch } from '../store/hooks';
-import { resetAuthenticatedSession } from '../store/session';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { performLogout, resetAuthenticatedSession } from '../store/session';
 import {
+  clearAuthState,
   markAuthInitialized,
   setAuthenticated,
   setAuthUser,
+  setSessionEndedMessage,
   type AuthUser,
 } from '../store/slices/authSlice';
+import { accountApi } from '../store/api/new/accountApi';
+import { patientProfileApi } from '../store/api/new/patientProfileApi';
+import { isJwtExpiringWithin, parseJwtClaims } from '../utilities/jwt';
 import { useCompleteProfileController } from '../controllers/useCompleteProfileController';
 import { useConsentController } from '../controllers/useConsentController';
 import { useFamilyMembersController } from '../controllers/useFamilyMembersController';
@@ -296,8 +304,10 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
     [],
   );
 
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+
   usePushNotificationLifecycle({
-    authenticated: true,
+    authenticated: isAuthenticated,
     navigation: notificationNavigation,
   });
 
@@ -324,6 +334,7 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
     doctorId: home.profileDoctorId ?? 'anjali',
     active: home.bookingOpen,
     onBack: home.onCloseBooking,
+    onAddMember: home.onAddMember,
   });
   const review = useBookingReviewController({
     active: home.bookingOpen,
@@ -579,6 +590,7 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
     active: home.consultNowOpen,
     onBack: home.onCloseConsultNow,
     onBookEarliest: home.onOpenResults,
+    onAddMember: home.onAddMember,
   });
   const consultPayment = useBookingPaymentController({
     active: home.consultNowOpen && consultNow.paymentOpen,
@@ -854,60 +866,6 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
   return <HomeView {...home} notificationCount={notifications.unreadCount} />;
 }
 
-function decodeBase64(input: string): string {
-  if (typeof globalThis.atob === 'function') {
-    return globalThis.atob(input);
-  }
-  const chars =
-    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
-  let str = '';
-  let i = 0;
-  const clean = input.replace(/[^A-Za-z0-9+/=]/g, '');
-  while (i < clean.length) {
-    const enc1 = chars.indexOf(clean.charAt(i++));
-    const enc2 = chars.indexOf(clean.charAt(i++));
-    const enc3 = chars.indexOf(clean.charAt(i++));
-    const enc4 = chars.indexOf(clean.charAt(i++));
-
-    const chr1 = (enc1 << 2) | (enc2 >> 4);
-    const chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
-    const chr3 = ((enc3 & 3) << 6) | enc4;
-
-    str += String.fromCharCode(chr1);
-    if (enc3 !== 64 && enc3 !== -1) {
-      str += String.fromCharCode(chr2);
-    }
-    if (enc4 !== 64 && enc4 !== -1) {
-      str += String.fromCharCode(chr3);
-    }
-  }
-  return str;
-}
-
-function parseJwtClaims(
-  token: string,
-): { userId?: number; mobile?: string } | null {
-  try {
-    const parts = token.split('.');
-    if (parts.length < 2) return null;
-    let base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-    while (base64.length % 4) {
-      base64 += '=';
-    }
-    const jsonStr = decodeBase64(base64);
-    const parsed = JSON.parse(jsonStr);
-    const userId = Array.isArray(parsed.nameid)
-      ? Number(parsed.nameid[0])
-      : parsed.nameid
-        ? Number(parsed.nameid)
-        : undefined;
-    const mobile = parsed.unique_name ? String(parsed.unique_name) : undefined;
-    return { userId, mobile };
-  } catch {
-    return null;
-  }
-}
-
 export function AppNavigator() {
   const dispatch = useAppDispatch();
   const [step, setStep] = useState<AppStep>('splash');
@@ -919,6 +877,7 @@ export function AppNavigator() {
   const [countryCode, setCountryCode] = useState('+91');
   const [devOtp, setDevOtp] = useState<string | undefined>();
   const [isUserRegistered, setIsUserRegistered] = useState(false);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -926,41 +885,130 @@ export function AppNavigator() {
       try {
         const token = await getAccessToken();
         if (token) {
-          // Restore user data from SecureStore
-          const savedUser = await getAuthUserData<AuthUser>();
-          if (savedUser) {
-            dispatch(
-              setAuthUser({
-                user: savedUser,
-                token,
-                patientId: savedUser.patientId,
-                userId: savedUser.userId,
-                mobile: savedUser.mobile || savedUser.mobileNo,
-              }),
-            );
-          } else {
-            const claims = parseJwtClaims(token);
-            const fallbackUser: AuthUser = claims?.mobile
-              ? {
-                  mobile: claims.mobile,
-                  mobileNo: claims.mobile,
-                  userId: claims.userId,
-                }
-              : null;
-            dispatch(
-              setAuthUser({
-                user: fallbackUser,
-                token,
-                userId: claims?.userId,
-                mobile: claims?.mobile,
-              }),
-            );
+          let activeToken = token;
+
+          // 1. Proactively refresh token if near expiry (< 24 hours)
+          if (isJwtExpiringWithin(token, 24 * 3600)) {
+            try {
+              const refreshRes = await dispatch(
+                accountApi.endpoints.refreshToken.initiate(),
+              ).unwrap();
+              if (refreshRes.token) {
+                await saveAccessToken(refreshRes.token);
+                activeToken = refreshRes.token;
+              }
+            } catch {
+              // Token cannot be refreshed (expired > 7 days or revoked)
+              await clearAuthCredentials();
+              dispatch(clearAuthState());
+              dispatch(
+                setSessionEndedMessage(
+                  'Your session has ended. Please sign in again.',
+                ),
+              );
+              if (isMounted) {
+                setResolvedTargetStep('signIn');
+              }
+              return;
+            }
           }
-          dispatch(markAuthInitialized());
-          if (isMounted) {
-            setResolvedTargetStep('home');
+
+          // 2. Fetch authoritative primary patient identity from PatientProfile/Me
+          try {
+            const profileRes = await dispatch(
+              patientProfileApi.endpoints.getPatientProfile.initiate(),
+            ).unwrap();
+
+            if (profileRes?.data) {
+              const p = profileRes.data;
+              const userObj: AuthUser = {
+                patientId: p.patientId,
+                userId: p.userId,
+                firstName: p.firstName,
+                lastName: p.lastName,
+                patientName: p.patientName,
+                mobile: p.mobileNo,
+                mobileNo: p.mobileNo,
+                email: p.email,
+                gender: p.gender,
+                dateOfBirth: p.dateOfBirth,
+              };
+              await saveAuthUserData(userObj);
+              dispatch(
+                setAuthUser({
+                  user: userObj,
+                  token: activeToken,
+                  patientId: p.patientId,
+                  userId: p.userId,
+                  mobile: p.mobileNo,
+                }),
+              );
+              dispatch(setAuthenticated(true));
+              dispatch(markAuthInitialized());
+              if (isMounted) {
+                setResolvedTargetStep('home');
+              }
+              return;
+            }
+          } catch (profileErr: unknown) {
+            const status = (profileErr as { status?: number })?.status;
+            if (status === 401) {
+              await clearAuthCredentials();
+              dispatch(clearAuthState());
+              dispatch(
+                setSessionEndedMessage(
+                  'Your session has ended. Please sign in again.',
+                ),
+              );
+              if (isMounted) {
+                setResolvedTargetStep('signIn');
+              }
+              return;
+            }
+
+            // Offline or transient network failure: restore from SecureStore
+            const savedUser = await getAuthUserData<AuthUser>();
+            if (savedUser) {
+              dispatch(
+                setAuthUser({
+                  user: savedUser,
+                  token: activeToken,
+                  patientId: savedUser.patientId,
+                  userId: savedUser.userId,
+                  mobile: savedUser.mobile || savedUser.mobileNo,
+                }),
+              );
+              dispatch(setAuthenticated(true));
+              dispatch(markAuthInitialized());
+              if (isMounted) {
+                setResolvedTargetStep('home');
+              }
+              return;
+            } else {
+              const claims = parseJwtClaims(activeToken);
+              const fallbackUser: AuthUser = claims?.mobile
+                ? {
+                    mobile: claims.mobile,
+                    mobileNo: claims.mobile,
+                    userId: claims.userId,
+                  }
+                : null;
+              dispatch(
+                setAuthUser({
+                  user: fallbackUser,
+                  token: activeToken,
+                  userId: claims?.userId,
+                  mobile: claims?.mobile,
+                }),
+              );
+              dispatch(setAuthenticated(true));
+              dispatch(markAuthInitialized());
+              if (isMounted) {
+                setResolvedTargetStep('home');
+              }
+              return;
+            }
           }
-          return;
         }
 
         const [langDone, onboardingDone] = await Promise.all([
@@ -973,13 +1021,10 @@ export function AppNavigator() {
         }
 
         if (!langDone) {
-          // 1. Language selection is first time process
           setResolvedTargetStep('firstLaunch');
         } else if (!onboardingDone) {
-          // 2. Introductory slides is also one time process
           setResolvedTargetStep('onboarding');
         } else {
-          // Otherwise proceed directly to login
           setResolvedTargetStep('signIn');
         }
       } catch {
@@ -1055,7 +1100,7 @@ export function AppNavigator() {
     [isUserRegistered, openHome, openCompleteProfile],
   );
   const handleLogOut = useCallback(async () => {
-    await resetAuthenticatedSession(dispatch);
+    await performLogout(dispatch);
     setStep('signIn');
   }, [dispatch]);
   const slideIndex = useMemo(

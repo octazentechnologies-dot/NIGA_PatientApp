@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import {
   BOOKING_MEMBERS,
@@ -8,6 +8,11 @@ import {
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
 import { useGetFamilyQuery } from '../store/api/new/familyApi';
+import { useGetHomeDashboardQuery } from '../store/api/new/homeApi';
+import {
+  useCreateDiaryEntryMutation,
+  useGetDiaryEntriesQuery,
+} from '../store/api/new/symptomDiaryApi';
 import { useAppSelector } from '../store/hooks';
 
 export type DiarySeverity = 'none' | 'mild' | 'moderate' | 'severe' | 'verySevere';
@@ -135,7 +140,7 @@ export function useSymptomDiaryController({
   onAddMember?: () => void;
 }): SymptomDiaryViewModel {
   const { language, t } = useLocalization();
-  const [memberId, setMemberId] = useState(BOOKING_MEMBERS[1]?.id ?? 'aarav');
+  const [memberId, setMemberId] = useState(BOOKING_MEMBERS[0]?.id ?? 'self');
   const [memberPickerOpen, setMemberPickerOpen] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [selectedDayId, setSelectedDayId] = useState<DiaryDayId>('26');
@@ -149,12 +154,50 @@ export function useSymptomDiaryController({
   const [notesMr, setNotesMr] = useState(false);
   const [photoAdded, setPhotoAdded] = useState(false);
 
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const authUser = useAppSelector((state) => state.auth.user);
+  const { data: homeDashboardResponse } = useGetHomeDashboardQuery(undefined, {
+    skip: !isAuthenticated,
+  });
   const patientFullName =
+    homeDashboardResponse?.data?.patientName ||
     authUser?.patientName ||
     [authUser?.firstName, authUser?.lastName].filter(Boolean).join(' ');
 
-  const { data: familyResponse } = useGetFamilyQuery();
+  const { data: diaryResponse } = useGetDiaryEntriesQuery(undefined, {
+    skip: !isAuthenticated,
+  });
+  const [createDiaryEntryApi] = useCreateDiaryEntryMutation();
+
+  useEffect(() => {
+    if (diaryResponse?.data && Array.isArray(diaryResponse.data) && diaryResponse.data.length > 0) {
+      setEntries(
+        diaryResponse.data.map((item) => {
+          let sev: DiarySeverity = 'none';
+          if (item.severity >= 9) sev = 'verySevere';
+          else if (item.severity >= 7) sev = 'severe';
+          else if (item.severity >= 4) sev = 'moderate';
+          else if (item.severity >= 1) sev = 'mild';
+
+          const entryDateObj = new Date(item.entryDate);
+          const dayId = (entryDateObj.getDate().toString() as DiaryDayId) || '26';
+
+          return {
+            id: String(item.symptomDiaryId),
+            dayId,
+            sectionKey: 'diarySectionToday',
+            severity: sev,
+            noteText: item.note || undefined,
+            hasPhotos: false,
+          };
+        }),
+      );
+    }
+  }, [diaryResponse]);
+
+  const { data: familyResponse } = useGetFamilyQuery(undefined, {
+    skip: !isAuthenticated,
+  });
   const apiFamily = familyResponse?.data;
 
   const members = useMemo(
@@ -230,6 +273,28 @@ export function useSymptomDiaryController({
         ...withoutDay,
       ];
     });
+
+    if (isAuthenticated) {
+      const numSeverity =
+        severity === 'verySevere'
+          ? 10
+          : severity === 'severe'
+            ? 8
+            : severity === 'moderate'
+              ? 5
+              : severity === 'mild'
+                ? 2
+                : 0;
+      const todayIso = new Date().toISOString().split('T')[0];
+      createDiaryEntryApi({
+        entryDate: todayIso,
+        severity: numSeverity,
+        note: notes.trim() || undefined,
+      }).catch((err) => {
+        console.warn('[createDiaryEntryApi] Failed:', err);
+      });
+    }
+
     setEntryOpen(false);
   };
 

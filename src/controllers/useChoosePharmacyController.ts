@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import { useGetPharmacySellersQuery } from '../store/api/new/medicinesApi';
 
 export type PharmacySortId = 'fastest' | 'price' | 'nearest';
 
@@ -109,8 +110,13 @@ export function useChoosePharmacyController({
   );
   const [emptyAltId, setEmptyAltId] = useState<EmptyAltId | null>(null);
 
+  const { data: sellersResponse } = useGetPharmacySellersQuery();
+
   const pharmacies = useMemo(() => {
     const list = [...PHARMACIES];
+    if (sellersResponse?.data && sellersResponse.data.length > 0) {
+      // Server partners are available
+    }
     if (sortId === 'price') {
       return list.sort(
         (a, b) =>

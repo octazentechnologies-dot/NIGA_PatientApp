@@ -227,6 +227,7 @@ function MemberChips({ vm }: { vm: MedicinesViewModel }) {
 }
 
 function ActiveOrderCard({ vm }: { vm: MedicinesViewModel }) {
+  if (!vm.activeOrderId) return null;
   return (
     <Pressable
       accessibilityRole="button"
@@ -290,6 +291,7 @@ function ActiveOrderCard({ vm }: { vm: MedicinesViewModel }) {
 }
 
 function PrescriptionsSection({ vm }: { vm: MedicinesViewModel }) {
+  if (!vm.orderableRx || vm.orderableRx.length === 0) return null;
   return (
     <View style={styles.section}>
       <AppText variant="headlineMd" color={INK}>

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import type { BookedAppointment } from '../config/bookedAppointments';
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import { useGetConsultationSummaryQuery } from '../store/api/new/teleApi';
 import { useAppSelector } from '../store/hooks';
 
 export type ConsultationCompleteViewModel = {
@@ -75,6 +76,14 @@ export function useConsultationCompleteController({
     [authUser?.firstName, authUser?.lastName].filter(Boolean).join(' ') ||
     '';
 
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+  const patientAppId = (appointment as unknown as { patientAppId?: number; appointmentId?: number })?.patientAppId ??
+    (appointment as unknown as { patientAppId?: number; appointmentId?: number })?.appointmentId;
+  const { data: summaryResponse } = useGetConsultationSummaryQuery(patientAppId ?? 0, {
+    skip: !isAuthenticated || !patientAppId,
+  });
+  const realSummaryText = summaryResponse?.data?.[0]?.text;
+
   const openPrescription = () => setPrescriptionOpen(true);
 
   return {
@@ -88,7 +97,7 @@ export function useConsultationCompleteController({
     discussed: t('completeDiscussedBody'),
     advice: t('completeAdviceBody'),
     nextFollowUp: t('completeFollowUpBody'),
-    summaryNote: t('completeSummaryNote').replace('{name}', doctorName),
+    summaryNote: realSummaryText || t('completeSummaryNote').replace('{name}', doctorName),
     followUpPlanMeta: t('completeFollowUpMeta'),
     rating,
     prescriptionOpen,

@@ -37,6 +37,8 @@ import {
 import { getDoctorProfile } from '../config/doctorProfiles';
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import { useGetFamilyQuery } from '../store/api/new/familyApi';
+import { useGetHomeDashboardQuery } from '../store/api/new/homeApi';
 import { useAppSelector } from '../store/hooks';
 import type { PaymentStatus } from './useBookAppointmentController';
 
@@ -183,10 +185,12 @@ export function useConsultNowController({
   active,
   onBack,
   onBookEarliest,
+  onAddMember,
 }: {
   active: boolean;
   onBack: () => void;
   onBookEarliest: (query: string) => void;
+  onAddMember?: () => void;
 }): ConsultNowViewModel {
   const { language, t } = useLocalization();
   const [memberId, setMemberId] = useState('self');
@@ -327,14 +331,27 @@ export function useConsultNowController({
     return () => clearTimeout(timer);
   }, [paymentStatus]);
 
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const authUser = useAppSelector((state) => state.auth.user);
+
+  const { data: homeDashboardResponse } = useGetHomeDashboardQuery(undefined, {
+    skip: !isAuthenticated,
+  });
+  const homeDashboardData = homeDashboardResponse?.data;
+
   const patientFullName =
+    homeDashboardData?.patientName ||
     authUser?.patientName ||
     [authUser?.firstName, authUser?.lastName].filter(Boolean).join(' ');
 
+  const { data: familyResponse } = useGetFamilyQuery(undefined, {
+    skip: !isAuthenticated,
+  });
+  const apiFamily = familyResponse?.data;
+
   const members = useMemo(
-    () => resolveBookingMembers(patientFullName),
-    [patientFullName],
+    () => resolveBookingMembers(patientFullName, undefined, apiFamily),
+    [patientFullName, apiFamily],
   );
 
   const member =
@@ -344,7 +361,9 @@ export function useConsultNowController({
   const feeLabel = formatRupees(CONSULT_NOW_FEE_RUPEES[mode], language);
   const selectedMemberLabel = member.self
     ? t('bookMyself')
-    : member.name.split(' ')[0];
+    : member.relationshipName
+      ? `${member.name} (${member.relationshipName})`
+      : member.name;
   const visibleCities = useMemo(() => {
     const needle = locationQuery.trim().toLowerCase();
     if (!needle) {
@@ -372,7 +391,11 @@ export function useConsultNowController({
   const instantWhenLabel = `${instantDateLine} · ${instantTimeLine}`;
   const instantPatientLabel = member.self
     ? member.name
-    : `${member.name} (${member.metaKey ? t(member.metaKey).replace(' • ', ', ') : ''})`;
+    : member.relationshipName
+      ? `${member.name} (${member.relationshipName}${member.age ? `, ${member.age} yrs` : ''})`
+      : member.metaKey
+        ? `${member.name} (${t(member.metaKey).replace(' • ', ', ')})`
+        : member.name;
   const instantModeConsultLabel = t(modeConsultKey(mode));
   const widenLanguage = nextWidenLanguage(selectedLanguages);
   const bookingMode: ConsultMode =
@@ -487,7 +510,10 @@ export function useConsultNowController({
       setMemberId(id);
       setMemberPickerOpen(false);
     },
-    onAddMember: () => undefined,
+    onAddMember: () => {
+      setMemberPickerOpen(false);
+      onAddMember?.();
+    },
     onSelectNeed: setSelectedNeedId,
     onToggleLanguage: (id) =>
       setSelectedLanguages((current) => {

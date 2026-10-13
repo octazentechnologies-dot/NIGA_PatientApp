@@ -17,6 +17,7 @@ import {
 } from '../config/appointmentSlots';
 import type { TranslationKey } from '../localization/types';
 import { useGetFamilyQuery } from '../store/api/new/familyApi';
+import { useGetHomeDashboardQuery } from '../store/api/new/homeApi';
 import { useAppSelector } from '../store/hooks';
 import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
@@ -48,8 +49,13 @@ export function WhoForMemberSheet({
   onAddMember,
 }: WhoForMemberSheetProps) {
   const insets = useSafeAreaInsets();
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const authUser = useAppSelector((state) => state.auth.user);
+  const { data: homeDashboardResponse } = useGetHomeDashboardQuery(undefined, {
+    skip: !isAuthenticated,
+  });
   const patientFullName =
+    homeDashboardResponse?.data?.patientName ||
     authUser?.patientName ||
     [authUser?.firstName, authUser?.lastName].filter(Boolean).join(' ') ||
     '';

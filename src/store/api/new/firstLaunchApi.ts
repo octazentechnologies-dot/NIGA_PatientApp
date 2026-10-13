@@ -9,6 +9,7 @@ export type LanguageMaster = {
 
 /** FirstLaunchView — GET api/mastersAPI/GetLanguages. Auth not required. */
 export const firstLaunchApi = newBaseApi.injectEndpoints({
+  overrideExisting: true,
   endpoints: (build) => ({
     getLanguages: build.query<LanguageMaster[], void>({
       query: () => 'api/mastersAPI/GetLanguages',

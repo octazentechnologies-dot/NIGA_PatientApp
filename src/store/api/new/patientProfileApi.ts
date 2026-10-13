@@ -23,17 +23,17 @@ export interface PatientProfileResponse {
 }
 
 export interface UpdatePatientProfileRequest {
-  firstName: string;
-  lastName: string;
-  patientName: string;
-  dateOfBirth: string;
-  gender: number;
-  age: number;
-  mobileNo: string;
-  email: string;
-  preferredLanguageId: number | null;
-  welcomeVersionSeen: string | null;
-  patientId: number;
+  firstName?: string;
+  lastName?: string;
+  patientName?: string;
+  dateOfBirth?: string;
+  gender?: number;
+  age?: number;
+  mobileNo?: string;
+  email?: string;
+  preferredLanguageId?: number | null;
+  welcomeVersionSeen?: string | null;
+  patientId?: number;
 }
 
 export interface UpdatePatientProfileResponse {
@@ -50,6 +50,7 @@ export interface UpdatePatientProfileResponse {
  * Auth: Bearer Token, Base: newBaseApi (devapi2)
  */
 export const patientProfileApi = newBaseApi.injectEndpoints({
+  overrideExisting: true,
   endpoints: (build) => ({
     getPatientProfile: build.query<PatientProfileResponse, void>({
       query: () => 'api/PatientProfile/Me',

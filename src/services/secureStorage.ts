@@ -64,11 +64,29 @@ export function deleteAuthUserData(): Promise<void> {
   return deleteSecret(AUTH_USER_KEY);
 }
 
+const BOOKING_SESSION_ID_KEY = 'auth.bookingSessionId';
+
+export function saveBookingSessionId(id: number): Promise<void> {
+  return saveSecret(BOOKING_SESSION_ID_KEY, String(id));
+}
+
+export async function getBookingSessionId(): Promise<number | null> {
+  const raw = await readSecret(BOOKING_SESSION_ID_KEY);
+  if (!raw) return null;
+  const num = Number(raw);
+  return Number.isFinite(num) ? num : null;
+}
+
+export function deleteBookingSessionId(): Promise<void> {
+  return deleteSecret(BOOKING_SESSION_ID_KEY);
+}
+
 export async function clearAuthCredentials(): Promise<void> {
   await Promise.all([
     deleteAccessToken(),
     deleteRefreshToken(),
     deleteAuthUserData(),
+    deleteBookingSessionId(),
   ]);
 }
 

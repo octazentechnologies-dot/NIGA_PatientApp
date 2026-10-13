@@ -1,7 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import { useGetProgressQuery } from '../store/api/new/symptomDiaryApi';
+import { useAppSelector } from '../store/hooks';
 
 export type EmptyRangeId = '7d' | '14d' | '30d';
 
@@ -72,12 +74,34 @@ export function useCliniSightProgressController({
   const [emptyRange, setEmptyRange] = useState<EmptyRangeId>('7d');
   const [readyRange, setReadyRange] = useState<ReadyRangeId>('3m');
 
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+  const authUser = useAppSelector((state) => state.auth.user);
+  const { data: progressResponse } = useGetProgressQuery(undefined, {
+    skip: !isAuthenticated,
+  });
+
+  const userDisplayName =
+    authUser?.patientName ||
+    [authUser?.firstName, authUser?.lastName].filter(Boolean).join(' ');
+  const memberLabel = userDisplayName || t('diaryMemberAarav');
+
+  useEffect(() => {
+    if (progressResponse?.data) {
+      const seriesCount = progressResponse.data.series?.length ?? 0;
+      if (seriesCount > 0 || (progressResponse.data.visitCount ?? 0) > 0) {
+        setHasEnoughData(true);
+      }
+    }
+  }, [progressResponse]);
+
   const chartCaption = useMemo(
-    () =>
-      t('cliniSightChartCaption')
-        .replace('{logged}', '42')
-        .replace('{total}', '56'),
-    [t],
+    () => {
+      const logged = progressResponse?.data?.series?.length ?? 42;
+      return t('cliniSightChartCaption')
+        .replace('{logged}', String(logged))
+        .replace('{total}', '56');
+    },
+    [t, progressResponse],
   );
 
   const daysLoggedLine = useMemo(
@@ -100,7 +124,7 @@ export function useCliniSightProgressController({
     language,
     t,
     hasEnoughData,
-    memberLabel: t('diaryMemberAarav'),
+    memberLabel,
     emptyRange,
     readyRange,
     emptyRanges: EMPTY_RANGES,

@@ -2,8 +2,14 @@ import { useMemo, useState } from 'react';
 
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import {
+  useGetDocumentsQuery,
+  useGetTimelineQuery,
+} from '../store/api/new/recordsApi';
+import { useGetFamilyQuery } from '../store/api/new/familyApi';
+import { useAppSelector } from '../store/hooks';
 
-export type RecordsMemberId = 'self' | 'aarav' | 'meera' | 'sunita';
+export type RecordsMemberId = string;
 
 export type RecordsFilterId =
   | 'all'
@@ -241,19 +247,128 @@ export function useHealthRecordsController({
   const [prescriptionOpen, setPrescriptionOpen] = useState(false);
   const [uploadDocumentOpen, setUploadDocumentOpen] = useState(false);
 
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+  const authUser = useAppSelector((state) => state.auth.user);
+  const { data: timelineResponse } = useGetTimelineQuery(undefined, {
+    skip: !isAuthenticated,
+  });
+  const { data: documentsResponse } = useGetDocumentsQuery(undefined, {
+    skip: !isAuthenticated,
+  });
+  const { data: familyResponse } = useGetFamilyQuery(undefined, {
+    skip: !isAuthenticated,
+  });
+
+  const authUserInitials = useMemo(() => {
+    const name =
+      authUser?.patientName ||
+      [authUser?.firstName, authUser?.lastName].filter(Boolean).join(' ');
+    if (!name) return 'ME';
+    return (
+      name
+        .split(' ')
+        .filter(Boolean)
+        .map((w) => w[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase() || 'ME'
+    );
+  }, [authUser]);
+
+  const members = useMemo<RecordsMember[]>(() => {
+    if (!isAuthenticated) return MEMBERS;
+    const list: RecordsMember[] = [
+      { id: 'self', nameKey: 'recordsMyself', initials: authUserInitials },
+    ];
+    if (familyResponse?.data) {
+      for (const m of familyResponse.data) {
+        const initials =
+          (m.fullName || m.relation || 'FM')
+            .split(' ')
+            .filter(Boolean)
+            .map((w) => w[0])
+            .join('')
+            .slice(0, 2)
+            .toUpperCase() || 'FM';
+        list.push({
+          id: String(m.familyMemberId),
+          nameKey: (m.fullName || m.relation) as TranslationKey,
+          initials,
+        });
+      }
+    }
+    return list;
+  }, [isAuthenticated, authUserInitials, familyResponse?.data]);
+
   const selectedMember =
-    MEMBERS.find((member) => member.id === selectedMemberId) ?? MEMBERS[0];
+    members.find((member) => member.id === selectedMemberId) ?? members[0];
   const isPendingMember = Boolean(selectedMember.pending);
 
-  const rawItems = useMemo(() => {
-    if (selectedMemberId === 'meera' || selectedMemberId === 'sunita') {
+  const rawItems = useMemo<RecordsTimelineItem[]>(() => {
+    if (!isAuthenticated) {
+      if (selectedMemberId === 'meera' || selectedMemberId === 'sunita') {
+        return [];
+      }
+      if (selectedMemberId === 'aarav') {
+        return AARAV_ITEMS;
+      }
+      return SELF_ITEMS;
+    }
+
+    if (selectedMemberId !== 'self') {
       return [];
     }
-    if (selectedMemberId === 'aarav') {
-      return AARAV_ITEMS;
+
+    const serverItems: RecordsTimelineItem[] = [];
+
+    const appointments = timelineResponse?.data?.appointments;
+    if (Array.isArray(appointments)) {
+      for (const app of appointments) {
+        serverItems.push({
+          id: `app-${app.refId}`,
+          kind: 'consultation',
+          titleKey: 'recordsConsultTitle',
+          metaKey: 'recordsConsultMeta',
+          badgeKey: app.title === 'COMPLETED' ? 'recordsNoteSigned' : undefined,
+        });
+      }
     }
-    return SELF_ITEMS;
-  }, [selectedMemberId]);
+
+    const prescriptions = timelineResponse?.data?.prescriptions;
+    if (Array.isArray(prescriptions)) {
+      for (const rx of prescriptions) {
+        const isSigned = rx.status === 'SIGNED';
+        serverItems.push({
+          id: `erx-${rx.erxSnapshotId}`,
+          kind: 'prescription',
+          titleKey: 'recordsRxTitle',
+          metaKey: 'recordsRxMeta',
+          badgeKey: isSigned ? 'recordsRxActive' : undefined,
+          rxStatus: isSigned ? 'active' : 'expired',
+        });
+      }
+    }
+
+    const docs = documentsResponse?.data;
+    if (Array.isArray(docs)) {
+      for (const doc of docs) {
+        serverItems.push({
+          id: `doc-${doc.documentId}`,
+          kind: 'document',
+          titleKey: 'recordsDocTitle',
+          metaKey: 'recordsDocMeta',
+          noteKey: 'recordsDocNote',
+        });
+      }
+    }
+
+    return serverItems;
+  }, [
+    isAuthenticated,
+    selectedMemberId,
+    timelineResponse,
+    documentsResponse,
+  ]);
 
   const items = useMemo(
     () => filterItems(rawItems, selectedFilter),
@@ -263,7 +378,7 @@ export function useHealthRecordsController({
   return {
     language,
     t,
-    members: MEMBERS,
+    members,
     selectedMemberId,
     filters: FILTERS,
     selectedFilter,

@@ -10,6 +10,19 @@ import './api/new/consentApi';
 import './api/new/doctorsApi';
 import './api/new/familyApi';
 import './api/new/patientProfileApi';
+import './api/new/accountApi';
+import './api/new/privacyConsentApi';
+import './api/new/homeApi';
+import './api/new/bookingApi';
+import './api/new/paymentsApi';
+import './api/new/visitsApi';
+import './api/new/devicesApi';
+import './api/new/recordsApi';
+import './api/new/symptomDiaryApi';
+import './api/new/teleApi';
+import './api/new/medicinesApi';
+import './api/new/notificationsApi';
+import './api/new/supportApi';
 import { authReducer } from './slices/authSlice';
 
 export const store = configureStore({

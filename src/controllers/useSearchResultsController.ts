@@ -13,6 +13,7 @@ import {
   DEFAULT_DOCTOR_FILTERS,
   EMPTY_DOCTOR_FILTERS,
 } from '../models/search';
+import { useGetDoctorsQuery } from '../store/api/new/doctorsApi';
 
 const STOP_WORDS = new Set(['in', 'or', 'the', 'a', 'an', 'dr', 'dr.', 'of']);
 const CURRENT_CITY_ID = 'solapur';
@@ -197,8 +198,9 @@ function filterDoctors(
   query: string,
   filters: DoctorFilters,
   t: (key: TranslationKey) => string,
+  sourceList: DoctorSearchResult[] = RESULTS,
 ): DoctorSearchResult[] {
-  return RESULTS.filter(
+  return sourceList.filter(
     (doctor) => matchesQuery(doctor, query, t) && matchesFilters(doctor, filters),
   );
 }
@@ -318,14 +320,59 @@ export function useSearchResultsController({
     setTimeout(() => setLoading(false), 900);
   };
 
+  const { data: apiDoctors } = useGetDoctorsQuery(
+    active ? { q: query || undefined } : undefined,
+    { skip: !active },
+  );
+
+  const combinedDoctors = useMemo<DoctorSearchResult[]>(() => {
+    if (!apiDoctors || apiDoctors.length === 0) return RESULTS;
+    const mapped: DoctorSearchResult[] = apiDoctors.map((doc) => {
+      const docName = doc.displayName || 'Doctor';
+      const initials = docName
+        .split(' ')
+        .filter(Boolean)
+        .map((w) => w[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase();
+      const fee = doc.consultFeeInClinic || doc.consultFeeTele || 500;
+      return {
+        id: String(doc.doctorId),
+        initials: initials || 'DR',
+        nameKey: docName as TranslationKey,
+        credentialsKey: (doc.qualification || 'Homeopathy Consultant') as TranslationKey,
+        experienceKey: 'doctorExperienceYears' as TranslationKey,
+        rating: doc.averageRating != null ? String(doc.averageRating.toFixed(1)) : '4.5',
+        reviewsKey: (doc.reviewCount ? `${doc.reviewCount} reviews` : 'reviewsCount') as TranslationKey,
+        feeKey: `₹${fee}` as TranslationKey,
+        fee,
+        availabilityKey: 'searchResultAnjaliWhen' as TranslationKey,
+        availabilitySoon: doc.isOnline,
+        availabilitySlots: doc.isOnline ? ['now', 'today'] : ['tomorrow'],
+        languageKeys: ['searchLangMarathi', 'searchLangEnglish'],
+        consultLanguages: ['mr', 'en'],
+        modes: doc.consultFeeTele ? ['video', 'clinic'] : ['clinic'],
+        careNeedIds: ['skin'],
+        gender: 'female',
+        cityId: doc.city?.toLowerCase() || 'pune',
+        recognizedQualification: doc.isVerified,
+        focusCertified: doc.isVerified,
+        keywords: `${docName} ${doc.city || ''} ${doc.qualification || ''} ${doc.clinicName || ''}`.toLowerCase(),
+        verified: doc.isVerified,
+      };
+    });
+    return mapped;
+  }, [apiDoctors]);
+
   const results = useMemo(
-    () => filterDoctors(query, applied, t),
-    [applied, query, t],
+    () => filterDoctors(query, applied, t, combinedDoctors),
+    [applied, query, t, combinedDoctors],
   );
 
   const matchingCount = useMemo(
-    () => filterDoctors(query, draft, t).length,
-    [draft, query, t],
+    () => filterDoctors(query, draft, t, combinedDoctors).length,
+    [draft, query, t, combinedDoctors],
   );
 
   const customDate = draft.customDate

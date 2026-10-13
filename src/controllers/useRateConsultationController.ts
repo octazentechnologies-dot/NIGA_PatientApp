@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { BookedAppointment } from '../config/bookedAppointments';
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import { useCreateReviewMutation } from '../store/api/new/supportApi';
+import { useAppSelector } from '../store/hooks';
 
 export type RateAspectId = 'listened' | 'onTime' | 'avQuality';
 
@@ -117,6 +119,9 @@ export function useRateConsultationController({
     setPostPublicly(true);
   }, [active]);
 
+  const authUser = useAppSelector((state) => state.auth.user);
+  const [createReviewMutation] = useCreateReviewMutation();
+
   const doctorName = appointment
     ? t(appointment.doctorNameKey)
     : t('searchResultAnjaliName');
@@ -124,12 +129,40 @@ export function useRateConsultationController({
   const modeLabel = appointment?.modeConsultLabel ?? t('reviewVideoConsult');
   const datePart = appointment?.whenLabel?.split(',')[0] ?? '26 Aug 2026';
 
+  const patientDisplayName =
+    authUser?.patientName ||
+    [authUser?.firstName, authUser?.lastName].filter(Boolean).join(' ');
+  const postAsName = patientDisplayName
+    ? (language === 'mr'
+        ? `${patientDisplayName} म्हणून पोस्ट करा`
+        : `Post as ${patientDisplayName}`)
+    : t('ratePostAsName');
+
   const overallLabel = useMemo(() => {
     if (overallRating < 1) {
       return '';
     }
     return t(OVERALL_KEYS[overallRating - 1]);
   }, [overallRating, t]);
+
+  const handleSubmit = useCallback(async () => {
+    if (overallRating < 1) {
+      return;
+    }
+    const appIdNum = appointment?.id ? Number(appointment.id) : null;
+    if (appIdNum && !isNaN(appIdNum)) {
+      try {
+        await createReviewMutation({
+          patientAppId: appIdNum,
+          rating: overallRating,
+          text: reviewText.trim() || undefined,
+        }).unwrap();
+      } catch (err) {
+        console.warn('[POST api/Reviews] Failed to submit review:', err);
+      }
+    }
+    setSubmitted(true);
+  }, [overallRating, appointment?.id, createReviewMutation, reviewText]);
 
   return {
     language,
@@ -148,7 +181,7 @@ export function useRateConsultationController({
     selectedTags,
     reviewText,
     reviewMax: 500,
-    postAsName: t('ratePostAsName'),
+    postAsName,
     postPublicly,
     reviewId: 'RV-99271',
     onClose: () => {
@@ -172,12 +205,7 @@ export function useRateConsultationController({
     },
     onTogglePostPublicly: setPostPublicly,
     onRaiseComplaint: () => undefined,
-    onSubmit: () => {
-      if (overallRating < 1) {
-        return;
-      }
-      setSubmitted(true);
-    },
+    onSubmit: handleSubmit,
     onSeeReviews: onFinished,
     onVoiceInput: () => undefined,
   };

@@ -50,6 +50,7 @@ type AuthState = {
   countryId: number | null;
   detectedLocation: DetectedGeoLocation | null;
   user: AuthUser;
+  sessionEndedMessage: string | null;
 };
 
 const initialState: AuthState = {
@@ -64,6 +65,7 @@ const initialState: AuthState = {
   countryId: null,
   detectedLocation: null,
   user: null,
+  sessionEndedMessage: null,
 };
 
 const authSlice = createSlice({
@@ -155,8 +157,18 @@ const authSlice = createSlice({
         bookingSessionId: action.payload.bookingSessionId,
       };
     },
-    clearAuthState() {
-      return initialState;
+    setSessionEndedMessage(state, action: { payload: string | null }) {
+      state.sessionEndedMessage = action.payload;
+    },
+    clearSessionEndedMessage(state) {
+      state.sessionEndedMessage = null;
+    },
+    clearAuthState(state) {
+      const message = state.sessionEndedMessage;
+      return {
+        ...initialState,
+        sessionEndedMessage: message,
+      };
     },
   },
 });
@@ -168,7 +180,10 @@ export const {
   setAuthMobile,
   setDetectedLocation,
   setBookingSession,
+  setSessionEndedMessage,
+  clearSessionEndedMessage,
   clearAuthState,
 } = authSlice.actions;
 
 export const authReducer = authSlice.reducer;
+

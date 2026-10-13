@@ -30,14 +30,29 @@ export type WithdrawConsentResponse = {
   message: string;
 };
 
+export type DataRequestPayload = {
+  requestType: 'EXPORT' | 'DELETE' | string;
+};
+
+export type DataRequestResponse = {
+  success: boolean;
+  message?: string;
+  data?: {
+    type: string;
+    status: string;
+  };
+};
+
 /**
  * Consent Screen APIs:
- * - GET api/Patient/Consents
- * - POST api/Patient/Consents/Types/{consentTypeId}/Grant
- * - POST api/Patient/Consents/{consentRecordId}/Withdraw
+ * - D3: GET api/Patient/Consents
+ * - D4: POST api/Patient/Consents/Types/{consentTypeId}/Grant
+ * - D5: POST api/Patient/Consents/{consentRecordId}/Withdraw
+ * - D6: POST api/Patient/DataRequests
  * Base: newBaseApi (devapi2). Auth required (Bearer Token via prepareAuthHeaders).
  */
 export const consentApi = newBaseApi.injectEndpoints({
+  overrideExisting: true,
   endpoints: (build) => ({
     getConsents: build.query<ConsentItem[], void>({
       query: () => 'api/Patient/Consents',
@@ -72,6 +87,13 @@ export const consentApi = newBaseApi.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'Consents', id: 'LIST' }],
     }),
+    createDataRequest: build.mutation<DataRequestResponse, DataRequestPayload>({
+      query: (body) => ({
+        url: 'api/Patient/DataRequests',
+        method: 'POST',
+        body,
+      }),
+    }),
   }),
 });
 
@@ -79,4 +101,5 @@ export const {
   useGetConsentsQuery,
   useGrantConsentMutation,
   useWithdrawConsentMutation,
+  useCreateDataRequestMutation,
 } = consentApi;

@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
 import type { HelpTopicId } from './useHelpCentreController';
+import { useCreateTicketMutation } from '../store/api/new/supportApi';
 
 export type TicketIssueId =
   | 'wrongItem'
@@ -99,11 +100,56 @@ export function useRaiseTicketController({
   }, [initialTopicId]);
 
   const issues = topicId === 'medicines' ? MEDICINE_ISSUES : GENERIC_ISSUES;
+  const [createTicketMutation] = useCreateTicketMutation();
 
   const canSubmit = useMemo(
     () => issueId !== 'other' || description.trim().length >= 4,
     [description, issueId],
   );
+
+  const handleSubmit = useCallback(async () => {
+    if (!canSubmit) {
+      return;
+    }
+    const topicOption = TOPIC_OPTIONS.find((opt) => opt.id === topicId);
+    const issueOption = issues.find((opt) => opt.id === issueId);
+    const subject = `${topicOption ? t(topicOption.labelKey) : topicId}: ${issueOption ? t(issueOption.labelKey) : issueId}`;
+
+    let category: 'billing' | 'booking' | 'technical' | 'clinical' | 'other' = 'other';
+    if (topicId === 'booking') category = 'booking';
+    else if (topicId === 'payments' || issueId === 'refundMissing') category = 'billing';
+    else if (topicId === 'joining') category = 'technical';
+    else if (topicId === 'prescriptions') category = 'clinical';
+
+    const orderContext =
+      topicId === 'medicines' && relatedVisible ? ' [Order #HM-4821]' : '';
+    const bodyText = `${description.trim() || subject}${orderContext} (Contact preference: ${contactPref})`;
+
+    try {
+      await createTicketMutation({
+        category,
+        subject,
+        body: bodyText,
+      }).unwrap();
+    } catch (err) {
+      console.warn('[POST api/Support/Tickets] Failed to create support ticket:', err);
+    }
+
+    onSubmitted?.();
+    onBack();
+  }, [
+    canSubmit,
+    topicId,
+    issueId,
+    issues,
+    t,
+    relatedVisible,
+    description,
+    contactPref,
+    createTicketMutation,
+    onSubmitted,
+    onBack,
+  ]);
 
   return {
     language,
@@ -134,12 +180,6 @@ export function useRaiseTicketController({
     onChangeDescription: setDescription,
     onSelectContact: setContactPref,
     onAddPhoto: () => undefined,
-    onSubmit: () => {
-      if (!canSubmit) {
-        return;
-      }
-      onSubmitted?.();
-      onBack();
-    },
+    onSubmit: handleSubmit,
   };
 }

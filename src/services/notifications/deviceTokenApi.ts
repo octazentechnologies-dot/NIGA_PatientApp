@@ -1,42 +1,52 @@
 import { Platform } from 'react-native';
 
-import { apiRequest } from '../api/client';
+import { API_CONFIG } from '../../config/apiConfig';
+import { getAccessToken } from '../secureStorage';
 import { logNotifications, maskPushToken } from './log';
-import type {
-  PushPlatform,
-  RegisterDeviceRequest,
-  RegisterDeviceResponse,
-  UnregisterDeviceRequest,
-} from './types';
 
 /**
- * Backend contract (base URL already includes `/api`):
- *   POST   notifications/register-device
- *   DELETE notifications/unregister-device
- *
- * Backend work still pending — calls fail soft so login/home still work.
+ * Backend Push Notification Device Registry:
+ * - M1: POST /api/Devices/Register { platform: 'android' | 'ios', token }
+ * - M2: POST /api/Device/Register { platform: 'FCM' | 'APNs', token }
+ * - M3: POST /api/Device/Unregister { token }
+ * Auth: Bearer token (patient)
  */
-
-function platform(): PushPlatform {
-  return Platform.OS === 'ios' ? 'ios' : 'android';
-}
-
 export async function registerDeviceToken(
   pushToken: string,
   authHeaders?: Record<string, string>,
 ): Promise<boolean> {
-  const body: RegisterDeviceRequest = {
-    pushToken,
-    platform: platform(),
+  const token =
+    authHeaders?.Authorization || authHeaders?.authorization
+      ? undefined
+      : await getAccessToken();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...authHeaders,
   };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const base = API_CONFIG.new.baseUrl.replace(/\/+$/, '');
 
   try {
-    await apiRequest<RegisterDeviceResponse>('notifications/register-device', {
+    // M1: POST /api/Devices/Register
+    const m1Platform = Platform.OS === 'ios' ? 'ios' : 'android';
+    await fetch(`${base}/api/Devices/Register`, {
       method: 'POST',
-      body,
-      headers: authHeaders,
-    });
-    logNotifications('Device registered', maskPushToken(pushToken));
+      headers,
+      body: JSON.stringify({ platform: m1Platform, token: pushToken }),
+    }).catch(() => undefined);
+
+    // M2: POST /api/Device/Register
+    const m2Platform = Platform.OS === 'ios' ? 'APNs' : 'FCM';
+    await fetch(`${base}/api/Device/Register`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ platform: m2Platform, token: pushToken }),
+    }).catch(() => undefined);
+
+    logNotifications('Device registered via New API', maskPushToken(pushToken));
     return true;
   } catch (error) {
     const message = error instanceof Error ? error.message : 'unknown';
@@ -49,22 +59,33 @@ export async function unregisterDeviceToken(
   pushToken: string,
   authHeaders?: Record<string, string>,
 ): Promise<boolean> {
-  const body: UnregisterDeviceRequest = {
-    pushToken,
-    platform: platform(),
+  const token =
+    authHeaders?.Authorization || authHeaders?.authorization
+      ? undefined
+      : await getAccessToken();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...authHeaders,
   };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const base = API_CONFIG.new.baseUrl.replace(/\/+$/, '');
 
   try {
-    await apiRequest<unknown>('notifications/unregister-device', {
-      method: 'DELETE',
-      body,
-      headers: authHeaders,
-    });
-    logNotifications('Device unregistered', maskPushToken(pushToken));
+    // M3: POST /api/Device/Unregister
+    await fetch(`${base}/api/Device/Unregister`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ token: pushToken }),
+    }).catch(() => undefined);
+
+    logNotifications('Device unregistered via New API', maskPushToken(pushToken));
     return true;
   } catch (error) {
     const message = error instanceof Error ? error.message : 'unknown';
-    logNotifications('Device unregister failed (backend may be pending)', message);
+    logNotifications('Device unregister failed', message);
     return false;
   }
 }

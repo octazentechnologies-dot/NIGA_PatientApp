@@ -2,6 +2,8 @@ import { useState } from 'react';
 
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import { useRequestRefillMutation } from '../store/api/new/medicinesApi';
+import { useAppSelector } from '../store/hooks';
 
 export type RefillFeeling = 'improved' | 'same' | 'worse' | 'returned';
 
@@ -103,6 +105,8 @@ export function useOrderDetailsController({
   );
 
   const canRefill = orderId === 'hm-3922';
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+  const [requestRefillApi] = useRequestRefillMutation();
   const deliveredLine =
     orderId === 'hm-3850'
       ? t('medsStatusCancelledByYou')
@@ -148,7 +152,16 @@ export function useOrderDetailsController({
     },
     onChangeRefillReason: setRefillReason,
     onSelectFeeling: setRefillFeeling,
-    onSendRefill: () => setRefillOpen(false),
+    onSendRefill: async () => {
+      setRefillOpen(false);
+      if (isAuthenticated) {
+        try {
+          await requestRefillApi({ erxSnapshotId: 3307 }).unwrap();
+        } catch (e) {
+          console.warn('[requestRefillApi] Failed:', e);
+        }
+      }
+    },
     onHelpWrongItem: () => undefined,
     onHelpMissingItem: () => undefined,
     onHelpRefund: () => undefined,

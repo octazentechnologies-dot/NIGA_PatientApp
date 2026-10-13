@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import { useGetHelpArticlesQuery } from '../store/api/new/supportApi';
 
 export type HelpTopicId =
   | 'joining'
@@ -80,6 +81,8 @@ export function useHelpCentreController({
 }): HelpCentreViewModel {
   const { language, setLanguage, t } = useLocalization();
   const [query, setQuery] = useState('');
+
+  const { data: remoteArticles } = useGetHelpArticlesQuery();
 
   const filteredTopics = useMemo(() => {
     const q = query.trim().toLowerCase();

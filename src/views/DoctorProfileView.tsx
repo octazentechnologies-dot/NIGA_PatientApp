@@ -33,6 +33,7 @@ const TABS: { id: ProfileTab; labelKey: TranslationKey }[] = [
 export function DoctorProfileView({
   t,
   profile,
+  reviews,
   tab,
   saved,
   aboutExpanded,
@@ -118,24 +119,28 @@ export function DoctorProfileView({
             {t(profile.credentialsKey)}
           </AppText>
           <View style={styles.statRow}>
-            <View style={[styles.statChip, styles.statChipBlue]}>
-              <Ionicons name="briefcase-outline" size={14} color={ICON_BLUE} />
-              <AppText variant="labelSm" color={MUTED} style={styles.statLabel}>
-                {t(profile.experienceKey)}
-              </AppText>
-            </View>
+            {profile.experienceKey ? (
+              <View style={[styles.statChip, styles.statChipBlue]}>
+                <Ionicons name="briefcase-outline" size={14} color={ICON_BLUE} />
+                <AppText variant="labelSm" color={MUTED} style={styles.statLabel}>
+                  {t(profile.experienceKey)}
+                </AppText>
+              </View>
+            ) : null}
             <View style={[styles.statChip, styles.statChipOrange]}>
               <Ionicons name="star" size={14} color={STAR} />
               <AppText variant="labelSm" color={MUTED} style={styles.statLabel}>
                 {`${profile.rating} ${t(profile.reviewsKey)}`}
               </AppText>
             </View>
-            <View style={[styles.statChip, styles.statChipBlue]}>
-              <Ionicons name="people-outline" size={14} color={ICON_BLUE} />
-              <AppText variant="labelSm" color={MUTED} style={styles.statLabel}>
-                {t(profile.consultsKey)}
-              </AppText>
-            </View>
+            {profile.consultsKey ? (
+              <View style={[styles.statChip, styles.statChipBlue]}>
+                <Ionicons name="people-outline" size={14} color={ICON_BLUE} />
+                <AppText variant="labelSm" color={MUTED} style={styles.statLabel}>
+                  {t(profile.consultsKey)}
+                </AppText>
+              </View>
+            ) : null}
           </View>
         </View>
       </View>
@@ -188,7 +193,9 @@ export function DoctorProfileView({
         {tab === 'credentials' ? (
           <DoctorCredentialsTab t={t} profile={profile} />
         ) : null}
-        {tab === 'reviews' ? <ReviewsTab t={t} profile={profile} /> : null}
+        {tab === 'reviews' ? (
+          <ReviewsTab t={t} profile={profile} reviews={reviews} />
+        ) : null}
         {tab === 'availability' ? (
           <AvailabilityTab t={t} nextAvailable={t(profile.nextAvailableKey)} />
         ) : null}
@@ -272,39 +279,43 @@ function AboutTab({
         </View>
       </View>
 
-      <View style={styles.bioBlock}>
-        <AppText
-          variant="bodyMd"
-          color={MUTED}
-          numberOfLines={aboutExpanded ? undefined : 4}
-          style={styles.bio}
-        >
-          {t(profile.aboutKey)}
-        </AppText>
-        <Pressable accessibilityRole="button" onPress={onToggleAbout} hitSlop={8}>
-          <AppText variant="labelSm" color={ICON_BLUE} weightOverride="500">
-            {t(aboutExpanded ? 'profileReadLess' : 'profileReadMore')}
+      {profile.aboutKey ? (
+        <View style={styles.bioBlock}>
+          <AppText
+            variant="bodyMd"
+            color={MUTED}
+            numberOfLines={aboutExpanded ? undefined : 4}
+            style={styles.bio}
+          >
+            {t(profile.aboutKey)}
           </AppText>
-        </Pressable>
-      </View>
-
-      <View style={styles.stackSm}>
-        <AppText variant="headlineMd" color="#000000" style={styles.sectionTitle}>
-          {t('profileCareFocus')}
-        </AppText>
-        <View style={styles.wrap}>
-          {profile.careNeedKeys.map((key) => (
-            <View key={key} style={styles.careChip}>
-              <AppText variant="bodyMd" color="#000000" style={styles.careChipLabel}>
-                {t(key)}
-              </AppText>
-            </View>
-          ))}
+          <Pressable accessibilityRole="button" onPress={onToggleAbout} hitSlop={8}>
+            <AppText variant="labelSm" color={ICON_BLUE} weightOverride="500">
+              {t(aboutExpanded ? 'profileReadLess' : 'profileReadMore')}
+            </AppText>
+          </Pressable>
         </View>
-        <AppText variant="labelSm" color={MUTED}>
-          {t('profileCareFocusNote')}
-        </AppText>
-      </View>
+      ) : null}
+
+      {profile.careNeedKeys && profile.careNeedKeys.length > 0 ? (
+        <View style={styles.stackSm}>
+          <AppText variant="headlineMd" color="#000000" style={styles.sectionTitle}>
+            {t('profileCareFocus')}
+          </AppText>
+          <View style={styles.wrap}>
+            {profile.careNeedKeys.map((key) => (
+              <View key={key} style={styles.careChip}>
+                <AppText variant="bodyMd" color="#000000" style={styles.careChipLabel}>
+                  {t(key)}
+                </AppText>
+              </View>
+            ))}
+          </View>
+          <AppText variant="labelSm" color={MUTED}>
+            {t('profileCareFocusNote')}
+          </AppText>
+        </View>
+      ) : null}
 
       <View style={styles.consultBlock}>
         <AppText variant="headlineMd" color="#000000" style={styles.sectionTitle}>
@@ -342,9 +353,11 @@ function AboutTab({
 function ReviewsTab({
   t,
   profile,
+  reviews,
 }: {
   t: DoctorProfileViewModel['t'];
   profile: DoctorProfileViewModel['profile'];
+  reviews: DoctorProfileViewModel['reviews'];
 }) {
   return (
     <View style={styles.stack}>
@@ -354,29 +367,45 @@ function ReviewsTab({
           {`${profile.rating} ${t(profile.reviewsKey)}`}
         </AppText>
       </View>
-      {profile.reviewIds.map((id) => (
-        <View key={id} style={styles.reviewCard}>
-          <AppText variant="titleMd" color="#000000">
-            {t(id === 1 ? 'profileReview1Name' : 'profileReview2Name')}
-          </AppText>
-          <View style={styles.ratingDots}>
-            {Array.from({ length: 5 }, (_, index) => (
-              <Ionicons
-                key={index}
-                name="star"
-                size={12}
-                color={index < 4 ? STAR : HAIRLINE}
-              />
-            ))}
-          </View>
-          <AppText variant="bodyMd" color={MUTED}>
-            {t(id === 1 ? 'profileReview1Body' : 'profileReview2Body')}
-          </AppText>
-          <AppText variant="labelSm" color={MUTED}>
-            {t(id === 1 ? 'profileReview1Date' : 'profileReview2Date')}
+      {!reviews || reviews.length === 0 ? (
+        <View style={styles.verifyCard}>
+          <AppText
+            variant="bodyMd"
+            color={MUTED}
+            style={{ textAlign: 'center', paddingVertical: spacing.md }}
+          >
+            {t('profileNoReviews')}
           </AppText>
         </View>
-      ))}
+      ) : (
+        reviews.map((rev) => (
+          <View key={rev.id} style={styles.reviewCard}>
+            <AppText variant="titleMd" color="#000000">
+              {rev.reviewerName}
+            </AppText>
+            <View style={styles.ratingDots}>
+              {Array.from({ length: 5 }, (_, index) => (
+                <Ionicons
+                  key={index}
+                  name="star"
+                  size={12}
+                  color={index < rev.rating ? STAR : HAIRLINE}
+                />
+              ))}
+            </View>
+            {rev.body ? (
+              <AppText variant="bodyMd" color={MUTED}>
+                {rev.body}
+              </AppText>
+            ) : null}
+            {rev.dateLabel ? (
+              <AppText variant="labelSm" color={MUTED}>
+                {rev.dateLabel}
+              </AppText>
+            ) : null}
+          </View>
+        ))
+      )}
     </View>
   );
 }

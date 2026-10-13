@@ -4,6 +4,11 @@ import type { BookedAppointment } from '../config/bookedAppointments';
 import { images } from '../config/images';
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import {
+  useGetChatMessagesQuery,
+  useSendChatMessageMutation,
+} from '../store/api/new/teleApi';
+import { useAppSelector } from '../store/hooks';
 
 export type ChatMessageKind = 'text' | 'image' | 'prescription' | 'system';
 
@@ -174,10 +179,41 @@ export function useConsultationChatController({
   const [draft, setDraft] = useState('');
   const [extraMessages, setExtraMessages] = useState<ChatMessage[]>([]);
 
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+  const sessionId = (appointment as unknown as { teleSessionId?: number; sessionId?: number })?.teleSessionId ??
+    (appointment as unknown as { teleSessionId?: number; sessionId?: number })?.sessionId;
+  const { data: serverChatResponse } = useGetChatMessagesQuery(sessionId ?? 0, {
+    skip: !isAuthenticated || !sessionId,
+    pollingInterval: 5000,
+  });
+  const [sendChatMessageApi] = useSendChatMessageMutation();
+
   const closed = forceClosed || naturallyClosed;
   const baseMessages = useMemo(
-    () => seedMessages(language, closed),
-    [language, closed],
+    () => {
+      if (serverChatResponse?.data && Array.isArray(serverChatResponse.data) && serverChatResponse.data.length > 0) {
+        return serverChatResponse.data.map((m) => {
+          const atDate = new Date(m.at);
+          const timeLabel = localizeDigits(
+            `${((atDate.getHours() + 11) % 12) + 1}:${String(atDate.getMinutes()).padStart(2, '0')} ${
+              atDate.getHours() >= 12 ? 'PM' : 'AM'
+            }`,
+            language,
+          );
+          return {
+            id: String(m.teleChatMessageId),
+            kind: 'text' as const,
+            from: m.senderRole === 'Doctor' ? ('doctor' as const) : ('patient' as const),
+            body: m.body,
+            timeLabel,
+            read: true,
+            dateGroup: 'today',
+          };
+        });
+      }
+      return seedMessages(language, closed);
+    },
+    [language, closed, serverChatResponse],
   );
   const messages = closed ? baseMessages : [...baseMessages, ...extraMessages];
 
@@ -236,6 +272,12 @@ export function useConsultationChatController({
         },
       ]);
       setDraft('');
+
+      if (isAuthenticated && sessionId) {
+        sendChatMessageApi({ sessionId, body: text }).catch((err) => {
+          console.warn('[sendChatMessageApi] Failed:', err);
+        });
+      }
     },
     onAttach: () => undefined,
     onViewLinked,

@@ -1,7 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import {
+  useGetNotificationsQuery,
+  useMarkNotificationReadMutation,
+} from '../store/api/new/notificationsApi';
+import { useAppSelector } from '../store/hooks';
 
 export type NotifFilter = 'all' | 'appointments' | 'prescriptions' | 'medicines';
 
@@ -122,6 +127,38 @@ export function useNotificationsController({
   const [items, setItems] = useState(SEED);
   const [revealedId, setRevealedId] = useState<string | null>('delivery');
 
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+  const { data: notifResponse } = useGetNotificationsQuery(undefined, {
+    skip: !isAuthenticated,
+  });
+  const [markNotificationReadApi] = useMarkNotificationReadMutation();
+
+  useEffect(() => {
+    if (notifResponse?.data && Array.isArray(notifResponse.data)) {
+      setItems(
+        notifResponse.data.map((item) => {
+          const filterVal: Exclude<NotifFilter, 'all'> = item.title.toLowerCase().includes('rx') ||
+            item.title.toLowerCase().includes('prescription')
+            ? 'prescriptions'
+            : item.title.toLowerCase().includes('order') || item.title.toLowerCase().includes('medicine')
+              ? 'medicines'
+              : 'appointments';
+
+          return {
+            id: String(item.appNotificationId),
+            filter: filterVal,
+            group: 'today' as NotifGroup,
+            titleKey: item.title as unknown as TranslationKey,
+            bodyKey: item.body as unknown as TranslationKey,
+            timeKey: 'notifTime42m',
+            tone: 'clinical',
+            unread: !item.isRead,
+          };
+        }),
+      );
+    }
+  }, [notifResponse]);
+
   const groups = useMemo(() => {
     const filtered =
       filter === 'all' ? items : items.filter((item) => item.filter === filter);
@@ -153,6 +190,13 @@ export function useNotificationsController({
     onMarkAllRead: () => {
       setItems((prev) => prev.map((item) => ({ ...item, unread: false })));
       setRevealedId(null);
+      if (isAuthenticated && notifResponse?.data) {
+        for (const item of notifResponse.data) {
+          if (!item.isRead) {
+            markNotificationReadApi({ appNotificationId: item.appNotificationId, isRead: true }).catch(() => undefined);
+          }
+        }
+      }
     },
     onSelectFilter: setFilter,
     onOpenItem: (id) => {
@@ -160,6 +204,14 @@ export function useNotificationsController({
         prev.map((item) => (item.id === id ? { ...item, unread: false } : item)),
       );
       setRevealedId(null);
+      if (isAuthenticated) {
+        const numId = Number(id);
+        if (!isNaN(numId) && numId > 0) {
+          markNotificationReadApi({ appNotificationId: numId, isRead: true }).catch((e) =>
+            console.warn('[markNotificationReadApi] Failed:', e),
+          );
+        }
+      }
     },
     onJoin: () => onJoinConsultation?.(),
     onReveal: setRevealedId,
@@ -168,6 +220,14 @@ export function useNotificationsController({
         prev.map((item) => (item.id === id ? { ...item, unread: false } : item)),
       );
       setRevealedId(null);
+      if (isAuthenticated) {
+        const numId = Number(id);
+        if (!isNaN(numId) && numId > 0) {
+          markNotificationReadApi({ appNotificationId: numId, isRead: true }).catch((e) =>
+            console.warn('[markNotificationReadApi] Failed:', e),
+          );
+        }
+      }
     },
     onDelete: (id) => {
       setItems((prev) => prev.filter((item) => item.id !== id));

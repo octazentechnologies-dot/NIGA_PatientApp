@@ -51,7 +51,7 @@ export function LocalizationProvider({ children }: PropsWithChildren) {
   }, []);
 
   const t = useCallback(
-    (key: TranslationKey) => dictionaries[language][key],
+    (key: TranslationKey) => dictionaries[language][key] ?? (key as unknown as string),
     [language],
   );
 

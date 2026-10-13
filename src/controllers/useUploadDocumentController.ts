@@ -9,6 +9,8 @@ import type { PatientDocument } from '../config/patientDocuments';
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
 import { useGetFamilyQuery } from '../store/api/new/familyApi';
+import { useGetHomeDashboardQuery } from '../store/api/new/homeApi';
+import { useUploadDocumentMutation } from '../store/api/new/recordsApi';
 import { useAppSelector } from '../store/hooks';
 
 export type UploadDocTypeId =
@@ -88,7 +90,7 @@ export function useUploadDocumentController({
   onSaved: (files: PatientDocument[]) => void;
 }): UploadDocumentViewModel {
   const { language, t } = useLocalization();
-  const [memberId, setMemberId] = useState<UploadMemberId>('aarav');
+  const [memberId, setMemberId] = useState<UploadMemberId>('self');
   const [memberPickerOpen, setMemberPickerOpen] = useState(false);
   const [files, setFiles] = useState<PatientDocument[]>([]);
   const [docType, setDocType] = useState<UploadDocTypeId | null>(null);
@@ -99,7 +101,7 @@ export function useUploadDocumentController({
 
   useEffect(() => {
     if (!active) {
-      setMemberId('aarav');
+      setMemberId('self');
       setMemberPickerOpen(false);
       setFiles([]);
       setDocType(null);
@@ -155,12 +157,19 @@ export function useUploadDocumentController({
     });
   };
 
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const authUser = useAppSelector((state) => state.auth.user);
+  const { data: homeDashboardResponse } = useGetHomeDashboardQuery(undefined, {
+    skip: !isAuthenticated,
+  });
   const patientFullName =
+    homeDashboardResponse?.data?.patientName ||
     authUser?.patientName ||
     [authUser?.firstName, authUser?.lastName].filter(Boolean).join(' ');
 
-  const { data: familyResponse } = useGetFamilyQuery();
+  const { data: familyResponse } = useGetFamilyQuery(undefined, {
+    skip: !isAuthenticated,
+  });
   const apiFamily = familyResponse?.data;
 
   const members = useMemo(
@@ -171,6 +180,8 @@ export function useUploadDocumentController({
   const member =
     members.find((item) => item.id === memberId) ?? members[0];
   const memberLabel = member.name;
+
+  const [uploadDocumentApi] = useUploadDocumentMutation();
 
   return {
     language,
@@ -216,10 +227,25 @@ export function useUploadDocumentController({
     onChangeNotes: setNotes,
     onSelectVisibility: setVisibility,
     onCancel: onClose,
-    onSave: () => {
+    onSave: async () => {
       const ready = files.filter((file) => file.status === 'ready');
       if (ready.length === 0) {
         return;
+      }
+      if (isAuthenticated) {
+        for (const file of ready) {
+          try {
+            const formData = new FormData();
+            formData.append('file', {
+              uri: 'file://' + file.name,
+              name: file.name,
+              type: file.kind === 'pdf' ? 'application/pdf' : 'image/jpeg',
+            } as unknown as Blob);
+            await uploadDocumentApi(formData).unwrap();
+          } catch (err) {
+            console.warn('[uploadDocumentApi] Failed:', err);
+          }
+        }
       }
       onSaved(ready);
       onClose();

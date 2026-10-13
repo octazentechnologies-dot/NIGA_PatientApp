@@ -1,7 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import {
+  useCompleteFollowUpMutation,
+  useGetFollowUpsQuery,
+} from '../store/api/new/recordsApi';
+import { useAppSelector } from '../store/hooks';
 
 export type FeelingId = 'improved' | 'same' | 'worse' | 'returned';
 
@@ -119,6 +124,26 @@ export function useFollowUpPlanController({
   const [tasks, setTasks] = useState(INITIAL_TASKS);
   const [prescriptionOpen, setPrescriptionOpen] = useState(false);
   const [consultationNoteOpen, setConsultationNoteOpen] = useState(false);
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+  const { data: followUpsResponse } = useGetFollowUpsQuery(undefined, {
+    skip: !isAuthenticated,
+  });
+  const [completeFollowUp] = useCompleteFollowUpMutation();
+
+  useEffect(() => {
+    if (followUpsResponse?.data && Array.isArray(followUpsResponse.data) && followUpsResponse.data.length > 0) {
+      setTasks(
+        followUpsResponse.data.map((item) => ({
+          id: String(item.followUpTaskId) as FollowUpTaskId,
+          titleKey: 'followUpTaskSulphur',
+          metaKey: 'followUpTaskSulphurMeta',
+          badgeKey: item.status === 'DONE' ? 'followUpBadgeOnTrack' : 'followUpBadgePending',
+          badgeTone: item.status === 'DONE' ? 'success' : 'warn',
+          done: item.status === 'DONE',
+        })),
+      );
+    }
+  }, [followUpsResponse]);
 
   const doneCount = useMemo(
     () => tasks.filter((task) => task.done).length,
@@ -152,12 +177,22 @@ export function useFollowUpPlanController({
     onSelectFeeling: setFeeling,
     onChangeNotes: setNotes,
     onRecordResponse: () => setResponseRecorded(true),
-    onToggleTask: (id) => {
+    onToggleTask: async (id) => {
       setTasks((prev) =>
         prev.map((task) =>
           task.id === id ? { ...task, done: !task.done } : task,
         ),
       );
+      if (isAuthenticated) {
+        const numId = Number(id);
+        if (!isNaN(numId) && numId > 0) {
+          try {
+            await completeFollowUp(numId).unwrap();
+          } catch (e) {
+            console.warn('[completeFollowUp] Failed:', e);
+          }
+        }
+      }
     },
     onUploadPhoto: () => onUploadPhoto?.(),
     prescriptionOpen,

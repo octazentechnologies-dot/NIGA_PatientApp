@@ -32,14 +32,19 @@ export type VerifyOtpErrorResponse = {
   success: false;
   message?: string;
   errorMessage?: string;
+  code?: string;
 };
 
 export type VerifyOtpResponse =
   | VerifyOtpSuccessResponse
   | VerifyOtpErrorResponse;
 
-/** OtpVerificationView — POST api/PatientAuth/VerifyOtp. Auth not required. */
+/**
+ * OtpVerificationView — POST api/PatientAuth/VerifyOtp.
+ * Anonymous endpoint. Returns JWT token and user profile for registered patients.
+ */
 export const otpVerificationApi = newBaseApi.injectEndpoints({
+  overrideExisting: true,
   endpoints: (build) => ({
     verifyOtp: build.mutation<VerifyOtpResponse, VerifyOtpRequest>({
       query: (body) => ({

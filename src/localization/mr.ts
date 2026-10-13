@@ -548,6 +548,7 @@ export const mr: TranslationMap = {
   profileReview2Body:
     'वेळेवर व्हिडिओ सल्ला. आहार आणि औषधांबाबत स्पष्ट मार्गदर्शन. पुन्हा बुक करेन.',
   profileReview2Date: '१ महिन्यापूर्वी',
+  profileNoReviews: 'या डॉक्टरांसाठी अद्याप कोणतेही पुनरावलोकन नाही.',
   doctorsTabSubtitle: 'तुमच्या जवळचे सत्यापित होमिओपॅथी डॉक्टर शोधा',
   languageLabel: 'भाषा',
   english: 'इंग्रजी',
@@ -1931,6 +1932,7 @@ export const mr: TranslationMap = {
   payHistLedgerNote:
     'सल्ला शुल्क, CareLink शुल्क आणि औषध ऑर्डर स्वतंत्रपणे बिल केले जातात. HelloHomeo तुमच्या वतीने वॉलेट शिल्लक ठेवत नाही.',
   payHistMonthAug2026: 'ऑगस्ट २०२६',
+  payHistItemConsult: 'डॉक्टर सल्ला',
   payHistItemConsultAnjali: 'सल्ला — डॉ. अंजली देशमुख',
   payHistMetaConsultAnjali: '२६ ऑगस्ट २०२६ · UPI · APT-2026-88214',
   payHistItemMeds: 'औषधे — HomeoMeds ऑर्डर #HM-4821',

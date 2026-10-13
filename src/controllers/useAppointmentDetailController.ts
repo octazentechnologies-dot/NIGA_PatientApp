@@ -23,6 +23,11 @@ import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
 import type { ConsultModeChoice, NetworkQuality } from './useDeviceCheckController';
 import { attemptJoinWaitingRoom } from './useJoinFailedController';
+import {
+  useCancelAppointmentMutation,
+  useGetVisitDetailQuery,
+  useRescheduleAppointmentMutation,
+} from '../store/api/new/visitsApi';
 
 export type AppointmentPhase = 'confirmed' | 'upcoming' | 'live' | 'ended';
 
@@ -317,6 +322,12 @@ export function useAppointmentDetailController({
     null,
   );
   const item = cancelledSnapshot ?? appointment ?? FALLBACK_APPOINTMENT;
+  const isNumericId = !isNaN(Number(item.id));
+  const { data: serverVisitDetailResponse } = useGetVisitDetailQuery(item.id, {
+    skip: !isNumericId,
+  });
+  const [cancelAppointmentMutation] = useCancelAppointmentMutation();
+  const [rescheduleAppointmentMutation] = useRescheduleAppointmentMutation();
   const startMs = useMemo(
     () => new Date(item.startsAt).getTime(),
     [item.startsAt],
@@ -724,6 +735,19 @@ export function useAppointmentDetailController({
       setCancelledSnapshot(item);
       setCancelSheetOpen(false);
       setCancelledOpen(true);
+      if (isNumericId) {
+        const reasonCode =
+          cancelReason === 'other'
+            ? 'Other'
+            : cancelReason === 'found_another'
+              ? 'Duplicate'
+              : 'PatientRequest';
+        void cancelAppointmentMutation({
+          patientAppId: Number(item.id),
+          reasonCode,
+          reasonText: cancelNote.trim() || undefined,
+        });
+      }
       if (item.id) {
         onRemoveAppointment(item.id);
       }
@@ -770,16 +794,31 @@ export function useAppointmentDetailController({
       const slotTimeLabel = t(selectedRescheduleSlot.labelKey);
       const timeLine = `${slotTimeLabel} IST`;
       const whenLabel = `${daySummary} · ${timeLine}`;
+      const newStartsAt = slotStartIso(
+        selectedRescheduleDay.year,
+        selectedRescheduleDay.month,
+        selectedRescheduleDay.day,
+        selectedRescheduleSlot.id,
+      );
+
+      if (isNumericId) {
+        const m = String(selectedRescheduleDay.month + 1).padStart(2, '0');
+        const d = String(selectedRescheduleDay.day).padStart(2, '0');
+        const appointmentDate = `${selectedRescheduleDay.year}-${m}-${d}`;
+        const appointmentTime = selectedRescheduleSlot.id.slice(0, 5);
+        void rescheduleAppointmentMutation({
+          patientAppId: Number(item.id),
+          appointmentDate,
+          appointmentTime,
+          reason: rescheduleNote.trim() || undefined,
+        });
+      }
+
       onUpdateAppointment(item.id, {
         whenLabel,
         dateLine: daySummary,
         timeLine,
-        startsAt: slotStartIso(
-          selectedRescheduleDay.year,
-          selectedRescheduleDay.month,
-          selectedRescheduleDay.day,
-          selectedRescheduleSlot.id,
-        ),
+        startsAt: newStartsAt,
       });
       setRescheduleOpen(false);
       resetRescheduleForm();

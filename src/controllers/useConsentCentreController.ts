@@ -2,8 +2,10 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import { useAppSelector } from '../store/hooks';
 import {
   type ConsentItem,
+  useCreateDataRequestMutation,
   useGetConsentsQuery,
   useGrantConsentMutation,
   useWithdrawConsentMutation,
@@ -47,6 +49,7 @@ export function useConsentCentreController({
   active?: boolean;
   onBack: () => void;
 }): ConsentCentreViewModel {
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const { language, t } = useLocalization();
   const [memberId, setMemberId] = useState<ConsentMemberId>('self');
   const [memberPickerOpen, setMemberPickerOpen] = useState(false);
@@ -57,10 +60,11 @@ export function useConsentCentreController({
     isLoading,
     isError,
     refetch,
-  } = useGetConsentsQuery(undefined, { skip: !active });
+  } = useGetConsentsQuery(undefined, { skip: !active || !isAuthenticated });
 
   const [grantConsentMutation] = useGrantConsentMutation();
   const [withdrawConsentMutation] = useWithdrawConsentMutation();
+  const [createDataRequestMutation] = useCreateDataRequestMutation();
 
   const [consents, setConsents] = useState<ConsentItem[]>([]);
 
@@ -167,7 +171,12 @@ export function useConsentCentreController({
     onToggleConsent: handleToggleConsent,
     onRetry: () => void refetch(),
     onSeeCareLinkShared: () => undefined,
-    onDataRight: () => undefined,
+    onDataRight: (id: string) => {
+      if (isAuthenticated) {
+        const reqType = id === 'delete' ? 'DELETE' : 'EXPORT';
+        void createDataRequestMutation({ requestType: reqType });
+      }
+    },
     onOpenRequest: () => undefined,
     onOpenHistory: () => undefined,
   };

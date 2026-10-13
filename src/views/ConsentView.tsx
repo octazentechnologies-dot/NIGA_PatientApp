@@ -28,6 +28,9 @@ export function ConsentView({
   isError,
   togglingConsentId,
   noticeOpen,
+  noticeTitle,
+  noticeBody,
+  noticeVersion,
   onToggleConsent,
   onRetry,
   onReadNotice,
@@ -171,18 +174,20 @@ export function ConsentView({
               color="#000000"
               style={styles.modalTitle}
             >
-              {t('privacyNoticeTitle')}
+              {noticeTitle || t('privacyNoticeTitle')}
             </AppText>
             <AppText
               variant="labelSm"
               color={colors.onSurfaceVariant}
               style={styles.modalVersion}
             >
-              {t('privacyNoticeVersion')}
+              {noticeVersion ? `Version ${noticeVersion}` : t('privacyNoticeVersion')}
             </AppText>
-            <AppText variant="bodyMd" color={colors.onSurface}>
-              {t('consentIntro')}
-            </AppText>
+            <ScrollView style={{ maxHeight: 300, marginBottom: spacing.md }} showsVerticalScrollIndicator={false}>
+              <AppText variant="bodyMd" color={colors.onSurface}>
+                {noticeBody || t('consentIntro')}
+              </AppText>
+            </ScrollView>
             <AppButton
               label={t('close')}
               textVariant="titleMd"

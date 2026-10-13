@@ -2,8 +2,11 @@ import { useMemo, useState } from 'react';
 
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import { useGetMedicineOrdersQuery } from '../store/api/new/medicinesApi';
+import { useGetFamilyQuery } from '../store/api/new/familyApi';
+import { useAppSelector } from '../store/hooks';
 
-export type MedicinesMemberId = 'everyone' | 'self' | 'aarav' | 'meera';
+export type MedicinesMemberId = string;
 
 export type PastOrderFilter = 'all' | 'delivered' | 'cancelled' | 'refunded';
 
@@ -75,65 +78,9 @@ const PAST_FILTERS: MedicinesViewModel['pastFilters'] = [
   { id: 'refunded', labelKey: 'medsFilterRefunded' },
 ];
 
-const RX: OrderableRx[] = [
-  {
-    id: 'rx-77410',
-    title: 'RX-2026-77410 · 3 medicines',
-    doctorLine: 'Dr. Anjali Deshmukh · 26 Aug 2026',
-    badgeKey: 'medsValidTill26Sep',
-    expired: false,
-  },
-  {
-    id: 'rx-88912',
-    title: 'RX-2026-88912 · 1 medicine',
-    doctorLine: 'Dr. Rajesh Patel · 15 Aug 2026',
-    badgeKey: 'medsValidTill15Sep',
-    expired: false,
-  },
-  {
-    id: 'rx-44123',
-    title: 'RX-2026-44123 · 2 medicines',
-    doctorLine: 'Dr. Anjali Deshmukh · 12 Jul 2026',
-    badgeKey: 'medsExpired12Aug',
-    expired: true,
-  },
-];
+const RX: OrderableRx[] = [];
 
-const PAST: PastOrder[] = [
-  {
-    id: 'hm-3922',
-    orderLabel: 'Order #HM-3922',
-    dateLabel: '10 Aug 2026',
-    status: 'delivered',
-    statusKey: 'medsStatusDelivered',
-    medsLine: 'M01, M02, M03',
-    pharmacy: 'Shree Homeo Pharmacy',
-    priceLabel: '₹310.00',
-    canReorder: true,
-  },
-  {
-    id: 'hm-3850',
-    orderLabel: 'Order #HM-3850',
-    dateLabel: '25 Jul 2026',
-    status: 'cancelled',
-    statusKey: 'medsStatusCancelledByYou',
-    medsLine: 'M04',
-    pharmacy: 'Harmony Homeopathics',
-    priceLabel: '₹120.00',
-    priceStruck: true,
-  },
-  {
-    id: 'hm-3601',
-    orderLabel: 'Order #HM-3601',
-    dateLabel: '02 Jun 2026',
-    status: 'refunded',
-    statusKey: 'medsStatusRefunded',
-    medsLine: 'M05, M06',
-    pharmacy: 'City Central Dispensary',
-    priceLabel: '₹280.00',
-    refundNote: true,
-  },
-];
+const PAST: PastOrder[] = [];
 
 export function useMedicinesController({
   onBookFollowUp,
@@ -157,34 +104,104 @@ export function useMedicinesController({
   const [memberId, setMemberId] = useState<MedicinesMemberId>('everyone');
   const [pastFilter, setPastFilter] = useState<PastOrderFilter>('all');
 
-  /** Demo: Meera has no orders yet — shows empty state (unless just placed). */
-  const hasOrders = forceHasOrders || memberId !== 'meera';
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+  const { data: ordersResponse } = useGetMedicineOrdersQuery(undefined, {
+    skip: !isAuthenticated,
+  });
+  const { data: familyResponse } = useGetFamilyQuery(undefined, {
+    skip: !isAuthenticated,
+  });
+
+  const activeOrder = useMemo(() => {
+    if (!isAuthenticated || !ordersResponse?.data) return null;
+    return (
+      ordersResponse.data.find(
+        (o) => o.status !== 'DELIVERED' && o.status !== 'REJECTED',
+      ) ?? null
+    );
+  }, [isAuthenticated, ordersResponse?.data]);
 
   const pastOrders = useMemo(() => {
+    if (isAuthenticated && ordersResponse?.data) {
+      const serverOrders: PastOrder[] = ordersResponse.data.map((order) => {
+        const isDelivered = order.status === 'DELIVERED';
+        const isCancelled = order.status === 'REJECTED';
+        const status: PastOrderStatus = isDelivered ? 'delivered' : isCancelled ? 'cancelled' : 'delivered';
+        return {
+          id: String(order.medicineOrderId),
+          orderLabel: `Order #HM-${order.medicineOrderId}`,
+          dateLabel: 'Recent',
+          status,
+          statusKey: isDelivered ? 'medsStatusDelivered' : isCancelled ? 'medsStatusCancelledByYou' : 'medsStatusDelivered',
+          medsLine: `eRx #${order.erxSnapshotId}`,
+          pharmacy: `Partner #${order.pharmacyPartnerId}`,
+          priceLabel: order.quoteAmount != null ? `₹${order.quoteAmount.toFixed(2)}` : '₹0.00',
+        };
+      });
+      if (pastFilter === 'all') {
+        return serverOrders;
+      }
+      return serverOrders.filter((order) => order.status === pastFilter);
+    }
     if (pastFilter === 'all') {
       return PAST;
     }
     return PAST.filter((order) => order.status === pastFilter);
-  }, [pastFilter]);
+  }, [isAuthenticated, ordersResponse, pastFilter]);
+
+  const members = useMemo(() => {
+    if (!isAuthenticated) return MEMBERS;
+    const base: { id: MedicinesMemberId; labelKey: TranslationKey }[] = [
+      { id: 'everyone', labelKey: 'medsMemberEveryone' },
+      { id: 'self', labelKey: 'medsMemberMyself' },
+    ];
+    if (familyResponse?.data) {
+      for (const m of familyResponse.data) {
+        base.push({
+          id: String(m.familyMemberId),
+          labelKey: (m.fullName || m.relation) as TranslationKey,
+        });
+      }
+    }
+    return base;
+  }, [isAuthenticated, familyResponse?.data]);
+
+  const hasOrders = isAuthenticated
+    ? Boolean(forceHasOrders || (ordersResponse?.data && ordersResponse.data.length > 0) || activeOrder)
+    : forceHasOrders || memberId !== 'meera';
+
+  const activeOrderId = isAuthenticated
+    ? (activeOrder ? `#HM-${activeOrder.medicineOrderId}` : '')
+    : '#HM-4821';
+  const activeStatusLine = isAuthenticated
+    ? (activeOrder ? activeOrder.status : '')
+    : t('medsActiveStatusOut');
+  const fulfilledBy = isAuthenticated
+    ? (activeOrder
+      ? (activeOrder.pharmacyPartnerId ? `Partner #${activeOrder.pharmacyPartnerId}` : 'Partner Pharmacy')
+      : '')
+    : t('medsFulfilledBy').replace('{name}', 'Harmony Homeopathics');
+  const arrivingBy = isAuthenticated
+    ? (activeOrder ? 'Expected in 2-3 Days' : '')
+    : t('medsArrivingBy').replace('{time}', '8:45 PM');
+
+  const orderableRx = isAuthenticated ? [] : RX;
 
   return {
     language,
     t,
     hasOrders,
     memberId,
-    members: MEMBERS,
+    members,
     pastFilter,
     pastFilters: PAST_FILTERS,
-    activeOrderId: '#HM-4821',
-    activeStatusLine: t('medsActiveStatusOut'),
+    activeOrderId,
+    activeStatusLine,
     activeProgressFilled: 4,
     activeProgressTotal: 5,
-    arrivingBy: t('medsArrivingBy').replace('{time}', '8:45 PM'),
-    fulfilledBy: t('medsFulfilledBy').replace(
-      '{name}',
-      'Harmony Homeopathics',
-    ),
-    orderableRx: RX,
+    arrivingBy,
+    fulfilledBy,
+    orderableRx,
     pastOrders,
     onSelectMember: setMemberId,
     onSelectPastFilter: setPastFilter,

@@ -4,7 +4,11 @@ import { appReleaseNotes, appVersionLabel } from '../config/release';
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
 import { useAppSelector } from '../store/hooks';
-import { useGetPatientProfileQuery } from '../store/api/new/patientProfileApi';
+import {
+  useGetPatientProfileQuery,
+  useUpdatePatientProfileMutation,
+} from '../store/api/new/patientProfileApi';
+import { useCreateDataRequestMutation } from '../store/api/new/consentApi';
 
 export type AccountViewModel = {
   language: AppLanguage;
@@ -67,10 +71,15 @@ export function useAccountController({
   const [lowDataMode, setLowDataMode] = useState(true);
   const [languagePickerOpen, setLanguagePickerOpen] = useState(false);
 
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const authUser = useAppSelector((state) => state.auth.user);
   const authMobile = useAppSelector((state) => state.auth.mobile);
 
-  const { data: profileQueryResponse } = useGetPatientProfileQuery();
+  const { data: profileQueryResponse } = useGetPatientProfileQuery(undefined, {
+    skip: !isAuthenticated,
+  });
+  const [updatePatientProfile] = useUpdatePatientProfileMutation();
+  const [createDataRequestMutation] = useCreateDataRequestMutation();
   const apiProfile = profileQueryResponse?.data;
 
   const profileName =
@@ -173,8 +182,16 @@ export function useAccountController({
     onSelectLanguage: (next) => {
       setLanguage(next);
       setLanguagePickerOpen(false);
+      if (isAuthenticated) {
+        const langId = next === 'mr' ? 2 : 1;
+        void updatePatientProfile({ preferredLanguageId: langId });
+      }
     },
     onLogOut,
-    onDeleteAccount: () => undefined,
+    onDeleteAccount: () => {
+      if (isAuthenticated) {
+        void createDataRequestMutation({ requestType: 'DELETE' });
+      }
+    },
   };
 }

@@ -2,10 +2,15 @@ import { useEffect, useState } from 'react';
 
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import { extractErrorMessage } from '../store/api/new/newBaseApi';
 import { useVerifyOtpMutation } from '../store/api/new/otpVerificationApi';
 import { useRequestOtpMutation } from '../store/api/new/signInApi';
 import { useAppDispatch } from '../store/hooks';
-import { saveAccessToken, saveAuthUserData } from '../services/secureStorage';
+import {
+  saveAccessToken,
+  saveAuthUserData,
+  saveBookingSessionId,
+} from '../services/secureStorage';
 import {
   setAuthenticated,
   setAuthUser,
@@ -126,13 +131,18 @@ export function useOtpVerificationController({
               response.isUserRegistered ??
               isUserRegistered,
           );
+
           dispatch(
             setBookingSession({
               bookingSessionId: response.bookingSessionId,
               mobile: response.mobile,
             }),
           );
-          if (registered) {
+          if (response.bookingSessionId) {
+            await saveBookingSessionId(response.bookingSessionId);
+          }
+
+          if (registered && response.token) {
             const userToSave = response.user
               ? {
                   userId: response.user.userId,
@@ -152,15 +162,13 @@ export function useOtpVerificationController({
                   mobileNo: response.mobile,
                 };
 
-            if (response.token) {
-              await saveAccessToken(response.token);
-            }
+            await saveAccessToken(response.token);
             await saveAuthUserData(userToSave);
 
             dispatch(
               setAuthUser({
                 user: userToSave,
-                token: response.token ?? null,
+                token: response.token,
                 patientId: response.user?.patientId,
                 userId: response.user?.userId,
                 mobile: response.user?.mobileNo ?? response.mobile,
@@ -172,23 +180,26 @@ export function useOtpVerificationController({
           onVerified(registered);
         } else {
           setErrorMessage(
-            response.message || response.errorMessage || 'Invalid OTP.',
+            extractErrorMessage(response, 'Invalid OTP.'),
           );
         }
       } catch (err: unknown) {
         if (
           typeof err === 'object' &&
           err !== null &&
-          'data' in err &&
-          typeof (err as { data?: unknown }).data === 'object' &&
-          (err as { data?: Record<string, unknown> }).data !== null
+          'status' in err &&
+          (err as { status?: number }).status === 429
         ) {
-          const data = (err as { data: Record<string, unknown> }).data;
-          const msg =
-            (typeof data.message === 'string' && data.message) ||
-            (typeof data.errorMessage === 'string' && data.errorMessage) ||
-            'Invalid OTP.';
-          setErrorMessage(msg);
+          setErrorMessage('OTP locked. Try later.');
+          return;
+        }
+        if (
+          typeof err === 'object' &&
+          err !== null &&
+          'data' in err
+        ) {
+          const data = (err as { data: unknown }).data;
+          setErrorMessage(extractErrorMessage(data, 'Invalid OTP.'));
         } else {
           setErrorMessage('Invalid OTP.');
         }
@@ -204,17 +215,27 @@ export function useOtpVerificationController({
       try {
         const response = await requestOtp({ mobile: mobileNumber }).unwrap();
         if (response.success) {
-          if (response.devCode) {
-            setDevOtp(response.devCode);
+          const safeDevCode = __DEV__ ? response.devCode : undefined;
+          if (safeDevCode) {
+            setDevOtp(safeDevCode);
           }
           const reg =
             response.isUserAlreadyRegistered ?? response.isUserRegistered;
           if (typeof reg === 'boolean') {
             setIsUserRegistered(reg);
           }
+        } else {
+          setErrorMessage(extractErrorMessage(response, 'Failed to resend OTP.'));
         }
-      } catch {
-        // silent fallback for resend
+      } catch (err: unknown) {
+        if (
+          typeof err === 'object' &&
+          err !== null &&
+          'status' in err &&
+          (err as { status?: number }).status === 429
+        ) {
+          setErrorMessage('Too many OTP requests. Please wait a moment.');
+        }
       }
     },
     onWhatsApp: () => undefined,

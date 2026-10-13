@@ -8,9 +8,11 @@ import {
   useGetCountriesQuery,
 } from '../store/api/new/completeProfileApi';
 import { useRequestOtpMutation } from '../store/api/new/signInApi';
+import { extractErrorMessage } from '../store/api/new/newBaseApi';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
   type DetectedGeoLocation,
+  clearSessionEndedMessage,
   setAuthMobile,
   setDetectedLocation,
 } from '../store/slices/authSlice';
@@ -94,9 +96,19 @@ export function useSignInController({
   const reduxDetectedLocation = useAppSelector(
     (state) => state.auth.detectedLocation,
   );
+  const sessionEndedMessage = useAppSelector(
+    (state) => state.auth.sessionEndedMessage,
+  );
 
   const [mobileNumber, setMobileNumber] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (sessionEndedMessage) {
+      setErrorMessage(sessionEndedMessage);
+      dispatch(clearSessionEndedMessage());
+    }
+  }, [sessionEndedMessage, dispatch]);
   const [agreedToWhatsApp, setAgreedToWhatsApp] = useState(false);
   const [devOtp, setDevOtp] = useState<string | null>(null);
   const [requestOtp, { isLoading }] = useRequestOtpMutation();
@@ -278,36 +290,40 @@ export function useSignInController({
         );
         const response = await requestOtp({ mobile: mobileNumber }).unwrap();
         if (response.success) {
-          if (response.devCode) {
-            setDevOtp(response.devCode);
+          const safeDevCode = __DEV__ ? response.devCode : undefined;
+          if (safeDevCode) {
+            setDevOtp(safeDevCode);
           }
           const isRegistered =
             response.isUserRegistered ?? response.isUserAlreadyRegistered;
           onOtpRequested(
             mobileNumber,
-            response.devCode,
+            safeDevCode,
             isRegistered,
             selectedCountryCode,
           );
         } else {
           setErrorMessage(
-            response.errorMessage || response.message || t('invalidMobile'),
+            extractErrorMessage(response, t('invalidMobile')),
           );
         }
       } catch (err: unknown) {
         if (
           typeof err === 'object' &&
           err !== null &&
-          'data' in err &&
-          typeof (err as { data?: unknown }).data === 'object' &&
-          (err as { data?: Record<string, unknown> }).data !== null
+          'status' in err &&
+          (err as { status?: number }).status === 429
         ) {
-          const data = (err as { data: Record<string, unknown> }).data;
-          const msg =
-            (typeof data.errorMessage === 'string' && data.errorMessage) ||
-            (typeof data.message === 'string' && data.message) ||
-            t('invalidMobile');
-          setErrorMessage(msg);
+          setErrorMessage('Too many OTP requests. Please wait a moment before trying again.');
+          return;
+        }
+        if (
+          typeof err === 'object' &&
+          err !== null &&
+          'data' in err
+        ) {
+          const data = (err as { data: unknown }).data;
+          setErrorMessage(extractErrorMessage(data, t('invalidMobile')));
         } else {
           setErrorMessage(t('invalidMobile'));
         }

@@ -3,6 +3,8 @@ import { Alert, Share } from 'react-native';
 
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import { useGetProgressQuery } from '../store/api/new/symptomDiaryApi';
+import { useAppSelector } from '../store/hooks';
 
 export type InsightsRangeId = '1m' | '3m' | '6m' | '1y';
 
@@ -67,19 +69,19 @@ export function useHealthInsightsController({
 }): HealthInsightsViewModel {
   const { language, t } = useLocalization();
   const [range, setRange] = useState<InsightsRangeId>('3m');
-  const [memberId, setMemberId] = useState<InsightsMemberId>('aarav');
+  const [memberId, setMemberId] = useState<InsightsMemberId>('self');
   const [memberPickerOpen, setMemberPickerOpen] = useState(false);
 
   const members = useMemo(
     () => [
-      { id: 'aarav' as const, label: t('insightsMemberAarav') },
       { id: 'self' as const, label: t('insightsMemberSelf') },
+      { id: 'aarav' as const, label: t('insightsMemberAarav') },
     ],
     [t],
   );
 
   const memberLabel =
-    members.find((item) => item.id === memberId)?.label ?? t('insightsMemberAarav');
+    members.find((item) => item.id === memberId)?.label ?? t('insightsMemberSelf');
 
   const shareSummary = t('insightsSummaryPlain')
     .replace('{name}', memberLabel)
@@ -87,6 +89,13 @@ export function useHealthInsightsController({
     .replace('{to}', t('insightsSeverityMild'))
     .replace('{logged}', '42')
     .replace('{total}', '56');
+
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+  const { data: progressResponse } = useGetProgressQuery(undefined, {
+    skip: !isAuthenticated,
+  });
+
+  const loggedDays = progressResponse?.data?.series?.length ?? 42;
 
   return {
     language,
@@ -97,7 +106,7 @@ export function useHealthInsightsController({
     memberLabel,
     memberPickerOpen,
     members,
-    daysLogged: 42,
+    daysLogged: loggedDays,
     daysTotal: 56,
     avgSeverity: t('insightsSeverityMild'),
     sleepQuality: t('insightsSleepGood'),

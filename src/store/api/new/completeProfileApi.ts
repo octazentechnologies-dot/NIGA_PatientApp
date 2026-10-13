@@ -107,6 +107,7 @@ export type GetGendersResponse = GenderMaster[] | { data: GenderMaster[] };
  * Base: newBaseApi (devapi2). Auth not required.
  */
 export const completeProfileApi = newBaseApi.injectEndpoints({
+  overrideExisting: true,
   endpoints: (build) => ({
     getGenders: build.query<GenderMaster[], void>({
       query: () => 'api/mastersAPI/GetGenders',

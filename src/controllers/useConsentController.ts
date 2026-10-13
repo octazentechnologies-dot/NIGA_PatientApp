@@ -2,12 +2,18 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import { useAppSelector } from '../store/hooks';
 import {
   type ConsentItem,
   useGetConsentsQuery,
   useGrantConsentMutation,
   useWithdrawConsentMutation,
 } from '../store/api/new/consentApi';
+import {
+  useGetConsentNoticeQuery,
+  useGetPrivacyStatusQuery,
+  useGrantPrivacyConsentMutation,
+} from '../store/api/new/privacyConsentApi';
 
 export type ConsentViewModel = {
   language: AppLanguage;
@@ -17,6 +23,9 @@ export type ConsentViewModel = {
   isError: boolean;
   togglingConsentId: number | null;
   noticeOpen: boolean;
+  noticeTitle?: string;
+  noticeBody?: string;
+  noticeVersion?: string;
   onToggleConsent: (consentTypeId: number) => void;
   onRetry: () => void;
   onReadNotice: () => void;
@@ -39,16 +48,31 @@ export function useConsentController({
   onManageLater: () => void;
 }): ConsentViewModel {
   const { language, setLanguage, t } = useLocalization();
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const [noticeOpen, setNoticeOpen] = useState(false);
   const [togglingConsentId, setTogglingConsentId] = useState<number | null>(null);
 
   const {
     data: remoteConsents,
-    isLoading,
-    isError,
+    isLoading: isConsentsLoading,
+    isError: isConsentsError,
     refetch,
-  } = useGetConsentsQuery(undefined, { skip: !active });
+  } = useGetConsentsQuery(undefined, { skip: !active || !isAuthenticated });
 
+  const {
+    data: privacyStatusResponse,
+    isLoading: isPrivacyLoading,
+    isError: isPrivacyError,
+  } = useGetPrivacyStatusQuery(undefined, { skip: !active || !isAuthenticated });
+
+  const privacyData = privacyStatusResponse?.data;
+
+  const { data: noticeResponse } = useGetConsentNoticeQuery(
+    { consentTypeCode: 'DataPrivacy', language },
+    { skip: !active || !isAuthenticated },
+  );
+
+  const [grantPrivacyConsent] = useGrantPrivacyConsentMutation();
   const [grantConsentMutation] = useGrantConsentMutation();
   const [withdrawConsentMutation] = useWithdrawConsentMutation();
 
@@ -59,6 +83,21 @@ export function useConsentController({
       setConsents(remoteConsents);
     }
   }, [remoteConsents]);
+
+  const handleAgree = useCallback(async () => {
+    // If privacy consent is required and not granted, grant it now
+    if (privacyData && (!privacyData.granted || privacyData.reconsentRequired)) {
+      try {
+        await grantPrivacyConsent({
+          noticeVersion: noticeResponse?.data?.version ?? privacyData.currentNoticeVersion ?? '1.0',
+          noticeLanguage: language,
+        }).unwrap();
+      } catch (err) {
+        console.warn('[POST Grant Privacy] Warning granting privacy consent:', err);
+      }
+    }
+    onAgree();
+  }, [privacyData, grantPrivacyConsent, noticeResponse, language, onAgree]);
 
   const handleToggleConsent = useCallback(
     async (consentTypeId: number) => {
@@ -137,15 +176,18 @@ export function useConsentController({
     language,
     t,
     consents,
-    isLoading,
-    isError,
+    isLoading: isConsentsLoading || isPrivacyLoading,
+    isError: isConsentsError && isPrivacyError,
     togglingConsentId,
     noticeOpen,
+    noticeTitle: noticeResponse?.data?.title,
+    noticeBody: noticeResponse?.data?.body,
+    noticeVersion: noticeResponse?.data?.version,
     onToggleConsent: handleToggleConsent,
     onRetry: () => void refetch(),
     onReadNotice: () => setNoticeOpen(true),
     onCloseNotice: () => setNoticeOpen(false),
-    onAgree,
+    onAgree: handleAgree,
     onManageLater,
     onSelectLanguage: setLanguage,
     onBack,

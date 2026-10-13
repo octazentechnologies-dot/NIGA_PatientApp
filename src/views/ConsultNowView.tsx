@@ -368,10 +368,16 @@ export function ConsultNowView(vm: ConsultNowViewModel) {
                   </View>
                   <View style={styles.flex}>
                     <AppText variant="titleMd" color="#000000" style={styles.memberName}>
-                      {item.self ? vm.t('bookMyself') : item.name.split(' ')[0]}
+                      {item.self ? vm.t('bookMyself') : item.name}
                     </AppText>
                     <AppText variant="bodyMd" color={selected ? '#000000' : MUTED}>
-                      {item.self ? item.name : item.metaKey ? vm.t(item.metaKey) : ''}
+                      {item.self
+                        ? item.name
+                        : item.relationshipName
+                          ? `${item.relationshipName}${item.age ? ` • ${item.age} yrs` : ''}`
+                          : item.metaKey
+                            ? vm.t(item.metaKey)
+                            : ''}
                     </AppText>
                   </View>
                   {selected ? (

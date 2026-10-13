@@ -550,6 +550,7 @@ export const en: TranslationMap = {
   profileReview2Body:
     'Punctual video consult. Clear guidance on diet and medicines. Would book again.',
   profileReview2Date: '1 month ago',
+  profileNoReviews: 'No reviews yet for this doctor.',
   doctorsTabSubtitle: 'Find Verified Homeopathy Doctors Near You',
   languageLabel: 'Language',
   english: 'English',
@@ -1931,6 +1932,7 @@ export const en: TranslationMap = {
   payHistLedgerNote:
     'Consultation fees, CareLink charges and medicine orders are billed separately. HelloHomeo does not hold a wallet balance on your behalf.',
   payHistMonthAug2026: 'August 2026',
+  payHistItemConsult: 'Doctor Consultation',
   payHistItemConsultAnjali: 'Consultation — Dr. Anjali Deshmukh',
   payHistMetaConsultAnjali: '26 Aug 2026 · UPI · APT-2026-88214',
   payHistItemMeds: 'Medicines — HomeoMeds order #HM-4821',

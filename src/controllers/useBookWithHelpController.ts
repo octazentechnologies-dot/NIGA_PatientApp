@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Linking } from 'react-native';
 
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import { useRequestAssistanceMutation } from '../store/api/new/supportApi';
 import { useAppSelector } from '../store/hooks';
 
 export type CallBackTimeId = 'now' | 'hour' | 'morning' | 'evening';
@@ -57,6 +58,7 @@ export function useBookWithHelpController({
 
   const authUser = useAppSelector((state) => state.auth.user);
   const authMobile = useAppSelector((state) => state.auth.mobile);
+  const [requestAssistanceMutation] = useRequestAssistanceMutation();
 
   const patientName =
     authUser?.patientName ||
@@ -68,6 +70,26 @@ export function useBookWithHelpController({
     authUser?.mobileNo ||
     authMobile ||
     '';
+
+  const handleRequestCallBack = useCallback(async () => {
+    try {
+      await requestAssistanceMutation({
+        patientId: authUser?.patientId,
+        notes: `Need help: ${helpNeedLabel} (Preferred time: ${callTime})`,
+        preferredDate: callTime,
+        contactMobile: mobileNumber || undefined,
+      }).unwrap();
+    } catch (err) {
+      console.warn('[POST api/Support/AssistanceRequest] Failed:', err);
+    }
+    setSubmitted(true);
+  }, [
+    requestAssistanceMutation,
+    authUser?.patientId,
+    helpNeedLabel,
+    callTime,
+    mobileNumber,
+  ]);
 
   return {
     language,
@@ -94,8 +116,6 @@ export function useBookWithHelpController({
       setHelpNeed(id);
       setHelpNeedPickerOpen(false);
     },
-    onRequestCallBack: () => {
-      setSubmitted(true);
-    },
+    onRequestCallBack: handleRequestCallBack,
   };
 }

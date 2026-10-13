@@ -302,6 +302,10 @@ export function HomeView({
       ? publicDoctors.filter((doc) => doc.isOnline)
       : publicDoctors;
 
+  const upcomingAppointment = appointments.find(
+    (a) => a.status === 'confirmed' || a.status === 'waiting_acceptance',
+  );
+
   return (
     <Screen edges={['left', 'right']} style={styles.root}>
       {selectedTab === 'home' ? (
@@ -387,82 +391,106 @@ export function HomeView({
             contentContainerStyle={{ paddingBottom: tabScrollInset }}
           >
             <View style={styles.body}>
-              <View style={styles.consultCard}>
-                <View style={styles.consultTop}>
-                  <View style={styles.doctorRow}>
-                    <View style={styles.flex}>
-                      <View style={styles.nameRow}>
-                        <AppText
-                          variant="titleMd"
-                          color={colors.onSurface}
-                          style={styles.doctorName}
-                        >
-                          {t('homeDoctorName')}
-                        </AppText>
-                        <View
-                          accessibilityLabel={t('homeVerified')}
-                          style={styles.verifiedBadge}
-                        >
-                          <Ionicons
-                            name="shield-checkmark"
-                            size={14}
-                            color="#000000"
-                          />
+              {upcomingAppointment ? (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => onOpenAppointment(upcomingAppointment.id)}
+                  style={styles.consultCard}
+                >
+                  <View style={styles.consultTop}>
+                    <View style={styles.doctorRow}>
+                      <View style={styles.flex}>
+                        <View style={styles.nameRow}>
+                          <AppText
+                            variant="titleMd"
+                            color={colors.onSurface}
+                            style={styles.doctorName}
+                          >
+                            {t(upcomingAppointment.doctorNameKey)}
+                          </AppText>
+                          <View
+                            accessibilityLabel={t('homeVerified')}
+                            style={styles.verifiedBadge}
+                          >
+                            <Ionicons
+                              name="shield-checkmark"
+                              size={14}
+                              color="#000000"
+                            />
+                          </View>
                         </View>
+                        <AppText variant="bodyMd" color={colors.onSurfaceVariant}>
+                          {upcomingAppointment.credentialsKey
+                            ? t(upcomingAppointment.credentialsKey)
+                            : t('homeDoctorQualification')}
+                        </AppText>
                       </View>
-                      <AppText variant="bodyMd" color={colors.onSurfaceVariant}>
-                        {t('homeDoctorQualification')}
+                      <Image
+                        source={images.doctorPortrait}
+                        resizeMode="cover"
+                        style={styles.doctorPhoto}
+                      />
+                    </View>
+
+                    <View style={styles.metaRow}>
+                      <Ionicons
+                        name="calendar-outline"
+                        size={16}
+                        color={colors.onSurfaceVariant}
+                      />
+                      <AppText variant="bodyMd" color={colors.onSurface}>
+                        {upcomingAppointment.whenLabel || t('homeConsultDate')}
                       </AppText>
                     </View>
-                    <Image
-                      source={images.doctorPortrait}
-                      resizeMode="cover"
-                      style={styles.doctorPhoto}
-                    />
+                    <View style={styles.metaRow}>
+                      <Ionicons
+                        name={
+                          upcomingAppointment.mode === 'video'
+                            ? 'videocam-outline'
+                            : 'storefront-outline'
+                        }
+                        size={16}
+                        color={colors.onSurfaceVariant}
+                      />
+                      <AppText variant="bodyMd" color={colors.onSurface}>
+                        {upcomingAppointment.modeConsultLabel || t('homeConsultMode')}
+                      </AppText>
+                    </View>
                   </View>
 
-                  <View style={styles.metaRow}>
-                    <Ionicons
-                      name="calendar-outline"
-                      size={16}
-                      color={colors.onSurfaceVariant}
-                    />
-                    <AppText variant="bodyMd" color={colors.onSurface}>
-                      {t('homeConsultDate')}
-                    </AppText>
-                  </View>
-                  <View style={styles.metaRow}>
-                    <Ionicons
-                      name="videocam-outline"
-                      size={16}
-                      color={colors.onSurfaceVariant}
-                    />
-                    <AppText variant="bodyMd" color={colors.onSurface}>
-                      {t('homeConsultMode')}
-                    </AppText>
-                  </View>
-                </View>
+                  <View style={styles.consultBottom}>
+                    <View style={styles.startsBanner}>
+                      <Ionicons
+                        name="time-outline"
+                        size={16}
+                        color={colors.onSurfaceVariant}
+                      />
+                      <AppText variant="bodyMd" color={colors.onSurface}>
+                        {upcomingAppointment.startsAt
+                          ? `${t('homeStartsIn')} · ${upcomingAppointment.timeLine || ''}`
+                          : t('homeStartsIn')}
+                      </AppText>
+                    </View>
 
-                <View style={styles.consultBottom}>
-                  <View style={styles.startsBanner}>
-                    <Ionicons
-                      name="time-outline"
-                      size={16}
-                      color={colors.onSurfaceVariant}
+                    <AppButton
+                      label={
+                        upcomingAppointment.mode === 'video'
+                          ? t('homeJoinConsultation')
+                          : t('clinicAptDirections')
+                      }
+                      textVariant="titleMd"
+                      onPress={() => {
+                        if (upcomingAppointment.mode === 'video') {
+                          onJoinConsultation();
+                        } else {
+                          onOpenAppointment(upcomingAppointment.id);
+                        }
+                      }}
+                      style={styles.joinButton}
                     />
-                    <AppText variant="bodyMd" color={colors.onSurface}>
-                      {t('homeStartsIn')}
-                    </AppText>
                   </View>
-
-                  <AppButton
-                    label={t('homeJoinConsultation')}
-                    textVariant="titleMd"
-                    onPress={onJoinConsultation}
-                    style={styles.joinButton}
-                  />
-                </View>
-              </View>
+                </Pressable>
+              ) : null}
 
               {followUpPlanAvailable ? (
                 <Pressable

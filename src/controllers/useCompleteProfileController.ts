@@ -12,6 +12,8 @@ import {
   useGetGendersQuery,
   useGetStatesByCountryQuery,
 } from '../store/api/new/completeProfileApi';
+import { useRequestOtpMutation } from '../store/api/new/signInApi';
+import { useVerifyOtpMutation } from '../store/api/new/otpVerificationApi';
 import {
   type PatientProfileData,
   type UpdatePatientProfileRequest,
@@ -22,6 +24,7 @@ import { saveAccessToken, saveAuthUserData } from '../services/secureStorage';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
   type DetectedGeoLocation,
+  setAuthenticated,
   setAuthUser,
   setDetectedLocation,
 } from '../store/slices/authSlice';
@@ -255,6 +258,9 @@ export function useCompleteProfileController({
   const reduxDetectedLocation = useAppSelector(
     (state) => state.auth.detectedLocation,
   );
+  const isAuthenticated = useAppSelector(
+    (state) => state.auth.isAuthenticated,
+  );
 
   const isEdit = mode === 'edit';
   const resolvedMobileNumber =
@@ -366,8 +372,12 @@ export function useCompleteProfileController({
     useCreatePatientMutation();
   const [updatePatientProfile, { isLoading: isUpdatingProfile }] =
     useUpdatePatientProfileMutation();
+  const [requestOtp, { isLoading: isRequestingOtp }] = useRequestOtpMutation();
+  const [verifyOtp, { isLoading: isVerifyingOtp }] = useVerifyOtpMutation();
 
-  const isSubmitting = isEdit ? isUpdatingProfile : isCreatingPatient;
+  const isSubmitting = isEdit
+    ? isUpdatingProfile
+    : isCreatingPatient || isRequestingOtp || isVerifyingOtp;
 
   const {
     data: profileQueryResponse,
@@ -375,7 +385,7 @@ export function useCompleteProfileController({
     isFetching: isProfileQueryFetching,
     error: profileQueryError,
   } = useGetPatientProfileQuery(undefined, {
-    skip: !isEdit,
+    skip: !isEdit || !isAuthenticated,
     refetchOnMountOrArgChange: true,
   });
 
@@ -963,9 +973,30 @@ export function useCompleteProfileController({
           response.pinCodeId ?? (pincode ? pincode.trim() : undefined),
       };
 
+      let sessionToken = response.token ?? null;
+
+      // POST /api/patient creates patient entity without JWT token.
+      // Automatically request and verify OTP to establish authenticated session.
+      if (!sessionToken && cleanMobile) {
+        try {
+          const otpRes = await requestOtp({ mobile: cleanMobile }).unwrap();
+          if (otpRes.success && otpRes.devCode) {
+            const verifyRes = await verifyOtp({
+              mobile: cleanMobile,
+              code: otpRes.devCode,
+            }).unwrap();
+            if (verifyRes.success && verifyRes.token) {
+              sessionToken = verifyRes.token;
+            }
+          }
+        } catch (otpErr) {
+          console.warn('[api/patient] Auto OTP exchange warning:', otpErr);
+        }
+      }
+
       // Save token & user in SecureStore for persistent session
-      if (response.token) {
-        await saveAccessToken(response.token);
+      if (sessionToken) {
+        await saveAccessToken(sessionToken);
       }
       await saveAuthUserData(userToSave);
 
@@ -973,12 +1004,15 @@ export function useCompleteProfileController({
       dispatch(
         setAuthUser({
           user: userToSave,
-          token: response.token ?? undefined,
+          token: sessionToken ?? undefined,
           patientId: response.patientID,
           userId: response.userId,
           mobile: response.mobileNo ?? cleanMobile,
         }),
       );
+      if (sessionToken) {
+        dispatch(setAuthenticated(true));
+      }
 
       // Navigate to next screen
       onContinue();

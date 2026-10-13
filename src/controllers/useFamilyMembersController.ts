@@ -281,18 +281,19 @@ export function useFamilyMembersController({
   variant?: 'onboarding' | 'account';
 }): FamilyMembersViewModel {
   const { language, setLanguage, t } = useLocalization();
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const [members, setMembers] = useState<FamilyMember[]>(SEED_MEMBERS);
   const {
     data: familyResponse,
     isLoading: isFamilyLoading,
     isError: isFamilyError,
     refetch: refetchFamily,
-  } = useGetFamilyQuery();
+  } = useGetFamilyQuery(undefined, { skip: !isAuthenticated });
 
   const {
     data: apiRelations = [],
     isLoading: isRelationsLoading,
-  } = useGetRelationsQuery();
+  } = useGetRelationsQuery(undefined, { skip: !isAuthenticated });
 
   const {
     data: apiGenders = [],
