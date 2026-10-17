@@ -85,7 +85,7 @@ export function SearchDoctorsView({
         </Pressable>
         <AppText
           variant="headlineMd"
-          color="#000000"
+          color={colors.ink}
           style={styles.headerTitle}
           numberOfLines={1}
         >
@@ -341,7 +341,7 @@ export function SearchDoctorsView({
                     variant="bodyMd"
                     color={selected ? colors.primary : colors.onSurface}
                   >
-                    {t(city.nameKey)}
+                    {city.label || (city.nameKey ? t(city.nameKey) : city.id)}
                   </AppText>
                 </Pressable>
               );

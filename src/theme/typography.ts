@@ -30,8 +30,9 @@ function size(fontSize: number, lineHeight: number): Pick<
 }
 
 /**
- * Mobile type scale (HomeoCentrum):
- * Display 22–28 · Section 18–20 · Body 14–16 · Caption 12–13 · Button 14–16
+ * Mobile type scale (Clinical Trust / patient):
+ * Display 22–26 · Section 17–20 · Body 15–16 · Caption 12–13 · Button 15
+ * Slightly tighter than the old prototype scale — refined, not shouty.
  */
 export function typography(
   variant: TypographyVariant,
@@ -45,25 +46,25 @@ export function typography(
   switch (variant) {
     case 'displayLg':
       return {
-        ...size(compact ? 24 : 28, lh(compact ? 32 : 36)),
+        ...size(compact ? 22 : 26, lh(compact ? 30 : 34)),
         fontWeight: '700',
         letterSpacing: mr ? 0 : -0.2,
       };
     case 'headlineLg':
       return {
-        ...size(compact ? 22 : 24, lh(compact ? 30 : 32)),
+        ...size(compact ? 20 : 22, lh(compact ? 28 : 30)),
         fontWeight: '600',
         letterSpacing: mr ? 0 : undefined,
       };
     case 'headlineMd':
       return {
-        ...size(22, lh(30)),
+        ...size(20, lh(28)),
         fontWeight: '600',
         letterSpacing: mr ? 0 : undefined,
       };
     case 'titleMd':
       return {
-        ...size(18, lh(24)),
+        ...size(17, lh(24)),
         fontWeight: '600',
         letterSpacing: mr ? 0 : undefined,
       };

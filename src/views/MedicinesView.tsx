@@ -16,18 +16,6 @@ import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
 import { layout, spacing } from '../theme/spacing';
 
-const INK = '#1F1F1F';
-const MUTED = '#595959';
-const HAIRLINE = '#DDDFE2';
-const ACTION = '#2A7BA3';
-const ACTION_OUTLINE = '#276F93';
-const CHIP_FILL = '#E6F5FE';
-const CHART = '#3AA9E0';
-const SUCCESS = '#0F7A4E';
-const SUCCESS_FILL = '#E9F5EF';
-const DANGER = '#A3231A';
-const DANGER_FILL = '#FBEBE9';
-
 export function MedicinesView({
   onBookFollowUp,
   onSeePrescriptions,
@@ -88,13 +76,13 @@ export function MedicinesView({
           >
             <View style={styles.helpLeft}>
               <View style={styles.helpIcon}>
-                <Ionicons name="help-circle-outline" size={18} color={ACTION} />
+                <Ionicons name="help-circle-outline" size={18} color={colors.primary} />
               </View>
-              <AppText variant="labelMd" color={INK} weightOverride="600">
+              <AppText variant="labelMd" color={colors.ink} weightOverride="600">
                 {vm.t('medsProblemOrder')}
               </AppText>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={MUTED} />
+            <Ionicons name="chevron-forward" size={20} color={colors.muted} />
           </Pressable>
         </ScrollView>
       ) : (
@@ -126,7 +114,7 @@ function HeaderActions({
       >
         <AppText
           variant="labelMd"
-          color={INK}
+          color={colors.ink}
           languageOverride={vm.language === 'en' ? 'en' : 'mr'}
         >
           {vm.language === 'en' ? 'EN' : 'मराठी'}
@@ -151,10 +139,10 @@ function ListHeader({
   return (
     <View style={styles.headerRow}>
       <View style={styles.flex}>
-        <AppText variant="headlineMd" color={INK}>
+        <AppText variant="headlineMd" color={colors.ink}>
           {vm.t('medsTitle')}
         </AppText>
-        <AppText variant="labelSm" color={MUTED}>
+        <AppText variant="labelSm" color={colors.muted}>
           {vm.t('medsSubtitle')}
         </AppText>
       </View>
@@ -178,12 +166,12 @@ function EmptyHeader({
         style={styles.emptyTitleBlock}
       >
         <View style={styles.titleWithCaret}>
-          <AppText variant="headlineMd" color={INK}>
+          <AppText variant="headlineMd" color={colors.ink}>
             {vm.t('medsTitle')}
           </AppText>
-          <Ionicons name="chevron-down" size={18} color={INK} />
+          <Ionicons name="chevron-down" size={18} color={colors.ink} />
         </View>
-        <AppText variant="labelSm" color={MUTED}>
+        <AppText variant="labelSm" color={colors.muted}>
           {vm.t('medsAllFamily')}
         </AppText>
       </Pressable>
@@ -213,7 +201,7 @@ function MemberChips({ vm }: { vm: MedicinesViewModel }) {
             >
               <AppText
                 variant="labelMd"
-                color={on ? INK : MUTED}
+                color={on ? colors.ink : colors.muted}
                 weightOverride={on ? '600' : '500'}
               >
                 {vm.t(member.labelKey)}
@@ -239,20 +227,20 @@ function ActiveOrderCard({ vm }: { vm: MedicinesViewModel }) {
         <View style={styles.flex}>
           <AppText
             variant="labelSm"
-            color={ACTION}
+            color={colors.primary}
             weightOverride="600"
             style={styles.uppercase}
           >
             {vm.t('medsActiveOrder')}
           </AppText>
-          <AppText variant="labelMd" color={INK} weightOverride="600">
+          <AppText variant="labelMd" color={colors.ink} weightOverride="600">
             {vm
               .t('medsActiveOrderLine')
               .replace('{id}', vm.activeOrderId)
               .replace('{status}', vm.activeStatusLine)}
           </AppText>
         </View>
-        <Ionicons name="car-outline" size={24} color={ACTION} />
+        <Ionicons name="car-outline" size={24} color={colors.primary} />
       </View>
 
       <View style={styles.progressRow}>
@@ -275,10 +263,10 @@ function ActiveOrderCard({ vm }: { vm: MedicinesViewModel }) {
         })}
       </View>
 
-      <AppText variant="headlineMd" color={INK}>
+      <AppText variant="headlineMd" color={colors.ink}>
         {vm.arrivingBy}
       </AppText>
-      <AppText variant="bodyMd" color={MUTED}>
+      <AppText variant="bodyMd" color={colors.muted}>
         {vm.fulfilledBy}
       </AppText>
       <AppButton
@@ -294,7 +282,7 @@ function PrescriptionsSection({ vm }: { vm: MedicinesViewModel }) {
   if (!vm.orderableRx || vm.orderableRx.length === 0) return null;
   return (
     <View style={styles.section}>
-      <AppText variant="headlineMd" color={INK}>
+      <AppText variant="headlineMd" color={colors.ink}>
         {vm.t('medsRxSection')}
       </AppText>
       {vm.orderableRx.map((rx) => (
@@ -307,14 +295,14 @@ function PrescriptionsSection({ vm }: { vm: MedicinesViewModel }) {
               <Ionicons
                 name="document-text-outline"
                 size={20}
-                color={rx.expired ? MUTED : ACTION}
+                color={rx.expired ? colors.muted : colors.primary}
               />
             </View>
             <View style={styles.flex}>
-              <AppText variant="labelMd" color={INK} weightOverride="600">
+              <AppText variant="labelMd" color={colors.ink} weightOverride="600">
                 {rx.title}
               </AppText>
-              <AppText variant="bodyMd" color={MUTED}>
+              <AppText variant="bodyMd" color={colors.muted}>
                 {rx.doctorLine}
               </AppText>
             </View>
@@ -327,7 +315,7 @@ function PrescriptionsSection({ vm }: { vm: MedicinesViewModel }) {
           >
             <AppText
               variant="labelSm"
-              color={rx.expired ? DANGER : SUCCESS}
+              color={rx.expired ? colors.error : colors.success}
               weightOverride="500"
             >
               {vm.t(rx.badgeKey)}
@@ -339,10 +327,10 @@ function PrescriptionsSection({ vm }: { vm: MedicinesViewModel }) {
               onPress={vm.onBookFollowUp}
               style={styles.followLink}
             >
-              <AppText variant="labelMd" color={ACTION_OUTLINE} weightOverride="600">
+              <AppText variant="labelMd" color={colors.primaryOutline} weightOverride="600">
                 {vm.t('medsBookFollowUp')}
               </AppText>
-              <Ionicons name="arrow-forward" size={16} color={ACTION_OUTLINE} />
+              <Ionicons name="arrow-forward" size={16} color={colors.primaryOutline} />
             </Pressable>
           ) : (
             <Pressable
@@ -350,7 +338,7 @@ function PrescriptionsSection({ vm }: { vm: MedicinesViewModel }) {
               onPress={() => vm.onOrderRx(rx.id)}
               style={styles.outlineBtn}
             >
-              <AppText variant="labelMd" color={ACTION_OUTLINE} weightOverride="600">
+              <AppText variant="labelMd" color={colors.primaryOutline} weightOverride="600">
                 {vm.t('medsOrder')}
               </AppText>
             </Pressable>
@@ -358,8 +346,8 @@ function PrescriptionsSection({ vm }: { vm: MedicinesViewModel }) {
         </View>
       ))}
       <View style={styles.infoNote}>
-        <Ionicons name="information-circle" size={16} color={ACTION} />
-        <AppText variant="bodyMd" color={MUTED} style={styles.flex}>
+        <Ionicons name="information-circle" size={16} color={colors.primary} />
+        <AppText variant="bodyMd" color={colors.muted} style={styles.flex}>
           {vm.t('medsPharmacyNote')}
         </AppText>
       </View>
@@ -370,7 +358,7 @@ function PrescriptionsSection({ vm }: { vm: MedicinesViewModel }) {
 function PastOrdersSection({ vm }: { vm: MedicinesViewModel }) {
   return (
     <View style={[styles.section, styles.pastSection]}>
-      <AppText variant="headlineMd" color={INK}>
+      <AppText variant="headlineMd" color={colors.ink}>
         {vm.t('medsPastOrders')}
       </AppText>
       <ScrollView
@@ -390,7 +378,7 @@ function PastOrdersSection({ vm }: { vm: MedicinesViewModel }) {
             >
               <AppText
                 variant="labelSm"
-                color={on ? INK : MUTED}
+                color={on ? colors.ink : colors.muted}
                 weightOverride={on ? '600' : '500'}
               >
                 {vm.t(filter.labelKey)}
@@ -438,26 +426,26 @@ function PastOrderRow({
     >
       <View style={styles.pastHead}>
         <View style={styles.flex}>
-          <AppText variant="labelMd" color={INK} weightOverride="600">
+          <AppText variant="labelMd" color={colors.ink} weightOverride="600">
             {order.orderLabel}
           </AppText>
-          <AppText variant="bodyMd" color={MUTED}>
+          <AppText variant="bodyMd" color={colors.muted}>
             {order.dateLabel}
           </AppText>
         </View>
         <StatusBadge status={order.status} label={t(order.statusKey)} />
       </View>
-      <AppText variant="bodyMd" color={mutedRow ? MUTED : INK}>
+      <AppText variant="bodyMd" color={mutedRow ? colors.muted : colors.ink}>
         {order.medsLine}
       </AppText>
       <View style={styles.pastFoot}>
         <View style={styles.flex}>
-          <AppText variant="bodyMd" color={MUTED}>
+          <AppText variant="bodyMd" color={colors.muted}>
             {order.pharmacy}
           </AppText>
           <AppText
             variant="labelMd"
-            color={mutedRow ? MUTED : INK}
+            color={mutedRow ? colors.muted : colors.ink}
             weightOverride="600"
             style={order.priceStruck ? styles.struck : undefined}
           >
@@ -469,12 +457,12 @@ function PastOrderRow({
         <View style={styles.pastActions}>
           {order.canReorder ? (
             <Pressable accessibilityRole="button" onPress={onReorder} hitSlop={8}>
-              <AppText variant="labelSm" color={ACTION} weightOverride="600">
+              <AppText variant="labelSm" color={colors.primary} weightOverride="600">
                 {t('medsReorder')}
               </AppText>
             </Pressable>
           ) : null}
-          <Ionicons name="chevron-forward" size={20} color={MUTED} />
+          <Ionicons name="chevron-forward" size={20} color={colors.muted} />
         </View>
       </View>
     </Pressable>
@@ -498,7 +486,7 @@ function StatusBadge({
     >
       <AppText
         variant="labelSm"
-        color={success ? SUCCESS : DANGER}
+        color={success ? colors.success : colors.error}
         weightOverride="500"
       >
         {label}
@@ -514,13 +502,13 @@ function EmptyState({ vm }: { vm: MedicinesViewModel }) {
         <MaterialCommunityIcons
           name="bottle-tonic-plus-outline"
           size={56}
-          color={ACTION}
+          color={colors.primary}
         />
       </View>
-      <AppText variant="headlineMd" color={INK} style={styles.center}>
+      <AppText variant="headlineMd" color={colors.ink} style={styles.center}>
         {vm.t('medsEmptyTitle')}
       </AppText>
-      <AppText variant="bodyMd" color={MUTED} style={styles.center}>
+      <AppText variant="bodyMd" color={colors.muted} style={styles.center}>
         {vm.t('medsEmptyBody')}
       </AppText>
       <Pressable
@@ -528,10 +516,10 @@ function EmptyState({ vm }: { vm: MedicinesViewModel }) {
         onPress={vm.onSeePrescriptions}
         style={styles.emptyLink}
       >
-        <AppText variant="labelMd" color={ACTION} weightOverride="600">
+        <AppText variant="labelMd" color={colors.primary} weightOverride="600">
           {vm.t('medsSeePrescriptions')}
         </AppText>
-        <Ionicons name="arrow-forward" size={16} color={ACTION} />
+        <Ionicons name="arrow-forward" size={16} color={colors.primary} />
       </Pressable>
     </View>
   );
@@ -566,7 +554,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     borderRadius: radii.sm,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -576,7 +564,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.full,
     backgroundColor: colors.page,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -609,7 +597,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderRadius: radii.full,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
@@ -619,20 +607,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderRadius: radii.full,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
   chipOn: {
-    backgroundColor: CHIP_FILL,
-    borderColor: CHART,
+    backgroundColor: colors.primaryContainer,
+    borderColor: colors.secondary,
   },
   card: {
     backgroundColor: colors.card,
     borderRadius: radii.default,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     padding: spacing.md,
     gap: spacing.sm,
   },
@@ -664,11 +652,11 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: radii.full,
   },
   progressSegOn: {
-    backgroundColor: CHART,
+    backgroundColor: colors.secondary,
     position: 'relative',
   },
   progressSegOff: {
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     position: 'relative',
   },
   progressDot: {
@@ -678,7 +666,7 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: radii.full,
-    backgroundColor: ACTION,
+    backgroundColor: colors.primary,
   },
   trackBtn: {
     marginTop: spacing.sm,
@@ -689,7 +677,7 @@ const styles = StyleSheet.create({
   },
   pastSection: {
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
     paddingTop: spacing.lg,
   },
   rxExpiredCard: {
@@ -705,7 +693,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.full,
     backgroundColor: colors.page,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -720,18 +708,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   badgeSuccess: {
-    backgroundColor: SUCCESS_FILL,
+    backgroundColor: colors.successContainer,
     borderColor: 'rgba(15, 122, 78, 0.2)',
   },
   badgeDanger: {
-    backgroundColor: DANGER_FILL,
+    backgroundColor: colors.errorContainer,
     borderColor: 'rgba(163, 35, 26, 0.2)',
   },
   outlineBtn: {
     minHeight: layout.buttonHeight,
     borderRadius: radii.button,
     borderWidth: 1.5,
-    borderColor: ACTION,
+    borderColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.card,
@@ -750,14 +738,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderRadius: radii.sm,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     padding: spacing.md,
   },
   pastList: {
     backgroundColor: colors.card,
     borderRadius: radii.default,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     overflow: 'hidden',
   },
   pastRow: {
@@ -766,7 +754,7 @@ const styles = StyleSheet.create({
   },
   pastBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   pastMuted: {
     backgroundColor: 'rgba(245, 246, 247, 0.5)',
@@ -798,7 +786,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderRadius: radii.default,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     paddingHorizontal: spacing.md,
   },
   helpLeft: {
@@ -811,7 +799,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: radii.full,
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     borderWidth: 1,
     borderColor: 'rgba(58, 169, 224, 0.2)',
     alignItems: 'center',
@@ -833,14 +821,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderRadius: radii.default,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     padding: spacing.xl,
   },
   emptyGlow: {
     width: 120,
     height: 120,
     borderRadius: radii.full,
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.sm,

@@ -23,6 +23,10 @@ import './api/new/teleApi';
 import './api/new/medicinesApi';
 import './api/new/notificationsApi';
 import './api/new/supportApi';
+import './api/new/appConfigApi';
+import './api/new/remindersApi';
+import './api/new/appointmentRequestsApi';
+import './api/new/addressesApi';
 import { authReducer } from './slices/authSlice';
 
 export const store = configureStore({

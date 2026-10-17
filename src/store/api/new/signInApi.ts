@@ -9,10 +9,23 @@ export type RequestOtpSuccessResponse = {
   otpChallengeId: number;
   expiresAt: string;
   destinationMasked: string;
+  /** Returned by non-SMS / staging backends so the app can display the OTP. */
   devCode?: string;
+  /** Alternate field names some environments return instead of `devCode`. */
+  otpCode?: string;
+  code?: string;
   isUserRegistered?: boolean;
   isUserAlreadyRegistered?: boolean;
 };
+
+/** On-screen OTP while SMS is not integrated. Prefer whatever the API sent. */
+export function extractDevOtp(
+  response: Pick<RequestOtpSuccessResponse, 'devCode' | 'otpCode' | 'code'>,
+): string | undefined {
+  const raw = response.devCode ?? response.otpCode ?? response.code;
+  const trimmed = typeof raw === 'string' ? raw.trim() : '';
+  return /^\d{4,8}$/.test(trimmed) ? trimmed : undefined;
+}
 
 export type RequestOtpErrorResponse = {
   success: false;

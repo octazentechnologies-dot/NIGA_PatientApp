@@ -11,15 +11,9 @@ import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
 import { spacing } from '../theme/spacing';
 
-const INK = '#1F1F1F';
-const MUTED = '#595959';
-const HAIRLINE = '#E6E6E6';
-const ACTION_OUTLINE = '#276F93';
-const SUCCESS = '#0F7A4E';
-const SUCCESS_FILL = '#E9F5EF';
-const ICON_FILL = '#E6F5FE';
-const NOT_SET_FILL = '#F0F1F3';
-const NOT_SET = '#6B7280';
+const ICON_FILL = colors.primaryContainer;
+const NOT_SET_FILL = colors.page;
+const NOT_SET = colors.muted;
 
 export function PhoneSetupView(vm: PhoneSetupViewModel) {
   const insets = useSafeAreaInsets();
@@ -34,9 +28,9 @@ export function PhoneSetupView(vm: PhoneSetupViewModel) {
             onPress={vm.onBack}
             style={styles.iconButton}
           >
-            <Ionicons name="arrow-back" size={24} color={INK} />
+            <Ionicons name="arrow-back" size={24} color={colors.ink} />
           </Pressable>
-          <AppText variant="headlineMd" color={INK} style={styles.flex} numberOfLines={2}>
+          <AppText variant="headlineMd" color={colors.ink} style={styles.flex} numberOfLines={2}>
             {vm.t('phoneSetupTitle')}
           </AppText>
           <View style={styles.iconButton} />
@@ -47,14 +41,14 @@ export function PhoneSetupView(vm: PhoneSetupViewModel) {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.body}
       >
-        <AppText variant="bodyMd" color={MUTED}>
+        <AppText variant="bodyMd" color={colors.muted}>
           {vm.t('phoneSetupBody')}
         </AppText>
 
         <PermissionCard
           icon="notifications-outline"
-          iconFill={SUCCESS_FILL}
-          iconColor={SUCCESS}
+          iconFill={colors.successContainer}
+          iconColor={colors.success}
           title={vm.t('phoneSetupNotifications')}
           hint={vm.t('phoneSetupNotificationsHint')}
           granted={vm.notificationsGranted}
@@ -113,7 +107,7 @@ export function PhoneSetupView(vm: PhoneSetupViewModel) {
           onPress={vm.onLater}
           style={styles.later}
         >
-          <AppText variant="titleMd" color={ACTION_OUTLINE} weightOverride="600">
+          <AppText variant="titleMd" color={colors.primaryOutline} weightOverride="600">
             {vm.t('phoneSetupLater')}
           </AppText>
         </Pressable>
@@ -154,14 +148,14 @@ function PermissionCard({
           <Ionicons name={icon} size={22} color={iconColor} />
         </View>
         <View style={styles.flex}>
-          <AppText variant="labelSm" color={MUTED} weightOverride="600" style={styles.kicker}>
+          <AppText variant="labelSm" color={colors.muted} weightOverride="600" style={styles.kicker}>
             {title}
           </AppText>
-          <AppText variant="bodyMd" color={INK}>
+          <AppText variant="bodyMd" color={colors.ink}>
             {hint}
           </AppText>
           {note ? (
-            <AppText variant="bodyMd" color={MUTED} style={styles.note}>
+            <AppText variant="bodyMd" color={colors.muted} style={styles.note}>
               {note}
             </AppText>
           ) : null}
@@ -172,7 +166,7 @@ function PermissionCard({
         <View style={[styles.pill, granted ? styles.pillOn : styles.pillOff]}>
           <AppText
             variant="labelSm"
-            color={granted ? SUCCESS : NOT_SET}
+            color={granted ? colors.success : NOT_SET}
             weightOverride="600"
           >
             {granted ? allowedLabel : notSetLabel}
@@ -184,7 +178,7 @@ function PermissionCard({
           disabled={granted}
           style={styles.allowHit}
         >
-          <AppText variant="labelMd" color={ACTION_OUTLINE} weightOverride="600">
+          <AppText variant="labelMd" color={colors.primaryOutline} weightOverride="600">
             {granted ? allowedLabel : allowLabel}
           </AppText>
         </Pressable>
@@ -201,7 +195,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   headerRow: {
     minHeight: 56,
@@ -230,7 +224,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderRadius: radii.default,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
   },
@@ -256,7 +250,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
   },
   cardBottom: {
     minHeight: 48,
@@ -271,7 +265,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   pillOn: {
-    backgroundColor: SUCCESS_FILL,
+    backgroundColor: colors.successContainer,
   },
   pillOff: {
     backgroundColor: NOT_SET_FILL,
@@ -287,7 +281,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     backgroundColor: colors.card,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
   },
   later: {
     minHeight: 48,

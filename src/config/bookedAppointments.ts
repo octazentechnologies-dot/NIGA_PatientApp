@@ -10,7 +10,7 @@ export type BookedAppointment = {
   doctorNameKey: TranslationKey;
   doctorInitials: string;
   credentialsKey: TranslationKey;
-  experienceKey: TranslationKey;
+  experienceKey: TranslationKey | '';
   whenLabel: string;
   dateLine: string;
   timeLine: string;

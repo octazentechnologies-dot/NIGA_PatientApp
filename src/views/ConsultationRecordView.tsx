@@ -19,17 +19,8 @@ import { radii } from '../theme/radii';
 import { layout, spacing } from '../theme/spacing';
 import { sheetBottomPadding } from '../utilities/sheetInset';
 
-const INK = '#1F1F1F';
-const MUTED = '#595959';
-const HAIRLINE = '#E6E6E6';
-const ACTION = '#2A7BA3';
-const ACTION_OUTLINE = '#276F93';
-const SUCCESS = '#0F7A4E';
-const SUCCESS_FILL = '#E9F5EF';
-const WARN = '#8A5109';
-const WARN_FILL = '#FCF3E4';
-const CHIP_FILL = '#E6F5FE';
-
+const WARN = colors.warning;
+const WARN_FILL = colors.warningContainer;
 export function ConsultationRecordView(vm: ConsultationRecordViewModel) {
   const insets = useSafeAreaInsets();
 
@@ -43,11 +34,11 @@ export function ConsultationRecordView(vm: ConsultationRecordViewModel) {
             onPress={vm.onBack}
             style={styles.iconHit}
           >
-            <Ionicons name="arrow-back" size={24} color={INK} />
+            <Ionicons name="arrow-back" size={24} color={colors.ink} />
           </Pressable>
           <AppText
             variant="headlineMd"
-            color={INK}
+            color={colors.ink}
             style={styles.headerTitle}
             numberOfLines={1}
           >
@@ -58,14 +49,14 @@ export function ConsultationRecordView(vm: ConsultationRecordViewModel) {
             onPress={vm.onShare}
             style={styles.iconHit}
           >
-            <Ionicons name="share-outline" size={22} color={INK} />
+            <Ionicons name="share-outline" size={22} color={colors.ink} />
           </Pressable>
           <Pressable
             accessibilityRole="button"
             onPress={vm.onDownload}
             style={styles.iconHit}
           >
-            <Ionicons name="download-outline" size={22} color={INK} />
+            <Ionicons name="download-outline" size={22} color={colors.ink} />
           </Pressable>
         </View>
       </View>
@@ -84,12 +75,12 @@ export function ConsultationRecordView(vm: ConsultationRecordViewModel) {
       >
         <View style={styles.signedBanner}>
           <View style={styles.signedRow}>
-            <Ionicons name="lock-closed" size={18} color={SUCCESS} />
-            <AppText variant="labelMd" color={SUCCESS} style={styles.flex}>
+            <Ionicons name="lock-closed" size={18} color={colors.success} />
+            <AppText variant="labelMd" color={colors.success} style={styles.flex}>
               {vm.signedBanner}
             </AppText>
           </View>
-          <AppText variant="labelSm" color={SUCCESS} style={styles.signedSub}>
+          <AppText variant="labelSm" color={colors.success} style={styles.signedSub}>
             {vm.t('consultRecordImmutable')}
           </AppText>
         </View>
@@ -100,17 +91,17 @@ export function ConsultationRecordView(vm: ConsultationRecordViewModel) {
               <View>
                 <Image source={images.doctorPortrait} style={styles.avatar} />
                 <View style={styles.verifiedBadge}>
-                  <Ionicons name="checkmark-circle" size={16} color={SUCCESS} />
+                  <Ionicons name="checkmark-circle" size={16} color={colors.success} />
                 </View>
               </View>
               <View style={styles.flex}>
-                <AppText variant="titleMd" color={INK}>
+                <AppText variant="titleMd" color={colors.ink}>
                   {vm.doctorName}
                 </AppText>
-                <AppText variant="bodyMd" color={MUTED}>
+                <AppText variant="bodyMd" color={colors.muted}>
                   {vm.credentials}
                 </AppText>
-                <AppText variant="labelSm" color={MUTED}>
+                <AppText variant="labelSm" color={colors.muted}>
                   {vm.regNo}
                 </AppText>
               </View>
@@ -137,8 +128,8 @@ export function ConsultationRecordView(vm: ConsultationRecordViewModel) {
 
           <View style={styles.versionStrip}>
             <View style={styles.versionLeft}>
-              <Ionicons name="time-outline" size={18} color={MUTED} />
-              <AppText variant="bodyMd" color={MUTED} style={styles.flex}>
+              <Ionicons name="time-outline" size={18} color={colors.muted} />
+              <AppText variant="bodyMd" color={colors.muted} style={styles.flex}>
                 {vm.versionStripLabel}
               </AppText>
             </View>
@@ -147,13 +138,13 @@ export function ConsultationRecordView(vm: ConsultationRecordViewModel) {
               onPress={vm.onOpenVersionHistory}
               style={styles.versionLink}
             >
-              <AppText variant="labelMd" color={ACTION} weightOverride="600">
+              <AppText variant="labelMd" color={colors.primary} weightOverride="600">
                 {vm.t('consultRecordVersionHistory')}
               </AppText>
             </Pressable>
           </View>
 
-          <AppText variant="headlineMd" color={INK} style={styles.sectionTitle}>
+          <AppText variant="headlineMd" color={colors.ink} style={styles.sectionTitle}>
             {vm.t('consultRecordClinicalNotes')}
           </AppText>
 
@@ -164,18 +155,18 @@ export function ConsultationRecordView(vm: ConsultationRecordViewModel) {
                 onPress={() => vm.onToggleNote(note.id)}
                 style={styles.accordionHeader}
               >
-                <AppText variant="bodyLg" color={INK} style={styles.flex}>
+                <AppText variant="bodyLg" color={colors.ink} style={styles.flex}>
                   {vm.t(note.titleKey)}
                 </AppText>
                 <Ionicons
                   name={note.open ? 'chevron-up' : 'chevron-down'}
                   size={20}
-                  color={MUTED}
+                  color={colors.muted}
                 />
               </Pressable>
               {note.open ? (
                 <View style={styles.accordionBody}>
-                  <AppText variant="bodyMd" color={MUTED}>
+                  <AppText variant="bodyMd" color={colors.muted}>
                     {vm.t(note.bodyKey)}
                   </AppText>
                 </View>
@@ -183,7 +174,7 @@ export function ConsultationRecordView(vm: ConsultationRecordViewModel) {
             </View>
           ))}
 
-          <AppText variant="titleMd" color={INK} style={styles.sectionTitle}>
+          <AppText variant="titleMd" color={colors.ink} style={styles.sectionTitle}>
             {vm.t('consultRecordAttachments')}
           </AppText>
           <ScrollView
@@ -192,8 +183,8 @@ export function ConsultationRecordView(vm: ConsultationRecordViewModel) {
             contentContainerStyle={styles.attachRow}
           >
             <View style={styles.attachCard}>
-              <Ionicons name="document-text-outline" size={36} color={MUTED} />
-              <AppText variant="labelSm" color={MUTED} numberOfLines={2} style={styles.center}>
+              <Ionicons name="document-text-outline" size={36} color={colors.muted} />
+              <AppText variant="labelSm" color={colors.muted} numberOfLines={2} style={styles.center}>
                 {vm.t('consultRecordAttachLab')}
               </AppText>
             </View>
@@ -203,13 +194,13 @@ export function ConsultationRecordView(vm: ConsultationRecordViewModel) {
                 style={styles.attachImage}
                 resizeMode="cover"
               />
-              <AppText variant="labelSm" color={MUTED} numberOfLines={1} style={styles.center}>
+              <AppText variant="labelSm" color={colors.muted} numberOfLines={1} style={styles.center}>
                 {vm.t('consultRecordAttachAllergy')}
               </AppText>
             </View>
           </ScrollView>
 
-          <AppText variant="titleMd" color={INK} style={styles.sectionTitle}>
+          <AppText variant="titleMd" color={colors.ink} style={styles.sectionTitle}>
             {vm.t('consultRecordLinked')}
           </AppText>
           <Pressable
@@ -218,20 +209,20 @@ export function ConsultationRecordView(vm: ConsultationRecordViewModel) {
             accessibilityRole="button"
           >
             <View style={styles.linkedIcon}>
-              <Ionicons name="medical-outline" size={20} color={SUCCESS} />
+              <Ionicons name="medical-outline" size={20} color={colors.success} />
             </View>
             <View style={styles.flex}>
-              <AppText variant="bodyMd" color={INK} weightOverride="600">
+              <AppText variant="bodyMd" color={colors.ink} weightOverride="600">
                 {vm.t('recordsRxTitle')}
               </AppText>
               <View style={styles.activeRow}>
                 <View style={styles.activeDot} />
-                <AppText variant="labelSm" color={SUCCESS} weightOverride="600">
+                <AppText variant="labelSm" color={colors.success} weightOverride="600">
                   {vm.t('recordsRxActive')}
                 </AppText>
               </View>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={MUTED} />
+            <Ionicons name="chevron-forward" size={20} color={colors.muted} />
           </Pressable>
           <Pressable
             style={styles.linkedCard}
@@ -239,17 +230,17 @@ export function ConsultationRecordView(vm: ConsultationRecordViewModel) {
             accessibilityRole="button"
           >
             <View style={[styles.linkedIcon, styles.linkedIconBlue]}>
-              <Ionicons name="calendar-outline" size={20} color={ACTION} />
+              <Ionicons name="calendar-outline" size={20} color={colors.primary} />
             </View>
             <View style={styles.flex}>
-              <AppText variant="bodyMd" color={INK} weightOverride="600">
+              <AppText variant="bodyMd" color={colors.ink} weightOverride="600">
                 {vm.t('consultRecordFollowUp')}
               </AppText>
-              <AppText variant="labelSm" color={MUTED}>
+              <AppText variant="labelSm" color={colors.muted}>
                 {vm.t('consultRecordFollowUpMeta')}
               </AppText>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={MUTED} />
+            <Ionicons name="chevron-forward" size={20} color={colors.muted} />
           </Pressable>
 
           <AppButton
@@ -258,7 +249,7 @@ export function ConsultationRecordView(vm: ConsultationRecordViewModel) {
             icon={<Ionicons name="download-outline" size={20} color={colors.onButton} />}
             style={styles.downloadBtn}
           />
-          <AppText variant="labelSm" color={MUTED} style={styles.downloadHint}>
+          <AppText variant="labelSm" color={colors.muted} style={styles.downloadHint}>
             {vm.t('consultRecordDownloadHint')}
           </AppText>
         </View>
@@ -280,7 +271,7 @@ export function ConsultationRecordView(vm: ConsultationRecordViewModel) {
           >
             <View style={styles.sheetHandle} />
             <View style={styles.sheetHeader}>
-              <AppText variant="headlineMd" color={INK} style={styles.flex}>
+              <AppText variant="headlineMd" color={colors.ink} style={styles.flex}>
                 {vm.t('consultRecordVersionHistory')}
               </AppText>
               <Pressable
@@ -288,10 +279,10 @@ export function ConsultationRecordView(vm: ConsultationRecordViewModel) {
                 onPress={vm.onCloseVersionHistory}
                 style={styles.iconHit}
               >
-                <Ionicons name="close" size={22} color={MUTED} />
+                <Ionicons name="close" size={22} color={colors.muted} />
               </Pressable>
             </View>
-            <AppText variant="bodyMd" color={MUTED} style={styles.sheetSub}>
+            <AppText variant="bodyMd" color={colors.muted} style={styles.sheetSub}>
               {vm.t('consultRecordVersionHistoryHint')}
             </AppText>
             {vm.versions.map((version) => (
@@ -300,7 +291,7 @@ export function ConsultationRecordView(vm: ConsultationRecordViewModel) {
                   <View style={styles.versionTitleRow}>
                     <AppText
                       variant="titleMd"
-                      color={version.current ? INK : MUTED}
+                      color={version.current ? colors.ink : colors.muted}
                     >
                       {version.label}
                     </AppText>
@@ -312,7 +303,7 @@ export function ConsultationRecordView(vm: ConsultationRecordViewModel) {
                     >
                       <AppText
                         variant="labelSm"
-                        color={version.current ? SUCCESS : WARN}
+                        color={version.current ? colors.success : WARN}
                         weightOverride="600"
                       >
                         {vm.t(
@@ -323,11 +314,11 @@ export function ConsultationRecordView(vm: ConsultationRecordViewModel) {
                       </AppText>
                     </View>
                   </View>
-                  <AppText variant="labelSm" color={MUTED}>
+                  <AppText variant="labelSm" color={colors.muted}>
                     {vm.t(version.dateKey)}
                   </AppText>
                   {version.noteKey ? (
-                    <AppText variant="bodyMd" color={MUTED}>
+                    <AppText variant="bodyMd" color={colors.muted}>
                       {vm.t(version.noteKey)}
                     </AppText>
                   ) : null}
@@ -337,7 +328,7 @@ export function ConsultationRecordView(vm: ConsultationRecordViewModel) {
                   onPress={() => vm.onSelectVersion(version.id)}
                   style={styles.viewVersionBtn}
                 >
-                  <AppText variant="labelMd" color={ACTION_OUTLINE} weightOverride="600">
+                  <AppText variant="labelMd" color={colors.primaryOutline} weightOverride="600">
                     {vm.t('recordsView')}
                   </AppText>
                 </Pressable>
@@ -361,12 +352,12 @@ function MetaRow({
 }) {
   return (
     <View style={styles.metaRow}>
-      <Ionicons name={icon} size={20} color={MUTED} />
+      <Ionicons name={icon} size={20} color={colors.muted} />
       <View style={styles.flex}>
-        <AppText variant="labelSm" color={MUTED} style={styles.metaLabel}>
+        <AppText variant="labelSm" color={colors.muted} style={styles.metaLabel}>
           {label}
         </AppText>
-        <AppText variant="bodyLg" color={INK}>
+        <AppText variant="bodyLg" color={colors.ink}>
           {value}
         </AppText>
       </View>
@@ -382,7 +373,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   headerRow: {
     minHeight: 48,
@@ -404,9 +395,9 @@ const styles = StyleSheet.create({
     gap: 0,
   },
   signedBanner: {
-    backgroundColor: SUCCESS_FILL,
+    backgroundColor: colors.successContainer,
     borderBottomWidth: 1,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     gap: 4,
@@ -426,7 +417,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
     gap: spacing.md,
@@ -440,9 +431,9 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: radii.full,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
   },
   verifiedBadge: {
     position: 'absolute',
@@ -453,7 +444,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
   },
   metaRow: {
     flexDirection: 'row',
@@ -473,7 +464,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
@@ -495,7 +486,7 @@ const styles = StyleSheet.create({
   accordion: {
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     overflow: 'hidden',
   },
@@ -508,7 +499,7 @@ const styles = StyleSheet.create({
   },
   accordionBody: {
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
   },
@@ -520,7 +511,7 @@ const styles = StyleSheet.create({
     height: 160,
     borderRadius: radii.default,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
@@ -531,7 +522,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 96,
     borderRadius: radii.sm,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
   },
   center: {
     textAlign: 'center',
@@ -542,7 +533,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
     minHeight: 64,
@@ -551,12 +542,12 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: radii.full,
-    backgroundColor: SUCCESS_FILL,
+    backgroundColor: colors.successContainer,
     alignItems: 'center',
     justifyContent: 'center',
   },
   linkedIconBlue: {
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
   },
   activeRow: {
     flexDirection: 'row',
@@ -568,7 +559,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: radii.full,
-    backgroundColor: SUCCESS,
+    backgroundColor: colors.success,
   },
   downloadBtn: {
     marginTop: spacing.sm,
@@ -596,7 +587,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: radii.full,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
     marginTop: spacing.sm,
     marginBottom: spacing.sm,
   },
@@ -612,7 +603,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
     marginBottom: spacing.sm,
@@ -629,7 +620,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   badgeCurrent: {
-    backgroundColor: SUCCESS_FILL,
+    backgroundColor: colors.successContainer,
   },
   badgeOld: {
     backgroundColor: WARN_FILL,
@@ -640,7 +631,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderRadius: radii.full,
     borderWidth: 1.5,
-    borderColor: ACTION_OUTLINE,
+    borderColor: colors.primaryOutline,
     alignItems: 'center',
     justifyContent: 'center',
   },

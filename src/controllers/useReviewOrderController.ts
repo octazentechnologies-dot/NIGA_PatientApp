@@ -40,40 +40,20 @@ export type ReviewOrderViewModel = {
   onProceedToPay: () => void;
 };
 
-const ITEMS: ReviewOrderItem[] = [
-  {
-    id: 'm01',
-    nameKey: 'orderMedM01',
-    doseKey: 'reviewOrderDose',
-    qtyKey: 'orderMedQty1Vial',
-    priceLabel: '₹90',
-  },
-  {
-    id: 'm02',
-    nameKey: 'orderMedM02',
-    doseKey: 'reviewOrderDose',
-    qtyKey: 'orderMedQty1Vial',
-    priceLabel: '₹80',
-  },
-  {
-    id: 'm03',
-    nameKey: 'orderMedM03',
-    doseKey: 'reviewOrderDose',
-    qtyKey: 'orderMedQty1Vial',
-    priceLabel: '₹80',
-  },
-];
-
 export function useReviewOrderController({
   onBack,
   onChangePharmacy,
   onProceedToPay,
   pharmacyName,
+  items = [],
+  rxId = '',
 }: {
   onBack: () => void;
   onChangePharmacy?: () => void;
   onProceedToPay?: () => void;
   pharmacyName?: string;
+  items?: ReviewOrderItem[];
+  rxId?: string;
 }): ReviewOrderViewModel {
   const { language, t } = useLocalization();
   const [consentChecked, setConsentChecked] = useState(true);
@@ -89,25 +69,27 @@ export function useReviewOrderController({
   const recipientLine =
     patientDisplayName && userPhone
       ? `${patientDisplayName} · +91 ${userPhone}`
-      : t('reviewOrderRecipient');
+      : '';
 
-  const name = pharmacyName ?? t('pharmacyShreeName');
+  const name = pharmacyName ?? '';
 
   return {
     language,
     t,
-    rxId: 'RX-2026-77410',
+    rxId,
     pharmacyName: name,
-    licenceShort: t('reviewOrderLicenceShort'),
-    distanceLine: t('reviewOrderDistance'),
-    items: ITEMS,
-    medicinesSubtotal: '₹250',
-    deliveryFee: '₹60',
-    taxes: '₹0',
-    totalPayable: '₹310',
-    addressLine: t('orderMedsAddress'),
+    licenceShort: '',
+    distanceLine: '',
+    items,
+    // Quote fields are null on sellers — hide until a quote exists.
+    medicinesSubtotal: '',
+    deliveryFee: '',
+    taxes: '',
+    totalPayable: '',
+    // blocked: B-023 — no delivery address book
+    addressLine: '',
     recipientLine,
-    deliveryEta: t('reviewOrderEta'),
+    deliveryEta: '',
     deliveryInstructions,
     consentChecked,
     canPay: consentChecked,

@@ -1,4 +1,5 @@
 import Svg, { Circle, Line, Path, Rect } from 'react-native-svg';
+import { colors } from '../theme/colors';
 
 export function EmptyDoctorsIllustration() {
   return (
@@ -9,8 +10,8 @@ export function EmptyDoctorsIllustration() {
         width={84}
         height={100}
         rx={6}
-        fill="#FFFFFF"
-        stroke="#000000"
+        fill={colors.card}
+        stroke={colors.ink}
         strokeWidth={2}
       />
       <Line
@@ -18,7 +19,7 @@ export function EmptyDoctorsIllustration() {
         y1={36}
         x2={70}
         y2={36}
-        stroke="#5CCEF7"
+        stroke={colors.iconFill}
         strokeWidth={3}
         strokeLinecap="round"
       />
@@ -27,7 +28,7 @@ export function EmptyDoctorsIllustration() {
         y1={48}
         x2={98}
         y2={48}
-        stroke="#E6E6E6"
+        stroke={colors.outlineVariant}
         strokeWidth={2}
         strokeLinecap="round"
       />
@@ -36,7 +37,7 @@ export function EmptyDoctorsIllustration() {
         y1={58}
         x2={88}
         y2={58}
-        stroke="#E6E6E6"
+        stroke={colors.outlineVariant}
         strokeWidth={2}
         strokeLinecap="round"
       />
@@ -45,29 +46,29 @@ export function EmptyDoctorsIllustration() {
         y1={68}
         x2={76}
         y2={68}
-        stroke="#E6E6E6"
+        stroke={colors.outlineVariant}
         strokeWidth={2}
         strokeLinecap="round"
       />
-      <Circle cx={72} cy={74} r={26} fill="#FFFFFF" stroke="#000000" strokeWidth={2} />
-      <Circle cx={72} cy={74} r={22} fill="#E6F5FE" fillOpacity={0.5} />
+      <Circle cx={72} cy={74} r={26} fill={colors.card} stroke={colors.ink} strokeWidth={2} />
+      <Circle cx={72} cy={74} r={22} fill={colors.primaryContainer} fillOpacity={0.5} />
       <Circle
         cx={72}
         cy={74}
         r={16}
-        stroke="#5CCEF7"
+        stroke={colors.iconFill}
         strokeWidth={2}
         strokeDasharray="3 3"
       />
       <Path
         d="M88 90L108 110"
-        stroke="#000000"
+        stroke={colors.ink}
         strokeWidth={3}
         strokeLinecap="round"
       />
       <Path
         d="M64 74H80"
-        stroke="#000000"
+        stroke={colors.ink}
         strokeWidth={2}
         strokeLinecap="round"
       />

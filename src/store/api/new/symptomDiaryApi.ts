@@ -37,6 +37,12 @@ export type ProgressSeriesPoint = {
 export type PatientProgressData = {
   visitCount: number;
   series: ProgressSeriesPoint[];
+  openFollowUps?: number | null;
+  completedFollowUps?: number | null;
+  followUpsCompleted?: number | null;
+  followUpsTotal?: number | null;
+  /** Null when not stored — hide in UI. */
+  adherencePercent?: number | null;
 };
 
 export type GetProgressResponse = {
@@ -84,7 +90,7 @@ export const symptomDiaryApi = newBaseApi.injectEndpoints({
     }),
     getProgress: build.query<GetProgressResponse, void>({
       query: () => 'api/Patient/Progress',
-      providesTags: ['Diary'],
+      providesTags: ['Progress', 'Diary'],
     }),
   }),
 });

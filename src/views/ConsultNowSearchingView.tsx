@@ -20,16 +20,12 @@ import { ConsultNowOfferSheet } from './ConsultNowOfferSheet';
 import { ConsultNowUnavailableView } from './ConsultNowUnavailableView';
 import { colors } from '../theme/colors';
 
-const MUTED = '#595959';
-const HAIRLINE = '#E6E6E6';
-const SUCCESS = '#0F7A4E';
-const ACTION = '#2A7BA3';
-const ICON_BLUE = '#2A7BA3';
-const ICON_FILL = '#2E9AD1';
-const RING = '#E6F5FE';
-const RING_BORDER = '#5CCEF7';
-const FILL = '#F2F2F2';
-const PENDING = '#8A8A8A';
+const ICON_BLUE = colors.primary;
+const ICON_FILL = colors.iconFill;
+const RING = colors.primaryContainer;
+const RING_BORDER = colors.iconFill;
+const FILL = colors.surfaceVariant;
+const PENDING = colors.outline;
 
 export function ConsultNowSearchingView(vm: ConsultNowViewModel) {
   const insets = useSafeAreaInsets();
@@ -61,16 +57,16 @@ export function ConsultNowSearchingView(vm: ConsultNowViewModel) {
         <SearchingPulse />
 
         <View style={styles.copy}>
-          <AppText variant="headlineMd" color="#000000" style={styles.center}>
+          <AppText variant="headlineMd" color={colors.ink} style={styles.center}>
             {vm.t('searchingTitle')}
           </AppText>
-          <AppText variant="bodyMd" color={MUTED} style={styles.center}>
+          <AppText variant="bodyMd" color={colors.muted} style={styles.center}>
             {vm.searchSummary}
           </AppText>
         </View>
 
         <View style={styles.card}>
-          <AppText variant="titleMd" color="#000000" style={styles.center}>
+          <AppText variant="titleMd" color={colors.ink} style={styles.center}>
             {vm.queueLabel}
           </AppText>
           <View style={styles.waitRow}>
@@ -99,8 +95,8 @@ export function ConsultNowSearchingView(vm: ConsultNowViewModel) {
         ]}
       >
         <View style={styles.notCharged}>
-          <Ionicons name="information-circle-outline" size={14} color={MUTED} />
-          <AppText variant="labelSm" color={MUTED}>
+          <Ionicons name="information-circle-outline" size={14} color={colors.muted} />
+          <AppText variant="labelSm" color={colors.muted}>
             {vm.t('searchingNotCharged')}
           </AppText>
         </View>
@@ -110,7 +106,7 @@ export function ConsultNowSearchingView(vm: ConsultNowViewModel) {
           onPress={vm.onCancelSearch}
           style={({ pressed }) => [styles.cancelBtn, pressed && styles.pressed]}
         >
-          <AppText variant="titleMd" color={ACTION}>
+          <AppText variant="titleMd" color={colors.primary}>
             {vm.t('searchingCancel')}
           </AppText>
         </Pressable>
@@ -197,14 +193,14 @@ function ProgressStep({
         ]}
       >
         {state === 'done' ? (
-          <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+          <Ionicons name="checkmark" size={14} color={colors.card} />
         ) : null}
         {state === 'active' ? <View style={styles.innerDot} /> : null}
       </View>
       <AppText
         variant="labelSm"
         color={
-          state === 'done' ? SUCCESS : state === 'active' ? ACTION : PENDING
+          state === 'done' ? colors.success : state === 'active' ? colors.primary : PENDING
         }
         weightOverride={state === 'active' ? '600' : '500'}
         style={styles.center}
@@ -272,7 +268,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     padding: spacing.md,
   },
@@ -294,7 +290,7 @@ const styles = StyleSheet.create({
     left: '16.5%',
     right: '16.5%',
     height: 2,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
   },
   trackActive: {
     position: 'absolute',
@@ -319,7 +315,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
   },
   dotDone: {
-    backgroundColor: SUCCESS,
+    backgroundColor: colors.success,
   },
   dotActive: {
     backgroundColor: colors.card,
@@ -335,7 +331,7 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: radii.full,
-    backgroundColor: ACTION,
+    backgroundColor: colors.primary,
   },
   footer: {
     paddingHorizontal: spacing.md,
@@ -349,7 +345,7 @@ const styles = StyleSheet.create({
     gap: 6,
     backgroundColor: FILL,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.full,
     paddingHorizontal: 14,
     paddingVertical: 6,
@@ -360,7 +356,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.button,
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: ACTION,
+    borderColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },

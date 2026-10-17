@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Alert } from 'react-native';
 
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
@@ -84,7 +85,18 @@ export function useConsentCentreController({
       setTogglingConsentId(consentTypeId);
 
       if (!item.granted) {
-        // Toggle ON -> Grant
+        // BE-033 — Caregiver must use Caregiver/Grant, never Types/{id}/Grant.
+        if ((item.code || '').trim().toLowerCase() === 'caregiver') {
+          Alert.alert(
+            'Caregiver',
+            'Manage caregiver access from the Caregiver screen.',
+          );
+          setTogglingConsentId(null);
+          if (item.manageLink === '/caregiver' || item.manageLink) {
+            // Navigation to caregiver is handled by onSeeCareLinkShared when wired.
+          }
+          return;
+        }
         try {
           const res = await grantConsentMutation(consentTypeId).unwrap();
           setConsents((prev) =>
@@ -101,10 +113,20 @@ export function useConsentCentreController({
             ),
           );
         } catch (error) {
+          const err = error as {
+            status?: number;
+            data?: { code?: string; message?: string };
+          };
+          const message =
+            err?.data?.message ||
+            (err?.status === 409
+              ? 'This consent must be managed from the Caregiver page.'
+              : 'Could not update consent.');
           console.error(
             `[ConsentCentre - POST Grant Consent] Error for consentTypeId ${consentTypeId}:`,
             error,
           );
+          Alert.alert('Consent', message);
         } finally {
           setTogglingConsentId(null);
         }

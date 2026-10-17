@@ -9,17 +9,12 @@ import { spacing } from '../theme/spacing';
 import { scaleFont } from '../utilities/scale';
 import { colors } from '../theme/colors';
 
-const SUCCESS = '#0F7A4E';
-const SUCCESS_FILL = '#E9F5EF';
-const SUCCESS_BORDER = '#CEEBDD';
-const AMBER = '#8A5109';
-const AMBER_FILL = '#FDF3DC';
-const AMBER_BORDER = '#F2C14E';
-const GREY_FILL = '#F2F2F2';
-const MUTED = '#595959';
-const HAIRLINE = '#E6E6E6';
-const CHIP_FILL = '#E6F5FE';
-const ICON_BLUE = '#2A7BA3';
+const SUCCESS_BORDER = colors.successContainer;
+const AMBER = colors.warning;
+const AMBER_FILL = colors.tertiaryFixed;
+const AMBER_BORDER = colors.tertiaryContainer;
+const GREY_FILL = colors.surfaceVariant;
+const ICON_BLUE = colors.primary;
 
 type Translate = (key: TranslationKey) => string;
 
@@ -31,6 +26,9 @@ export function DoctorCredentialsTab({
   profile: DoctorProfileSeed;
 }) {
   const { credentialsDetail } = profile;
+  const hasQualifications = credentialsDetail.qualifications.length > 0;
+  const registration = credentialsDetail.registration;
+  const hasRegistration = Boolean(registration?.titleKey);
 
   return (
     <View style={styles.root}>
@@ -46,57 +44,76 @@ export function DoctorCredentialsTab({
           </AppText>
         </View>
         <View style={styles.flex}>
-          <AppText variant="titleMd" color="#000000" style={styles.identityName}>
+          <AppText variant="titleMd" color={colors.ink} style={styles.identityName} raw>
             {t(profile.nameKey)}
           </AppText>
-          <AppText variant="bodyMd" color={MUTED} style={styles.bodySm}>
+          <AppText variant="bodyMd" color={colors.muted} style={styles.bodySm}>
             {t('credAndVerification')}
           </AppText>
         </View>
       </View>
 
-      <View style={styles.section}>
-        <View style={styles.sectionHead}>
-          <Ionicons name="school-outline" size={28} color="#000000" />
-          <AppText variant="titleMd" color="#000000" style={styles.sectionTitle}>
-            {t('credRecognisedTitle')}
-          </AppText>
-        </View>
-        <View style={[styles.banner, styles.bannerGreen]}>
-          <Ionicons name="information-circle-outline" size={22} color={SUCCESS} />
-          <AppText variant="bodyMd" color={SUCCESS} style={styles.bannerText}>
-            {t('credRecognisedNote')}
-          </AppText>
-        </View>
-        {credentialsDetail.qualifications.map((item) => (
-          <View key={item.titleKey} style={styles.card}>
-            <AppText variant="bodyLg" color="#000000" weightOverride="600">
-              {t(item.titleKey)}
-            </AppText>
-            <AppText variant="bodyMd" color={MUTED} style={styles.cardDetail}>
-              {t(item.detailKey)}
-            </AppText>
-            <VerifiedPill icon="checkmark-circle" label={t(item.badgeKey)} />
-          </View>
-        ))}
-        <View style={styles.card}>
-          <AppText variant="bodyLg" color="#000000" weightOverride="600">
-            {t(credentialsDetail.registration.titleKey)}
-          </AppText>
-          <View style={styles.regLines}>
-            <AppText variant="bodyMd" color={MUTED}>
-              {t(credentialsDetail.registration.councilKey)}
-            </AppText>
-            <AppText variant="bodyMd" color={MUTED}>
-              {t(credentialsDetail.registration.statusKey)}
-            </AppText>
-            <AppText variant="bodyMd" color={MUTED}>
-              {t(credentialsDetail.registration.validKey)}
+      {hasQualifications ? (
+        <View style={styles.section}>
+          <View style={styles.sectionHead}>
+            <Ionicons name="school-outline" size={28} color={colors.ink} />
+            <AppText variant="titleMd" color={colors.ink} style={styles.sectionTitle}>
+              {t('credRecognisedTitle')}
             </AppText>
           </View>
-          <VerifiedPill icon="shield-checkmark" label={t('credLicensedBadge')} />
+          <View style={[styles.banner, styles.bannerGreen]}>
+            <Ionicons name="information-circle-outline" size={22} color={colors.success} />
+            <AppText variant="bodyMd" color={colors.success} style={styles.bannerText}>
+              {t('credRecognisedNote')}
+            </AppText>
+          </View>
+          {credentialsDetail.qualifications.map((item) => (
+            <View key={String(item.titleKey)} style={styles.card}>
+              {item.titleKey ? (
+                <AppText variant="bodyLg" color={colors.ink} weightOverride="600" raw>
+                  {t(item.titleKey)}
+                </AppText>
+              ) : null}
+              {item.detailKey ? (
+                <AppText variant="bodyMd" color={colors.muted} style={styles.cardDetail} raw>
+                  {t(item.detailKey)}
+                </AppText>
+              ) : null}
+              {item.badgeKey ? (
+                <VerifiedPill icon="checkmark-circle" label={t(item.badgeKey)} />
+              ) : null}
+            </View>
+          ))}
         </View>
-      </View>
+      ) : null}
+
+      {hasRegistration && registration ? (
+        <View style={styles.section}>
+          <View style={styles.card}>
+            <AppText variant="bodyLg" color={colors.ink} weightOverride="600" raw>
+              {t(registration.titleKey)}
+            </AppText>
+            {registration.councilKey ? (
+              <View style={styles.regLines}>
+                <AppText variant="bodyMd" color={colors.muted} raw>
+                  {t(registration.councilKey)}
+                </AppText>
+                {registration.statusKey ? (
+                  <AppText variant="bodyMd" color={colors.muted} raw>
+                    {t(registration.statusKey)}
+                  </AppText>
+                ) : null}
+                {registration.validKey ? (
+                  <AppText variant="bodyMd" color={colors.muted} raw>
+                    {t(registration.validKey)}
+                  </AppText>
+                ) : null}
+              </View>
+            ) : null}
+            <VerifiedPill icon="shield-checkmark" label={t('credLicensedBadge')} />
+          </View>
+        </View>
+      ) : null}
 
       {credentialsDetail.focus ? (
         <View style={styles.section}>
@@ -109,7 +126,7 @@ export function DoctorCredentialsTab({
           </View>
           <View style={[styles.banner, styles.bannerAmber]}>
             <Ionicons name="warning" size={22} color={AMBER} />
-            <AppText variant="bodyMd" color="#000000" style={styles.bannerText}>
+            <AppText variant="bodyMd" color={colors.ink} style={styles.bannerText}>
               {t('credFocusWarning')}
             </AppText>
           </View>
@@ -117,22 +134,22 @@ export function DoctorCredentialsTab({
             <View style={styles.focusTitleRow}>
               <AppText
                 variant="bodyLg"
-                color="#000000"
+                color={colors.ink}
                 weightOverride="600"
                 style={styles.flex}
               >
                 {t(credentialsDetail.focus.titleKey)}
               </AppText>
               <View style={styles.activeTag}>
-                <AppText variant="labelSm" color={SUCCESS} weightOverride="600">
+                <AppText variant="labelSm" color={colors.success} weightOverride="600">
                   {t('credActive')}
                 </AppText>
               </View>
             </View>
-            <AppText variant="bodyMd" color={MUTED} style={styles.bodySm}>
+            <AppText variant="bodyMd" color={colors.muted} style={styles.bodySm}>
               {t(credentialsDetail.focus.idKey)}
             </AppText>
-            <AppText variant="bodyMd" color={MUTED} style={styles.bodySm}>
+            <AppText variant="bodyMd" color={colors.muted} style={styles.bodySm}>
               {t(credentialsDetail.focus.validKey)}
             </AppText>
             <Pressable
@@ -155,22 +172,22 @@ export function DoctorCredentialsTab({
         <View style={styles.section}>
           <View style={styles.hairline} />
           <View style={styles.sectionHead}>
-            <Ionicons name="git-network-outline" size={28} color={MUTED} />
-            <AppText variant="titleMd" color="#000000" style={styles.sectionTitle}>
+            <Ionicons name="git-network-outline" size={28} color={colors.muted} />
+            <AppText variant="titleMd" color={colors.ink} style={styles.sectionTitle}>
               {t('credCareLinkTitle')}
             </AppText>
           </View>
           <View style={[styles.banner, styles.bannerGrey]}>
-            <Ionicons name="information-circle-outline" size={22} color={MUTED} />
-            <AppText variant="bodyMd" color={MUTED} style={styles.bannerText}>
+            <Ionicons name="information-circle-outline" size={22} color={colors.muted} />
+            <AppText variant="bodyMd" color={colors.muted} style={styles.bannerText}>
               {t('credCareLinkNote')}
             </AppText>
           </View>
           <View style={styles.card}>
-            <AppText variant="bodyLg" color="#000000" weightOverride="600">
+            <AppText variant="bodyLg" color={colors.ink} weightOverride="600">
               {t(credentialsDetail.careLink.titleKey)}
             </AppText>
-            <AppText variant="bodyMd" color={MUTED} style={styles.quote}>
+            <AppText variant="bodyMd" color={colors.muted} style={styles.quote}>
               {t(credentialsDetail.careLink.quoteKey)}
             </AppText>
           </View>
@@ -178,10 +195,10 @@ export function DoctorCredentialsTab({
       ) : null}
 
       <View style={styles.reportCard}>
-        <AppText variant="titleMd" color="#000000" style={styles.reportTitle}>
+        <AppText variant="titleMd" color={colors.ink} style={styles.reportTitle}>
           {t('credSomethingWrong')}
         </AppText>
-        <AppText variant="bodyMd" color={MUTED} style={styles.reportBody}>
+        <AppText variant="bodyMd" color={colors.muted} style={styles.reportBody}>
           {t('credReportsGoTo')}
         </AppText>
         <Pressable
@@ -192,18 +209,6 @@ export function DoctorCredentialsTab({
             {t('credReportError')}
           </AppText>
         </Pressable>
-      </View>
-
-      <View style={styles.legal}>
-        <AppText variant="bodyMd" color={MUTED} style={styles.legalLink}>
-          {t('credReportProfileLink')}
-        </AppText>
-        <AppText variant="bodyMd" color={MUTED} style={styles.legalLink}>
-          {t('credPrivacyLink')}
-        </AppText>
-        <AppText variant="bodyMd" color={MUTED} style={styles.copyright}>
-          {t('credNetworkCopyright')}
-        </AppText>
       </View>
     </View>
   );
@@ -218,8 +223,8 @@ function VerifiedPill({
 }) {
   return (
     <View style={styles.pill}>
-      <Ionicons name={icon} size={16} color={SUCCESS} />
-      <AppText variant="labelSm" color={SUCCESS} weightOverride="600">
+      <Ionicons name={icon} size={14} color={colors.success} />
+      <AppText variant="labelSm" color={colors.success} weightOverride="600">
         {label}
       </AppText>
     </View>
@@ -228,180 +233,142 @@ function VerifiedPill({
 
 const styles = StyleSheet.create({
   root: {
-    gap: 32,
+    gap: spacing.lg,
   },
   identity: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: HAIRLINE,
-    borderRadius: radii.sm,
-    backgroundColor: colors.card,
+    gap: spacing.sm,
   },
   identityAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: radii.full,
-    backgroundColor: CHIP_FILL,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
   },
   identityInitials: {
-    fontSize: scaleFont(16),
-    lineHeight: scaleFont(20),
+    fontSize: scaleFont(18),
   },
   identityName: {
-    fontSize: scaleFont(20),
-    lineHeight: scaleFont(28),
+    marginBottom: 2,
+  },
+  flex: {
+    flex: 1,
+  },
+  bodySm: {
+    marginTop: 2,
   },
   section: {
-    gap: 16,
+    gap: spacing.sm,
   },
   sectionHead: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.xs,
   },
   sectionTitle: {
     flex: 1,
-    fontSize: scaleFont(20),
-    lineHeight: scaleFont(28),
   },
   banner: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 12,
-    padding: spacing.md,
-    borderRadius: radii.sm,
-    borderWidth: 1,
+    gap: spacing.xs,
+    borderRadius: radii.md,
+    padding: spacing.sm,
   },
   bannerGreen: {
-    backgroundColor: SUCCESS_FILL,
+    backgroundColor: colors.successContainer,
+    borderWidth: 1,
     borderColor: SUCCESS_BORDER,
   },
   bannerAmber: {
     backgroundColor: AMBER_FILL,
+    borderWidth: 1,
     borderColor: AMBER_BORDER,
   },
   bannerGrey: {
     backgroundColor: GREY_FILL,
-    borderColor: GREY_FILL,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
   },
   bannerText: {
     flex: 1,
-    fontSize: scaleFont(14),
-    lineHeight: scaleFont(20),
   },
   card: {
     backgroundColor: colors.card,
+    borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: HAIRLINE,
-    borderRadius: radii.sm,
+    borderColor: colors.outlineVariant,
     padding: spacing.md,
-    gap: 8,
+    gap: spacing.xs,
   },
   cardDetail: {
-    marginTop: 4,
-    fontSize: scaleFont(14),
-    lineHeight: scaleFont(20),
+    marginTop: 2,
   },
   regLines: {
-    gap: 8,
-    marginTop: 4,
+    gap: 2,
   },
   pill: {
     alignSelf: 'flex-start',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    backgroundColor: SUCCESS_FILL,
+    gap: 4,
+    marginTop: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
     borderRadius: radii.full,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginTop: 8,
+    backgroundColor: colors.successContainer,
+  },
+  hairline: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.outlineVariant,
+    marginBottom: spacing.sm,
   },
   focusTitleRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   activeTag: {
-    backgroundColor: SUCCESS_FILL,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
     borderRadius: radii.full,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    backgroundColor: colors.successContainer,
   },
   outlineButton: {
+    marginTop: spacing.xs,
     minHeight: 48,
-    marginTop: 8,
-    borderWidth: 1.5,
-    borderColor: ICON_BLUE,
-    borderRadius: radii.button,
-    backgroundColor: colors.card,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: spacing.xs,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: ICON_BLUE,
     paddingHorizontal: spacing.md,
   },
   pressed: {
     opacity: 0.85,
-    backgroundColor: CHIP_FILL,
   },
   quote: {
-    fontStyle: 'italic',
     marginTop: 4,
-    fontSize: scaleFont(14),
-    lineHeight: scaleFont(20),
-  },
-  hairline: {
-    height: 1,
-    backgroundColor: HAIRLINE,
-    marginBottom: 8,
   },
   reportCard: {
-    marginTop: 8,
-    alignItems: 'center',
-    padding: spacing.lg,
+    backgroundColor: colors.card,
+    borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: HAIRLINE,
-    borderRadius: radii.sm,
-    gap: spacing.md,
+    borderColor: colors.outlineVariant,
+    padding: spacing.md,
+    gap: spacing.xs,
   },
   reportTitle: {
-    textAlign: 'center',
-    fontSize: scaleFont(20),
-    lineHeight: scaleFont(28),
+    marginBottom: 2,
   },
   reportBody: {
-    textAlign: 'center',
-    fontSize: scaleFont(14),
-    lineHeight: scaleFont(20),
-  },
-  legal: {
-    alignItems: 'center',
-    gap: 12,
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: HAIRLINE,
-  },
-  legalLink: {
-    textAlign: 'center',
-    fontSize: scaleFont(14),
-    lineHeight: scaleFont(20),
-  },
-  copyright: {
-    textAlign: 'center',
-    fontSize: scaleFont(14),
-    lineHeight: scaleFont(20),
-  },
-  bodySm: {
-    fontSize: scaleFont(14),
-    lineHeight: scaleFont(20),
-  },
-  flex: {
-    flex: 1,
+    marginBottom: spacing.xs,
   },
 });

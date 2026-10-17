@@ -1,8 +1,9 @@
+import { Alert } from 'react-native';
 import { useCallback, useMemo, useState } from 'react';
-import { Linking } from 'react-native';
 
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import { useAppConfig } from '../providers/AppConfigProvider';
 import { useRequestAssistanceMutation } from '../store/api/new/supportApi';
 import { useAppSelector } from '../store/hooks';
 
@@ -21,6 +22,9 @@ export type BookWithHelpViewModel = {
   helpNeedOptions: { id: HelpNeedId; labelKey: TranslationKey }[];
   helpNeedPickerOpen: boolean;
   submitted: boolean;
+  showCallHelpline: boolean;
+  showWhatsApp: boolean;
+  supportUnavailable: boolean;
   onBack: () => void;
   onCallHelpline: () => void;
   onWhatsApp: () => void;
@@ -44,6 +48,7 @@ export function useBookWithHelpController({
   onBack: () => void;
 }): BookWithHelpViewModel {
   const { language, t } = useLocalization();
+  const appConfig = useAppConfig();
   const [callTime, setCallTime] = useState<CallBackTimeId>('now');
   const [helpNeed, setHelpNeed] = useState<HelpNeedId>('doctor');
   const [helpNeedPickerOpen, setHelpNeedPickerOpen] = useState(false);
@@ -79,16 +84,18 @@ export function useBookWithHelpController({
         preferredDate: callTime,
         contactMobile: mobileNumber || undefined,
       }).unwrap();
+      setSubmitted(true);
     } catch (err) {
       console.warn('[POST api/Support/AssistanceRequest] Failed:', err);
+      Alert.alert(t('bookHelpTitle'), t('bookHelpNeedOther'));
     }
-    setSubmitted(true);
   }, [
     requestAssistanceMutation,
     authUser?.patientId,
     helpNeedLabel,
     callTime,
     mobileNumber,
+    t,
   ]);
 
   return {
@@ -102,13 +109,12 @@ export function useBookWithHelpController({
     helpNeedOptions: HELP_NEEDS,
     helpNeedPickerOpen,
     submitted,
+    showCallHelpline: Boolean(appConfig.supportPhone),
+    showWhatsApp: Boolean(appConfig.supportWhatsApp),
+    supportUnavailable: !appConfig.hasAnySupportContact,
     onBack,
-    onCallHelpline: () => {
-      void Linking.openURL('tel:18001234567');
-    },
-    onWhatsApp: () => {
-      void Linking.openURL('https://wa.me/918001234567');
-    },
+    onCallHelpline: appConfig.openSupportPhone,
+    onWhatsApp: appConfig.openSupportWhatsApp,
     onSelectCallTime: setCallTime,
     onOpenHelpNeedPicker: () => setHelpNeedPickerOpen(true),
     onCloseHelpNeedPicker: () => setHelpNeedPickerOpen(false),

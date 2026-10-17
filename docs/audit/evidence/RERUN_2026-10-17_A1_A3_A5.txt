@@ -1,0 +1,36 @@
+RERUN 2026-10-17 static audit (read-only). Branch Devlopment_1.1 @ 48d7507.
+Working tree has uncommitted mobile binds after that commit. This scan reads the working tree.
+
+A1 URLs
+- src/config/apiConfig.ts:4 API_BASE_URL = https://devapi.homeocentrum.com/
+- app.json:116 extra.apiBaseUrl = https://devapi.homeocentrum.com/
+- src/config/env.ts:2 AppConfig.apiBaseUrl = https://devapi.homeocentrum.com/
+- Contract PatientMobile_Bind_APIs.md:9 same host.
+- No mismatch in the working tree. (An earlier note recorded a migration host; that value is not in app.json now.)
+
+A1 auth
+- prepareAuthHeaders.ts:13-16 attaches Bearer only when SecureStore has a token. Public routes still go through the same client.
+- newBaseApi.ts:46 401 triggers refresh via POST api/Account/RefreshToken (lines 63-70). Auth routes are excluded (48-52).
+- apiResponse.ts:4 documents 401 empty body; the client does not JSON-parse that body.
+- session.ts:37 logout uses accountApi.endpoints.logout.initiate (POST api/Account/Logout), not the generated hook name.
+- services/api/client.ts:31 and services/notifications/deviceTokenApi.ts:35 use fetch outside RTK Query.
+
+A3 hooks
+- 123 exported Query/Mutation hooks.
+- 44 names have no screen import. Logout and refresh are still called (session.ts / newBaseApi.ts).
+- Full table was printed by the inventory script in this session; unused names include Instant*, Tele token/session, DeviceCheck, ConsultOrders, Verify, PayMedicine, caregiver grant/revoke, Help slug, diary update/delete, ranking, waitlist, refund policy.
+
+A5 notable static hits
+- useHealthInsightsController.ts:53 FOLLOW_UPS fixture dates; :61 ADHERENCE number grid.
+- useMedicinesController.ts:129 non-final orders labelled delivered; :138 quoteAmount null becomes ₹0.00.
+- useConsultNowController.ts:361 CONSULT_NOW_FEE_RUPEES; :377 getDoctorProfile seed; :6 PLATFORM_FEE_RUPEES.
+- config/appointmentSlots.ts:184 PLATFORM_FEE_RUPEES = 90.
+- usePaymentStatusController.ts:111 SEED_PAYMENT_ID (deferred payment).
+- useWaitingRoomController.ts:71 forceDoctorLate; useVideoCallController.ts:186 elapsed 8*60+12 (deferred video).
+- OtpVerificationView.tsx:101 renders devOtp when set.
+- useUploadDocumentController.ts:93 Math.random only for a local temp id.
+
+A7
+- yarn typecheck exit 0 (RERUN_A7_typecheck.txt)
+- yarn lint exit 0 (RERUN_A7_lint.txt)
+- No unit-test script in package.json. Bundle/export not run.

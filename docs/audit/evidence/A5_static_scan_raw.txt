@@ -1,0 +1,99 @@
+=== Static/hardcoded scan ===
+--- require images ---
+src/config/images.ts:2:  appIcon: require('../../assets/image/app_icon.png'),
+src/config/images.ts:3:  favicon: require('../../assets/image/favicon.png'),
+src/config/images.ts:4:  languageSelectionBackground: require('../../assets/image/language_selection.png'),
+src/config/images.ts:5:  onboardingSlide1: require('../../assets/image/screen_1_icon.png'),
+src/config/images.ts:6:  onboardingSlide2: require('../../assets/image/screen_2_icon.png'),
+src/config/images.ts:7:  onboardingSlide3: require('../../assets/image/screen_3_icon.png'),
+src/config/images.ts:8:  categorySkin: require('../../assets/image/glowing-skin.png'),
+src/config/images.ts:9:  categoryAllergy: require('../../assets/image/allergy.png'),
+src/config/images.ts:10:  categoryDigestion: require('../../assets/image/gastroenterology.png'),
+src/config/images.ts:11:  categoryWomensHealth: require('../../assets/image/woman-avatar.png'),
+src/config/images.ts:12:  categoryChildCare: require('../../assets/image/baby.png'),
+src/config/images.ts:13:  doctorPortrait: require('../../assets/image/woman-avatar.png'),
+src/config/images.ts:14:  healthTipHero: require('../../assets/image/screen.png'),
+src/config/images.ts:15:  doctorNotAvailable: require('../../assets/image/doctor_not_available.png'),
+src/config/images.ts:16:  noRecordsFound: require('../../assets/image/no_record_found.png'),
+src/config/images.ts:17:  diaryEmpty: require('../../assets/image/diary_empty.png'),
+--- hardcoded names ---
+src/localization/mr.ts:317:  searchCityPune: 'पुणे',
+src/localization/mr.ts:319:  searchDoctorJoshiName: 'डॉ. ए. जोशी',
+src/localization/mr.ts:320:  searchDoctorJoshiMeta: 'BHMS • १५ वर्षे अनुभव',
+src/localization/mr.ts:321:  searchDoctorJoshiPlace: 'सोलापूर उत्तर • २.५ किमी',
+src/localization/mr.ts:373:  searchResultAnjaliName: 'डॉ. अंजली देशमुख',
+src/localization/mr.ts:374:  searchResultAnjaliCredentials:
+src/localization/mr.ts:376:  searchResultAnjaliReg: 'नोंदणी MH-HOM-24581',
+src/localization/mr.ts:377:  searchResultAnjaliExperience: '१२ वर्षे अनुभव · सोलापूर',
+src/localization/mr.ts:378:  searchResultAnjaliReviews: '(२१२ समीक्षा)',
+src/localization/mr.ts:379:  searchResultAnjaliFee: '₹६००',
+src/localization/mr.ts:380:  searchResultAnjaliWhen: 'आज सायं. ६:३०',
+src/localization/mr.ts:482:  credAnjaliMdTitle: 'एम.डी. (होमिओपॅथी) — प्रॅक्टिस ऑफ मेडिसिन',
+src/localization/mr.ts:483:  credAnjaliMdDetail: 'शासकीय होमिओपॅथिक मेडिकल कॉलेज, पुणे · २०१६',
+src/localization/mr.ts:484:  credAnjaliMdBadge: '१२ ऑगस्ट २०२६ रोजी सत्यापित',
+src/localization/mr.ts:485:  credAnjaliBhmsTitle: 'बी.एच.एम.एस.',
+src/localization/mr.ts:486:  credAnjaliBhmsDetail: 'महाराष्ट्र आरोग्य विज्ञान विद्यापीठ · २०१२',
+src/localization/mr.ts:487:  credAnjaliRegTitle: 'नोंदणी क्र. MH-HOM-24581',
+src/localization/mr.ts:488:  credAnjaliCouncil: 'परिषद: महाराष्ट्र होमिओपॅथी परिषद',
+src/localization/mr.ts:489:  credAnjaliValid: 'वैधता: ३१ मार्च २०२८ पर्यंत',
+src/localization/mr.ts:490:  credAnjaliFocusTitle: 'होमिओसेंट्रम सर्टिफाइड फोकस प्रॅक्टिशनर — त्वचा काळजी',
+src/localization/mr.ts:491:  credAnjaliFocusId: 'प्रमाणपत्र आयडी HC-FP-SKN-0912 · जारी ०४ फेब्रुवारी २०२६',
+src/localization/mr.ts:492:  credAnjaliFocusValid: 'वैधता ०४ फेब्रुवारी २०२९ पर्यंत',
+src/localization/mr.ts:493:  credAnjaliCareLinkTitle: 'जिल्हा सल्लागार · केअरलिंक',
+src/localization/mr.ts:494:  credAnjaliCareLinkQuote:
+src/localization/mr.ts:520:  profileAnjaliExp: '१२ वर्षे अनुभव',
+src/localization/mr.ts:521:  profileAnjaliConsults: '१,८४० सल्लामसलत',
+src/localization/mr.ts:522:  profileAnjaliAbout:
+src/localization/mr.ts:524:  profileAnjaliRegVerified: 'नोंदणी MH-HOM-24581 सत्यापित',
+src/localization/mr.ts:525:  profileAnjaliLastVerified: 'शेवटचे सत्यापन १२ ऑगस्ट २०२६',
+src/localization/mr.ts:526:  profileAnjaliNext: 'पुढील उपलब्ध बुध, २६ ऑगस्ट, सायं. ६:३०',
+src/localization/mr.ts:527:  profileAnjaliClinicFee: '₹५००',
+src/localization/mr.ts:646:  bookMeeraMeta: '३१ वर्षे • पती/पत्नी',
+src/localization/mr.ts:664:  bookAnjaliShortCreds: 'बी.एच.एम.एस., एम.डी. (होम.)',
+src/localization/mr.ts:1119:  recordsMeera: 'मीरा',
+src/localization/mr.ts:1601:  medsMemberMeera: 'मीरा',
+src/localization/mr.ts:1936:  payHistItemConsultAnjali: 'सल्ला — डॉ. अंजली देशमुख',
+src/localization/mr.ts:1937:  payHistMetaConsultAnjali: '२६ ऑगस्ट २०२६ · UPI · APT-2026-88214',
+src/localization/types.ts:279:  | 'searchCityPune'
+src/localization/types.ts:281:  | 'searchDoctorJoshiName'
+src/localization/types.ts:282:  | 'searchDoctorJoshiMeta'
+src/localization/types.ts:283:  | 'searchDoctorJoshiPlace'
+src/localization/types.ts:330:  | 'searchResultAnjaliName'
+src/localization/types.ts:331:  | 'searchResultAnjaliCredentials'
+src/localization/types.ts:332:  | 'searchResultAnjaliReg'
+src/localization/types.ts:333:  | 'searchResultAnjaliExperience'
+src/localization/types.ts:334:  | 'searchResultAnjaliReviews'
+src/localization/types.ts:335:  | 'searchResultAnjaliFee'
+src/localization/types.ts:336:  | 'searchResultAnjaliWhen'
+src/localization/types.ts:431:  | 'credAnjaliMdTitle'
+src/localization/types.ts:432:  | 'credAnjaliMdDetail'
+src/localization/types.ts:433:  | 'credAnjaliMdBadge'
+src/localization/types.ts:434:  | 'credAnjaliBhmsTitle'
+src/localization/types.ts:435:  | 'credAnjaliBhmsDetail'
+src/localization/types.ts:436:  | 'credAnjaliRegTitle'
+src/localization/types.ts:437:  | 'credAnjaliCouncil'
+src/localization/types.ts:438:  | 'credAnjaliValid'
+src/localization/types.ts:439:  | 'credAnjaliFocusTitle'
+src/localization/types.ts:440:  | 'credAnjaliFocusId'
+src/localization/types.ts:441:  | 'credAnjaliFocusValid'
+src/localization/types.ts:442:  | 'credAnjaliCareLinkTitle'
+src/localization/types.ts:443:  | 'credAnjaliCareLinkQuote'
+src/localization/types.ts:465:  | 'profileAnjaliExp'
+src/localization/types.ts:466:  | 'profileAnjaliConsults'
+src/localization/types.ts:467:  | 'profileAnjaliAbout'
+src/localization/types.ts:468:  | 'profileAnjaliRegVerified'
+src/localization/types.ts:469:  | 'profileAnjaliLastVerified'
+src/localization/types.ts:470:  | 'profileAnjaliNext'
+src/localization/types.ts:471:  | 'profileAnjaliClinicFee'
+src/localization/types.ts:584:  | 'bookMeeraMeta'
+src/localization/types.ts:601:  | 'bookAnjaliShortCreds'
+src/localization/types.ts:1029:  | 'recordsMeera'
+src/localization/types.ts:1477:  | 'medsMemberMeera'
+src/localization/types.ts:1781:  | 'payHistItemConsultAnjali'
+src/localization/types.ts:1782:  | 'payHistMetaConsultAnjali'
+src/localization/en.ts:162:  homeDoctorName: 'Dr. Anjali Deshmukh',
+src/localization/en.ts:196:  homeTipReviewedBy: 'Reviewed by Dr. N. Jamdar',
+src/localization/en.ts:224:  tipEczemaReviewer: 'Dr. Nikhil Bondar',
+src/localization/en.ts:261:  tipImmunityReviewer: 'Dr. N. Jamdar',
+src/localization/en.ts:292:  searchRecentDoctor: 'Dr. Deshmukh',
+src/localization/en.ts:319:  searchCityPune: 'Pune',

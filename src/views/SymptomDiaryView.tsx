@@ -25,14 +25,8 @@ import { radii } from '../theme/radii';
 import { layout, spacing } from '../theme/spacing';
 import { SymptomDiaryEntryView } from './SymptomDiaryEntryView';
 
-const INK = '#1F1F1F';
-const MUTED = '#595959';
-const HAIRLINE = '#E6E6E6';
-const ACTION = '#2A7BA3';
-const SUCCESS = '#0F7A4E';
-const SUCCESS_FILL = '#E9F5EF';
-const WARN = '#8A5109';
-const WARN_FILL = '#FCF3E4';
+const WARN = colors.warning;
+const WARN_FILL = colors.warningContainer;
 
 export function SymptomDiaryView(vm: SymptomDiaryViewModel) {
   const insets = useSafeAreaInsets();
@@ -56,9 +50,9 @@ export function SymptomDiaryView(vm: SymptomDiaryViewModel) {
             onPress={vm.onBack}
             style={styles.iconHit}
           >
-            <Ionicons name="arrow-back" size={24} color={INK} />
+            <Ionicons name="arrow-back" size={24} color={colors.ink} />
           </Pressable>
-          <AppText variant="headlineMd" color={INK} style={styles.headerTitle} numberOfLines={1}>
+          <AppText variant="headlineMd" color={colors.ink} style={styles.headerTitle} numberOfLines={1}>
             {vm.t('diaryTitle')}
           </AppText>
           <Pressable
@@ -67,17 +61,17 @@ export function SymptomDiaryView(vm: SymptomDiaryViewModel) {
             onPress={vm.onOpenCalendar}
             style={styles.iconHit}
           >
-            <Ionicons name="calendar-outline" size={22} color={INK} />
+            <Ionicons name="calendar-outline" size={22} color={colors.ink} />
           </Pressable>
           <Pressable
             accessibilityRole="button"
             onPress={vm.onOpenMemberPicker}
             style={styles.memberChip}
           >
-            <AppText variant="labelSm" color={MUTED}>
+            <AppText variant="labelSm" color={colors.muted}>
               {vm.memberLabel}
             </AppText>
-            <Ionicons name="chevron-down" size={16} color={MUTED} />
+            <Ionicons name="chevron-down" size={16} color={colors.muted} />
           </Pressable>
         </View>
       </View>
@@ -100,13 +94,13 @@ export function SymptomDiaryView(vm: SymptomDiaryViewModel) {
                     onPress={() => vm.onSelectDay(day.id)}
                     style={styles.dayItem}
                   >
-                    <AppText variant="labelSm" color={MUTED}>
+                    <AppText variant="labelSm" color={colors.muted}>
                       {vm.t(day.weekdayKey)}
                     </AppText>
                     <View style={[styles.dayCircle, selected && styles.dayCircleOn]}>
                       <AppText
                         variant="bodyMd"
-                        color={selected ? colors.onButton : INK}
+                        color={selected ? colors.onButton : colors.ink}
                         weightOverride="600"
                       >
                         {day.dateLabel}
@@ -140,10 +134,10 @@ export function SymptomDiaryView(vm: SymptomDiaryViewModel) {
                 <Ionicons name="flame" size={26} color={WARN} />
               </View>
               <View style={styles.flex}>
-                <AppText variant="titleMd" color={INK}>
+                <AppText variant="titleMd" color={colors.ink}>
                   {vm.t('diaryStreakTitle')}
                 </AppText>
-                <AppText variant="bodyMd" color={MUTED}>
+                <AppText variant="bodyMd" color={colors.muted}>
                   {vm.t('diaryStreakBody')}
                 </AppText>
               </View>
@@ -164,13 +158,13 @@ export function SymptomDiaryView(vm: SymptomDiaryViewModel) {
                     onPress={() => vm.onSelectDay(day.id)}
                     style={styles.dayItem}
                   >
-                    <AppText variant="labelSm" color={MUTED}>
+                    <AppText variant="labelSm" color={colors.muted}>
                       {vm.t(day.weekdayKey)}
                     </AppText>
                     <View style={[styles.dayCircle, selected && styles.dayCircleOn]}>
                       <AppText
                         variant="bodyMd"
-                        color={selected ? colors.onButton : INK}
+                        color={selected ? colors.onButton : colors.ink}
                         weightOverride="600"
                       >
                         {day.dateLabel}
@@ -183,7 +177,7 @@ export function SymptomDiaryView(vm: SymptomDiaryViewModel) {
 
             {vm.entriesForDay.map((entry) => (
               <View key={entry.id} style={styles.section}>
-                <AppText variant="labelSm" color={MUTED} style={styles.sectionLabel}>
+                <AppText variant="labelSm" color={colors.muted} style={styles.sectionLabel}>
                   {vm.t(entry.sectionKey)}
                 </AppText>
                 <Pressable
@@ -193,9 +187,9 @@ export function SymptomDiaryView(vm: SymptomDiaryViewModel) {
                 >
                   <View style={styles.entryHead}>
                     <SeverityPill severity={entry.severity} t={vm.t} />
-                    <Ionicons name="chevron-forward" size={20} color={MUTED} />
+                    <Ionicons name="chevron-forward" size={20} color={colors.muted} />
                   </View>
-                  <AppText variant="bodyMd" color={INK}>
+                  <AppText variant="bodyMd" color={colors.ink}>
                     {entry.noteText
                       ? `"${entry.noteText}"`
                       : entry.noteKey
@@ -286,10 +280,10 @@ function EmptyDiary({
           resizeMode="contain"
         />
       </View>
-      <AppText variant="headlineMd" color={INK} style={styles.center}>
+      <AppText variant="headlineMd" color={colors.ink} style={styles.center}>
         {title}
       </AppText>
-      <AppText variant="bodyMd" color={MUTED} style={styles.center}>
+      <AppText variant="bodyMd" color={colors.muted} style={styles.center}>
         {body}
       </AppText>
       <AppButton
@@ -299,8 +293,8 @@ function EmptyDiary({
         style={styles.emptyCta}
       />
       <View style={styles.secureRow}>
-        <Ionicons name="shield-checkmark-outline" size={16} color={MUTED} />
-        <AppText variant="labelSm" color={MUTED}>
+        <Ionicons name="shield-checkmark-outline" size={16} color={colors.muted} />
+        <AppText variant="labelSm" color={colors.muted}>
           {secure}
         </AppText>
       </View>
@@ -320,18 +314,18 @@ function SeverityPill({
     <View
       style={[
         styles.sevPill,
-        { backgroundColor: mild ? SUCCESS_FILL : WARN_FILL },
+        { backgroundColor: mild ? colors.successContainer : WARN_FILL },
       ]}
     >
       <View
         style={[
           styles.sevDot,
-          { backgroundColor: mild ? SUCCESS : WARN },
+          { backgroundColor: mild ? colors.success : WARN },
         ]}
       />
       <AppText
         variant="labelSm"
-        color={mild ? SUCCESS : WARN}
+        color={mild ? colors.success : WARN}
         weightOverride="600"
       >
         {t(
@@ -358,7 +352,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   headerRow: {
     minHeight: 56,
@@ -383,7 +377,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.full,
     paddingHorizontal: spacing.sm,
     backgroundColor: colors.card,
@@ -397,7 +391,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
   },
@@ -424,13 +418,13 @@ const styles = StyleSheet.create({
     borderRadius: radii.full,
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
   },
   dayCircleOn: {
-    backgroundColor: ACTION,
-    borderColor: ACTION,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   section: {
     gap: spacing.sm,
@@ -443,7 +437,7 @@ const styles = StyleSheet.create({
   entryCard: {
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
     gap: spacing.sm,
@@ -474,7 +468,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: radii.sm,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
   },
   fab: {
     position: 'absolute',
@@ -500,7 +494,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.default,
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.md,

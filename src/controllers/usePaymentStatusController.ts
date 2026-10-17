@@ -4,22 +4,20 @@ import { formatHoldTime } from '../config/bookingPayment';
 import type { ConsultMode } from '../config/appointmentSlots';
 import {
   makeBookingId,
-  SEED_ATTEMPT_ID,
-  SEED_PAYMENT_ID,
   SEED_REASON_KEY,
 } from '../config/bookedAppointments';
 import type { BookedAppointment } from '../config/bookedAppointments';
 import type { PaymentStatus } from './useBookAppointmentController';
-import { getDoctorProfile } from '../config/doctorProfiles';
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import { maskPaymentId } from '../payments';
 
 export type PaymentStatusDraft = {
   status: PaymentStatus;
   doctorId: string;
   doctorName: string;
   doctorInitials: string;
-  experienceKey: TranslationKey;
+  experienceKey: TranslationKey | '';
   whenLabel: string;
   dateLine: string;
   timeLine: string;
@@ -31,6 +29,8 @@ export type PaymentStatusDraft = {
   patientLabel: string;
   totalLabel: string;
   holdSeconds: number;
+  /** Server paymentOrderId — never a seed literal. */
+  paymentOrderId: number | null;
 };
 
 export type PaymentStatusViewModel = {
@@ -86,18 +86,20 @@ export function usePaymentStatusController({
   }, [active]);
 
   useEffect(() => {
+    // Only add a local calendar row after the server confirmed CAPTURED (status success).
     if (!active || draft.status !== 'success' || confirmed.current) {
       return;
     }
     confirmed.current = true;
-    const profile = getDoctorProfile(draft.doctorId);
+    const paymentId =
+      draft.paymentOrderId != null ? String(draft.paymentOrderId) : '';
     onConfirmBooking({
       id: `${draft.doctorId}-${draft.whenLabel}-${draft.patientLabel}`,
       bookingId: makeBookingId(),
       doctorId: draft.doctorId,
-      doctorNameKey: profile.nameKey,
+      doctorNameKey: '' as TranslationKey,
       doctorInitials: draft.doctorInitials,
-      credentialsKey: profile.credentialsKey,
+      credentialsKey: '' as TranslationKey,
       experienceKey: draft.experienceKey,
       whenLabel: draft.whenLabel,
       dateLine: draft.dateLine,
@@ -108,7 +110,7 @@ export function usePaymentStatusController({
       modeConsultLabel: draft.modeConsultLabel,
       patientLabel: draft.patientLabel,
       feeLabel: draft.totalLabel,
-      paymentId: SEED_PAYMENT_ID,
+      paymentId,
       reasonKey: SEED_REASON_KEY,
       status: 'waiting_acceptance',
       ...(draft.mode === 'chat'
@@ -122,20 +124,27 @@ export function usePaymentStatusController({
     });
   }, [active, draft, onConfirmBooking]);
 
+  const paymentLabel =
+    draft.paymentOrderId != null
+      ? maskPaymentId(draft.paymentOrderId)
+      : '—';
+
   return {
     language,
     t,
     status: draft.status,
     doctorName: draft.doctorName,
     doctorInitials: draft.doctorInitials,
-    specialtyLine: `${t('payStatusHomeopath')} · ${t(draft.experienceKey)}`,
+    specialtyLine: draft.experienceKey
+      ? `${t('payStatusHomeopath')} · ${t(draft.experienceKey)}`
+      : t('payStatusHomeopath'),
     whenLabel: draft.whenLabel,
     modeConsultLabel: draft.modeConsultLabel,
     patientLabel: draft.patientLabel,
     successMeta: t('payStatusSuccessMeta')
       .replace('{amount}', draft.totalLabel)
-      .replace('{id}', SEED_PAYMENT_ID),
-    attemptId: SEED_ATTEMPT_ID,
+      .replace('{id}', paymentLabel),
+    attemptId: paymentLabel,
     holdMoreLabel: t('payStatusHoldMore')
       .replace('{slot}', draft.slotTimeLabel)
       .replace('{time}', formatHoldTime(draft.holdSeconds)),

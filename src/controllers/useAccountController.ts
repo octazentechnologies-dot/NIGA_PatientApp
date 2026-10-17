@@ -8,7 +8,18 @@ import {
   useGetPatientProfileQuery,
   useUpdatePatientProfileMutation,
 } from '../store/api/new/patientProfileApi';
-import { useCreateDataRequestMutation } from '../store/api/new/consentApi';
+import {
+  useCreateDataRequestMutation,
+  useGetDataRequestsQuery,
+} from '../store/api/new/consentApi';
+import { messageFromUnknownError } from '../utilities/apiResponse';
+
+export type DataRequestHistoryRow = {
+  id: string;
+  typeLabel: string;
+  statusLabel: string;
+  createdAt: string;
+};
 
 export type AccountViewModel = {
   language: AppLanguage;
@@ -31,6 +42,11 @@ export type AccountViewModel = {
   onSelectLanguage: (language: AppLanguage) => void;
   onLogOut: () => void;
   onDeleteAccount: () => void;
+  dataRequestMessage: string | null;
+  dataRequestBusy: boolean;
+  dataRequestHistory: DataRequestHistoryRow[];
+  dataRequestsOpen: boolean;
+  onCloseDataRequests: () => void;
 };
 
 export function useAccountController({
@@ -70,6 +86,11 @@ export function useAccountController({
   const [astroEnabled, setAstroEnabled] = useState(false);
   const [lowDataMode, setLowDataMode] = useState(true);
   const [languagePickerOpen, setLanguagePickerOpen] = useState(false);
+  const [dataRequestMessage, setDataRequestMessage] = useState<string | null>(
+    null,
+  );
+  const [dataRequestBusy, setDataRequestBusy] = useState(false);
+  const [dataRequestsOpen, setDataRequestsOpen] = useState(false);
 
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const authUser = useAppSelector((state) => state.auth.user);
@@ -80,6 +101,40 @@ export function useAccountController({
   });
   const [updatePatientProfile] = useUpdatePatientProfileMutation();
   const [createDataRequestMutation] = useCreateDataRequestMutation();
+  const { data: dataRequestsList } = useGetDataRequestsQuery(undefined, {
+    skip: !isAuthenticated,
+  });
+  const dataRequestHistory: DataRequestHistoryRow[] = (dataRequestsList ?? []).map(
+    (row, index) => ({
+      id: String(row.dataRequestId ?? index),
+      typeLabel: String(row.requestType || row.type || 'REQUEST'),
+      statusLabel: String(row.status || '').trim() || 'Unknown',
+      createdAt: row.createdAt?.trim() || '',
+    }),
+  );
+
+  const submitDataRequest = (requestType: 'EXPORT' | 'DELETE') => {
+    if (!isAuthenticated || dataRequestBusy) {
+      return;
+    }
+    setDataRequestBusy(true);
+    setDataRequestMessage(null);
+    void createDataRequestMutation({ requestType })
+      .unwrap()
+      .then((response) => {
+        const status = response.data?.status?.trim();
+        setDataRequestMessage(
+          response.message?.trim() ||
+            (status ? `Request received (${status}).` : 'Request received.'),
+        );
+      })
+      .catch((err: unknown) => {
+        setDataRequestMessage(messageFromUnknownError(err));
+      })
+      .finally(() => {
+        setDataRequestBusy(false);
+      });
+  };
   const apiProfile = profileQueryResponse?.data;
 
   const profileName =
@@ -174,7 +229,15 @@ export function useAccountController({
       if (id === 'notifications') {
         onOpenNotificationSettings?.();
       }
+      if (id === 'data-requests') {
+        setDataRequestsOpen(true);
+        return;
+      }
+      if (id === 'download') {
+        submitDataRequest('EXPORT');
+      }
     },
+    onCloseDataRequests: () => setDataRequestsOpen(false),
     onToggleAstro: () => setAstroEnabled((value) => !value),
     onToggleLowData: () => setLowDataMode((value) => !value),
     onOpenLanguagePicker: () => setLanguagePickerOpen(true),
@@ -188,10 +251,10 @@ export function useAccountController({
       }
     },
     onLogOut,
-    onDeleteAccount: () => {
-      if (isAuthenticated) {
-        void createDataRequestMutation({ requestType: 'DELETE' });
-      }
-    },
+    onDeleteAccount: () => submitDataRequest('DELETE'),
+    dataRequestMessage,
+    dataRequestBusy,
+    dataRequestHistory,
+    dataRequestsOpen,
   };
 }

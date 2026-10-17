@@ -25,13 +25,8 @@ import { radii } from '../theme/radii';
 import { layout, spacing } from '../theme/spacing';
 import { fontFamilyFor } from '../utilities/fonts';
 
-const INK = '#1F1F1F';
-const MUTED = '#595959';
-const HAIRLINE = '#E6E6E6';
-const ACTION = '#2A7BA3';
-const CHIP_FILL = '#E6F5FE';
-const PLACEHOLDER = '#8A8A8A';
-const INFO_FILL = '#E6F5FE';
+const PLACEHOLDER = colors.outline;
+const INFO_FILL = colors.primaryContainer;
 
 const SEVERITIES: {
   id: DiarySeverity;
@@ -76,9 +71,9 @@ export function SymptomDiaryEntryView(vm: SymptomDiaryViewModel) {
             onPress={vm.onCloseEntry}
             style={styles.iconHit}
           >
-            <Ionicons name="close" size={24} color={INK} />
+            <Ionicons name="close" size={24} color={colors.ink} />
           </Pressable>
-          <AppText variant="headlineMd" color={INK} style={styles.headerTitle} numberOfLines={1}>
+          <AppText variant="headlineMd" color={colors.ink} style={styles.headerTitle} numberOfLines={1}>
             {vm.t('diaryEntryTitle')}
           </AppText>
           <View style={styles.iconHit} />
@@ -99,14 +94,14 @@ export function SymptomDiaryEntryView(vm: SymptomDiaryViewModel) {
         ]}
       >
         <Pressable style={styles.dateRow}>
-          <Ionicons name="calendar-outline" size={20} color={MUTED} />
-          <AppText variant="bodyLg" color={INK} style={styles.flex}>
+          <Ionicons name="calendar-outline" size={20} color={colors.muted} />
+          <AppText variant="bodyLg" color={colors.ink} style={styles.flex}>
             {vm.entryDateLabel}
           </AppText>
-          <Ionicons name="chevron-forward" size={20} color={MUTED} />
+          <Ionicons name="chevron-forward" size={20} color={colors.muted} />
         </Pressable>
 
-        <AppText variant="titleMd" color={INK}>
+        <AppText variant="titleMd" color={colors.ink}>
           {vm.t('diarySymptomsToday')}
         </AppText>
         <View style={styles.severityRow}>
@@ -129,12 +124,12 @@ export function SymptomDiaryEntryView(vm: SymptomDiaryViewModel) {
                   <Ionicons
                     name={item.icon}
                     size={22}
-                    color={selected ? ACTION : MUTED}
+                    color={selected ? colors.primary : colors.muted}
                   />
                 </View>
                 <AppText
                   variant="labelSm"
-                  color={selected ? ACTION : MUTED}
+                  color={selected ? colors.primary : colors.muted}
                   weightOverride={selected ? '600' : undefined}
                   style={styles.center}
                 >
@@ -145,7 +140,7 @@ export function SymptomDiaryEntryView(vm: SymptomDiaryViewModel) {
           })}
         </View>
 
-        <AppText variant="titleMd" color={INK}>
+        <AppText variant="titleMd" color={colors.ink}>
           {vm.t('diaryWhichSymptoms')}
         </AppText>
         <View style={styles.chipWrap}>
@@ -159,23 +154,23 @@ export function SymptomDiaryEntryView(vm: SymptomDiaryViewModel) {
                 onPress={() => vm.onToggleSymptom(item.id)}
                 style={[styles.chip, selected && styles.chipOn]}
               >
-                <AppText variant="bodyMd" color={INK}>
+                <AppText variant="bodyMd" color={colors.ink}>
                   {vm.t(item.labelKey)}
                 </AppText>
                 {selected ? (
-                  <Ionicons name="checkmark" size={16} color={ACTION} />
+                  <Ionicons name="checkmark" size={16} color={colors.primary} />
                 ) : null}
               </Pressable>
             );
           })}
           <Pressable style={styles.chipAdd}>
-            <AppText variant="bodyMd" color={ACTION}>
+            <AppText variant="bodyMd" color={colors.primary}>
               {vm.t('diaryAddOwn')}
             </AppText>
           </Pressable>
         </View>
 
-        <AppText variant="titleMd" color={INK}>
+        <AppText variant="titleMd" color={colors.ink}>
           {vm.t('diarySleep')}
         </AppText>
         <View style={styles.optionRow}>
@@ -191,7 +186,7 @@ export function SymptomDiaryEntryView(vm: SymptomDiaryViewModel) {
               >
                 <AppText
                   variant="labelSm"
-                  color={selected ? ACTION : INK}
+                  color={selected ? colors.primary : colors.ink}
                   weightOverride={selected ? '600' : undefined}
                   style={styles.center}
                 >
@@ -202,7 +197,7 @@ export function SymptomDiaryEntryView(vm: SymptomDiaryViewModel) {
           })}
         </View>
 
-        <AppText variant="titleMd" color={INK}>
+        <AppText variant="titleMd" color={colors.ink}>
           {vm.t('diaryAppetite')}
         </AppText>
         <View style={styles.optionRow}>
@@ -218,7 +213,7 @@ export function SymptomDiaryEntryView(vm: SymptomDiaryViewModel) {
               >
                 <AppText
                   variant="labelSm"
-                  color={selected ? ACTION : INK}
+                  color={selected ? colors.primary : colors.ink}
                   weightOverride={selected ? '600' : undefined}
                   style={styles.center}
                 >
@@ -230,7 +225,7 @@ export function SymptomDiaryEntryView(vm: SymptomDiaryViewModel) {
         </View>
 
         <View style={styles.notesHead}>
-          <AppText variant="titleMd" color={INK} style={styles.flex}>
+          <AppText variant="titleMd" color={colors.ink} style={styles.flex}>
             {vm.t('diaryNotes')}
           </AppText>
           <Pressable
@@ -238,7 +233,7 @@ export function SymptomDiaryEntryView(vm: SymptomDiaryViewModel) {
             onPress={vm.onToggleNotesLanguage}
             style={styles.langChip}
           >
-            <AppText variant="labelSm" color={ACTION} weightOverride="600">
+            <AppText variant="labelSm" color={colors.primary} weightOverride="600">
               {vm.notesMr ? 'EN' : 'मराठी'}
             </AppText>
           </Pressable>
@@ -265,12 +260,12 @@ export function SymptomDiaryEntryView(vm: SymptomDiaryViewModel) {
           <Ionicons
             name="mic-outline"
             size={22}
-            color={MUTED}
+            color={colors.muted}
             style={styles.mic}
           />
         </View>
 
-        <AppText variant="titleMd" color={INK}>
+        <AppText variant="titleMd" color={colors.ink}>
           {vm.t('diaryAddPhotos')}
         </AppText>
         <View style={styles.photoRow}>
@@ -279,8 +274,8 @@ export function SymptomDiaryEntryView(vm: SymptomDiaryViewModel) {
             onPress={vm.onAddPhoto}
             style={styles.photoAdd}
           >
-            <Ionicons name="camera-outline" size={24} color={ACTION} />
-            <AppText variant="labelSm" color={ACTION}>
+            <Ionicons name="camera-outline" size={24} color={colors.primary} />
+            <AppText variant="labelSm" color={colors.primary}>
               {vm.t('diaryPhotoAdd')}
             </AppText>
           </Pressable>
@@ -296,15 +291,15 @@ export function SymptomDiaryEntryView(vm: SymptomDiaryViewModel) {
                 onPress={vm.onRemovePhoto}
                 style={styles.photoRemove}
               >
-                <Ionicons name="close" size={14} color={INK} />
+                <Ionicons name="close" size={14} color={colors.ink} />
               </Pressable>
             </View>
           ) : null}
         </View>
 
         <View style={styles.infoBanner}>
-          <Ionicons name="information-circle-outline" size={18} color={ACTION} />
-          <AppText variant="bodyMd" color={MUTED} style={styles.flex}>
+          <Ionicons name="information-circle-outline" size={18} color={colors.primary} />
+          <AppText variant="bodyMd" color={colors.muted} style={styles.flex}>
             {vm.t('diaryDoctorSees')}
           </AppText>
         </View>
@@ -330,7 +325,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   headerRow: {
     minHeight: 48,
@@ -359,7 +354,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     paddingHorizontal: spacing.md,
   },
@@ -378,15 +373,15 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: radii.full,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
   severityCircleOn: {
     borderWidth: 2,
-    borderColor: ACTION,
-    backgroundColor: CHIP_FILL,
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryContainer,
   },
   chipWrap: {
     flexDirection: 'row',
@@ -400,20 +395,20 @@ const styles = StyleSheet.create({
     gap: 4,
     borderRadius: radii.full,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     backgroundColor: colors.card,
     paddingHorizontal: spacing.md,
   },
   chipOn: {
-    borderColor: ACTION,
-    backgroundColor: CHIP_FILL,
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryContainer,
   },
   chipAdd: {
     minHeight: 48,
     borderRadius: radii.full,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: ACTION,
+    borderColor: colors.primary,
     paddingHorizontal: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
@@ -427,15 +422,15 @@ const styles = StyleSheet.create({
     minHeight: 48,
     borderRadius: radii.sm,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.sm,
   },
   optionBtnOn: {
-    backgroundColor: CHIP_FILL,
-    borderColor: ACTION,
+    backgroundColor: colors.primaryContainer,
+    borderColor: colors.primary,
   },
   notesHead: {
     flexDirection: 'row',
@@ -446,7 +441,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     borderRadius: radii.full,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -454,7 +449,7 @@ const styles = StyleSheet.create({
     minHeight: 120,
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
   },
@@ -462,7 +457,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 88,
     fontSize: 16,
-    color: INK,
+    color: colors.ink,
     paddingRight: 28,
   },
   mic: {
@@ -480,7 +475,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: ACTION,
+    borderColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
@@ -490,7 +485,7 @@ const styles = StyleSheet.create({
     width: 88,
     height: 88,
     borderRadius: radii.sm,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
   },
   photoRemove: {
     position: 'absolute',
@@ -501,7 +496,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.full,
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -518,7 +513,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     backgroundColor: colors.card,
     borderTopWidth: 1,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
   },
   flex: {
     flex: 1,

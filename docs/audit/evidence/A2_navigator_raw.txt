@@ -1,0 +1,191 @@
+=== AppNavigator screen mounts ===
+2:import { StyleSheet, View } from 'react-native';
+31:import { useCompleteProfileController } from '../controllers/useCompleteProfileController';
+32:import { useConsentController } from '../controllers/useConsentController';
+33:import { useFamilyMembersController } from '../controllers/useFamilyMembersController';
+34:import { useFirstLaunchController } from '../controllers/useFirstLaunchController';
+35:import { useHomeController } from '../controllers/useHomeController';
+36:import { useOnboardingController } from '../controllers/useOnboardingController';
+37:import { useOtpVerificationController } from '../controllers/useOtpVerificationController';
+38:import { useSearchDoctorsController } from '../controllers/useSearchDoctorsController';
+39:import { useSearchResultsController } from '../controllers/useSearchResultsController';
+40:import { useDoctorProfileController } from '../controllers/useDoctorProfileController';
+41:import { useBookAppointmentController } from '../controllers/useBookAppointmentController';
+42:import { useBookingPaymentController } from '../controllers/useBookingPaymentController';
+43:import { useBookingReviewController } from '../controllers/useBookingReviewController';
+44:import { useAppointmentDetailController } from '../controllers/useAppointmentDetailController';
+45:import { useDeviceCheckController } from '../controllers/useDeviceCheckController';
+46:import { usePhoneSetupController } from '../controllers/usePhoneSetupController';
+47:import { useJoinFailedController } from '../controllers/useJoinFailedController';
+48:import { useConsultationChatController } from '../controllers/useConsultationChatController';
+49:import { useConsultationCompleteController } from '../controllers/useConsultationCompleteController';
+50:import { useRateConsultationController } from '../controllers/useRateConsultationController';
+51:import { useWaitingRoomController } from '../controllers/useWaitingRoomController';
+52:import { useVideoCallController } from '../controllers/useVideoCallController';
+53:import { usePaymentStatusController } from '../controllers/usePaymentStatusController';
+54:import { useConsultNowController } from '../controllers/useConsultNowController';
+55:import { useFollowUpPlanController } from '../controllers/useFollowUpPlanController';
+56:import { useHealthTipController } from '../controllers/useHealthTipController';
+57:import { useSignInController } from '../controllers/useSignInController';
+58:import { useSplashController } from '../controllers/useSplashController';
+59:import { useSymptomDiaryController } from '../controllers/useSymptomDiaryController';
+60:import { useCliniSightProgressController } from '../controllers/useCliniSightProgressController';
+61:import { useHealthInsightsController } from '../controllers/useHealthInsightsController';
+62:import { useRemindersCentreController } from '../controllers/useRemindersCentreController';
+63:import { useOrderMedicinesController } from '../controllers/useOrderMedicinesController';
+64:import { useOrderTrackingController } from '../controllers/useOrderTrackingController';
+65:import { useOrderDetailsController } from '../controllers/useOrderDetailsController';
+66:import { usePaymentsController } from '../controllers/usePaymentsController';
+67:import { useConsentCentreController } from '../controllers/useConsentCentreController';
+68:import { useMyReviewsController } from '../controllers/useMyReviewsController';
+69:import { useAppealReviewController } from '../controllers/useAppealReviewController';
+70:import { useHelpCentreController } from '../controllers/useHelpCentreController';
+71:import { useRaiseTicketController } from '../controllers/useRaiseTicketController';
+72:import { useBookWithHelpController } from '../controllers/useBookWithHelpController';
+73:import { useLegalDocumentController } from '../controllers/useLegalDocumentController';
+74:import { useNotificationsController } from '../controllers/useNotificationsController';
+75:import { useNotificationSettingsController } from '../controllers/useNotificationSettingsController';
+156:  const splash = useSplashController(onFinished);
+161:  const firstLaunch = useFirstLaunchController(onContinue);
+166:  const onboarding = useOnboardingController({
+186:  const signIn = useSignInController({ onBack, onOtpRequested });
+205:  const otp = useOtpVerificationController({
+229:  const profile = useCompleteProfileController({
+248:  const consent = useConsentController({
+266:  const phoneSetup = usePhoneSetupController({ active, onBack, onContinue });
+279:  const family = useFamilyMembersController({ onBack, onContinue, onSkip });
+284:  const home = useHomeController({ onLogOut });
+293:          homeRef.current.onOpenAppointment(id);
+296:        homeRef.current.onOpenMyAppointments();
+298:      openMyAppointments: () => homeRef.current.onOpenMyAppointments(),
+300:        homeRef.current.onOpenAccountRecords('prescriptions'),
+301:      openHealthRecords: () => homeRef.current.onOpenAccountRecords('all'),
+302:      openNotificationsInbox: () => homeRef.current.onOpenNotifications(),
+314:  const search = useSearchDoctorsController({
+315:    active: home.searchOpen && !home.resultsOpen,
+317:    onSubmitSearch: home.onOpenResults,
+318:    onOpenDoctor: home.onOpenDoctorProfile,
+320:  const results = useSearchResultsController({
+322:    active: home.resultsOpen,
+325:    onOpenSearch: home.onReopenSearch,
+326:    onOpenDoctor: home.onOpenDoctorProfile,
+328:  const profile = useDoctorProfileController({
+331:    onBook: home.onOpenBooking,
+333:  const booking = useBookAppointmentController({
+335:    active: home.bookingOpen,
+339:  const review = useBookingReviewController({
+340:    active: home.bookingOpen,
+342:    onProceedPay: booking.onOpenPayment,
+355:  const payment = useBookingPaymentController({
+356:    active: home.bookingOpen && booking.paymentOpen,
+360:        booking.onOpenPaymentStatus('failed');
+363:      booking.onOpenPaymentStatus('pending');
+373:  const paymentStatus = usePaymentStatusController({
+374:    active: Boolean(home.bookingOpen && booking.paymentStatus),
+380:    onConfirmPending: () => booking.onOpenPaymentStatus('success'),
+402:  const appointmentDetail = useAppointmentDetailController({
+409:  const deviceCheck = useDeviceCheckController({
+414:  const joinFailed = useJoinFailedController({
+424:  const consultationChat = useConsultationChatController({
+430:      home.onOpenConsultNow();
+432:    onOpenVideo: appointmentDetail.onStartVideoFromChat,
+435:  const waitingRoom = useWaitingRoomController({
+445:  const videoCall = useVideoCallController({
+447:    active: appointmentDetail.videoCallOpen,
+455:  const consultationComplete = useConsultationCompleteController({
+468:      home.onOpenFollowUpPlan();
+474:      home.onOpenOrderMedicines();
+476:    onWriteReview: appointmentDetail.onOpenRateConsultation,
+478:  const rateConsultation = useRateConsultationController({
+481:    active: appointmentDetail.rateConsultationOpen,
+485:  const followUpPlan = useFollowUpPlanController({
+489:      home.onOpenSearch();
+492:    onOpenDiary: home.onOpenSymptomDiary,
+494:  const symptomDiary = useSymptomDiaryController({
+498:  const cliniSightProgress = useCliniSightProgressController({
+500:    onAddTodayEntry: home.onOpenSymptomDiary,
+502:  const healthInsights = useHealthInsightsController({
+505:  const remindersCentre = useRemindersCentreController({
+510:      home.onOpenSearch();
+513:  const editProfile = useCompleteProfileController({
+519:  const accountFamily = useFamilyMembersController({
+525:  const payments = usePaymentsController({
+530:      home.onOpenSearch();
+533:  const consentCentre = useConsentCentreController({
+534:    active: home.consentCentreOpen,
+537:  const myReviews = useMyReviewsController({
+540:    onAppeal: () => home.onOpenAppealReview(),
+542:  const appealReview = useAppealReviewController({
+546:  const helpCentre = useHelpCentreController({
+548:    onOpenTopic: (topicId) => home.onOpenRaiseTicket(topicId),
+550:  const raiseTicket = useRaiseTicketController({
+554:  const bookWithHelp = useBookWithHelpController({
+557:  const legalDocument = useLegalDocumentController({
+561:  const notifications = useNotificationsController({
+568:  const notificationSettings = useNotificationSettingsController({
+570:    onOpenNotifications: () => {
+572:      home.onOpenNotifications();
+575:  const orderMedicines = useOrderMedicinesController({
+579:  const orderTracking = useOrderTrackingController({
+582:  const orderDetails = useOrderDetailsController({
+587:      home.onOpenOrderMedicines();
+590:  const consultNow = useConsultNowController({
+591:    active: home.consultNowOpen,
+593:    onBookEarliest: home.onOpenResults,
+596:  const consultPayment = useBookingPaymentController({
+597:    active: home.consultNowOpen && consultNow.paymentOpen,
+601:        consultNow.onOpenPaymentStatus('failed');
+604:      consultNow.onOpenPaymentStatus('pending');
+614:  const consultPaymentStatus = usePaymentStatusController({
+615:    active: Boolean(home.consultNowOpen && consultNow.paymentStatus),
+622:    onConfirmPending: () => consultNow.onOpenPaymentStatus('success'),
+642:  const healthTip = useHealthTipController({
+645:    onOpenRelated: home.onOpenHealthTip,
+649:  if (appointmentDetail.cancelledOpen) {
+654:    if (appointmentDetail.rateConsultationOpen) {
+657:    if (appointmentDetail.consultationCompleteOpen) {
+660:    if (appointmentDetail.videoCallOpen) {
+663:    if (appointmentDetail.waitingRoomOpen) {
+666:    if (appointmentDetail.joinFailedOpen) {
+669:    if (appointmentDetail.deviceCheckOpen) {
+672:    if (appointmentDetail.consultationChatOpen) {
+675:    if (appointmentDetail.rescheduleOpen) {
+679:      if (appointmentDetail.clinicCheckInOpen) {
+703:  if (home.orderDetailsOpen) {
+706:  if (home.orderTrackingOpen) {
+709:  if (home.orderMedicinesOpen) {
+713:  if (home.symptomDiaryOpen) {
+717:  if (home.remindersOpen) {
+721:  if (home.editProfileOpen) {
+725:  if (home.accountFamilyOpen) {
+729:  if (home.myAppointmentsOpen) {
+734:        onOpenAppointment={home.onOpenAppointment}
+738:          home.onOpenSearch();
+744:  if (home.accountRecordsOpen) {
+755:        onOpenFollowUpPlan={home.onOpenFollowUpPlan}
+756:        onOpenOrderMedicines={home.onOpenOrderMedicines}
+762:  if (home.healthInsightsOpen) {
+766:  if (home.clinisightProgressOpen) {
+770:  if (home.paymentsOpen) {
+774:  if (home.consentCentreOpen) {
+778:  if (home.appealReviewOpen) {
+782:  if (home.myReviewsOpen) {
+786:  if (home.raiseTicketOpen) {
+790:  if (home.helpCentreOpen) {
+794:  if (home.bookWithHelpOpen) {
+802:  if (home.notificationsOpen) {
+806:  if (home.notificationSettingsOpen) {
+810:  if (home.followUpPlanOpen) {
+814:        onOrderMedicines={home.onOpenOrderMedicines}
+819:  if (home.consultNowOpen) {
+823:    if (consultNow.paymentOpen) {
+826:    if (consultNow.searchingOpen) {
+836:  if (home.bookingOpen && home.profileDoctorId) {
+840:    if (booking.paymentOpen) {
+843:    if (booking.reviewOpen) {
+853:  if (home.resultsOpen) {
+857:        selectedTab={home.selectedTab}
+863:  if (home.searchOpen) {
+1134:      </View>
+1180:    </View>
+1184:const styles = StyleSheet.create({

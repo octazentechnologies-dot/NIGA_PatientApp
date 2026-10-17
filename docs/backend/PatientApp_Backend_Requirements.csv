@@ -1,0 +1,44 @@
+ID,Priority,Type,Screens,Method,Path,Purpose,Status,Backend owner,ETA,Notes
+BE-001,P1,CLARIFY,All,—,—,Confirm New API host for patient app,Open,,,
+BE-002,P1,CLARIFY,Sign in / OTP,—,—,OTP vs Account/Login as auth SoT,Open,,,
+BE-003,P1,CONFIG,Help / Book with help / Offline,GET,/api/Public/AppConfig,Populate supportPhone/WhatsApp/Email,Open,,,
+BE-004,P1,EXTEND_ROUTE,Home / Consult now / Medicines,GET,/api/Public/AppConfig,Add instantConsultEnabled + medicineOnlinePayEnabled,Open,,,
+BE-005,P1,NEW_ROUTE,Booking / My appointments,GET/PATCH/DELETE,/api/Patient/AppointmentRequests*,Patient list/status/cancel/respond to proposals,Open,,,
+BE-006,P1,EXTEND_ROUTE,Notifications,GET,/api/Notifications,Add type + deepLink on inbox items,Open,,,
+BE-007,P1,FIX_ROUTE,Clinic check-in,POST,/api/Patient/Visits/{id}/CheckIn,readyAt / queue refresh contract,Open,,,
+BE-008,P1,FIX_ROUTE,Visit detail / Join / Late,GET,/api/Patient/Visits*,Guarantee teleSessionId on tele visits,Open,,,
+BE-009,P1,NEW_ROUTE,Search doctors,GET,/api/Public/Doctors/FilterOptions,Cities (+ qualifications) for filters,Open,,,
+BE-010,P1,EXTEND_ROUTE,Choose pharmacy,GET,/api/Pharmacy/Sellers,Store quote fields or document post-quote only,Open,,,
+BE-011,P1,EXTEND_ROUTE,Consult now offer,GET,/api/Tele/Instant/{id},Fee fields on OFFERED status,Open,,,
+BE-012,P1,FIX_ROUTE,Prescription / Records,GET,/api/Erx/{erxSnapshotId}/Pdf,Confirm PDF route + wireable response (share/download NO-OP today),Open,,,
+BE-013,P2,EXTEND_ROUTE,Doctor profile,GET,/api/Public/Doctors*,nextAvailableAt,Open,,,
+BE-014,P2,EXTEND_ROUTE,Clinic / Doctor profile,GET,/api/Patient/Visits/{id},clinicAddressLine (+ map),Open,,,
+BE-015,P2,CLARIFY,Doctor profile / Search,—,—,yearsExperience/languages/education store or drop,Open,,,
+BE-016,P2,EXTEND_ROUTE,Doctor credentials,GET,/api/Public/Doctors/{id},Structured qualifications optional,Open,,,
+BE-017,P2,EXTEND_ROUTE,My reviews / Appeal,GET,/api/Reviews/Mine,appealStatus/outcome fields,Open,,,
+BE-018,P2,NEW_ROUTE,Account,GET,/api/Patient/DataRequests,List/status (+ downloadUrl),Open,,,
+BE-019,P2,CLARIFY,Account,—,—,Delete account via DataRequest vs DELETE /api/Account,Open,,,
+BE-020,P2,EXTEND_ROUTE,Help centre,GET,/api/Help,Topic taxonomy/slugs for UI,Open,,,
+BE-021,P2,EXTEND_ROUTE,Progress / Insights,GET,/api/Patient/Progress,adherencePercent compute or drop,Open,,,
+BE-022,P2,EXTEND_ROUTE,Visit detail,GET,/api/Patient/Visits/{id},followUpDate + erxPdfUrl,Open,,,
+BE-023,P2,NEW_ROUTE,Order medicines,CRUD,/api/Patient/DeliveryAddresses,Delivery address book,Open,,,
+BE-024,P2,EXTEND_ROUTE,Reminders,CRUD,/api/Patient/Reminders,Snooze + push schedule fields,Open,,,
+BE-025,P2,EXTEND_ROUTE,Notifications,GET,/api/Notifications,Pagination,Open,,,
+BE-026,P2,NEW_ROUTE,Home bell,GET,/api/Notifications/UnreadCount,Unread count for badge,Open,,,
+BE-027,P2,EXTEND_ROUTE,Booking ask-time,POST,/api/Patient/AppointmentRequests,Idempotency-Key support,Open,,,
+BE-028,P2,FIX_ROUTE,Order tracking,GET,/api/MedicineOrders/{id}/Tracking,Stable order ids (no hardcode),Open,,,
+BE-029,P2,EXTEND_ROUTE,Search results,GET,/api/Public/Doctors,careCategoryId filter param,Open,,,
+BE-030,P3,EXTEND_ROUTE,Doctor availability,GET,/api/Tele/Availability/{id},Document/align next-slot shape,Open,,,
+BE-031,P3,NEW_ROUTE,Articles,POST/GET,/api/Patient/ArticleBookmarks*,Optional bookmarks,Open,,,
+BE-032,P3,EXTEND_ROUTE,Profile,POST/DELETE,/api/PatientProfile/Photo,Photo upload/remove,Open,,,
+BE-033,P3,EXTEND_ROUTE,Legal / Consent,GET,/api/Consent/Notice/* + Policies,Versioned legal body,Open,,,
+BE-034,P3,FIX_ROUTE,Notifications,POST,/api/Notifications/MarkAllRead,Confirm envelope; app should call it,Open,,,
+BE-035,P3,EXTEND_ROUTE,Visits list,GET,/api/Patient/Visits,Filters + pagination,Open,,,
+BE-P01,PHASE2,PHASE2,Booking payment,POST,/api/Payments/ConsultOrders + Verify,Complete Razorpay consult contract,Open,,,technical:FIX_ROUTE
+BE-P02,PHASE2,PHASE2,Medicine checkout,POST,/api/Payments/MedicineOrders,Complete Razorpay medicine contract,Open,,,technical:FIX_ROUTE
+BE-P03,PHASE2,PHASE2,Booking hold,—,/api/Public/Doctors/{id}/Bookings,Release slot on holdExpiresAt,Open,,,technical:FIX_ROUTE
+BE-P04,PHASE2,PHASE2,Payments / Orders,Webhook + GET,Payment/order status updates,Open,,,,technical:NEW_ROUTE
+BE-P05,PHASE2,PHASE2,Cancel / Refunds,GET,/api/Refunds/Policy/{id},Cancellation fee rules,Open,,,technical:EXTEND_ROUTE
+BE-P06,PHASE2,PHASE2,Payments / Visit,—,Payment history / visit,receiptUrl invoice PDF,Open,,,technical:EXTEND_ROUTE
+BE-P07,PHASE2,PHASE2,Video join,POST,/api/Tele/Sessions/{id}/Token,Real vendor token isStub=false,Open,,,technical:FIX_ROUTE
+BE-P08,PHASE2,PHASE2,Waiting room,GET,/api/Tele/Sessions/{id},Queue ETA / doctor join events,Open,,,technical:EXTEND_ROUTE

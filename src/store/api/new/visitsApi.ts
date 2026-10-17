@@ -9,15 +9,30 @@ export type PatientVisitItem = {
   isTele: boolean;
   doctorId: number;
   doctorName: string;
+  /** BE-008 — number for open tele visits; else null. */
   teleSessionId?: number | null;
   sessionStatus?: string | null;
   chatCount?: number;
   hasSummary?: boolean;
 };
 
+export type GetPatientVisitsParams = {
+  patientId?: number;
+  status?: string;
+  fromDate?: string; // YYYY-MM-DD
+  toDate?: string;
+  pageNumber?: number;
+  pageSize?: number;
+};
+
 export type PatientVisitsResponse = {
   success: boolean;
-  data: PatientVisitItem[];
+  data: PatientVisitItem[] | {
+    totalRecords: number;
+    pageNumber: number;
+    pageSize: number;
+    data: PatientVisitItem[];
+  };
   message?: string;
 };
 
@@ -44,7 +59,15 @@ export type VisitDetailData = {
   clinicName?: string | null;
   clinicCity?: string | null;
   clinicMapLink?: string | null;
+  /** Path like `/api/Profile/Photo/{id}` — use `resolveApiUrl`. */
   doctorPhotoUrl?: string | null;
+  /** Contract §3 — null when doctor has no fee stored. */
+  consultFee?: number | null;
+  currency?: string | null;
+  /** Null unless CONSULT payment > consultFee. Never invent 90. */
+  platformFee?: number | null;
+  clinicPhone?: string | null;
+  reasonText?: string | null;
   paymentStatus: string;
   paymentMethod?: string | null;
   isPaid: boolean;
@@ -57,6 +80,11 @@ export type VisitDetailData = {
   hasSummary?: boolean;
   erxSnapshotId?: number | null;
   erxSigned?: boolean;
+  /** BE-022 — hide when null. */
+  followUpDate?: string | null;
+  erxPdfUrl?: string | null;
+  /** BE-014 — hide when null. */
+  clinicAddressLine?: string | null;
   actions: VisitDetailActions;
 };
 
@@ -147,16 +175,74 @@ export type RefundPolicyResponse = {
 export const visitsApi = newBaseApi.injectEndpoints({
   overrideExisting: true,
   endpoints: (build) => ({
-    getPatientVisits: build.query<PatientVisitsResponse, { patientId?: number } | void>({
+    getPatientVisits: build.query<
+      PatientVisitsResponse,
+      GetPatientVisitsParams | void
+    >({
       query: (params) => ({
         url: 'api/Patient/Visits',
-        params: params?.patientId ? { patientId: params.patientId } : undefined,
+        params: params
+          ? {
+              patientId: params.patientId,
+              status: params.status,
+              fromDate: params.fromDate,
+              toDate: params.toDate,
+              pageNumber: params.pageNumber,
+              pageSize: params.pageSize,
+            }
+          : undefined,
       }),
       providesTags: ['Visits'],
     }),
     getVisitDetail: build.query<VisitDetailResponse, number | string>({
       query: (patientAppId) => `api/Patient/Visits/${patientAppId}`,
-      providesTags: ['Visits'],
+      providesTags: (_result, _err, patientAppId) => [
+        { type: 'VisitDetail', id: String(patientAppId) },
+        'Visits',
+      ],
+    }),
+    checkInVisit: build.mutation<
+      {
+        success: boolean;
+        data: {
+          patientAppId: number;
+          status: string;
+          queuePosition: number | null;
+          /** BE-007 — always null until clinic marks ready; never invent ETA. */
+          readyAt: string | null;
+          estimatedWaitMinutes?: number | null;
+        };
+        message?: string;
+      },
+      { patientAppId: number | string; status: 'EARLY' | 'WAITING' | 'READY' }
+    >({
+      query: ({ patientAppId, status }) => ({
+        url: `api/Patient/Visits/${patientAppId}/CheckIn`,
+        method: 'POST',
+        body: { status },
+      }),
+      invalidatesTags: (_r, _e, { patientAppId }) => [
+        { type: 'VisitDetail', id: String(patientAppId) },
+        'Visits',
+      ],
+    }),
+    switchVisitToTele: build.mutation<
+      {
+        success: boolean;
+        data: { patientAppId: number; consultMode: string; isTele: boolean };
+        message?: string;
+      },
+      { patientAppId: number }
+    >({
+      query: ({ patientAppId }) => ({
+        url: 'api/PatientAppointment/SwitchToTele',
+        method: 'POST',
+        body: { patientAppId },
+      }),
+      invalidatesTags: (_r, _e, { patientAppId }) => [
+        { type: 'VisitDetail', id: String(patientAppId) },
+        'Visits',
+      ],
     }),
     getAppointmentChangeLog: build.query<
       AppointmentChangeLogResponse,
@@ -196,6 +282,8 @@ export const visitsApi = newBaseApi.injectEndpoints({
 export const {
   useGetPatientVisitsQuery,
   useGetVisitDetailQuery,
+  useCheckInVisitMutation,
+  useSwitchVisitToTeleMutation,
   useGetAppointmentChangeLogQuery,
   useRescheduleAppointmentMutation,
   useCancelAppointmentMutation,

@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sheetBottomPadding } from '../utilities/sheetInset';
+import { colors } from '../theme/colors';
 
 import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
@@ -9,16 +10,6 @@ import { CancelAppointmentSheet } from '../components/CancelAppointmentSheet';
 import type { AppointmentDetailViewModel } from '../controllers/useAppointmentDetailController';
 import { radii } from '../theme/radii';
 import { spacing } from '../theme/spacing';
-
-const INK = '#1F1F1F';
-const MUTED = '#595959';
-const HAIRLINE = '#DDDFE2';
-const PAGE = '#F5F6F7';
-const CARD = '#FFFFFF';
-const ACTION = '#2A7BA3';
-const ACTION_OUTLINE = '#276F93';
-const SUCCESS = '#0F7A4E';
-const SUCCESS_FILL = '#E9F5EF';
 
 type ClinicAppointmentViewModel = AppointmentDetailViewModel & {
   clinicName: string;
@@ -48,9 +39,9 @@ export function ClinicAppointmentView(vm: ClinicAppointmentViewModel) {
             onPress={vm.onBack}
             style={styles.iconHit}
           >
-            <Ionicons name="arrow-back" size={24} color={INK} />
+            <Ionicons name="arrow-back" size={24} color={colors.ink} />
           </Pressable>
-          <AppText variant="headlineMd" color={INK} style={styles.headerTitle}>
+          <AppText variant="headlineMd" color={colors.ink} style={styles.headerTitle}>
             {vm.t('clinicAptTitle')}
           </AppText>
           <View style={styles.iconHit} />
@@ -65,84 +56,103 @@ export function ClinicAppointmentView(vm: ClinicAppointmentViewModel) {
         ]}
       >
         <View style={styles.banner}>
-          <Ionicons name="checkmark-circle" size={22} color={SUCCESS} />
-          <AppText variant="labelMd" color={SUCCESS} weightOverride="600" style={styles.flex}>
+          <Ionicons name="checkmark-circle" size={22} color={colors.success} />
+          <AppText variant="labelMd" color={colors.success} weightOverride="600" style={styles.flex}>
             {vm.clinicBannerLabel}
           </AppText>
         </View>
 
-        <View style={styles.card}>
-          <AppText variant="headlineLg" color={INK}>
-            {vm.clinicName}
-          </AppText>
-          <AppText variant="bodyMd" color={MUTED}>
-            {vm.clinicAddress}
-          </AppText>
-
-          <View style={styles.mapBox}>
-            <View style={styles.mapGrid}>
-              {Array.from({ length: 12 }).map((_, index) => (
-                <View key={`map-line-${index}`} style={styles.mapLine} />
-              ))}
-            </View>
-            <View style={styles.mapPin}>
-              <Ionicons name="location" size={28} color={ACTION_OUTLINE} />
-            </View>
-          </View>
-
-          <View style={styles.actionRow}>
-            <QuickAction
-              icon="navigate-outline"
-              label={vm.t('clinicAptDirections')}
-              onPress={vm.onDirections}
-            />
-            <QuickAction
-              icon="call-outline"
-              label={vm.t('clinicAptCall')}
-              sublabel={vm.t('clinicAptMasked')}
-              onPress={vm.onCallClinic}
-            />
-            <QuickAction
-              icon="copy-outline"
-              label={
-                vm.addressCopied
-                  ? vm.t('clinicAptCopied')
-                  : vm.t('clinicAptCopyAddress')
-              }
-              onPress={vm.onCopyAddress}
-            />
-          </View>
-
-          <View style={styles.travelBox}>
-            <Ionicons name="car-outline" size={20} color={MUTED} />
-            <View style={styles.flex}>
-              <AppText variant="bodyMd" color={MUTED}>
-                {vm.clinicDistanceLabel}
+        {vm.clinicName || vm.clinicAddress ? (
+          <View style={styles.card}>
+            {vm.clinicName ? (
+              <AppText variant="headlineLg" color={colors.ink} raw>
+                {vm.clinicName}
               </AppText>
-              <AppText variant="labelSm" color={MUTED}>
-                {vm.clinicTravelNote}
+            ) : null}
+            {vm.clinicAddress ? (
+              <AppText variant="bodyMd" color={colors.muted} raw>
+                {vm.clinicAddress}
               </AppText>
+            ) : null}
+
+            {vm.clinicMapLink || vm.clinicAddress ? (
+              <View style={styles.mapBox}>
+                <View style={styles.mapGrid}>
+                  {Array.from({ length: 12 }).map((_, index) => (
+                    <View key={`map-line-${index}`} style={styles.mapLine} />
+                  ))}
+                </View>
+                <View style={styles.mapPin}>
+                  <Ionicons name="location" size={28} color={colors.primaryOutline} />
+                </View>
+              </View>
+            ) : null}
+
+            <View style={styles.actionRow}>
+              {vm.clinicMapLink || vm.clinicAddress ? (
+                <QuickAction
+                  icon="navigate-outline"
+                  label={vm.t('clinicAptDirections')}
+                  onPress={vm.onDirections}
+                />
+              ) : null}
+              {vm.clinicPhone ? (
+                <QuickAction
+                  icon="call-outline"
+                  label={vm.t('clinicAptCall')}
+                  onPress={vm.onCallClinic}
+                />
+              ) : null}
+              {vm.clinicAddress || vm.clinicName ? (
+                <QuickAction
+                  icon="copy-outline"
+                  label={
+                    vm.addressCopied
+                      ? vm.t('clinicAptCopied')
+                      : vm.t('clinicAptCopyAddress')
+                  }
+                  onPress={vm.onCopyAddress}
+                />
+              ) : null}
             </View>
+
+            {vm.clinicDistanceLabel || vm.clinicTravelNote ? (
+              <View style={styles.travelBox}>
+                <Ionicons name="car-outline" size={20} color={colors.muted} />
+                <View style={styles.flex}>
+                  {vm.clinicDistanceLabel ? (
+                    <AppText variant="bodyMd" color={colors.muted}>
+                      {vm.clinicDistanceLabel}
+                    </AppText>
+                  ) : null}
+                  {vm.clinicTravelNote ? (
+                    <AppText variant="labelSm" color={colors.muted}>
+                      {vm.clinicTravelNote}
+                    </AppText>
+                  ) : null}
+                </View>
+              </View>
+            ) : null}
           </View>
-        </View>
+        ) : null}
 
         <View style={styles.card}>
           <View style={styles.doctorRow}>
             <View style={styles.avatar}>
-              <AppText variant="titleMd" color={ACTION} languageOverride="en">
+              <AppText variant="titleMd" color={colors.primary} languageOverride="en">
                 {vm.doctorInitials}
               </AppText>
               {vm.verified ? (
                 <View style={styles.verifiedBadge}>
-                  <Ionicons name="checkmark" size={10} color="#FFFFFF" />
+                  <Ionicons name="checkmark" size={10} color={colors.card} />
                 </View>
               ) : null}
             </View>
             <View style={styles.flex}>
-              <AppText variant="headlineMd" color={INK}>
+              <AppText variant="headlineMd" color={colors.ink}>
                 {vm.doctorName}
               </AppText>
-              <AppText variant="bodyMd" color={MUTED}>
+              <AppText variant="bodyMd" color={colors.muted}>
                 {vm.credentials}
               </AppText>
             </View>
@@ -152,35 +162,37 @@ export function ClinicAppointmentView(vm: ClinicAppointmentViewModel) {
           <DetailRow label={vm.t('clinicAptType')} value={vm.modeConsultLabel} />
           <DetailRow label={vm.t('clinicAptPatient')} value={vm.patientLabel} />
           <DetailRow label={vm.t('clinicAptBookingId')} value={vm.bookingId} />
-          <View style={styles.detailRowLast}>
-            <AppText variant="bodyMd" color={MUTED}>
-              {vm.t('clinicAptFee')}
-            </AppText>
-            <View style={styles.feeRight}>
-              <AppText variant="labelMd" color={INK} weightOverride="600">
-                {vm.clinicFeeAmount}
+          {vm.clinicFeeAmount ? (
+            <View style={styles.detailRowLast}>
+              <AppText variant="bodyMd" color={colors.muted}>
+                {vm.t('clinicAptFee')}
               </AppText>
-              <View style={styles.payPill}>
-                <AppText variant="labelSm" color={MUTED} weightOverride="600">
-                  {vm.t('clinicAptPayAtClinic')}
+              <View style={styles.feeRight}>
+                <AppText variant="labelMd" color={colors.ink} weightOverride="600" raw>
+                  {vm.clinicFeeAmount}
                 </AppText>
+                <View style={styles.payPill}>
+                  <AppText variant="labelSm" color={colors.muted} weightOverride="600">
+                    {vm.t('clinicAptPayAtClinic')}
+                  </AppText>
+                </View>
               </View>
             </View>
-          </View>
+          ) : null}
         </View>
 
         <View style={styles.card}>
-          <AppText variant="headlineMd" color={INK}>
+          <AppText variant="headlineMd" color={colors.ink}>
             {vm.t('clinicAptCheckInTitle')}
           </AppText>
-          <AppText variant="bodyMd" color={MUTED}>
+          <AppText variant="bodyMd" color={colors.muted}>
             {vm.t('clinicAptCheckInBody')}
           </AppText>
           <AppButton label={vm.t('clinicAptCheckInCta')} onPress={vm.onOpenCheckIn} />
         </View>
 
         <View style={styles.card}>
-          <AppText variant="headlineMd" color={INK}>
+          <AppText variant="headlineMd" color={colors.ink}>
             {vm.t('clinicAptBringTitle')}
           </AppText>
           {(
@@ -192,8 +204,8 @@ export function ClinicAppointmentView(vm: ClinicAppointmentViewModel) {
             ] as const
           ).map((key) => (
             <View key={key} style={styles.bringRow}>
-              <Ionicons name="checkmark-circle" size={20} color={ACTION_OUTLINE} />
-              <AppText variant="bodyMd" color={INK} style={styles.flex}>
+              <Ionicons name="checkmark-circle" size={20} color={colors.primaryOutline} />
+              <AppText variant="bodyMd" color={colors.ink} style={styles.flex}>
                 {vm.t(key)}
               </AppText>
             </View>
@@ -206,7 +218,7 @@ export function ClinicAppointmentView(vm: ClinicAppointmentViewModel) {
             onPress={vm.onChangeTime}
             style={styles.outlineBtn}
           >
-            <AppText variant="labelMd" color={ACTION_OUTLINE} weightOverride="600">
+            <AppText variant="labelMd" color={colors.primaryOutline} weightOverride="600">
               {vm.t('clinicAptReschedule')}
             </AppText>
           </Pressable>
@@ -215,7 +227,7 @@ export function ClinicAppointmentView(vm: ClinicAppointmentViewModel) {
             onPress={vm.onCancel}
             style={styles.outlineBtn}
           >
-            <AppText variant="labelMd" color={ACTION_OUTLINE} weightOverride="600">
+            <AppText variant="labelMd" color={colors.primaryOutline} weightOverride="600">
               {vm.t('clinicAptCancel')}
             </AppText>
           </Pressable>
@@ -226,7 +238,7 @@ export function ClinicAppointmentView(vm: ClinicAppointmentViewModel) {
           onPress={vm.onSwitchOnline}
           style={styles.switchLink}
         >
-          <AppText variant="labelMd" color={ACTION_OUTLINE} weightOverride="600">
+          <AppText variant="labelMd" color={colors.primaryOutline} weightOverride="600">
             {vm.t('clinicAptSwitchOnline')}
           </AppText>
         </Pressable>
@@ -264,13 +276,13 @@ function QuickAction({
   return (
     <Pressable accessibilityRole="button" onPress={onPress} style={styles.quickAction}>
       <View style={styles.quickCircle}>
-        <Ionicons name={icon} size={22} color={ACTION_OUTLINE} />
+        <Ionicons name={icon} size={22} color={colors.primaryOutline} />
       </View>
-      <AppText variant="labelSm" color={ACTION_OUTLINE} weightOverride="600">
+      <AppText variant="labelSm" color={colors.primaryOutline} weightOverride="600">
         {label}
       </AppText>
       {sublabel ? (
-        <AppText variant="labelSm" color={MUTED}>
+        <AppText variant="labelSm" color={colors.muted}>
           {sublabel}
         </AppText>
       ) : null}
@@ -281,10 +293,10 @@ function QuickAction({
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.detailRow}>
-      <AppText variant="bodyMd" color={MUTED}>
+      <AppText variant="bodyMd" color={colors.muted}>
         {label}
       </AppText>
-      <AppText variant="labelMd" color={INK} weightOverride="600" style={styles.detailValue}>
+      <AppText variant="labelMd" color={colors.ink} weightOverride="600" style={styles.detailValue}>
         {value}
       </AppText>
     </View>
@@ -292,11 +304,11 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: PAGE },
+  root: { flex: 1, backgroundColor: colors.page },
   header: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
     paddingHorizontal: spacing.sm,
     paddingBottom: spacing.sm,
   },
@@ -324,14 +336,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: SUCCESS_FILL,
+    backgroundColor: colors.successContainer,
     borderRadius: radii.default,
     padding: spacing.md,
   },
   card: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
     gap: spacing.md,
@@ -339,7 +351,7 @@ const styles = StyleSheet.create({
   mapBox: {
     height: 160,
     borderRadius: radii.default,
-    backgroundColor: '#E8EEF2',
+    backgroundColor: colors.primaryContainer,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
@@ -352,18 +364,18 @@ const styles = StyleSheet.create({
   },
   mapLine: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: ACTION_OUTLINE,
+    backgroundColor: colors.primaryOutline,
     marginHorizontal: 12,
   },
   mapPin: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
   },
   actionRow: {
     flexDirection: 'row',
@@ -379,7 +391,7 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: ACTION_OUTLINE,
+    borderColor: colors.primaryOutline,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -387,9 +399,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
-    backgroundColor: PAGE,
+    backgroundColor: colors.page,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.sm,
   },
@@ -402,7 +414,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#E6F5FE',
+    backgroundColor: colors.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -413,11 +425,11 @@ const styles = StyleSheet.create({
     width: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: ACTION,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: CARD,
+    borderColor: colors.card,
   },
   detailRow: {
     flexDirection: 'row',
@@ -426,7 +438,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingVertical: spacing.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   detailRowLast: {
     flexDirection: 'row',
@@ -447,8 +459,8 @@ const styles = StyleSheet.create({
   payPill: {
     borderRadius: radii.full,
     borderWidth: 1,
-    borderColor: HAIRLINE,
-    backgroundColor: PAGE,
+    borderColor: colors.outlineVariant,
+    backgroundColor: colors.page,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
@@ -466,7 +478,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
     borderRadius: radii.button,
     borderWidth: 1.5,
-    borderColor: ACTION,
+    borderColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.sm,

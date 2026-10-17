@@ -1,0 +1,15 @@
+# A1 Environment / config
+Date: 2026-10-17
+Branch: Devlopment_1.1 @ 48d7507
+
+Contract base URL (PatientMobile_Bind_APIs.md): https://devapi.homeocentrum.com/
+apiConfig.ts API_BASE_URL default: https://devapi.homeocentrum.com/
+app.json extra.apiBaseUrl (WINS at runtime via Constants.expoConfig): https://devmaigrationapi.homeocentrum.com/
+=> LIVE host = migration API unless expo extra overridden. MISMATCH with contract.
+
+Auth: OTP PatientAuth/RequestOtp + VerifyOtp → token in SecureStore
+prepareAuthHeaders: attaches Bearer when token present (including Public routes)
+401: baseQueryWithReauth attempts RefreshToken except on auth routes
+Public routes per contract: GET /api/Public/AppConfig, GET /api/Public/Doctors
+
+Feature flags: AppConfig has NO instantConsultEnabled / medicineOnlinePayEnabled (contract §1)

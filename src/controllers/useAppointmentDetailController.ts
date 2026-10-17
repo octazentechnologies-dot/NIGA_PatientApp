@@ -5,7 +5,6 @@ import {
   MONTH_KEYS,
   WEEKDAY_KEYS,
   buildDaysForMonth,
-  consultFeeRupees,
   formatRupees,
   todayStart,
   type BookingDay,
@@ -23,11 +22,19 @@ import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
 import type { ConsultModeChoice, NetworkQuality } from './useDeviceCheckController';
 import { attemptJoinWaitingRoom } from './useJoinFailedController';
+import { useGetDoctorSlotsQuery } from '../store/api/new/doctorsApi';
+import { useGetDocumentsQuery } from '../store/api/new/recordsApi';
+import { useReportRunningLateMutation } from '../store/api/new/teleApi';
 import {
   useCancelAppointmentMutation,
+  useCheckInVisitMutation,
   useGetVisitDetailQuery,
   useRescheduleAppointmentMutation,
+  useSwitchVisitToTeleMutation,
 } from '../store/api/new/visitsApi';
+import { useAppSelector } from '../store/hooks';
+import { messageFromUnknownError } from '../utilities/apiResponse';
+import { formatMoney } from '../utilities/formatters';
 
 export type AppointmentPhase = 'confirmed' | 'upcoming' | 'live' | 'ended';
 
@@ -124,6 +131,7 @@ export type AppointmentDetailViewModel = {
   nextShortWhen: string;
   reschedulePolicy: string;
   rescheduleReasonLabel: string;
+  rescheduleError: string | null;
   canConfirmReschedule: boolean;
   onBack: () => void;
   onJoin: () => void;
@@ -197,15 +205,19 @@ export type AppointmentDetailViewModel = {
   clinicTravelNote: string;
   clinicFeeAmount: string;
   clinicBannerLabel: string;
+  clinicPhone: string | null;
+  clinicMapLink: string | null;
   addressCopied: boolean;
   checkedInAtLabel: string;
-  queuePosition: number;
-  waitMinutes: number;
+  queuePosition: number | null;
+  waitMinutes: number | null;
+  checkInBusy: boolean;
   onOpenCheckIn: () => void;
   onCloseCheckIn: () => void;
   onConfirmCheckIn: () => void;
   onTellClinicLate: () => void;
-  onSelectCheckInDemoState: (state: ClinicCheckInState) => void;
+  /** Null when API does not send readyAt — hide in UI. */
+  readyAtLabel: string | null;
   onCopyAddress: () => void;
   onDirections: () => void;
   onCallClinic: () => void;
@@ -254,23 +266,48 @@ function compactDate(
   return `${date.getDate()} ${monthShort(date, t, language)}`;
 }
 
-function upcomingRescheduleDays(): BookingDay[] {
+/** Future dates only. Slot grids come from GET Slots — no Saturday/full heuristics. */
+function futureRescheduleDays(): BookingDay[] {
   const today = todayStart();
   const current = buildDaysForMonth(today.getFullYear(), today.getMonth());
   const next =
     today.getMonth() === 11
       ? buildDaysForMonth(today.getFullYear() + 1, 0)
       : buildDaysForMonth(today.getFullYear(), today.getMonth() + 1);
-  return [...current, ...next].slice(0, 7);
+  return [...current, ...next]
+    .filter((day) => day.status !== 'past')
+    .slice(0, 14)
+    .map((day) => ({
+      ...day,
+      status: 'open',
+      morning: [],
+      afternoon: [],
+      evening: [],
+    }));
 }
 
-function firstOpenSlot(day: BookingDay, skipId?: string | null): string | null {
-  const all = [...day.morning, ...day.afternoon, ...day.evening];
-  return (
-    all.find((slot) => !slot.booked && slot.id !== skipId)?.id ??
-    all.find((slot) => !slot.booked)?.id ??
-    null
-  );
+function applyApiSlots(
+  day: BookingDay,
+  apiSlots: { time: string; label: string; status: string }[],
+): BookingDay {
+  const mapped: TimeSlot[] = apiSlots
+    .filter((slot) => slot.status !== 'break' && slot.status !== 'past')
+    .map((slot) => {
+      const time = (slot.time || '').slice(0, 5);
+      return {
+        id: time,
+        labelKey: (slot.label || time) as TranslationKey,
+        booked: slot.status !== 'available',
+      };
+    })
+    .filter((slot) => /^\d{2}:\d{2}$/.test(slot.id));
+  const morning = mapped.filter((slot) => Number(slot.id.split(':')[0]) < 12);
+  const afternoon = mapped.filter((slot) => {
+    const hour = Number(slot.id.split(':')[0]);
+    return hour >= 12 && hour < 17;
+  });
+  const evening = mapped.filter((slot) => Number(slot.id.split(':')[0]) >= 17);
+  return { ...day, status: 'open', morning, afternoon, evening };
 }
 
 function findSlot(day: BookingDay | undefined, slotId: string | null): TimeSlot | undefined {
@@ -285,11 +322,11 @@ function findSlot(day: BookingDay | undefined, slotId: string | null): TimeSlot 
 const FALLBACK_APPOINTMENT: BookedAppointment = {
   id: '',
   bookingId: '',
-  doctorId: 'anjali',
-  doctorNameKey: 'searchResultAnjaliName',
-  doctorInitials: 'AD',
-  credentialsKey: 'searchResultAnjaliCredentials',
-  experienceKey: 'profileAnjaliExp',
+  doctorId: '',
+  doctorNameKey: '' as TranslationKey,
+  doctorInitials: 'DR',
+  credentialsKey: '' as TranslationKey,
+  experienceKey: '' as TranslationKey,
   whenLabel: '',
   dateLine: '',
   timeLine: '',
@@ -300,7 +337,7 @@ const FALLBACK_APPOINTMENT: BookedAppointment = {
   patientLabel: '',
   feeLabel: '',
   paymentId: '',
-  reasonKey: 'aptReasonCough',
+  reasonKey: '' as TranslationKey,
   status: 'confirmed',
 };
 
@@ -326,8 +363,12 @@ export function useAppointmentDetailController({
   const { data: serverVisitDetailResponse } = useGetVisitDetailQuery(item.id, {
     skip: !isNumericId,
   });
+  const visitDetail = serverVisitDetailResponse?.data;
   const [cancelAppointmentMutation] = useCancelAppointmentMutation();
   const [rescheduleAppointmentMutation] = useRescheduleAppointmentMutation();
+  const [checkInVisit, { isLoading: checkInBusy }] = useCheckInVisitMutation();
+  const [switchVisitToTele] = useSwitchVisitToTeleMutation();
+  const [reportRunningLate] = useReportRunningLateMutation();
   const startMs = useMemo(
     () => new Date(item.startsAt).getTime(),
     [item.startsAt],
@@ -338,9 +379,8 @@ export function useAppointmentDetailController({
   const [cancelNote, setCancelNote] = useState('');
   const [cancelledOpen, setCancelledOpen] = useState(false);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
-  const [rescheduleDays] = useState(upcomingRescheduleDays);
   const [rescheduleDayId, setRescheduleDayId] = useState(
-    () => rescheduleDays.find((day) => day.status === 'open')?.id ?? rescheduleDays[0]?.id ?? '',
+    () => futureRescheduleDays()[0]?.id ?? '',
   );
   const [rescheduleSlotId, setRescheduleSlotId] = useState<string | null>(null);
   const [rescheduleReason, setRescheduleReason] = useState<RescheduleReason | null>(
@@ -348,6 +388,8 @@ export function useAppointmentDetailController({
   );
   const [rescheduleReasonOpen, setRescheduleReasonOpen] = useState(false);
   const [rescheduleNote, setRescheduleNote] = useState('');
+  const [rescheduleError, setRescheduleError] = useState<string | null>(null);
+  const [rescheduleSubmitting, setRescheduleSubmitting] = useState(false);
   const [deviceCheckOpen, setDeviceCheckOpen] = useState(false);
   const [waitingRoomOpen, setWaitingRoomOpen] = useState(false);
   const [videoCallOpen, setVideoCallOpen] = useState(false);
@@ -361,7 +403,11 @@ export function useAppointmentDetailController({
   const [joinMbps, setJoinMbps] = useState(4.2);
   const [joinDisplayMbps, setJoinDisplayMbps] = useState(0.3);
   const [videoJoinRetried, setVideoJoinRetried] = useState(false);
-  const [libraryDocuments, setLibraryDocuments] = useState<PatientDocument[]>([]);
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+  const { data: documentsResponse } = useGetDocumentsQuery(undefined, {
+    skip: !isAuthenticated,
+  });
+  const [extraDocuments, setExtraDocuments] = useState<PatientDocument[]>([]);
   const [attachedIds, setAttachedIds] = useState<string[]>([]);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [selectSheetOpen, setSelectSheetOpen] = useState(false);
@@ -369,12 +415,29 @@ export function useAppointmentDetailController({
   const [clinicCheckInState, setClinicCheckInState] =
     useState<ClinicCheckInState>('ready');
   const [addressCopied, setAddressCopied] = useState(false);
-  const [checkedInAtLabel, setCheckedInAtLabel] = useState('10:52 AM');
+  const [checkedInAtLabel, setCheckedInAtLabel] = useState('');
+  const [readyAtLabel, setReadyAtLabel] = useState<string | null>(null);
+  const [checkInQueuePosition, setCheckInQueuePosition] = useState<number | null>(
+    null,
+  );
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (!visitDetail) return;
+    const status = (visitDetail.status || '').toUpperCase();
+    if (status === 'WAITING' || status === 'WALK-IN') {
+      setClinicCheckInState('waiting');
+      if (!checkedInAtLabel) {
+        setCheckedInAtLabel(clockLabel(new Date()));
+      }
+    } else if (status === 'NOT ARRIVED' || status === 'REMAINING') {
+      setClinicCheckInState('ready');
+    }
+  }, [checkedInAtLabel, visitDetail]);
 
   useEffect(() => {
     if (!waitingRoomOpen || videoCallOpen) {
@@ -415,10 +478,14 @@ export function useAppointmentDetailController({
             : t('aptBannerConfirmed');
 
   const startDate = new Date(item.startsAt);
-  const fee = consultFeeRupees(item.doctorId, item.mode);
+  const fee =
+    visitDetail?.consultFee != null ? Number(visitDetail.consultFee) : null;
   const refundPercent =
     remainingMs <= 0 ? 0 : remainingMs > FOUR_HOURS_MS ? 100 : 50;
-  const refundAmount = formatRupees(Math.round((fee * refundPercent) / 100), language);
+  const refundAmount =
+    fee != null
+      ? formatRupees(Math.round((fee * refundPercent) / 100), language)
+      : '';
   const refundTitle =
     refundPercent === 100
       ? t('cancelRefundFullTitle').replace('{amount}', refundAmount)
@@ -431,6 +498,39 @@ export function useAppointmentDetailController({
       : refundPercent === 50
         ? t('cancelRefundHalfBody')
         : t('cancelRefundNoneBody');
+
+  const calendarRescheduleDays = useMemo(() => futureRescheduleDays(), []);
+  const slotDoctorId = visitDetail?.doctorId;
+  const { data: rescheduleSlotsResponse } = useGetDoctorSlotsQuery(
+    { doctorId: slotDoctorId ?? 0, date: rescheduleDayId },
+    {
+      skip:
+        !rescheduleOpen ||
+        slotDoctorId == null ||
+        slotDoctorId <= 0 ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(rescheduleDayId),
+    },
+  );
+  const rescheduleDays = useMemo(() => {
+    const apiSlots = rescheduleSlotsResponse?.data?.slots;
+    return calendarRescheduleDays.map((day) =>
+      day.id === rescheduleDayId && apiSlots ? applyApiSlots(day, apiSlots) : day,
+    );
+  }, [
+    calendarRescheduleDays,
+    rescheduleDayId,
+    rescheduleSlotsResponse?.data?.slots,
+  ]);
+
+  useEffect(() => {
+    if (!rescheduleOpen) {
+      return;
+    }
+    const slots = rescheduleSlotsResponse?.data?.slots ?? [];
+    const available = slots.find((slot) => slot.status === 'available');
+    const time = available?.time?.slice(0, 5) ?? null;
+    setRescheduleSlotId(time && /^\d{2}:\d{2}$/.test(time) ? time : null);
+  }, [rescheduleDayId, rescheduleOpen, rescheduleSlotsResponse?.data?.slots]);
 
   const selectedRescheduleDay =
     rescheduleDays.find((day) => day.id === rescheduleDayId) ?? rescheduleDays[0];
@@ -470,7 +570,8 @@ export function useAppointmentDetailController({
       selectedRescheduleSlot &&
       !selectedRescheduleSlot.booked &&
       rescheduleReason &&
-      (rescheduleReason !== 'other' || rescheduleNote.trim()),
+      (rescheduleReason !== 'other' || rescheduleNote.trim()) &&
+      !rescheduleSubmitting,
   );
 
   const resetCancelForm = () => {
@@ -485,7 +586,24 @@ export function useAppointmentDetailController({
     setRescheduleReason(null);
     setRescheduleReasonOpen(false);
     setRescheduleNote('');
+    setRescheduleError(null);
   };
+
+  const libraryDocuments = useMemo(() => {
+    const fromApi: PatientDocument[] = (documentsResponse?.data ?? [])
+      .filter((doc) => Number.isFinite(doc.documentId) && doc.documentId > 0)
+      .map((doc) => ({
+        id: String(doc.documentId),
+        name: doc.fileName?.trim() || `Document ${doc.documentId}`,
+        sizeLabel: doc.size
+          ? `${Math.max(1, Math.round(doc.size / 1024))} KB`
+          : '',
+        kind: doc.mime?.startsWith('image/') ? ('image' as const) : ('pdf' as const),
+        status: 'ready' as const,
+      }));
+    const known = new Set(fromApi.map((doc) => doc.id));
+    return [...fromApi, ...extraDocuments.filter((doc) => !known.has(doc.id))];
+  }, [documentsResponse?.data, extraDocuments]);
 
   const attachedDocuments = useMemo(
     () =>
@@ -493,10 +611,22 @@ export function useAppointmentDetailController({
     [libraryDocuments, attachedIds],
   );
 
+  const visitFeeLabel =
+    formatMoney(visitDetail?.consultFee, visitDetail?.currency) || '';
+  // platformFee: hide when null — available for UI rows via visitDetail
+  void formatMoney(visitDetail?.platformFee ?? null, visitDetail?.currency);
+  const clinicName = visitDetail?.clinicName?.trim() || '';
+  const clinicAddress = [visitDetail?.clinicCity].filter(Boolean).join(', ');
+  const clinicPhone = visitDetail?.clinicPhone?.trim() || null;
+  const clinicMapLink = visitDetail?.clinicMapLink?.trim() || null;
+  const queuePosition =
+    checkInQueuePosition ??
+    (visitDetail?.queuePosition != null ? visitDetail.queuePosition : null);
+
   return {
     language,
     t,
-    doctorName: t(item.doctorNameKey),
+    doctorName: visitDetail?.doctorName?.trim() || t(item.doctorNameKey),
     doctorInitials: item.doctorInitials,
     credentials: t(item.credentialsKey),
     verified: true,
@@ -516,8 +646,10 @@ export function useAppointmentDetailController({
           : item.mode === 'chat'
             ? 'chatbubble-outline'
             : 'videocam-outline',
-    reason: t(item.reasonKey),
-    feeLabel: t('aptPaidAmount').replace('{amount}', item.feeLabel),
+    reason: visitDetail?.reasonText?.trim() || t(item.reasonKey),
+    feeLabel: visitFeeLabel
+      ? t('aptPaidAmount').replace('{amount}', visitFeeLabel)
+      : '',
     paymentId: item.paymentId,
     isClinic,
     isChat,
@@ -558,6 +690,7 @@ export function useAppointmentDetailController({
     nextShortWhen,
     reschedulePolicy: t('reschedulePolicy').replace('{deadline}', deadlineLabel),
     rescheduleReasonLabel,
+    rescheduleError,
     canConfirmReschedule,
     onBack,
     onJoin: () => {
@@ -690,7 +823,7 @@ export function useAppointmentDetailController({
     },
     onCloseUpload: () => setUploadOpen(false),
     onUploadSaved: (files) => {
-      setLibraryDocuments((prev) => {
+      setExtraDocuments((prev) => {
         const next = [...prev];
         files.forEach((file) => {
           if (!next.some((item) => item.id === file.id)) {
@@ -768,9 +901,13 @@ export function useAppointmentDetailController({
       resetRescheduleForm();
     },
     onSelectRescheduleDay: (id) => {
-      const day = rescheduleDays.find((row) => row.id === id);
+      const day = calendarRescheduleDays.find((row) => row.id === id);
+      if (!day || day.status === 'past') {
+        return;
+      }
+      setRescheduleError(null);
       setRescheduleDayId(id);
-      setRescheduleSlotId(day ? firstOpenSlot(day, currentSlotId) : null);
+      setRescheduleSlotId(null);
     },
     onSelectRescheduleSlot: setRescheduleSlotId,
     onOpenRescheduleReason: () => setRescheduleReasonOpen(true),
@@ -784,7 +921,18 @@ export function useAppointmentDetailController({
     },
     onChangeRescheduleNote: setRescheduleNote,
     onConfirmReschedule: () => {
-      if (!canConfirmReschedule || !selectedRescheduleDay || !selectedRescheduleSlot) {
+      if (
+        rescheduleSubmitting ||
+        !canConfirmReschedule ||
+        !selectedRescheduleDay ||
+        !selectedRescheduleSlot ||
+        selectedRescheduleDay.status === 'past'
+      ) {
+        return;
+      }
+      const appointmentTime = selectedRescheduleSlot.id.slice(0, 5);
+      if (!/^\d{2}:\d{2}$/.test(appointmentTime) || !isNumericId) {
+        setRescheduleError('Choose an available time from the schedule.');
         return;
       }
       const weekday = t(WEEKDAY_KEYS[selectedRescheduleDay.weekdayIndex]);
@@ -800,66 +948,110 @@ export function useAppointmentDetailController({
         selectedRescheduleDay.day,
         selectedRescheduleSlot.id,
       );
+      const appointmentDate = selectedRescheduleDay.id;
 
-      if (isNumericId) {
-        const m = String(selectedRescheduleDay.month + 1).padStart(2, '0');
-        const d = String(selectedRescheduleDay.day).padStart(2, '0');
-        const appointmentDate = `${selectedRescheduleDay.year}-${m}-${d}`;
-        const appointmentTime = selectedRescheduleSlot.id.slice(0, 5);
-        void rescheduleAppointmentMutation({
-          patientAppId: Number(item.id),
-          appointmentDate,
-          appointmentTime,
-          reason: rescheduleNote.trim() || undefined,
+      setRescheduleSubmitting(true);
+      setRescheduleError(null);
+      void rescheduleAppointmentMutation({
+        patientAppId: Number(item.id),
+        appointmentDate,
+        appointmentTime,
+        reason: rescheduleNote.trim() || undefined,
+      })
+        .unwrap()
+        .then(() => {
+          onUpdateAppointment(item.id, {
+            whenLabel,
+            dateLine: daySummary,
+            timeLine,
+            startsAt: newStartsAt,
+          });
+          setRescheduleOpen(false);
+          resetRescheduleForm();
+        })
+        .catch((err: unknown) => {
+          setRescheduleError(messageFromUnknownError(err));
+        })
+        .finally(() => {
+          setRescheduleSubmitting(false);
         });
-      }
-
-      onUpdateAppointment(item.id, {
-        whenLabel,
-        dateLine: daySummary,
-        timeLine,
-        startsAt: newStartsAt,
-      });
-      setRescheduleOpen(false);
-      resetRescheduleForm();
     },
     onGetHelp: () => undefined,
     clinicCheckInOpen,
     clinicCheckInState,
-    clinicName: t('clinicAptClinicName'),
-    clinicAddress: t('clinicAptClinicAddress'),
-    clinicDistanceLabel: t('clinicAptDistance'),
-    clinicTravelNote: t('clinicAptTravelNote'),
-    clinicFeeAmount: item.feeLabel,
+    clinicName,
+    clinicAddress,
+    clinicDistanceLabel: '',
+    clinicTravelNote: '',
+    clinicFeeAmount: visitFeeLabel,
     clinicBannerLabel: t('clinicAptBanner').replace('{when}', item.whenLabel),
+    clinicPhone,
+    clinicMapLink,
     addressCopied,
     checkedInAtLabel,
-    queuePosition: 2,
-    waitMinutes: 15,
+    queuePosition,
+    waitMinutes: null,
+    checkInBusy,
     onOpenCheckIn: () => {
       setClinicCheckInState(clinicCheckInState === 'waiting' ? 'waiting' : 'ready');
       setClinicCheckInOpen(true);
     },
     onCloseCheckIn: () => setClinicCheckInOpen(false),
     onConfirmCheckIn: () => {
-      setCheckedInAtLabel(clockLabel(new Date()));
-      setClinicCheckInState('waiting');
+      if (!isNumericId || checkInBusy) {
+        return;
+      }
+      void checkInVisit({ patientAppId: Number(item.id), status: 'WAITING' })
+        .unwrap()
+        .then((res) => {
+          setCheckedInAtLabel(clockLabel(new Date()));
+          setClinicCheckInState('waiting');
+          if (res.data?.queuePosition != null) {
+            setCheckInQueuePosition(res.data.queuePosition);
+          }
+          setReadyAtLabel(res.data?.readyAt?.trim() || null);
+        })
+        .catch(() => undefined);
     },
-    onTellClinicLate: () => undefined,
-    onSelectCheckInDemoState: setClinicCheckInState,
+    onTellClinicLate: () => {
+      const teleSessionId = visitDetail?.teleSessionId;
+      if (teleSessionId == null) return;
+      void reportRunningLate({ teleSessionId, minutes: 10 })
+        .unwrap()
+        .catch(() => undefined);
+    },
+    readyAtLabel,
     onCopyAddress: () => {
-      void Share.share({ message: t('clinicAptClinicAddress') });
+      const message = [clinicName, clinicAddress].filter(Boolean).join('\n');
+      if (!message) return;
+      void Share.share({ message });
       setAddressCopied(true);
       setTimeout(() => setAddressCopied(false), 2000);
     },
     onDirections: () => {
-      void Linking.openURL(
-        'https://maps.google.com/?q=Prabhat+Road+Lane+15+Pune+411004',
-      );
+      if (clinicMapLink) {
+        void Linking.openURL(clinicMapLink);
+        return;
+      }
+      if (clinicAddress) {
+        void Linking.openURL(
+          `https://maps.google.com/?q=${encodeURIComponent(clinicAddress)}`,
+        );
+      }
     },
     onCallClinic: () => {
-      void Linking.openURL('tel:+918001234567');
+      if (!clinicPhone) return;
+      const digits = clinicPhone.replace(/[^\d+]/g, '');
+      if (digits) void Linking.openURL(`tel:${digits}`);
     },
-    onSwitchOnline: () => undefined,
+    onSwitchOnline: () => {
+      if (!isNumericId) return;
+      void switchVisitToTele({ patientAppId: Number(item.id) })
+        .unwrap()
+        .then(() => {
+          onUpdateAppointment(item.id, { mode: 'video' });
+        })
+        .catch(() => undefined);
+    },
   };
 }

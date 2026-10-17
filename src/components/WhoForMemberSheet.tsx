@@ -140,7 +140,7 @@ export function WhoForMemberSheet({
                             : 'person-outline'
                       }
                       size={22}
-                      color={isChild ? '#D97706' : colors.primary}
+                      color={isChild ? colors.warning : colors.primary}
                     />
                   </View>
 
@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 4,
     borderRadius: radii.full,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: colors.outlineVariant,
     marginBottom: spacing.xs,
   },
   header: {
@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(15, 118, 110, 0.16)',
   },
   avatarChild: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: colors.warningContainer,
   },
   copy: {
     flex: 1,

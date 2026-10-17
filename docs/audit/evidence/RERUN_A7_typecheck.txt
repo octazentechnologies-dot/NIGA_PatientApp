@@ -1,0 +1,5 @@
+yarn run v1.22.19
+$ tsc --noEmit
+warning Cannot find a suitable global folder. Tried these: "/usr/local, /Users/pranavbandekar/.yarn"
+Done in 11.03s.
+TYPECHECK:0

@@ -4,6 +4,7 @@ import { CARE_CATEGORIES } from '../config/careCategories';
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
 import type { CareNeed, NearbyDoctor, SearchCity } from '../models/search';
+import { useGetDoctorFilterOptionsQuery } from '../store/api/new/doctorsApi';
 import {
   isSpeechRecognitionAvailable,
   speechRecognition,
@@ -17,36 +18,10 @@ const CARE_NEEDS: CareNeed[] = CARE_CATEGORIES.map((category, index) => ({
   wide: index === CARE_CATEGORIES.length - 1 && CARE_CATEGORIES.length % 2 === 1,
 }));
 
-const CITIES: SearchCity[] = [
-  { id: 'solapur', nameKey: 'searchCitySolapur' },
-  { id: 'pune', nameKey: 'searchCityPune' },
-  { id: 'mumbai', nameKey: 'searchCityMumbai' },
-];
+/** Nearby list removed — wait for search results from Public/Doctors. */
+const DOCTORS: NearbyDoctor[] = [];
 
-const DOCTORS: NearbyDoctor[] = [
-  {
-    id: 'joshi',
-    nameKey: 'searchDoctorJoshiName',
-    initials: 'AJ',
-    metaKey: 'searchDoctorJoshiMeta',
-    placeKey: 'searchDoctorJoshiPlace',
-    verified: true,
-  },
-  {
-    id: 'patil',
-    nameKey: 'searchDoctorPatilName',
-    initials: 'SP',
-    metaKey: 'searchDoctorPatilMeta',
-    placeKey: 'searchDoctorPatilPlace',
-    verified: true,
-  },
-];
-
-const INITIAL_RECENTS: TranslationKey[] = [
-  'searchRecentSkin',
-  'searchRecentDoctor',
-  'searchRecentChild',
-];
+const INITIAL_RECENTS: TranslationKey[] = [];
 
 export type SearchDoctorsViewModel = {
   language: AppLanguage;
@@ -91,16 +66,35 @@ export function useSearchDoctorsController({
   const closingRef = useRef(false);
   const [query, setQuery] = useState('');
   const [recents, setRecents] = useState<TranslationKey[]>(INITIAL_RECENTS);
-  const [selectedCityId, setSelectedCityId] = useState('solapur');
+  const [selectedCityId, setSelectedCityId] = useState('');
   const [cityPickerOpen, setCityPickerOpen] = useState(false);
   const [listening, setListening] = useState(false);
   const [voiceErrorKey, setVoiceErrorKey] = useState<TranslationKey | null>(
     null,
   );
 
+  const { data: filterOptions } = useGetDoctorFilterOptionsQuery(undefined, {
+    skip: !active,
+  });
+  const cities = useMemo<SearchCity[]>(() => {
+    const out: SearchCity[] = [];
+    for (const city of filterOptions?.cities ?? []) {
+      const label = city.trim();
+      if (!label) continue;
+      out.push({ id: label.toLowerCase(), label });
+    }
+    return out;
+  }, [filterOptions?.cities]);
+
+  useEffect(() => {
+    if (!selectedCityId && cities[0]) {
+      setSelectedCityId(cities[0].id);
+    }
+  }, [cities, selectedCityId]);
+
   const selectedCity = useMemo(
-    () => CITIES.find((city) => city.id === selectedCityId) ?? CITIES[0],
-    [selectedCityId],
+    () => cities.find((city) => city.id === selectedCityId) ?? cities[0],
+    [cities, selectedCityId],
   );
 
   useEffect(() => {
@@ -208,9 +202,11 @@ export function useSearchDoctorsController({
     recents,
     careNeeds: CARE_NEEDS,
     doctors: DOCTORS,
-    cities: CITIES,
+    cities,
     selectedCityId,
-    selectedCityLabel: t(selectedCity.nameKey),
+    selectedCityLabel: selectedCity?.label || selectedCity?.nameKey
+      ? selectedCity.label || t(selectedCity.nameKey!)
+      : '',
     cityPickerOpen,
     listening,
     voiceErrorKey,

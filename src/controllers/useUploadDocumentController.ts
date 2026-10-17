@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Alert } from 'react-native';
+import * as DocumentPicker from 'expo-document-picker';
+import * as ImagePicker from 'expo-image-picker';
 
 import {
   BOOKING_MEMBERS,
@@ -34,6 +37,7 @@ export type UploadDocumentViewModel = {
   files: PatientDocument[];
   readyCount: number;
   canSave: boolean;
+  saving: boolean;
   docType: UploadDocTypeId | null;
   docTypeLabel: string;
   docTypePickerOpen: boolean;
@@ -69,14 +73,31 @@ const DOC_TYPE_KEYS: Record<UploadDocTypeId, TranslationKey> = {
   other: 'uploadDocTypeOther',
 };
 
-function makeUploadingFile(kind: PatientDocument['kind'], name: string): PatientDocument {
+type LocalFile = PatientDocument & {
+  uri: string;
+  mimeType: string;
+};
+
+function makeLocalFile(
+  kind: PatientDocument['kind'],
+  name: string,
+  uri: string,
+  mimeType: string,
+  sizeBytes?: number | null,
+): LocalFile {
+  const sizeLabel =
+    sizeBytes != null && sizeBytes > 0
+      ? `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`
+      : '';
   return {
     id: `up-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     name,
-    sizeLabel: kind === 'pdf' ? '1.1 MB' : '820 KB',
+    sizeLabel,
     kind,
-    status: 'uploading',
-    progress: 0.15,
+    status: 'ready',
+    progress: 1,
+    uri,
+    mimeType,
   };
 }
 
@@ -92,7 +113,7 @@ export function useUploadDocumentController({
   const { language, t } = useLocalization();
   const [memberId, setMemberId] = useState<UploadMemberId>('self');
   const [memberPickerOpen, setMemberPickerOpen] = useState(false);
-  const [files, setFiles] = useState<PatientDocument[]>([]);
+  const [files, setFiles] = useState<LocalFile[]>([]);
   const [docType, setDocType] = useState<UploadDocTypeId | null>(null);
   const [docTypePickerOpen, setDocTypePickerOpen] = useState(false);
   const [docDate, setDocDate] = useState('');
@@ -112,48 +133,15 @@ export function useUploadDocumentController({
     }
   }, [active]);
 
-  useEffect(() => {
-    if (!active) {
-      return;
-    }
-    const uploading = files.filter((file) => file.status === 'uploading');
-    if (uploading.length === 0) {
-      return;
-    }
-    const timer = setInterval(() => {
-      setFiles((prev) =>
-        prev.map((file) => {
-          if (file.status !== 'uploading') {
-            return file;
-          }
-          const next = Math.min(1, (file.progress ?? 0) + 0.2);
-          if (next >= 1) {
-            return { ...file, status: 'ready', progress: 1 };
-          }
-          return { ...file, progress: next };
-        }),
-      );
-    }, 400);
-    return () => clearInterval(timer);
-  }, [active, files]);
-
   const readyCount = useMemo(
     () => files.filter((file) => file.status === 'ready').length,
     [files],
   );
 
-  const addDemoFile = (kind: PatientDocument['kind']) => {
-    const name =
-      kind === 'pdf'
-        ? 'blood_report_aug.pdf'
-        : kind === 'image'
-          ? 'rash_arm.jpg'
-          : 'capture.jpg';
+  const appendFile = (file: LocalFile) => {
     setFiles((prev) => {
-      if (prev.length >= 10) {
-        return prev;
-      }
-      return [...prev, makeUploadingFile(kind === 'pdf' ? 'pdf' : 'image', name)];
+      if (prev.length >= 10) return prev;
+      return [...prev, file];
     });
   };
 
@@ -181,7 +169,76 @@ export function useUploadDocumentController({
     members.find((item) => item.id === memberId) ?? members[0];
   const memberLabel = member.name;
 
-  const [uploadDocumentApi] = useUploadDocumentMutation();
+  const [uploadDocumentApi, { isLoading: saving }] =
+    useUploadDocumentMutation();
+
+  const onTakePhoto = async () => {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert(t('genericError'), 'Camera permission is required.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      quality: 0.85,
+    });
+    if (result.canceled || !result.assets[0]) return;
+    const asset = result.assets[0];
+    appendFile(
+      makeLocalFile(
+        'image',
+        asset.fileName || `photo_${Date.now()}.jpg`,
+        asset.uri,
+        asset.mimeType || 'image/jpeg',
+        asset.fileSize,
+      ),
+    );
+  };
+
+  const onPickGallery = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert(t('genericError'), 'Photo library permission is required.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 0.85,
+    });
+    if (result.canceled || !result.assets[0]) return;
+    const asset = result.assets[0];
+    appendFile(
+      makeLocalFile(
+        'image',
+        asset.fileName || `image_${Date.now()}.jpg`,
+        asset.uri,
+        asset.mimeType || 'image/jpeg',
+        asset.fileSize,
+      ),
+    );
+  };
+
+  const onPickFile = async () => {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: ['application/pdf', 'image/*'],
+      copyToCacheDirectory: true,
+      multiple: false,
+    });
+    if (result.canceled || !result.assets[0]) return;
+    const asset = result.assets[0];
+    const isPdf =
+      (asset.mimeType || '').includes('pdf') ||
+      (asset.name || '').toLowerCase().endsWith('.pdf');
+    appendFile(
+      makeLocalFile(
+        isPdf ? 'pdf' : 'image',
+        asset.name || `file_${Date.now()}`,
+        asset.uri,
+        asset.mimeType || (isPdf ? 'application/pdf' : 'image/jpeg'),
+        asset.size,
+      ),
+    );
+  };
 
   return {
     language,
@@ -192,7 +249,8 @@ export function useUploadDocumentController({
     memberPickerOpen,
     files,
     readyCount,
-    canSave: readyCount > 0,
+    canSave: readyCount > 0 && !saving,
+    saving,
     docType,
     docTypeLabel: docType ? t(DOC_TYPE_KEYS[docType]) : '',
     docTypePickerOpen,
@@ -203,24 +261,30 @@ export function useUploadDocumentController({
     onHelp: () => undefined,
     onOpenMemberPicker: () => setMemberPickerOpen(true),
     onCloseMemberPicker: () => setMemberPickerOpen(false),
-    onSelectMember: (id) => {
-      setMemberId(id);
+    onSelectMember: (next) => {
+      setMemberId(next);
       setMemberPickerOpen(false);
     },
     onAddMember: () => {
       setMemberPickerOpen(false);
     },
-    onTakePhoto: () => addDemoFile('image'),
-    onPickGallery: () => addDemoFile('image'),
-    onPickFile: () => addDemoFile('pdf'),
-    onCancelUpload: (id) => {
-      setFiles((prev) => prev.filter((file) => file.id !== id));
+    onTakePhoto: () => {
+      void onTakePhoto();
+    },
+    onPickGallery: () => {
+      void onPickGallery();
+    },
+    onPickFile: () => {
+      void onPickFile();
+    },
+    onCancelUpload: (fileId) => {
+      setFiles((prev) => prev.filter((file) => file.id !== fileId));
     },
     onOpenFileMenu: (_id: string) => undefined,
     onOpenDocTypePicker: () => setDocTypePickerOpen(true),
     onCloseDocTypePicker: () => setDocTypePickerOpen(false),
-    onSelectDocType: (id) => {
-      setDocType(id);
+    onSelectDocType: (next) => {
+      setDocType(next);
       setDocTypePickerOpen(false);
     },
     onChangeDocDate: setDocDate,
@@ -229,25 +293,37 @@ export function useUploadDocumentController({
     onCancel: onClose,
     onSave: async () => {
       const ready = files.filter((file) => file.status === 'ready');
-      if (ready.length === 0) {
+      if (ready.length === 0 || saving) {
         return;
       }
-      if (isAuthenticated) {
-        for (const file of ready) {
-          try {
-            const formData = new FormData();
-            formData.append('file', {
-              uri: 'file://' + file.name,
-              name: file.name,
-              type: file.kind === 'pdf' ? 'application/pdf' : 'image/jpeg',
-            } as unknown as Blob);
-            await uploadDocumentApi(formData).unwrap();
-          } catch (err) {
-            console.warn('[uploadDocumentApi] Failed:', err);
+      if (!isAuthenticated) {
+        Alert.alert(t('genericError'), 'Sign in to upload documents.');
+        return;
+      }
+      const uploaded: PatientDocument[] = [];
+      for (const file of ready) {
+        try {
+          const formData = new FormData();
+          formData.append('file', {
+            uri: file.uri,
+            name: file.name,
+            type: file.mimeType,
+          } as unknown as Blob);
+          if (docType) {
+            formData.append('docType', docType);
           }
+          if (notes.trim()) {
+            formData.append('notes', notes.trim());
+          }
+          await uploadDocumentApi(formData).unwrap();
+          uploaded.push(file);
+        } catch (err) {
+          console.warn('[uploadDocumentApi] Failed:', err);
+          Alert.alert(t('genericError'), 'Upload failed. Please try again.');
+          return;
         }
       }
-      onSaved(ready);
+      onSaved(uploaded);
       onClose();
     },
   };

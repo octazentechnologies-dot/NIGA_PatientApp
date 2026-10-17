@@ -37,7 +37,7 @@ export function LanguageChoiceRow({
       <View style={styles.labels}>
         <AppText
           variant="bodyLg"
-          color="#000000"
+          color={colors.ink}
           languageOverride={languageCode}
           weightOverride="600"
         >

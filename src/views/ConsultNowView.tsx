@@ -20,19 +20,13 @@ import { fontFamilyFor } from '../utilities/fonts';
 import { scaleFont } from '../utilities/scale';
 import { sheetBottomPadding } from '../utilities/sheetInset';
 
-const MUTED = '#595959';
-const HAIRLINE = '#E6E6E6';
-const SUCCESS = '#0F7A4E';
-const SUCCESS_FILL = '#E9F5EF';
-const SUCCESS_BORDER = '#CDE8DA';
-const CHIP_FILL = '#E6F5FE';
-const ICON_BLUE = '#2A7BA3';
-const ACTION = '#2A7BA3';
-const AMBER = '#8A5109';
-const AMBER_FILL = '#FCF3E4';
-const AMBER_BORDER = '#F2C14E';
-const ERROR = '#A3231A';
-const ERROR_FILL = '#FBEBE9';
+const SUCCESS_BORDER = colors.successContainer;
+const ICON_BLUE = colors.primary;
+const AMBER = colors.warning;
+const AMBER_FILL = colors.warningContainer;
+const AMBER_BORDER = colors.tertiaryContainer;
+const ERROR = colors.error;
+const ERROR_FILL = colors.errorContainer;
 
 export function ConsultNowView(vm: ConsultNowViewModel) {
   const insets = useSafeAreaInsets();
@@ -51,9 +45,9 @@ export function ConsultNowView(vm: ConsultNowViewModel) {
           onPress={vm.onBack}
           style={styles.iconButton}
         >
-          <Ionicons name="arrow-back" size={24} color="#000000" />
+          <Ionicons name="arrow-back" size={24} color={colors.ink} />
         </Pressable>
-        <AppText variant="headlineMd" color="#000000" style={styles.title}>
+        <AppText variant="headlineMd" color={colors.ink} style={styles.title}>
           {vm.t('consultNowTitle')}
         </AppText>
         <View style={styles.instantBadge}>
@@ -71,12 +65,12 @@ export function ConsultNowView(vm: ConsultNowViewModel) {
         ]}
       >
         <View style={styles.availableCard}>
-          <Ionicons name="time-outline" size={22} color={SUCCESS} />
+          <Ionicons name="time-outline" size={22} color={colors.success} />
           <View style={styles.flex}>
-            <AppText variant="titleMd" color={SUCCESS}>
+            <AppText variant="titleMd" color={colors.success}>
               {vm.availableLabel}
             </AppText>
-            <AppText variant="bodyMd" color={MUTED}>
+            <AppText variant="bodyMd" color={colors.muted}>
               {vm.waitLabel}
             </AppText>
           </View>
@@ -87,20 +81,20 @@ export function ConsultNowView(vm: ConsultNowViewModel) {
           onPress={vm.onOpenMemberPicker}
           style={styles.consultingChip}
         >
-          <AppText variant="bodyMd" color="#000000">
+          <AppText variant="bodyMd" color={colors.ink}>
             {`${vm.t('bookConsultingFor')} `}
-            <AppText variant="bodyMd" color="#000000" weightOverride="600">
+            <AppText variant="bodyMd" color={colors.ink} weightOverride="600">
               {vm.selectedMemberLabel}
             </AppText>
           </AppText>
-          <Ionicons name="chevron-down" size={18} color={MUTED} />
+          <Ionicons name="chevron-down" size={18} color={colors.muted} />
         </Pressable>
 
         <View style={styles.section}>
-          <AppText variant="titleMd" color="#000000">
+          <AppText variant="titleMd" color={colors.ink}>
             {vm.t('consultNowCareNeed')}
           </AppText>
-          <AppText variant="bodyMd" color={MUTED}>
+          <AppText variant="bodyMd" color={colors.muted}>
             {vm.t('consultNowCareNeedHint')}
           </AppText>
           <View style={styles.needGrid}>
@@ -121,10 +115,10 @@ export function ConsultNowView(vm: ConsultNowViewModel) {
                     resizeMode="contain"
                     style={styles.needImage}
                   />
-                  <AppText variant="titleMd" color="#000000">
+                  <AppText variant="titleMd" color={colors.ink}>
                     {vm.t(need.titleKey)}
                   </AppText>
-                  <AppText variant="bodyMd" color={MUTED}>
+                  <AppText variant="bodyMd" color={colors.muted}>
                     {vm.t(need.hintKey)}
                   </AppText>
                 </Pressable>
@@ -134,7 +128,7 @@ export function ConsultNowView(vm: ConsultNowViewModel) {
         </View>
 
         <View style={styles.section}>
-          <AppText variant="titleMd" color="#000000">
+          <AppText variant="titleMd" color={colors.ink}>
             {vm.t('filterConsultMode')}
           </AppText>
           <View style={styles.chipRow}>
@@ -151,7 +145,7 @@ export function ConsultNowView(vm: ConsultNowViewModel) {
         </View>
 
         <View style={styles.section}>
-          <AppText variant="titleMd" color="#000000">
+          <AppText variant="titleMd" color={colors.ink}>
             {vm.t('languageLabel')}
           </AppText>
           <View style={styles.chipRow}>
@@ -170,7 +164,7 @@ export function ConsultNowView(vm: ConsultNowViewModel) {
         <View style={styles.divider} />
 
         <View style={styles.section}>
-          <AppText variant="titleMd" color="#000000">
+          <AppText variant="titleMd" color={colors.ink}>
             {vm.t('filterDoctorSection')}
           </AppText>
           <View style={styles.chipRow}>
@@ -190,7 +184,7 @@ export function ConsultNowView(vm: ConsultNowViewModel) {
         <View style={styles.divider} />
 
         <View style={styles.section}>
-          <AppText variant="titleMd" color="#000000">
+          <AppText variant="titleMd" color={colors.ink}>
             {vm.t('filterQualifications')}
           </AppText>
           <Pressable
@@ -200,7 +194,7 @@ export function ConsultNowView(vm: ConsultNowViewModel) {
             style={styles.checkRow}
           >
             <CheckBox checked={vm.recognizedQualification} />
-            <AppText variant="bodyMd" color="#000000" style={styles.flex}>
+            <AppText variant="bodyMd" color={colors.ink} style={styles.flex}>
               {vm.t('filterRecognizedQual')}
             </AppText>
           </Pressable>
@@ -211,7 +205,7 @@ export function ConsultNowView(vm: ConsultNowViewModel) {
             style={styles.checkRow}
           >
             <CheckBox checked={vm.focusCertified} />
-            <AppText variant="bodyMd" color="#000000" style={styles.flex}>
+            <AppText variant="bodyMd" color={colors.ink} style={styles.flex}>
               {vm.t('filterFocusCert')}
             </AppText>
           </Pressable>
@@ -220,16 +214,16 @@ export function ConsultNowView(vm: ConsultNowViewModel) {
         <View style={styles.divider} />
 
         <View style={styles.section}>
-          <AppText variant="titleMd" color="#000000">
+          <AppText variant="titleMd" color={colors.ink}>
             {vm.t('filterLocation')}
           </AppText>
           <View style={styles.searchWrap}>
-            <Ionicons name="search" size={18} color="#707976" />
+            <Ionicons name="search" size={18} color={colors.outline} />
             <TextInput
               value={vm.locationQuery}
               onChangeText={vm.onChangeLocationQuery}
               placeholder={vm.t('filterLocationPlaceholder')}
-              placeholderTextColor="#707976"
+              placeholderTextColor={colors.outline}
               style={[
                 styles.searchInput,
                 { fontFamily: fontFamilyFor('400', vm.language, 'sans') },
@@ -240,7 +234,7 @@ export function ConsultNowView(vm: ConsultNowViewModel) {
             {vm.visibleCities.map((city) => (
               <PreferenceChip
                 key={city.id}
-                label={vm.t(city.nameKey)}
+                label={city.label || (city.nameKey ? vm.t(city.nameKey) : city.id)}
                 selected={vm.selectedCityIds.includes(city.id)}
                 onPress={() => vm.onToggleCity(city.id)}
               />
@@ -257,10 +251,10 @@ export function ConsultNowView(vm: ConsultNowViewModel) {
 
         <View style={styles.section}>
           <View style={styles.noteHead}>
-            <AppText variant="titleMd" color="#000000">
+            <AppText variant="titleMd" color={colors.ink}>
               {vm.t('consultNowNote')}
             </AppText>
-            <AppText variant="bodyMd" color={MUTED}>
+            <AppText variant="bodyMd" color={colors.muted}>
               {vm.t('consultNowNoteOptional')}
             </AppText>
           </View>
@@ -268,7 +262,7 @@ export function ConsultNowView(vm: ConsultNowViewModel) {
             value={vm.note}
             onChangeText={vm.onChangeNote}
             placeholder={vm.t('consultNowNotePlaceholder')}
-            placeholderTextColor={MUTED}
+            placeholderTextColor={colors.muted}
             multiline
             style={[
               styles.note,
@@ -279,24 +273,24 @@ export function ConsultNowView(vm: ConsultNowViewModel) {
 
         <View style={styles.feeCard}>
           <View style={styles.feeRow}>
-            <AppText variant="bodyLg" color="#000000">
+            <AppText variant="bodyLg" color={colors.ink}>
               {vm.t('consultNowFeeLabel')}
             </AppText>
-            <AppText variant="titleMd" color="#000000">
+            <AppText variant="titleMd" color={colors.ink}>
               {vm.feeLabel}
             </AppText>
           </View>
           <AppText variant="bodyMd" color={AMBER} weightOverride="600">
             {vm.t('consultNowPaidExtra')}
           </AppText>
-          <AppText variant="bodyMd" color={MUTED}>
+          <AppText variant="bodyMd" color={colors.muted}>
             {vm.t('consultNowFeeHint')}
           </AppText>
         </View>
 
         <View style={styles.emergency}>
           <Ionicons name="warning" size={22} color={ERROR} />
-          <AppText variant="bodyMd" color="#000000" style={styles.flex}>
+          <AppText variant="bodyMd" color={colors.ink} style={styles.flex}>
             <AppText variant="bodyMd" color={ERROR} weightOverride="600">
               {vm.t('consultNowEmergency')}
             </AppText>
@@ -316,10 +310,10 @@ export function ConsultNowView(vm: ConsultNowViewModel) {
             pressed && vm.canFindDoctor && styles.pressed,
           ]}
         >
-          <AppText variant="titleMd" color="#FFFFFF">
+          <AppText variant="titleMd" color={colors.card}>
             {vm.t('consultNowFindDoctor')}
           </AppText>
-          <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+          <Ionicons name="arrow-forward" size={20} color={colors.card} />
         </Pressable>
       </View>
 
@@ -339,11 +333,11 @@ export function ConsultNowView(vm: ConsultNowViewModel) {
           >
             <View style={styles.handle} />
             <View style={styles.sheetHead}>
-              <AppText variant="headlineMd" color="#000000">
+              <AppText variant="headlineMd" color={colors.ink}>
                 {vm.t('bookWhoFor')}
               </AppText>
               <Pressable onPress={vm.onCloseMemberPicker} style={styles.iconButton}>
-                <Ionicons name="close" size={22} color="#000000" />
+                <Ionicons name="close" size={22} color={colors.ink} />
               </Pressable>
             </View>
             {vm.members.map((item) => {
@@ -363,14 +357,14 @@ export function ConsultNowView(vm: ConsultNowViewModel) {
                     <Ionicons
                       name={item.icon === 'child' ? 'happy-outline' : 'person-outline'}
                       size={22}
-                      color="#000000"
+                      color={colors.ink}
                     />
                   </View>
                   <View style={styles.flex}>
-                    <AppText variant="titleMd" color="#000000" style={styles.memberName}>
+                    <AppText variant="titleMd" color={colors.ink} style={styles.memberName}>
                       {item.self ? vm.t('bookMyself') : item.name}
                     </AppText>
-                    <AppText variant="bodyMd" color={selected ? '#000000' : MUTED}>
+                    <AppText variant="bodyMd" color={selected ? colors.ink : colors.muted}>
                       {item.self
                         ? item.name
                         : item.relationshipName
@@ -388,9 +382,9 @@ export function ConsultNowView(vm: ConsultNowViewModel) {
             })}
             <Pressable onPress={vm.onAddMember} style={styles.addMember}>
               <View style={styles.addAvatar}>
-                <Ionicons name="add" size={22} color="#000000" />
+                <Ionicons name="add" size={22} color={colors.ink} />
               </View>
-              <AppText variant="titleMd" color="#000000" style={styles.memberName}>
+              <AppText variant="titleMd" color={colors.ink} style={styles.memberName}>
                 {vm.t('bookAddMember')}
               </AppText>
             </Pressable>
@@ -426,9 +420,9 @@ function PreferenceChip({
       {selected && !keepIcon ? (
         <Ionicons name="checkmark" size={16} color={ICON_BLUE} />
       ) : icon ? (
-        <Ionicons name={icon} size={16} color="#000000" />
+        <Ionicons name={icon} size={16} color={colors.ink} />
       ) : null}
-      <AppText variant="labelMd" color="#000000" languageOverride={languageOverride}>
+      <AppText variant="labelMd" color={colors.ink} languageOverride={languageOverride}>
         {label}
       </AppText>
     </Pressable>
@@ -438,7 +432,7 @@ function PreferenceChip({
 function CheckBox({ checked }: { checked: boolean }) {
   return (
     <View style={[styles.checkbox, checked && styles.checkboxOn]}>
-      {checked ? <Ionicons name="checkmark" size={14} color="#FFFFFF" /> : null}
+      {checked ? <Ionicons name="checkmark" size={14} color={colors.card} /> : null}
     </View>
   );
 }
@@ -455,7 +449,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
     gap: 8,
   },
   iconButton: {
@@ -482,7 +476,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   availableCard: {
-    backgroundColor: SUCCESS_FILL,
+    backgroundColor: colors.successContainer,
     borderWidth: 1,
     borderColor: SUCCESS_BORDER,
     borderRadius: radii.sm,
@@ -497,7 +491,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.full,
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -515,7 +509,7 @@ const styles = StyleSheet.create({
     width: '47%',
     flexGrow: 1,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     padding: spacing.md,
     gap: spacing.xs,
@@ -525,7 +519,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   needSelected: {
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     borderColor: ICON_BLUE,
     borderWidth: 1.5,
   },
@@ -542,7 +536,7 @@ const styles = StyleSheet.create({
   chip: {
     minHeight: 40,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.full,
     paddingHorizontal: 14,
     flexDirection: 'row',
@@ -551,13 +545,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
   },
   chipSelected: {
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     borderColor: ICON_BLUE,
     borderWidth: 1.5,
   },
   divider: {
     height: 1,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
   },
   checkRow: {
     flexDirection: 'row',
@@ -581,7 +575,7 @@ const styles = StyleSheet.create({
   searchWrap: {
     minHeight: 48,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.full,
     paddingHorizontal: 14,
     flexDirection: 'row',
@@ -591,7 +585,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    color: '#000000',
+    color: colors.ink,
     paddingVertical: 10,
     fontSize: scaleFont(15),
   },
@@ -603,15 +597,15 @@ const styles = StyleSheet.create({
   note: {
     minHeight: 120,
     borderWidth: 1,
-    borderColor: '#8A8A8A',
+    borderColor: colors.outline,
     borderRadius: radii.sm,
     padding: spacing.md,
-    color: '#000000',
+    color: colors.ink,
     textAlignVertical: 'top',
   },
   feeCard: {
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     padding: spacing.md,
     gap: 8,
@@ -638,14 +632,14 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: colors.card,
     borderTopWidth: 1,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
   },
   findBtn: {
     minHeight: 52,
     borderRadius: radii.button,
-    backgroundColor: ACTION,
+    backgroundColor: colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -669,7 +663,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 5,
     borderRadius: radii.full,
-    backgroundColor: '#D6D6D6',
+    backgroundColor: colors.outlineVariant,
     marginBottom: 4,
   },
   sheetHead: {
@@ -684,11 +678,11 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
   },
   memberRowSelected: {
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     borderWidth: 1.5,
     borderColor: ICON_BLUE,
   },
@@ -696,14 +690,14 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: radii.full,
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     borderWidth: 1.5,
-    borderColor: '#000000',
+    borderColor: colors.ink,
     alignItems: 'center',
     justifyContent: 'center',
   },
   memberAvatarSelected: {
-    backgroundColor: '#5CCEF7',
+    backgroundColor: colors.iconFill,
   },
   memberName: {
     fontSize: scaleFont(18),
@@ -716,7 +710,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderWidth: 1.5,
     borderStyle: 'dashed',
-    borderColor: '#8A8A8A',
+    borderColor: colors.outline,
     borderRadius: radii.sm,
     marginTop: 8,
   },
@@ -724,7 +718,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: radii.full,
-    backgroundColor: '#F2F2F2',
+    backgroundColor: colors.surfaceVariant,
     alignItems: 'center',
     justifyContent: 'center',
   },

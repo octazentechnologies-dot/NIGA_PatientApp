@@ -4,11 +4,24 @@ import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
 import {
   useGetNotificationsQuery,
+  useGetUnreadNotificationCountQuery,
+  useMarkAllNotificationsReadMutation,
   useMarkNotificationReadMutation,
+  type ApiAppNotification,
+  type NotificationType,
 } from '../store/api/new/notificationsApi';
 import { useAppSelector } from '../store/hooks';
+import {
+  resolveNotificationDeepLink,
+  type DeepLinkTarget,
+} from '../utilities/deepLink';
 
-export type NotifFilter = 'all' | 'appointments' | 'prescriptions' | 'medicines';
+export type NotifFilter =
+  | 'all'
+  | 'appointments'
+  | 'prescriptions'
+  | 'medicines'
+  | 'other';
 
 export type NotifGroup = 'today' | 'yesterday' | 'earlier';
 
@@ -23,6 +36,7 @@ export type NotificationItem = {
   timeKey: TranslationKey;
   tone: NotifTone;
   unread: boolean;
+  deepLink: string | null;
   joinAction?: boolean;
 };
 
@@ -33,6 +47,9 @@ export type NotificationsViewModel = {
   filters: { id: NotifFilter; labelKey: TranslationKey }[];
   groups: { id: NotifGroup; labelKey: TranslationKey; items: NotificationItem[] }[];
   revealedId: string | null;
+  loading: boolean;
+  isError: boolean;
+  isEmpty: boolean;
   onBack: () => void;
   onMarkAllRead: () => void;
   onSelectFilter: (id: NotifFilter) => void;
@@ -41,6 +58,9 @@ export type NotificationsViewModel = {
   onReveal: (id: string | null) => void;
   onMarkRead: (id: string) => void;
   onDelete: (id: string) => void;
+  onRetry: () => void;
+  onLoadMore: () => void;
+  canLoadMore: boolean;
   unreadCount: number;
 };
 
@@ -51,117 +71,123 @@ const FILTERS: NotificationsViewModel['filters'] = [
   { id: 'medicines', labelKey: 'notifFilterMedicines' },
 ];
 
-const SEED: NotificationItem[] = [
-  {
-    id: 'join',
-    filter: 'appointments',
-    group: 'today',
-    titleKey: 'notifJoinTitle',
-    bodyKey: 'notifJoinBody',
-    timeKey: 'notifTime42m',
+function filterFromType(
+  type: NotificationType | null | undefined,
+): Exclude<NotifFilter, 'all'> {
+  const key = (type || '').toUpperCase();
+  if (key === 'APPOINTMENT' || key === 'PAYMENT' || key === 'SYSTEM') {
+    return 'appointments';
+  }
+  if (key === 'PRESCRIPTION') {
+    return 'prescriptions';
+  }
+  if (key === 'MEDICINE') {
+    return 'medicines';
+  }
+  // null / MARKETING / unknown → other (shown under all)
+  return 'other';
+}
+
+function groupFor(createdAt: string): NotifGroup {
+  const day = createdAt?.slice(0, 10);
+  if (!day) {
+    return 'earlier';
+  }
+  const today = new Date();
+  const ymd = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  if (day === ymd(today)) {
+    return 'today';
+  }
+  const y = new Date(today);
+  y.setDate(y.getDate() - 1);
+  if (day === ymd(y)) {
+    return 'yesterday';
+  }
+  return 'earlier';
+}
+
+function mapRow(item: ApiAppNotification): NotificationItem {
+  return {
+    id: String(item.appNotificationId),
+    filter: filterFromType(item.type),
+    group: groupFor(item.createdAt || ''),
+    titleKey: (item.title || '') as TranslationKey,
+    bodyKey: (item.body || '') as TranslationKey,
+    timeKey: '' as TranslationKey,
     tone: 'clinical',
-    unread: true,
-    joinAction: true,
-  },
-  {
-    id: 'rx',
-    filter: 'prescriptions',
-    group: 'today',
-    titleKey: 'notifRxTitle',
-    bodyKey: 'notifRxBody',
-    timeKey: 'notifTime2h',
-    tone: 'clinical',
-    unread: true,
-  },
-  {
-    id: 'delivery',
-    filter: 'medicines',
-    group: 'today',
-    titleKey: 'notifDeliveryTitle',
-    bodyKey: 'notifDeliveryBody',
-    timeKey: 'notifTime3h',
-    tone: 'clinical',
-    unread: true,
-  },
-  {
-    id: 'followup',
-    filter: 'appointments',
-    group: 'yesterday',
-    titleKey: 'notifFollowTitle',
-    bodyKey: 'notifFollowBody',
-    timeKey: 'notifTime1d',
-    tone: 'clinical',
-    unread: false,
-  },
-  {
-    id: 'refund',
-    filter: 'appointments',
-    group: 'earlier',
-    titleKey: 'notifRefundTitle',
-    bodyKey: 'notifRefundBody',
-    timeKey: 'notifTime3d',
-    tone: 'money',
-    unread: false,
-  },
-  {
-    id: 'carelink',
-    filter: 'appointments',
-    group: 'earlier',
-    titleKey: 'notifCareLinkTitle',
-    bodyKey: 'notifCareLinkBody',
-    timeKey: 'notifTime5d',
-    tone: 'carelink',
-    unread: false,
-  },
-];
+    unread: !item.isRead,
+    deepLink: item.deepLink ?? null,
+  };
+}
 
 export function useNotificationsController({
   onBack,
   onJoinConsultation,
+  onNavigateDeepLink,
 }: {
   onBack: () => void;
   onJoinConsultation?: () => void;
+  onNavigateDeepLink?: (target: DeepLinkTarget) => void;
 }): NotificationsViewModel {
   const { language, t } = useLocalization();
   const [filter, setFilter] = useState<NotifFilter>('all');
-  const [items, setItems] = useState(SEED);
-  const [revealedId, setRevealedId] = useState<string | null>('delivery');
+  const [pageNumber, setPageNumber] = useState(1);
+  const [accumulated, setAccumulated] = useState<NotificationItem[]>([]);
+  const [revealedId, setRevealedId] = useState<string | null>(null);
+  const pageSize = 20;
 
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
-  const { data: notifResponse } = useGetNotificationsQuery(undefined, {
-    skip: !isAuthenticated,
-  });
+  const {
+    data: notifResponse,
+    isLoading,
+    isFetching,
+    isError,
+    refetch,
+  } = useGetNotificationsQuery(
+    { pageNumber, pageSize },
+    { skip: !isAuthenticated },
+  );
+  const { data: unreadFromApi, refetch: refetchUnread } =
+    useGetUnreadNotificationCountQuery(undefined, {
+      skip: !isAuthenticated,
+    });
   const [markNotificationReadApi] = useMarkNotificationReadMutation();
+  const [markAllReadApi] = useMarkAllNotificationsReadMutation();
 
   useEffect(() => {
-    if (notifResponse?.data && Array.isArray(notifResponse.data)) {
-      setItems(
-        notifResponse.data.map((item) => {
-          const filterVal: Exclude<NotifFilter, 'all'> = item.title.toLowerCase().includes('rx') ||
-            item.title.toLowerCase().includes('prescription')
-            ? 'prescriptions'
-            : item.title.toLowerCase().includes('order') || item.title.toLowerCase().includes('medicine')
-              ? 'medicines'
-              : 'appointments';
-
-          return {
-            id: String(item.appNotificationId),
-            filter: filterVal,
-            group: 'today' as NotifGroup,
-            titleKey: item.title as unknown as TranslationKey,
-            bodyKey: item.body as unknown as TranslationKey,
-            timeKey: 'notifTime42m',
-            tone: 'clinical',
-            unread: !item.isRead,
-          };
-        }),
-      );
+    if (!notifResponse?.items) {
+      return;
     }
-  }, [notifResponse]);
+    const mapped = notifResponse.items.map(mapRow);
+    setAccumulated((prev) => {
+      if (pageNumber <= 1) {
+        if (
+          prev.length === mapped.length &&
+          prev.every((row, index) => row.id === mapped[index]?.id)
+        ) {
+          return prev;
+        }
+        return mapped;
+      }
+      const seen = new Set(prev.map((p) => p.id));
+      const appended = mapped.filter((m) => !seen.has(m.id));
+      if (appended.length === 0) {
+        return prev;
+      }
+      return [...prev, ...appended];
+    });
+  }, [notifResponse, pageNumber]);
+
+  const items = accumulated;
 
   const groups = useMemo(() => {
     const filtered =
-      filter === 'all' ? items : items.filter((item) => item.filter === filter);
+      filter === 'all'
+        ? items
+        : filter === 'other'
+          ? items.filter((item) => item.filter === 'other')
+          : items.filter((item) => item.filter === filter);
     const order: NotifGroup[] = ['today', 'yesterday', 'earlier'];
     const labels: Record<NotifGroup, TranslationKey> = {
       today: 'notifGroupToday',
@@ -177,7 +203,34 @@ export function useNotificationsController({
       .filter((group) => group.items.length > 0);
   }, [filter, items]);
 
-  const unreadCount = items.filter((item) => item.unread).length;
+  const unreadCount =
+    typeof unreadFromApi === 'number'
+      ? unreadFromApi
+      : items.filter((item) => item.unread).length;
+  const loading = isAuthenticated && (isLoading || isFetching);
+  const canLoadMore =
+    Boolean(notifResponse) &&
+    accumulated.length < (notifResponse?.totalRecords ?? 0);
+
+  const markRead = (id: string) => {
+    setAccumulated((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, unread: false } : item)),
+    );
+    setRevealedId(null);
+    if (!isAuthenticated) return;
+    const numId = Number(id);
+    if (!Number.isNaN(numId) && numId > 0) {
+      void markNotificationReadApi({
+        appNotificationId: numId,
+        isRead: true,
+      })
+        .unwrap()
+        .then(() => {
+          void refetchUnread();
+        })
+        .catch(() => undefined);
+    }
+  };
 
   return {
     language,
@@ -186,53 +239,49 @@ export function useNotificationsController({
     filters: FILTERS,
     groups,
     revealedId,
+    loading,
+    isError: isAuthenticated && isError,
+    isEmpty: !loading && !isError && items.length === 0,
     onBack,
     onMarkAllRead: () => {
-      setItems((prev) => prev.map((item) => ({ ...item, unread: false })));
+      setAccumulated((prev) => prev.map((item) => ({ ...item, unread: false })));
       setRevealedId(null);
-      if (isAuthenticated && notifResponse?.data) {
-        for (const item of notifResponse.data) {
-          if (!item.isRead) {
-            markNotificationReadApi({ appNotificationId: item.appNotificationId, isRead: true }).catch(() => undefined);
-          }
-        }
-      }
+      if (!isAuthenticated) return;
+      void markAllReadApi()
+        .unwrap()
+        .then(() => {
+          void refetchUnread();
+        })
+        .catch(() => undefined);
     },
-    onSelectFilter: setFilter,
+    onSelectFilter: (id) => {
+      setFilter(id);
+    },
     onOpenItem: (id) => {
-      setItems((prev) =>
-        prev.map((item) => (item.id === id ? { ...item, unread: false } : item)),
-      );
-      setRevealedId(null);
-      if (isAuthenticated) {
-        const numId = Number(id);
-        if (!isNaN(numId) && numId > 0) {
-          markNotificationReadApi({ appNotificationId: numId, isRead: true }).catch((e) =>
-            console.warn('[markNotificationReadApi] Failed:', e),
-          );
-        }
+      const row = items.find((i) => i.id === id);
+      markRead(id);
+      const target = resolveNotificationDeepLink(row?.deepLink);
+      if (target && target.kind !== 'unknown') {
+        onNavigateDeepLink?.(target);
       }
     },
     onJoin: () => onJoinConsultation?.(),
     onReveal: setRevealedId,
-    onMarkRead: (id) => {
-      setItems((prev) =>
-        prev.map((item) => (item.id === id ? { ...item, unread: false } : item)),
-      );
-      setRevealedId(null);
-      if (isAuthenticated) {
-        const numId = Number(id);
-        if (!isNaN(numId) && numId > 0) {
-          markNotificationReadApi({ appNotificationId: numId, isRead: true }).catch((e) =>
-            console.warn('[markNotificationReadApi] Failed:', e),
-          );
-        }
-      }
-    },
+    onMarkRead: markRead,
     onDelete: (id) => {
-      setItems((prev) => prev.filter((item) => item.id !== id));
+      setAccumulated((prev) => prev.filter((item) => item.id !== id));
       setRevealedId(null);
     },
+    onRetry: () => {
+      setPageNumber(1);
+      void refetch();
+      void refetchUnread();
+    },
+    onLoadMore: () => {
+      if (!canLoadMore || isFetching) return;
+      setPageNumber((p) => p + 1);
+    },
+    canLoadMore,
     unreadCount,
   };
 }

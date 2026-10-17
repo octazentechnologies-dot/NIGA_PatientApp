@@ -2,7 +2,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sheetBottomPadding } from '../utilities/sheetInset';
+import { colors } from '../theme/colors';
 
+import { AppScreenHeader } from '../components/AppScreenHeader';
 import { AppText } from '../components/AppText';
 import type {
   HelpCentreViewModel,
@@ -11,46 +13,28 @@ import type {
 import { radii } from '../theme/radii';
 import { spacing } from '../theme/spacing';
 
-const INK = '#1F1F1F';
-const MUTED = '#595959';
-const HAIRLINE = '#DDDFE2';
-const PAGE = '#F5F6F7';
-const CARD = '#FFFFFF';
-const ACTION = '#2A7BA3';
-const ICON_CYAN = '#5CCEF7';
-const OUTLINE = '#8A8A8A';
-const DANGER = '#A3231A';
-const DANGER_FILL = '#FBEBE9';
-
+const OUTLINE = colors.outline;
 export function HelpCentreView(vm: HelpCentreViewModel) {
   const insets = useSafeAreaInsets();
 
   return (
     <View style={styles.root}>
-      <View style={[styles.header, { paddingTop: Math.max(insets.top, spacing.sm) }]}>
-        <View style={styles.headerRow}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={vm.t('back')}
-            onPress={vm.onBack}
-            style={styles.iconHit}
-          >
-            <Ionicons name="arrow-back" size={24} color={INK} />
-          </Pressable>
-          <AppText variant="headlineMd" color={INK} style={styles.headerTitle}>
-            {vm.t('helpCentreTitle')}
-          </AppText>
+      <AppScreenHeader
+        title={vm.t('helpCentreTitle')}
+        onBack={vm.onBack}
+        backLabel={vm.t('back')}
+        right={
           <Pressable
             accessibilityRole="button"
             onPress={vm.onToggleLanguage}
             style={styles.langHit}
           >
-            <AppText variant="labelMd" color={ACTION} weightOverride="600">
+            <AppText variant="labelMd" color={colors.primary} weightOverride="600">
               {vm.languageToggleLabel}
             </AppText>
           </Pressable>
-        </View>
-      </View>
+        }
+      />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -61,64 +45,129 @@ export function HelpCentreView(vm: HelpCentreViewModel) {
         ]}
       >
         <View style={styles.searchWrap}>
-          <Ionicons name="search" size={20} color={MUTED} />
+          <Ionicons name="search" size={20} color={colors.muted} />
           <TextInput
             value={vm.query}
             onChangeText={vm.onChangeQuery}
             placeholder={vm.t('helpSearchPlaceholder')}
-            placeholderTextColor={MUTED}
+            placeholderTextColor={colors.muted}
             style={styles.searchInput}
           />
         </View>
 
         <View style={styles.card}>
-          <AppText variant="headlineMd" color={INK}>
+          <AppText variant="headlineMd" color={colors.ink}>
             {vm.t('helpGetHelpFast')}
           </AppText>
-          <Pressable
-            accessibilityRole="button"
-            onPress={vm.onChatSupport}
-            style={styles.fastAction}
-          >
-            <View style={styles.fastTitleRow}>
-              <Ionicons name="chatbubble" size={18} color={ICON_CYAN} />
-              <AppText variant="labelMd" color={INK} weightOverride="600">
-                {vm.t('helpChatSupport')}
-              </AppText>
-            </View>
-            <AppText variant="bodyMd" color={MUTED}>
-              {vm.t('helpChatSupportMeta')}
+          {vm.supportUnavailable ? (
+            <AppText variant="bodyMd" color={colors.muted} raw>
+              Support contact not available yet
             </AppText>
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            onPress={vm.onCallHelpline}
-            style={styles.fastAction}
-          >
-            <View style={styles.fastTitleRow}>
-              <Ionicons name="call" size={18} color={ICON_CYAN} />
-              <AppText variant="labelMd" color={INK} weightOverride="600">
-                {vm.t('helpCallHelpline')}
+          ) : null}
+          {vm.showChatSupport ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={vm.onChatSupport}
+              style={styles.fastAction}
+            >
+              <View style={styles.fastTitleRow}>
+                <Ionicons name="chatbubble" size={18} color={colors.iconFill} />
+                <AppText variant="labelMd" color={colors.ink} weightOverride="600">
+                  {vm.t('helpChatSupport')}
+                </AppText>
+              </View>
+              <AppText variant="bodyMd" color={colors.muted}>
+                {vm.t('helpChatSupportMeta')}
               </AppText>
-            </View>
-            <AppText variant="bodyMd" color={MUTED}>
-              {vm.t('helpCallHelplineMeta')}
-            </AppText>
-          </Pressable>
+            </Pressable>
+          ) : null}
+          {vm.showCallHelpline ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={vm.onCallHelpline}
+              style={styles.fastAction}
+            >
+              <View style={styles.fastTitleRow}>
+                <Ionicons name="call" size={18} color={colors.iconFill} />
+                <AppText variant="labelMd" color={colors.ink} weightOverride="600">
+                  {vm.t('helpCallHelpline')}
+                </AppText>
+              </View>
+              <AppText variant="bodyMd" color={colors.muted}>
+                {vm.t('helpCallHelplineMeta')}
+              </AppText>
+            </Pressable>
+          ) : null}
         </View>
 
-        <AppText
-          variant="labelSm"
-          color={MUTED}
-          weightOverride="600"
-          style={styles.sectionLabel}
-        >
-          {vm.t('helpNeedHelpWith')}
-        </AppText>
-
-        {vm.filteredTopics.map((topic) => (
-          <TopicRow key={topic.id} topic={topic} vm={vm} />
-        ))}
+        {vm.selectedSlug ? (
+          <View style={styles.card}>
+            <Pressable accessibilityRole="button" onPress={vm.onCloseArticle}>
+              <AppText variant="labelSm" color={colors.primary} weightOverride="600">
+                {vm.t('back')}
+              </AppText>
+            </Pressable>
+            {vm.detailLoading ? (
+              <AppText variant="bodyMd" color={colors.muted}>
+                …
+              </AppText>
+            ) : vm.detailError ? (
+              <AppText variant="bodyMd" color={colors.error} raw>
+                Could not load this article.
+              </AppText>
+            ) : (
+              <>
+                {vm.selectedTitle ? (
+                  <AppText variant="headlineMd" color={colors.ink} raw>
+                    {vm.selectedTitle}
+                  </AppText>
+                ) : null}
+                {vm.selectedBody ? (
+                  <AppText variant="bodyMd" color={colors.muted} raw>
+                    {vm.selectedBody}
+                  </AppText>
+                ) : null}
+              </>
+            )}
+          </View>
+        ) : (
+          <>
+            <AppText
+              variant="labelSm"
+              color={colors.muted}
+              weightOverride="600"
+              style={styles.sectionLabel}
+            >
+              {vm.t('helpNeedHelpWith')}
+            </AppText>
+            {vm.listLoading ? (
+              <AppText variant="bodyMd" color={colors.muted}>
+                …
+              </AppText>
+            ) : vm.listError ? (
+              <Pressable accessibilityRole="button" onPress={vm.onRetry}>
+                <AppText variant="bodyMd" color={colors.error} raw>
+                  Could not load help. Tap to retry.
+                </AppText>
+              </Pressable>
+            ) : vm.isEmpty ? (
+              <AppText variant="bodyMd" color={colors.muted} raw>
+                No help articles yet.
+              </AppText>
+            ) : (
+              vm.grouped.map((group) => (
+                <View key={group.category} style={{ gap: spacing.sm }}>
+                  <AppText variant="labelSm" color={colors.muted} weightOverride="600" raw>
+                    {group.category}
+                  </AppText>
+                  {group.topics.map((topic) => (
+                    <TopicRow key={topic.id} topic={topic} vm={vm} />
+                  ))}
+                </View>
+              ))
+            )}
+          </>
+        )}
       </ScrollView>
     </View>
   );
@@ -137,22 +186,13 @@ function TopicRow({
       onPress={() => vm.onOpenTopic(topic.id)}
       style={styles.topicRow}
     >
-      <View
-        style={[
-          styles.topicIcon,
-          topic.danger && styles.topicIconDanger,
-        ]}
-      >
-        <Ionicons
-          name={topic.icon}
-          size={20}
-          color={topic.danger ? DANGER : INK}
-        />
+      <View style={styles.topicIcon}>
+        <Ionicons name="document-text-outline" size={20} color={colors.ink} />
       </View>
-      <AppText variant="bodyLg" color={INK} style={styles.flex}>
-        {vm.t(topic.labelKey)}
+      <AppText variant="bodyLg" color={colors.ink} style={styles.flex} raw>
+        {topic.title}
       </AppText>
-      <Ionicons name="chevron-forward" size={20} color={MUTED} />
+      <Ionicons name="chevron-forward" size={20} color={colors.muted} />
     </Pressable>
   );
 }
@@ -160,12 +200,12 @@ function TopicRow({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: PAGE,
+    backgroundColor: colors.page,
   },
   header: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
     paddingHorizontal: spacing.sm,
     paddingBottom: spacing.sm,
   },
@@ -200,7 +240,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderBottomWidth: 1,
     borderBottomColor: OUTLINE,
     borderTopLeftRadius: radii.default,
@@ -211,14 +251,14 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    color: INK,
+    color: colors.ink,
     fontSize: 16,
     paddingVertical: spacing.sm,
   },
   card: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
     gap: spacing.md,
@@ -226,7 +266,7 @@ const styles = StyleSheet.create({
   },
   fastAction: {
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
     gap: spacing.xs,
@@ -247,9 +287,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
     minHeight: 64,
@@ -258,12 +298,12 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: ICON_CYAN,
+    backgroundColor: colors.iconFill,
     alignItems: 'center',
     justifyContent: 'center',
   },
   topicIconDanger: {
-    backgroundColor: DANGER_FILL,
+    backgroundColor: colors.errorContainer,
   },
   flex: {
     flex: 1,

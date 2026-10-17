@@ -99,6 +99,7 @@ export const homeApi = newBaseApi.injectEndpoints({
     }),
     getCareCategories: build.query<CareCategoriesResponse, void>({
       query: () => 'api/PatientPortal/CareCategories',
+      providesTags: ['Articles'],
     }),
     getArticles: build.query<
       HealthArticlesResponse,
@@ -111,9 +112,11 @@ export const homeApi = newBaseApi.injectEndpoints({
           pageSize: params?.pageSize ?? 10,
         },
       }),
+      providesTags: ['Articles'],
     }),
     getArticleById: build.query<HealthArticleDetailResponse, number | string>({
       query: (blogId) => `api/Public/Articles/${blogId}`,
+      providesTags: (_r, _e, blogId) => [{ type: 'Articles', id: String(blogId) }],
     }),
   }),
 });

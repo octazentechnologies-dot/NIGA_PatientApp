@@ -21,7 +21,10 @@ export type NearbyDoctor = {
 
 export type SearchCity = {
   id: string;
-  nameKey: TranslationKey;
+  /** Translation key when using i18n cities; omit when label comes from API. */
+  nameKey?: TranslationKey;
+  /** BE-009 — raw city string from FilterOptions. */
+  label?: string;
 };
 
 export type DoctorConsultMode = 'video' | 'audio' | 'chat' | 'clinic';
@@ -32,6 +35,8 @@ export type DoctorFilterLanguage = 'mr' | 'en' | 'hi';
 
 export type DoctorFilters = {
   careNeedIds: string[];
+  /** BE-029 — numeric category id from CareCategories; omit when null. */
+  careCategoryId?: number | null;
   modes: DoctorConsultMode[];
   availability: DoctorAvailabilitySlot[];
   customDate: string | null;
@@ -51,6 +56,7 @@ export const FEE_RANGE_MAX = 2000;
 
 export const EMPTY_DOCTOR_FILTERS: DoctorFilters = {
   careNeedIds: [],
+  careCategoryId: null,
   modes: [],
   availability: [],
   customDate: null,
@@ -65,31 +71,37 @@ export const EMPTY_DOCTOR_FILTERS: DoctorFilters = {
   locationQuery: '',
 };
 
+/** Same as empty — do not pre-select video/Marathi (that hid clinic-only doctors). */
 export const DEFAULT_DOCTOR_FILTERS: DoctorFilters = {
   ...EMPTY_DOCTOR_FILTERS,
-  modes: ['video'],
-  languages: ['mr'],
 };
 
 export type DoctorSearchResult = {
   id: string;
   initials: string;
+  /** Display name from API (also used as translation key for seed rows). */
   nameKey: TranslationKey;
   credentialsKey: TranslationKey;
   registrationKey?: TranslationKey;
-  experienceKey: TranslationKey;
-  rating: string;
+  /** Null/omit — yearsExperience is always null per contract. */
+  experienceKey?: TranslationKey | null;
+  /** Null when reviewCount is 0 / averageRating null. */
+  rating: string | null;
   reviewsKey: TranslationKey;
+  reviewCount: number;
+  /** Preformatted fee label; null → hide fee row. */
+  feeLabel: string | null;
   feeKey: TranslationKey;
-  fee: number;
+  fee: number | null;
   availabilityKey: TranslationKey;
   availabilitySoon: boolean;
   availabilitySlots: DoctorAvailabilitySlot[];
+  /** Empty — languages not returned by API. */
   languageKeys: TranslationKey[];
   consultLanguages: DoctorFilterLanguage[];
   modes: DoctorConsultMode[];
   careNeedIds: string[];
-  gender: 'male' | 'female';
+  gender: 'male' | 'female' | null;
   cityId: string;
   recognizedQualification: boolean;
   focusCertified: boolean;
@@ -97,4 +109,5 @@ export type DoctorSearchResult = {
   verified: boolean;
   certifiedKey?: TranslationKey;
   sponsored?: boolean;
+  photoUrl?: string | null;
 };

@@ -2,9 +2,6 @@ import { useState } from 'react';
 
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
-import { useRequestRefillMutation } from '../store/api/new/medicinesApi';
-import { useAppSelector } from '../store/hooks';
-
 export type RefillFeeling = 'improved' | 'same' | 'worse' | 'returned';
 
 export type OrderDetailItem = {
@@ -104,32 +101,28 @@ export function useOrderDetailsController({
     'improved',
   );
 
-  const canRefill = orderId === 'hm-3922';
-  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
-  const [requestRefillApi] = useRequestRefillMutation();
-  const deliveredLine =
-    orderId === 'hm-3850'
-      ? t('medsStatusCancelledByYou')
-      : orderId === 'hm-3601'
-        ? t('medsStatusRefunded')
-        : t('orderDetailDeliveredOn');
+  const numericOrderId = Number(String(orderId).replace(/\D/g, ''));
+  const hasValidId = Number.isFinite(numericOrderId) && numericOrderId > 0;
+  const canRefill = hasValidId;
+  // blocked: B-028 — order detail payload not fully bound; require real id, no seed doctor/fees.
+  const deliveredLine = hasValidId ? t('orderDetailDeliveredOn') : '';
 
   return {
     language,
     t,
-    orderId: orderId === 'hm-3922' ? '#HM-3922' : `#${orderId.toUpperCase()}`,
+    orderId: hasValidId ? `#HM-${numericOrderId}` : '',
     deliveredLine,
-    items: ITEMS,
-    subtotalLabel: '₹250',
-    deliveryLabel: '₹60',
-    totalPaidLabel: '₹310',
-    paymentMethodLine: t('orderDetailPaymentMethod'),
-    rxId: 'RX-2026-77410',
-    doctorName: 'Dr. Anjali Deshmukh',
-    pharmacyName: t('orderDetailPharmacyName'),
-    pharmacyLicense: 'MH-SOL-20B/21B-4471',
-    invoiceId: 'INV-SHP-2026-1187',
-    rxValidTill: t('orderDetailRxValidTill'),
+    items: [],
+    subtotalLabel: '',
+    deliveryLabel: '',
+    totalPaidLabel: '',
+    paymentMethodLine: '',
+    rxId: '',
+    doctorName: '',
+    pharmacyName: '',
+    pharmacyLicense: '',
+    invoiceId: '',
+    rxValidTill: '',
     canRefill,
     refillOpen,
     refillMedicines,
@@ -154,13 +147,7 @@ export function useOrderDetailsController({
     onSelectFeeling: setRefillFeeling,
     onSendRefill: async () => {
       setRefillOpen(false);
-      if (isAuthenticated) {
-        try {
-          await requestRefillApi({ erxSnapshotId: 3307 }).unwrap();
-        } catch (e) {
-          console.warn('[requestRefillApi] Failed:', e);
-        }
-      }
+      // blocked: B-023 — refill requires erxSnapshotId from order payload
     },
     onHelpWrongItem: () => undefined,
     onHelpMissingItem: () => undefined,

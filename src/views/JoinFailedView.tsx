@@ -11,15 +11,8 @@ import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
 import { spacing } from '../theme/spacing';
 
-const INK = '#1F1F1F';
-const MUTED = '#595959';
-const HAIRLINE = '#E6E6E6';
-const ACTION = '#2A7BA3';
-const ACTION_OUTLINE = '#276F93';
-const WARN_AMBER = '#E08A2E';
-const ERROR = '#A3231A';
-const SUCCESS = '#0F7A4E';
-
+const WARN_AMBER = colors.warning;
+const ERROR = colors.error;
 export function JoinFailedView(vm: JoinFailedViewModel) {
   const insets = useSafeAreaInsets();
 
@@ -33,9 +26,9 @@ export function JoinFailedView(vm: JoinFailedViewModel) {
             onPress={vm.onBack}
             style={styles.iconButton}
           >
-            <Ionicons name="arrow-back" size={24} color={INK} />
+            <Ionicons name="arrow-back" size={24} color={colors.ink} />
           </Pressable>
-          <AppText variant="headlineMd" color={INK} style={styles.headerTitle} numberOfLines={1}>
+          <AppText variant="headlineMd" color={colors.ink} style={styles.headerTitle} numberOfLines={1}>
             {vm.t('joinFailedBrand')}
           </AppText>
           <View style={styles.iconButton} />
@@ -53,22 +46,22 @@ export function JoinFailedView(vm: JoinFailedViewModel) {
       >
         <View style={styles.hero}>
           <ConnectionFailedIllustration />
-          <AppText variant="labelSm" color={MUTED} style={styles.heroCaption}>
+          <AppText variant="labelSm" color={colors.muted} style={styles.heroCaption}>
             {vm.t('joinFailedCaption')}
           </AppText>
         </View>
 
         <View style={styles.copyBlock}>
-          <AppText variant="titleMd" color={INK} style={styles.copyTitle}>
+          <AppText variant="titleMd" color={colors.ink} style={styles.copyTitle}>
             {vm.t('joinFailedTitle')}
           </AppText>
-          <AppText variant="bodyMd" color={MUTED} style={styles.copyBody}>
+          <AppText variant="bodyMd" color={colors.muted} style={styles.copyBody}>
             {vm.t('joinFailedBody')}
           </AppText>
         </View>
 
         <View style={styles.diagnosticsCard}>
-          <AppText variant="labelSm" color={MUTED} style={styles.diagnosticsTitle}>
+          <AppText variant="labelSm" color={colors.muted} style={styles.diagnosticsTitle}>
             {vm.t('joinFailedDiagnostics')}
           </AppText>
 
@@ -77,14 +70,14 @@ export function JoinFailedView(vm: JoinFailedViewModel) {
               <Ionicons
                 name={vm.internetWeak ? 'wifi-outline' : 'wifi'}
                 size={22}
-                color={vm.internetWeak ? ERROR : ACTION}
+                color={vm.internetWeak ? ERROR : colors.primary}
               />
             }
             label={vm.t('joinFailedInternet')}
             status={
               <AppText
                 variant="labelMd"
-                color={vm.internetWeak ? ERROR : SUCCESS}
+                color={vm.internetWeak ? ERROR : colors.success}
                 style={styles.statusWeight}
               >
                 {vm.internetStatusLabel}
@@ -96,7 +89,7 @@ export function JoinFailedView(vm: JoinFailedViewModel) {
           <View style={styles.diagDivider} />
 
           <DiagnosticRow
-            icon={<Ionicons name="videocam" size={22} color={ACTION} />}
+            icon={<Ionicons name="videocam" size={22} color={colors.primary} />}
             label={vm.t('joinFailedCamera')}
             status={<OkStatus label={vm.t('joinFailedStatusOk')} />}
           />
@@ -104,7 +97,7 @@ export function JoinFailedView(vm: JoinFailedViewModel) {
           <View style={styles.diagDivider} />
 
           <DiagnosticRow
-            icon={<Ionicons name="mic" size={22} color={ACTION} />}
+            icon={<Ionicons name="mic" size={22} color={colors.primary} />}
             label={vm.t('joinFailedMic')}
             status={<OkStatus label={vm.t('joinFailedStatusOk')} />}
           />
@@ -126,14 +119,14 @@ export function JoinFailedView(vm: JoinFailedViewModel) {
             variant="secondary"
             disabled={vm.joining}
             onPress={vm.onJoinAudio}
-            icon={<Ionicons name="call-outline" size={20} color={ACTION_OUTLINE} />}
+            icon={<Ionicons name="call-outline" size={20} color={colors.primaryOutline} />}
           />
           <AppButton
             label={vm.t('joinFailedAskDoctor')}
             variant="secondary"
             disabled={vm.joining}
             onPress={vm.onAskDoctorCall}
-            icon={<Ionicons name="phone-portrait-outline" size={20} color={ACTION_OUTLINE} />}
+            icon={<Ionicons name="phone-portrait-outline" size={20} color={colors.primaryOutline} />}
           />
         </View>
 
@@ -142,12 +135,12 @@ export function JoinFailedView(vm: JoinFailedViewModel) {
           onPress={vm.onGetHelp}
           style={styles.helpLink}
         >
-          <AppText variant="labelMd" color={ACTION} style={styles.helpText}>
+          <AppText variant="labelMd" color={colors.primary} style={styles.helpText}>
             {vm.t('joinFailedGetHelp')}
           </AppText>
         </Pressable>
 
-        <AppText variant="labelSm" color={MUTED} style={styles.bookingId}>
+        <AppText variant="labelSm" color={colors.muted} style={styles.bookingId}>
           {vm.bookingIdLabel}
         </AppText>
       </ScrollView>
@@ -158,8 +151,8 @@ export function JoinFailedView(vm: JoinFailedViewModel) {
 function OkStatus({ label }: { label: string }) {
   return (
     <View style={styles.okRow}>
-      <Ionicons name="checkmark-circle" size={18} color={SUCCESS} />
-      <AppText variant="labelMd" color={SUCCESS} style={styles.statusWeight}>
+      <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+      <AppText variant="labelMd" color={colors.success} style={styles.statusWeight}>
         {label}
       </AppText>
     </View>
@@ -183,7 +176,7 @@ function DiagnosticRow({
         {icon}
         {showSlash ? <View style={styles.slash} /> : null}
       </View>
-      <AppText variant="bodyMd" color={INK} style={styles.diagLabel} numberOfLines={2}>
+      <AppText variant="bodyMd" color={colors.ink} style={styles.diagLabel} numberOfLines={2}>
         {label}
       </AppText>
       <View style={styles.diagStatus}>{status}</View>
@@ -210,7 +203,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   headerRow: {
     minHeight: 48,
@@ -271,7 +264,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     gap: spacing.sm,
@@ -309,7 +302,7 @@ const styles = StyleSheet.create({
   },
   diagDivider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
   },
   okRow: {
     flexDirection: 'row',

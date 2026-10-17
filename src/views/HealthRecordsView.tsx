@@ -32,19 +32,8 @@ import { ConsultationRecordView } from './ConsultationRecordView';
 import { PrescriptionView } from './PrescriptionView';
 import { UploadDocumentView } from './UploadDocumentView';
 
-const INK = '#1F1F1F';
-const MUTED = '#595959';
-const HAIRLINE = '#E6E6E6';
-const ACTION = '#2A7BA3';
-const ACTION_OUTLINE = '#276F93';
-const CHIP_FILL = '#E6F5FE';
-const SUCCESS = '#0F7A4E';
-const SUCCESS_FILL = '#E9F5EF';
-const WARN = '#8A5109';
-const WARN_FILL = '#FCF3E4';
-const DANGER = '#A3231A';
-const DANGER_FILL = '#FBEBE9';
-
+const WARN = colors.warning;
+const WARN_FILL = colors.warningContainer;
 export function HealthRecordsView({
   onOpenFollowUpPlan,
   onOpenOrderMedicines,
@@ -70,11 +59,13 @@ export function HealthRecordsView({
   const insets = useSafeAreaInsets();
   const tabScrollInset = usePatientTabScrollInset();
   const consultationRecord = useConsultationRecordController({
+    patientAppId: vm.activePatientAppId,
     onBack: vm.onCloseConsultationRecord,
     onOpenPrescription: vm.onViewPrescription,
     onOpenFollowUp: vm.onOpenFollowUp,
   });
   const prescription = usePrescriptionController({
+    patientAppId: vm.activePatientAppId,
     onBack: vm.onClosePrescription,
     onOrder: () => {
       vm.onClosePrescription();
@@ -127,10 +118,10 @@ export function HealthRecordsView({
               onPress={onBack}
               style={styles.iconHit}
             >
-              <Ionicons name="arrow-back" size={22} color={INK} />
+              <Ionicons name="arrow-back" size={22} color={colors.ink} />
             </Pressable>
           ) : null}
-          <AppText variant="headlineMd" color={INK} style={styles.flex}>
+          <AppText variant="headlineMd" color={colors.ink} style={styles.flex}>
             {vm.t(titleKey ?? 'recordsTitle')}
           </AppText>
           <View style={styles.headerActions}>
@@ -144,7 +135,7 @@ export function HealthRecordsView({
             >
               <AppText
                 variant="labelMd"
-                color={INK}
+                color={colors.ink}
                 languageOverride={vm.language === 'en' ? 'en' : 'mr'}
               >
                 {vm.language === 'en' ? 'EN' : 'मराठी'}
@@ -181,19 +172,19 @@ export function HealthRecordsView({
                   ]}
                 >
                   <View style={styles.memberAvatar}>
-                    <AppText variant="labelMd" color={selected ? ACTION : MUTED}>
+                    <AppText variant="labelMd" color={selected ? colors.primary : colors.muted}>
                       {member.initials}
                     </AppText>
                   </View>
                   {member.pending ? (
                     <View style={styles.lockBadge}>
-                      <Ionicons name="lock-closed" size={12} color={MUTED} />
+                      <Ionicons name="lock-closed" size={12} color={colors.muted} />
                     </View>
                   ) : null}
                 </View>
                 <AppText
                   variant="labelSm"
-                  color={selected ? INK : MUTED}
+                  color={selected ? colors.ink : colors.muted}
                   weightOverride={selected ? '600' : undefined}
                   style={styles.memberName}
                   numberOfLines={2}
@@ -209,9 +200,9 @@ export function HealthRecordsView({
             style={styles.memberItem}
           >
             <View style={styles.addMember}>
-              <Ionicons name="add" size={28} color={MUTED} />
+              <Ionicons name="add" size={28} color={colors.muted} />
             </View>
-            <AppText variant="labelSm" color={MUTED}>
+            <AppText variant="labelSm" color={colors.muted}>
               {vm.t('recordsAdd')}
             </AppText>
           </Pressable>
@@ -234,7 +225,7 @@ export function HealthRecordsView({
               >
                 <AppText
                   variant="labelSm"
-                  color={selected ? colors.onButton : INK}
+                  color={selected ? colors.onButton : colors.ink}
                   weightOverride="600"
                 >
                   {vm.t(filter.labelKey)}
@@ -247,7 +238,7 @@ export function HealthRecordsView({
             onPress={vm.onOpenCalendar}
             style={styles.calendarBtn}
           >
-            <Ionicons name="calendar-outline" size={20} color={INK} />
+            <Ionicons name="calendar-outline" size={20} color={colors.ink} />
           </Pressable>
         </ScrollView>
       </View>
@@ -278,7 +269,7 @@ export function HealthRecordsView({
         ) : (
           <View style={styles.timeline}>
             <View style={styles.timelineLine} />
-            <AppText variant="titleMd" color={INK} style={styles.monthLabel}>
+            <AppText variant="titleMd" color={colors.ink} style={styles.monthLabel}>
               {vm.monthLabel}
             </AppText>
             {vm.items.map((item) => (
@@ -306,20 +297,20 @@ export function HealthRecordsView({
                 onPress={vm.onUploadDocument}
                 accessibilityRole="button"
               >
-                <AppText variant="bodyMd" color={INK}>
+                <AppText variant="bodyMd" color={colors.ink}>
                   {vm.t('recordsUploadDoc')}
                 </AppText>
-                <Ionicons name="cloud-upload-outline" size={20} color={MUTED} />
+                <Ionicons name="cloud-upload-outline" size={20} color={colors.muted} />
               </Pressable>
               <Pressable
                 style={styles.fabMenuItem}
                 onPress={vm.onAddDiary}
                 accessibilityRole="button"
               >
-                <AppText variant="bodyMd" color={INK}>
+                <AppText variant="bodyMd" color={colors.ink}>
                   {vm.t('recordsAddDiary')}
                 </AppText>
-                <Ionicons name="create-outline" size={20} color={MUTED} />
+                <Ionicons name="create-outline" size={20} color={colors.muted} />
               </Pressable>
             </View>
           ) : null}
@@ -357,13 +348,13 @@ function EmptyState({
         />
       ) : (
         <View style={styles.emptyIcon}>
-          <Ionicons name="lock-closed-outline" size={36} color={MUTED} />
+          <Ionicons name="lock-closed-outline" size={36} color={colors.muted} />
         </View>
       )}
-      <AppText variant="titleMd" color={INK} style={styles.center}>
+      <AppText variant="titleMd" color={colors.ink} style={styles.center}>
         {title}
       </AppText>
-      <AppText variant="bodyMd" color={MUTED} style={styles.center}>
+      <AppText variant="bodyMd" color={colors.muted} style={styles.center}>
         {body}
       </AppText>
     </View>
@@ -384,14 +375,14 @@ function TimelineCard({
 
   const nodeColor =
     item.rxStatus === 'cancelled'
-      ? DANGER
+      ? colors.error
       : item.rxStatus === 'expired' || item.rxStatus === 'superseded'
         ? WARN
         : item.kind === 'followup'
-          ? SUCCESS
+          ? colors.success
           : item.kind === 'document'
-            ? MUTED
-            : ACTION;
+            ? colors.muted
+            : colors.primary;
 
   return (
     <View style={styles.timelineItem}>
@@ -405,22 +396,22 @@ function TimelineCard({
           >
             <Image source={images.doctorPortrait} style={styles.doctorAvatar} />
             <View style={styles.flex}>
-              <AppText variant="bodyMd" color={INK} weightOverride="600">
+              <AppText variant="bodyMd" color={colors.ink} weightOverride="600">
                 {vm.t(item.titleKey)}
               </AppText>
-              <AppText variant="labelSm" color={MUTED}>
+              <AppText variant="labelSm" color={colors.muted}>
                 {vm.t(item.metaKey)}
               </AppText>
               {item.badgeKey ? (
                 <View style={styles.badge}>
-                  <Ionicons name="checkmark-circle" size={12} color={SUCCESS} />
-                  <AppText variant="labelSm" color={SUCCESS} weightOverride="600">
+                  <Ionicons name="checkmark-circle" size={12} color={colors.success} />
+                  <AppText variant="labelSm" color={colors.success} weightOverride="600">
                     {vm.t(item.badgeKey)}
                   </AppText>
                 </View>
               ) : null}
             </View>
-            <Ionicons name="chevron-forward" size={20} color={MUTED} />
+            <Ionicons name="chevron-forward" size={20} color={colors.muted} />
           </Pressable>
         ) : null}
 
@@ -431,18 +422,18 @@ function TimelineCard({
             <>
               <View style={styles.row}>
                 <View style={styles.iconBubble}>
-                  <Ionicons name="medical-outline" size={20} color={ACTION} />
+                  <Ionicons name="medical-outline" size={20} color={colors.primary} />
                 </View>
                 <View style={styles.flex}>
-                  <AppText variant="bodyMd" color={INK} weightOverride="600">
+                  <AppText variant="bodyMd" color={colors.ink} weightOverride="600">
                     {vm.t(item.titleKey)}
                   </AppText>
-                  <AppText variant="labelSm" color={MUTED}>
+                  <AppText variant="labelSm" color={colors.muted}>
                     {vm.t(item.metaKey)}
                   </AppText>
                   {item.badgeKey ? (
                     <View style={styles.badge}>
-                      <AppText variant="labelSm" color={SUCCESS} weightOverride="600">
+                      <AppText variant="labelSm" color={colors.success} weightOverride="600">
                         {vm.t(item.badgeKey)}
                       </AppText>
                     </View>
@@ -470,19 +461,30 @@ function TimelineCard({
           <>
             <View style={styles.row}>
               <View style={styles.docThumb}>
-                <Ionicons name="document-text-outline" size={22} color={MUTED} />
+                <Ionicons name="document-text-outline" size={22} color={colors.muted} />
               </View>
               <View style={styles.flex}>
-                <AppText variant="bodyMd" color={INK} weightOverride="600">
+                <AppText variant="bodyMd" color={colors.ink} weightOverride="600" raw>
                   {vm.t(item.titleKey)}
                 </AppText>
-                <AppText variant="labelSm" color={MUTED}>
+                <AppText variant="labelSm" color={colors.muted} raw>
                   {vm.t(item.metaKey)}
                 </AppText>
               </View>
+              {item.documentId != null ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={vm.t('notifActionDelete')}
+                  onPress={() => vm.onDeleteDocument(item.id)}
+                  hitSlop={8}
+                  style={{ minWidth: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <Ionicons name="trash-outline" size={22} color={colors.muted} />
+                </Pressable>
+              ) : null}
             </View>
             {item.noteKey ? (
-              <AppText variant="labelSm" color={MUTED} style={styles.docNote}>
+              <AppText variant="labelSm" color={colors.muted} style={styles.docNote}>
                 {vm.t(item.noteKey)}
               </AppText>
             ) : null}
@@ -496,27 +498,27 @@ function TimelineCard({
             style={styles.followRow}
           >
             <View style={styles.flex}>
-              <AppText variant="bodyMd" color={INK}>
+              <AppText variant="bodyMd" color={colors.ink}>
                 {vm.t(item.titleKey)}
               </AppText>
-              <AppText variant="labelSm" color={MUTED}>
+              <AppText variant="labelSm" color={colors.muted}>
                 {vm.t(item.metaKey)}
               </AppText>
             </View>
-            <Ionicons name="thumbs-up" size={22} color={SUCCESS} />
+            <Ionicons name="thumbs-up" size={22} color={colors.success} />
           </Pressable>
         ) : null}
 
         {item.kind === 'referral' ? (
           <View style={styles.row}>
             <View style={[styles.iconBubble, styles.iconBubbleMuted]}>
-              <Ionicons name="share-social-outline" size={20} color={MUTED} />
+              <Ionicons name="share-social-outline" size={20} color={colors.muted} />
             </View>
             <View style={styles.flex}>
-              <AppText variant="bodyMd" color={INK} weightOverride="600">
+              <AppText variant="bodyMd" color={colors.ink} weightOverride="600">
                 {vm.t(item.titleKey)}
               </AppText>
-              <AppText variant="labelSm" color={MUTED}>
+              <AppText variant="labelSm" color={colors.muted}>
                 {vm.t(item.metaKey)}
               </AppText>
             </View>
@@ -526,8 +528,8 @@ function TimelineCard({
         {item.kind === 'diary' ? (
           <View style={styles.followRow}>
             <View style={styles.diaryLeft}>
-              <Ionicons name="book-outline" size={20} color={ACTION} />
-              <AppText variant="bodyMd" color={INK} weightOverride="600">
+              <Ionicons name="book-outline" size={20} color={colors.primary} />
+              <AppText variant="bodyMd" color={colors.ink} weightOverride="600">
                 {vm.t(item.titleKey)}
               </AppText>
             </View>
@@ -561,8 +563,8 @@ function PrescriptionStatusCard({
 }) {
   const status = item.rxStatus;
   const isDanger = status === 'cancelled';
-  const stripInk = isDanger ? DANGER : WARN;
-  const stripFill = isDanger ? DANGER_FILL : WARN_FILL;
+  const stripInk = isDanger ? colors.error : WARN;
+  const stripFill = isDanger ? colors.errorContainer : WARN_FILL;
   const stripIcon =
     status === 'cancelled'
       ? 'close-circle'
@@ -586,10 +588,10 @@ function PrescriptionStatusCard({
               onPress={() => vm.onViewLatestPrescription(item.id)}
               style={styles.rxLatestLink}
             >
-              <AppText variant="labelMd" color={ACTION_OUTLINE} weightOverride="600">
+              <AppText variant="labelMd" color={colors.primaryOutline} weightOverride="600">
                 {vm.t('rxStatusViewLatest')}
               </AppText>
-              <Ionicons name="arrow-forward" size={16} color={ACTION_OUTLINE} />
+              <Ionicons name="arrow-forward" size={16} color={colors.primaryOutline} />
             </Pressable>
           ) : null}
         </View>
@@ -598,10 +600,10 @@ function PrescriptionStatusCard({
       <View style={styles.rxStatusBody}>
         <View style={styles.rxStatusTitleRow}>
           <View style={styles.flex}>
-            <AppText variant="headlineMd" color={INK}>
+            <AppText variant="headlineMd" color={colors.ink}>
               {vm.t(item.titleKey)}
             </AppText>
-            <AppText variant="bodyMd" color={MUTED}>
+            <AppText variant="bodyMd" color={colors.muted}>
               {vm.t(item.metaKey)}
             </AppText>
           </View>
@@ -609,7 +611,7 @@ function PrescriptionStatusCard({
             <View
               style={[
                 styles.rxStatusPill,
-                { backgroundColor: stripFill, borderColor: HAIRLINE },
+                { backgroundColor: stripFill, borderColor: colors.outlineVariant },
               ]}
             >
               <AppText
@@ -627,22 +629,22 @@ function PrescriptionStatusCard({
         <View style={styles.rxStatusFields}>
           {item.rxField1LabelKey && item.rxField1ValueKey ? (
             <View style={styles.rxStatusField}>
-              <AppText variant="labelSm" color={MUTED}>
+              <AppText variant="labelSm" color={colors.muted}>
                 {vm.t(item.rxField1LabelKey)}
               </AppText>
-              <AppText variant="bodyMd" color={INK}>
+              <AppText variant="bodyMd" color={colors.ink}>
                 {vm.t(item.rxField1ValueKey)}
               </AppText>
             </View>
           ) : null}
           {item.rxField2LabelKey && item.rxField2ValueKey ? (
             <View style={styles.rxStatusField}>
-              <AppText variant="labelSm" color={MUTED}>
+              <AppText variant="labelSm" color={colors.muted}>
                 {vm.t(item.rxField2LabelKey)}
               </AppText>
               <AppText
                 variant="bodyMd"
-                color={item.rxField2Alert ? DANGER : INK}
+                color={item.rxField2Alert ? colors.error : colors.ink}
               >
                 {vm.t(item.rxField2ValueKey)}
               </AppText>
@@ -653,8 +655,8 @@ function PrescriptionStatusCard({
         {status === 'expired' ? (
           <View style={styles.rxStatusFooter}>
             <View style={styles.rxCannotReorder}>
-              <Ionicons name="ban-outline" size={18} color={MUTED} />
-              <AppText variant="labelMd" color={MUTED} weightOverride="600">
+              <Ionicons name="ban-outline" size={18} color={colors.muted} />
+              <AppText variant="labelMd" color={colors.muted} weightOverride="600">
                 {vm.t('rxStatusCannotReorder')}
               </AppText>
             </View>
@@ -664,8 +666,8 @@ function PrescriptionStatusCard({
         {status === 'cancelled' && item.rxFooterKey ? (
           <View style={styles.rxStatusFooter}>
             <View style={styles.rxInfoBox}>
-              <Ionicons name="information-circle-outline" size={18} color={MUTED} />
-              <AppText variant="bodyMd" color={MUTED} style={styles.flex}>
+              <Ionicons name="information-circle-outline" size={18} color={colors.muted} />
+              <AppText variant="bodyMd" color={colors.muted} style={styles.flex}>
                 {vm.t(item.rxFooterKey)}
               </AppText>
             </View>
@@ -684,7 +686,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.sm,
   },
@@ -713,7 +715,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     borderRadius: radii.sm,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -723,7 +725,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.full,
     backgroundColor: colors.page,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -763,14 +765,14 @@ const styles = StyleSheet.create({
     height: 64,
     borderRadius: radii.full,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     padding: 3,
     backgroundColor: colors.card,
   },
   memberRingSelected: {
     borderWidth: 2,
-    borderColor: ACTION,
-    backgroundColor: CHIP_FILL,
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryContainer,
   },
   memberRingPending: {
     opacity: 0.7,
@@ -791,7 +793,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.full,
     backgroundColor: colors.page,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -804,14 +806,14 @@ const styles = StyleSheet.create({
     borderRadius: radii.full,
     borderWidth: 2,
     borderStyle: 'dashed',
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
   filtersWrap: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
     paddingBottom: spacing.sm,
   },
   filtersRow: {
@@ -824,21 +826,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderRadius: radii.full,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     backgroundColor: colors.page,
     alignItems: 'center',
     justifyContent: 'center',
   },
   filterChipOn: {
-    backgroundColor: INK,
-    borderColor: INK,
+    backgroundColor: colors.ink,
+    borderColor: colors.ink,
   },
   calendarBtn: {
     width: 40,
     height: 40,
     borderRadius: radii.full,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     backgroundColor: colors.page,
     alignItems: 'center',
     justifyContent: 'center',
@@ -854,7 +856,7 @@ const styles = StyleSheet.create({
     top: 8,
     bottom: 8,
     width: 2,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
   },
   monthLabel: {
     marginLeft: -4,
@@ -876,7 +878,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
     gap: spacing.sm,
@@ -890,7 +892,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
     gap: spacing.sm,
   },
   rxStatusStripLeft: {
@@ -938,7 +940,7 @@ const styles = StyleSheet.create({
   },
   rxStatusFooter: {
     borderTopWidth: 1,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
     paddingTop: spacing.md,
   },
   rxCannotReorder: {
@@ -949,7 +951,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingHorizontal: spacing.md,
     borderWidth: 1.5,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.button,
     opacity: 0.55,
   },
@@ -970,7 +972,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: radii.full,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
   },
   badge: {
     alignSelf: 'flex-start',
@@ -978,7 +980,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     marginTop: spacing.xs,
-    backgroundColor: SUCCESS_FILL,
+    backgroundColor: colors.successContainer,
     borderRadius: radii.sm,
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
@@ -987,20 +989,20 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: radii.full,
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
   },
   iconBubbleMuted: {
     backgroundColor: colors.page,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
   },
   rxActions: {
     flexDirection: 'row',
     gap: spacing.sm,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
     paddingTop: spacing.sm,
   },
   rxBtn: {
@@ -1011,7 +1013,7 @@ const styles = StyleSheet.create({
     height: 64,
     borderRadius: radii.sm,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     backgroundColor: colors.page,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1043,7 +1045,7 @@ const styles = StyleSheet.create({
     width: 6,
     borderTopLeftRadius: 2,
     borderTopRightRadius: 2,
-    backgroundColor: ACTION,
+    backgroundColor: colors.primary,
   },
   empty: {
     alignItems: 'center',
@@ -1062,7 +1064,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.full,
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.md,
@@ -1080,7 +1082,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: radii.button,
-    backgroundColor: ACTION,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1093,7 +1095,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.button,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,

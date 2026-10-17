@@ -4,6 +4,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
+import { EmptyState } from '../components/EmptyState';
+import { ErrorState } from '../components/ErrorState';
+import { LoadingState } from '../components/LoadingState';
 import type {
   ChoosePharmacyViewModel,
   PharmacyFulfilTone,
@@ -14,16 +17,8 @@ import { radii } from '../theme/radii';
 import { layout, spacing } from '../theme/spacing';
 import { sheetBottomPadding } from '../utilities/sheetInset';
 
-const INK = '#1F1F1F';
-const MUTED = '#595959';
-const HAIRLINE = '#DDDFE2';
-const ACTION = '#2A7BA3';
-const ACTION_OUTLINE = '#276F93';
-const CHIP_FILL = '#E6F5FE';
-const CHART = '#3AA9E0';
-const SUCCESS = '#0F7A4E';
-const WARN = '#8A5109';
-const WARN_FILL = '#FCF3E4';
+const WARN = colors.warning;
+const WARN_FILL = colors.warningContainer;
 
 export function ChoosePharmacyView(vm: ChoosePharmacyViewModel) {
   const insets = useSafeAreaInsets();
@@ -38,11 +33,11 @@ export function ChoosePharmacyView(vm: ChoosePharmacyViewModel) {
             onPress={vm.onBack}
             style={styles.iconHit}
           >
-            <Ionicons name="arrow-back" size={24} color={INK} />
+            <Ionicons name="arrow-back" size={24} color={colors.ink} />
           </Pressable>
           <AppText
             variant="headlineMd"
-            color={INK}
+            color={colors.ink}
             style={styles.headerTitle}
             numberOfLines={1}
           >
@@ -77,8 +72,8 @@ function DeliveryList({
         ]}
       >
         <View style={styles.banner}>
-          <Ionicons name="location-outline" size={18} color={ACTION} />
-          <AppText variant="bodyMd" color={INK} style={styles.flex}>
+          <Ionicons name="location-outline" size={18} color={colors.primary} />
+          <AppText variant="bodyMd" color={colors.ink} style={styles.flex}>
             {vm
               .t('pharmacyBanner')
               .replace('{count}', String(vm.pharmacyCount))
@@ -86,34 +81,23 @@ function DeliveryList({
           </AppText>
         </View>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.chipScroll}
-          contentContainerStyle={styles.chipRow}
-        >
-          {vm.sorts.map((sort) => {
-            const on = sort.id === vm.sortId;
-            return (
-              <Pressable
-                key={sort.id}
-                accessibilityRole="button"
-                accessibilityState={{ selected: on }}
-                onPress={() => vm.onSelectSort(sort.id)}
-                style={[styles.chip, on && styles.chipOn]}
-              >
-                <AppText
-                  variant="labelSm"
-                  color={on ? ACTION : INK}
-                  weightOverride={on ? '600' : '500'}
-                >
-                  {vm.t(sort.labelKey)}
-                </AppText>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+        {/* BE-010 — no price/ETA/distance sort chips */}
 
+        {vm.notice ? (
+          <AppText variant="bodyMd" color={colors.error} raw>
+            {vm.notice}
+          </AppText>
+        ) : null}
+        {vm.isLoading ? <LoadingState /> : null}
+        {vm.isError ? (
+          <ErrorState
+            message="Could not load pharmacies."
+            onRetry={vm.onRetry}
+          />
+        ) : null}
+        {!vm.isLoading && !vm.isError && vm.pharmacies.length === 0 ? (
+          <EmptyState title="No pharmacies yet" />
+        ) : null}
         {vm.pharmacies.map((pharmacy) => (
           <PharmacyCard
             key={pharmacy.id}
@@ -133,16 +117,22 @@ function DeliveryList({
         ]}
       >
         <View style={styles.footerLeft}>
-          <AppText variant="labelSm" color={MUTED}>
+          <AppText variant="labelSm" color={colors.muted}>
             {vm.t('pharmacySelectedLabel')}
           </AppText>
-          <AppText variant="labelMd" color={INK} weightOverride="600" numberOfLines={1}>
+          <AppText
+            variant="labelMd"
+            color={colors.ink}
+            weightOverride="600"
+            numberOfLines={1}
+            raw={Boolean(vm.selectedPharmacy)}
+          >
             {vm.selectedPharmacy
               ? vm.t(vm.selectedPharmacy.nameKey)
               : vm.t('pharmacyNoneSelected')}
           </AppText>
-          {vm.selectedPharmacy ? (
-            <AppText variant="titleMd" color={INK}>
+          {vm.selectedPharmacy?.priceLabel ? (
+            <AppText variant="titleMd" color={colors.ink} raw>
               {vm.selectedPharmacy.priceLabel}
             </AppText>
           ) : null}
@@ -176,13 +166,13 @@ function EmptyDelivery({
       >
         <View style={styles.emptyHero}>
           <View style={styles.emptyGlow}>
-            <Ionicons name="location-outline" size={40} color={MUTED} />
+            <Ionicons name="location-outline" size={40} color={colors.muted} />
             <View style={styles.strike} />
           </View>
-          <AppText variant="headlineMd" color={INK} style={styles.center}>
+          <AppText variant="headlineMd" color={colors.ink} style={styles.center}>
             {vm.t('pharmacyEmptyTitle')}
           </AppText>
-          <AppText variant="bodyMd" color={MUTED} style={styles.center}>
+          <AppText variant="bodyMd" color={colors.muted} style={styles.center}>
             {vm.t('pharmacyEmptyBody').replace('{pin}', vm.pincode)}
           </AppText>
           <Pressable
@@ -190,7 +180,7 @@ function EmptyDelivery({
             onPress={vm.onNotifyDelivery}
             style={styles.notifyBtn}
           >
-            <AppText variant="labelMd" color={ACTION_OUTLINE} weightOverride="600">
+            <AppText variant="labelMd" color={colors.primaryOutline} weightOverride="600">
               {vm.t('pharmacyNotify')}
             </AppText>
           </Pressable>
@@ -255,107 +245,90 @@ function PharmacyCard({
       ) : null}
 
       <View style={styles.cardHead}>
-        <AppText variant="headlineMd" color={INK} style={styles.flex}>
+        <AppText variant="headlineMd" color={colors.ink} style={styles.flex} raw>
           {t(pharmacy.nameKey)}
         </AppText>
-        <View style={styles.licensed}>
-          <Ionicons name="checkmark-circle" size={12} color={MUTED} />
-          <AppText variant="labelSm" color={MUTED} weightOverride="500">
-            {t('pharmacyLicensed')}
-          </AppText>
-        </View>
       </View>
 
-      <AppText variant="labelSm" color={MUTED}>
-        {t(pharmacy.licenceKey)}
-      </AppText>
-      <View style={styles.metaRow}>
-        <Ionicons
-          name={pharmacy.tone === 'pickup' ? 'storefront-outline' : 'walk-outline'}
-          size={16}
-          color={MUTED}
-        />
-        <AppText variant="labelSm" color={MUTED}>
-          {t(pharmacy.metaKey)}
+      {pharmacy.licenceKey ? (
+        <AppText variant="labelSm" color={colors.muted} raw>
+          {t(pharmacy.licenceKey)}
         </AppText>
-      </View>
-
-      <View style={[styles.fulfilBox, fulfilStyle(pharmacy.tone)]}>
-        <View style={styles.fulfilRow}>
-          <Ionicons
-            name={fulfilIcon(pharmacy.tone)}
-            size={18}
-            color={fulfilColor(pharmacy.tone)}
-          />
-          <AppText
-            variant="labelMd"
-            color={fulfilColor(pharmacy.tone)}
-            weightOverride="600"
-            style={styles.flex}
-          >
-            {t(pharmacy.fulfilKey)}
+      ) : null}
+      {pharmacy.metaKey ? (
+        <View style={styles.metaRow}>
+          <Ionicons name="storefront-outline" size={16} color={colors.muted} />
+          <AppText variant="labelSm" color={colors.muted} raw>
+            {t(pharmacy.metaKey)}
           </AppText>
         </View>
-        {pharmacy.fulfilDetailKey ? (
-          <AppText variant="bodyMd" color={MUTED}>
-            {t(pharmacy.fulfilDetailKey)}
-          </AppText>
-        ) : null}
-        {pharmacy.tone === 'full' ? (
-          <View style={styles.fulfilRow}>
-            <Ionicons name="time-outline" size={16} color={ACTION} />
-            <AppText variant="labelSm" color={MUTED}>
-              {t(pharmacy.etaKey)}
-            </AppText>
-          </View>
-        ) : null}
-      </View>
+      ) : null}
 
-      <View style={styles.cardFoot}>
-        <View style={styles.flex}>
-          {pharmacy.ratingKey ? (
-            <AppText variant="labelSm" color={MUTED}>
-              {t(pharmacy.ratingKey)}
+      {pharmacy.fulfilKey || pharmacy.etaKey ? (
+        <View style={[styles.fulfilBox, fulfilStyle(pharmacy.tone)]}>
+          {pharmacy.fulfilKey ? (
+            <View style={styles.fulfilRow}>
+              <Ionicons
+                name={fulfilIcon(pharmacy.tone)}
+                size={18}
+                color={fulfilColor(pharmacy.tone)}
+              />
+              <AppText
+                variant="labelMd"
+                color={fulfilColor(pharmacy.tone)}
+                weightOverride="600"
+                style={styles.flex}
+              >
+                {t(pharmacy.fulfilKey)}
+              </AppText>
+            </View>
+          ) : null}
+          {pharmacy.fulfilDetailKey ? (
+            <AppText variant="bodyMd" color={colors.muted}>
+              {t(pharmacy.fulfilDetailKey)}
             </AppText>
-          ) : (
-            <View style={styles.metaRow}>
-              <Ionicons name="time-outline" size={14} color={MUTED} />
-              <AppText variant="labelSm" color={MUTED}>
+          ) : null}
+          {pharmacy.etaKey ? (
+            <View style={styles.fulfilRow}>
+              <Ionicons name="time-outline" size={16} color={colors.primary} />
+              <AppText variant="labelSm" color={colors.muted}>
                 {t(pharmacy.etaKey)}
               </AppText>
             </View>
-          )}
-          {pharmacy.freeDelivery ? (
-            <AppText variant="labelSm" color={SUCCESS} weightOverride="600">
-              {`${t('pharmacyFree')} · ${
-                pharmacy.priceNoteKey ? t(pharmacy.priceNoteKey) : ''
-              }`}
-            </AppText>
           ) : null}
         </View>
-        <View style={styles.priceBlock}>
-          <AppText variant="titleMd" color={INK}>
-            {pharmacy.priceLabel}
-          </AppText>
-          {pharmacy.priceNoteKey && !pharmacy.freeDelivery ? (
-            <AppText variant="labelSm" color={MUTED}>
-              {t(pharmacy.priceNoteKey)}
-            </AppText>
-          ) : null}
-          {pharmacy.tone === 'full' ? (
-            <Pressable
-              accessibilityRole="button"
-              onPress={onBreakdown}
-              style={styles.breakdown}
-            >
-              <AppText variant="labelSm" color={ACTION} weightOverride="600">
-                {t('pharmacyViewBreakdown')}
+      ) : null}
+
+      {pharmacy.priceLabel || pharmacy.ratingKey ? (
+        <View style={styles.cardFoot}>
+          <View style={styles.flex}>
+            {pharmacy.ratingKey ? (
+              <AppText variant="labelSm" color={colors.muted}>
+                {t(pharmacy.ratingKey)}
               </AppText>
-              <Ionicons name="chevron-down" size={14} color={ACTION} />
-            </Pressable>
+            ) : null}
+          </View>
+          {pharmacy.priceLabel ? (
+            <View style={styles.priceBlock}>
+              <AppText variant="titleMd" color={colors.ink} raw>
+                {pharmacy.priceLabel}
+              </AppText>
+              {pharmacy.tone === 'full' ? (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={onBreakdown}
+                  style={styles.breakdown}
+                >
+                  <AppText variant="labelSm" color={colors.primary} weightOverride="600">
+                    {t('pharmacyViewBreakdown')}
+                  </AppText>
+                  <Ionicons name="chevron-down" size={14} color={colors.primary} />
+                </Pressable>
+              ) : null}
+            </View>
           ) : null}
         </View>
-      </View>
+      ) : null}
     </Pressable>
   );
 }
@@ -381,13 +354,13 @@ function AltCard({
       style={[styles.altCard, selected && styles.cardSelected]}
     >
       <View style={styles.altIcon}>
-        <Ionicons name={icon} size={20} color={ACTION} />
+        <Ionicons name={icon} size={20} color={colors.primary} />
       </View>
       <View style={styles.flex}>
-        <AppText variant="labelMd" color={INK} weightOverride="600">
+        <AppText variant="labelMd" color={colors.ink} weightOverride="600">
           {title}
         </AppText>
-        <AppText variant="labelSm" color={MUTED}>
+        <AppText variant="labelSm" color={colors.muted}>
           {meta}
         </AppText>
       </View>
@@ -402,7 +375,7 @@ function fulfilStyle(tone: PharmacyFulfilTone) {
   if (tone === 'pickup') {
     return { backgroundColor: colors.page };
   }
-  return { backgroundColor: CHIP_FILL };
+  return { backgroundColor: colors.primaryContainer };
 }
 
 function fulfilIcon(tone: PharmacyFulfilTone): keyof typeof Ionicons.glyphMap {
@@ -420,9 +393,9 @@ function fulfilColor(tone: PharmacyFulfilTone) {
     return WARN;
   }
   if (tone === 'pickup') {
-    return INK;
+    return colors.ink;
   }
-  return ACTION;
+  return colors.primary;
 }
 
 const styles = StyleSheet.create({
@@ -433,7 +406,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   headerRow: {
     minHeight: 56,
@@ -459,10 +432,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     borderRadius: radii.default,
     borderWidth: 1,
-    borderColor: CHART,
+    borderColor: colors.secondary,
     padding: spacing.md,
   },
   chipScroll: {
@@ -477,25 +450,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderRadius: radii.full,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
   chipOn: {
-    backgroundColor: CHIP_FILL,
-    borderColor: CHART,
+    backgroundColor: colors.primaryContainer,
+    borderColor: colors.secondary,
   },
   card: {
     backgroundColor: colors.card,
     borderRadius: radii.default,
     borderWidth: 1.5,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     padding: spacing.md,
     gap: spacing.sm,
   },
   cardSelected: {
-    borderColor: ACTION_OUTLINE,
+    borderColor: colors.primaryOutline,
   },
   checkBadge: {
     position: 'absolute',
@@ -504,7 +477,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: radii.full,
-    backgroundColor: ACTION,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1,
@@ -568,7 +541,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     backgroundColor: colors.card,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
   },
   footerLeft: {
     flex: 1,
@@ -593,7 +566,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.full,
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.sm,
@@ -602,7 +575,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 56,
     height: 2,
-    backgroundColor: MUTED,
+    backgroundColor: colors.muted,
     transform: [{ rotate: '-35deg' }],
   },
   notifyBtn: {
@@ -610,7 +583,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     borderRadius: radii.button,
     borderWidth: 1.5,
-    borderColor: ACTION_OUTLINE,
+    borderColor: colors.primaryOutline,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.card,
@@ -623,7 +596,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderRadius: radii.default,
     borderWidth: 1.5,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     padding: spacing.md,
     minHeight: layout.buttonHeight + 16,
   },
@@ -631,7 +604,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: radii.full,
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -644,7 +617,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     backgroundColor: colors.card,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
   },
   center: {
     textAlign: 'center',

@@ -1,0 +1,394 @@
+=== API endpoints (url/method) ===
+src/store/api/new/appConfigApi.ts:24:      query: () => 'api/Public/AppConfig',
+src/store/api/new/accountApi.ts:37:      query: (body) => ({
+src/store/api/new/accountApi.ts:38:        url: 'api/Account/RefreshToken',
+src/store/api/new/accountApi.ts:39:        method: 'POST',
+src/store/api/new/accountApi.ts:44:      query: () => ({
+src/store/api/new/accountApi.ts:45:        url: 'api/Account/Logout',
+src/store/api/new/accountApi.ts:46:        method: 'POST',
+src/store/api/new/remindersApi.ts:37:      query: () => 'api/Patient/Reminders',
+src/store/api/new/remindersApi.ts:53:      query: (body) => ({
+src/store/api/new/remindersApi.ts:54:        url: 'api/Patient/Reminders',
+src/store/api/new/remindersApi.ts:55:        method: 'POST',
+src/store/api/new/remindersApi.ts:64:      query: ({ id, body }) => ({
+src/store/api/new/remindersApi.ts:65:        url: `api/Patient/Reminders/${id}`,
+src/store/api/new/remindersApi.ts:66:        method: 'PUT',
+src/store/api/new/remindersApi.ts:75:      query: (id) => ({
+src/store/api/new/remindersApi.ts:76:        url: `api/Patient/Reminders/${id}`,
+src/store/api/new/remindersApi.ts:77:        method: 'DELETE',
+src/store/api/new/firstLaunchApi.ts:15:      query: () => 'api/mastersAPI/GetLanguages',
+src/store/api/new/consentApi.ts:58:      query: () => 'api/Patient/Consents',
+src/store/api/new/consentApi.ts:77:      query: (consentTypeId) => ({
+src/store/api/new/consentApi.ts:78:        url: `api/Patient/Consents/Types/${consentTypeId}/Grant`,
+src/store/api/new/consentApi.ts:79:        method: 'POST',
+src/store/api/new/consentApi.ts:84:      query: (consentRecordId) => ({
+src/store/api/new/consentApi.ts:85:        url: `api/Patient/Consents/${consentRecordId}/Withdraw`,
+src/store/api/new/consentApi.ts:86:        method: 'POST',
+src/store/api/new/consentApi.ts:91:      query: (body) => ({
+src/store/api/new/consentApi.ts:92:        url: 'api/Patient/DataRequests',
+src/store/api/new/consentApi.ts:93:        method: 'POST',
+src/store/api/new/otpVerificationApi.ts:50:      query: (body) => ({
+src/store/api/new/otpVerificationApi.ts:51:        url: 'api/PatientAuth/VerifyOtp',
+src/store/api/new/otpVerificationApi.ts:52:        method: 'POST',
+src/store/api/new/patientProfileApi.ts:56:      query: () => 'api/PatientProfile/Me',
+src/store/api/new/patientProfileApi.ts:63:      query: (body) => ({
+src/store/api/new/patientProfileApi.ts:64:        url: 'api/PatientProfile/Me',
+src/store/api/new/patientProfileApi.ts:65:        method: 'PUT',
+src/store/api/new/recordsApi.ts:134:      query: () => 'api/Patient/Timeline',
+src/store/api/new/recordsApi.ts:141:      query: (patientAppId) => `api/Patient/Consultations/${patientAppId}/Note`,
+src/store/api/new/recordsApi.ts:144:      query: (patientAppId) => `api/Erx/Patient/${patientAppId}`,
+src/store/api/new/recordsApi.ts:148:      query: () => 'api/Patient/Documents',
+src/store/api/new/recordsApi.ts:152:      query: (formData) => ({
+src/store/api/new/recordsApi.ts:153:        url: 'api/Patient/Documents',
+src/store/api/new/recordsApi.ts:154:        method: 'POST',
+src/store/api/new/recordsApi.ts:160:      query: (documentId) => ({
+src/store/api/new/recordsApi.ts:161:        url: `api/Patient/Documents/${documentId}`,
+src/store/api/new/recordsApi.ts:162:        method: 'DELETE',
+src/store/api/new/recordsApi.ts:167:      query: () => 'api/Patient/FollowUps',
+src/store/api/new/recordsApi.ts:174:      query: (followUpTaskId) => ({
+src/store/api/new/recordsApi.ts:175:        url: `api/Patient/FollowUps/${followUpTaskId}/Complete`,
+src/store/api/new/recordsApi.ts:176:        method: 'POST',
+src/store/api/new/familyApi.ts:166:      query: () => 'api/Family',
+src/store/api/new/familyApi.ts:173:      query: (id) => `api/Family/${id}`,
+src/store/api/new/familyApi.ts:177:      query: () => 'api/Family/Relations',
+src/store/api/new/familyApi.ts:189:      query: (body) => ({
+src/store/api/new/familyApi.ts:190:        url: 'api/Family',
+src/store/api/new/familyApi.ts:191:        method: 'POST',
+src/store/api/new/familyApi.ts:200:      query: ({ id, body }) => ({
+src/store/api/new/familyApi.ts:201:        url: `api/Family/${id}`,
+src/store/api/new/familyApi.ts:202:        method: 'PUT',
+src/store/api/new/familyApi.ts:211:      query: (id) => ({
+src/store/api/new/familyApi.ts:212:        url: `api/Family/${id}`,
+src/store/api/new/familyApi.ts:213:        method: 'DELETE',
+src/store/api/new/familyApi.ts:218:      query: () => 'api/Caregiver/Me',
+src/store/api/new/familyApi.ts:221:      query: (contact) => `api/Caregiver/Lookup?contact=${encodeURIComponent(contact)}`,
+src/store/api/new/familyApi.ts:227:      query: (body) => ({
+src/store/api/new/familyApi.ts:228:        url: 'api/Caregiver/Grant',
+src/store/api/new/familyApi.ts:229:        method: 'POST',
+src/store/api/new/familyApi.ts:238:      query: (body) => ({
+src/store/api/new/familyApi.ts:239:        url: 'api/Caregiver/Revoke',
+src/store/api/new/familyApi.ts:240:        method: 'POST',
+src/store/api/new/familyApi.ts:249:      query: () => 'api/Caregiver/ListMine',
+src/store/api/new/familyApi.ts:255:      query: () => 'api/Caregiver/ListActingFor',
+src/store/api/new/visitsApi.ts:159:      query: (params) => ({
+src/store/api/new/visitsApi.ts:160:        url: 'api/Patient/Visits',
+src/store/api/new/visitsApi.ts:166:      query: (patientAppId) => `api/Patient/Visits/${patientAppId}`,
+src/store/api/new/visitsApi.ts:185:      query: ({ patientAppId, status }) => ({
+src/store/api/new/visitsApi.ts:186:        url: `api/Patient/Visits/${patientAppId}/CheckIn`,
+src/store/api/new/visitsApi.ts:187:        method: 'POST',
+src/store/api/new/visitsApi.ts:203:      query: ({ patientAppId }) => ({
+src/store/api/new/visitsApi.ts:204:        url: 'api/PatientAppointment/SwitchToTele',
+src/store/api/new/visitsApi.ts:205:        method: 'POST',
+src/store/api/new/visitsApi.ts:217:      query: (patientAppId) =>
+src/store/api/new/visitsApi.ts:224:      query: (body) => ({
+src/store/api/new/visitsApi.ts:225:        url: 'api/PatientAppointment/RescheduleAppointment',
+src/store/api/new/visitsApi.ts:226:        method: 'POST',
+src/store/api/new/visitsApi.ts:235:      query: (body) => ({
+src/store/api/new/visitsApi.ts:236:        url: 'api/PatientAppointment/CancelAppointment',
+src/store/api/new/visitsApi.ts:237:        method: 'POST',
+src/store/api/new/visitsApi.ts:243:      query: (paymentOrderId) => `api/Refunds/Policy/${paymentOrderId}`,
+src/store/api/new/privacyConsentApi.ts:78:      query: (params) => ({
+src/store/api/new/privacyConsentApi.ts:79:        url: 'api/Consent/PrivacyStatus',
+src/store/api/new/privacyConsentApi.ts:85:      query: ({ consentTypeCode, language = 'en' }) => ({
+src/store/api/new/privacyConsentApi.ts:86:        url: `api/Consent/Notice/${consentTypeCode}`,
+src/store/api/new/privacyConsentApi.ts:91:      query: (body) => ({
+src/store/api/new/privacyConsentApi.ts:92:        url: 'api/Consent/GrantPrivacy',
+src/store/api/new/privacyConsentApi.ts:93:        method: 'POST',
+src/store/api/new/completeProfileApi.ts:113:      query: () => 'api/mastersAPI/GetGenders',
+src/store/api/new/completeProfileApi.ts:128:      query: () => 'api/UserAddressLocation/Countries',
+src/store/api/new/completeProfileApi.ts:131:      query: (countryId) => `api/UserAddressLocation/States/ByCountry/${countryId}`,
+src/store/api/new/completeProfileApi.ts:134:      query: (stateId) => `api/UserAddressLocation/Districts/ByState/${stateId}`,
+src/store/api/new/completeProfileApi.ts:137:      query: (districtId) => `api/UserAddressLocation/Cities/ByDistrict/${districtId}`,
+src/store/api/new/completeProfileApi.ts:140:      query: (body) => ({
+src/store/api/new/completeProfileApi.ts:141:        url: 'api/patient/',
+src/store/api/new/completeProfileApi.ts:142:        method: 'POST',
+src/store/api/new/supportApi.ts:131:      query: (body) => ({
+src/store/api/new/supportApi.ts:132:        url: 'api/Reviews',
+src/store/api/new/supportApi.ts:133:        method: 'POST',
+src/store/api/new/supportApi.ts:156:      query: () => 'api/Reviews/Mine',
+src/store/api/new/supportApi.ts:163:      query: ({ reviewId, reason }) => ({
+src/store/api/new/supportApi.ts:164:        url: `api/Reviews/${reviewId}/Appeal`,
+src/store/api/new/supportApi.ts:165:        method: 'POST',
+src/store/api/new/supportApi.ts:171:      query: (body) => ({
+src/store/api/new/supportApi.ts:172:        url: 'api/Support/Tickets',
+src/store/api/new/supportApi.ts:173:        method: 'POST',
+src/store/api/new/supportApi.ts:179:      query: () => 'api/Support/Tickets/Mine',
+src/store/api/new/supportApi.ts:183:      query: (supportTicketId) => `api/Support/Tickets/${supportTicketId}/Messages`,
+src/store/api/new/supportApi.ts:192:      query: ({ supportTicketId, ...body }) => ({
+src/store/api/new/supportApi.ts:193:        url: `api/Support/Tickets/${supportTicketId}/Messages`,
+src/store/api/new/supportApi.ts:194:        method: 'POST',
+src/store/api/new/supportApi.ts:202:      query: () => 'api/Help',
+src/store/api/new/supportApi.ts:205:      query: (slug) => `api/Help/${encodeURIComponent(slug)}`,
+src/store/api/new/supportApi.ts:208:      query: (body) => ({
+src/store/api/new/supportApi.ts:209:        url: 'api/Support/AssistanceRequest',
+src/store/api/new/supportApi.ts:210:        method: 'POST',
+src/store/api/new/paymentsApi.ts:21:  method: string | null;
+src/store/api/new/paymentsApi.ts:71:  method: string | null;
+src/store/api/new/paymentsApi.ts:108:      query: (body) => ({
+src/store/api/new/paymentsApi.ts:109:        url: 'api/Payments/ConsultOrders',
+src/store/api/new/paymentsApi.ts:110:        method: 'POST',
+src/store/api/new/paymentsApi.ts:116:      query: (body) => ({
+src/store/api/new/paymentsApi.ts:117:        url: 'api/Payments/Verify',
+src/store/api/new/paymentsApi.ts:118:        method: 'POST',
+src/store/api/new/paymentsApi.ts:127:      query: (patientAppId) => `api/Payments/Appointments/${patientAppId}`,
+src/store/api/new/paymentsApi.ts:131:      query: () => 'api/Patient/Payments',
+src/store/api/new/paymentsApi.ts:135:      query: (paymentOrderId) => `api/Refunds/Policy/${paymentOrderId}`,
+src/store/api/new/teleApi.ts:174:      query: (body) => ({
+src/store/api/new/teleApi.ts:175:        url: 'api/Tele/Instant',
+src/store/api/new/teleApi.ts:176:        method: 'POST',
+src/store/api/new/teleApi.ts:185:      query: (requestId) => `api/Tele/Instant/${requestId}`,
+src/store/api/new/teleApi.ts:192:      query: (requestId) => ({
+src/store/api/new/teleApi.ts:193:        url: `api/Tele/Instant/${requestId}/Cancel`,
+src/store/api/new/teleApi.ts:194:        method: 'POST',
+src/store/api/new/teleApi.ts:199:      query: () => 'api/Tele/DeviceCheck',
+src/store/api/new/teleApi.ts:202:      query: (teleSessionId) => `api/Tele/Sessions/${teleSessionId}`,
+src/store/api/new/teleApi.ts:206:      query: (teleSessionId) => ({
+src/store/api/new/teleApi.ts:207:        url: `api/Tele/Sessions/${teleSessionId}/Token`,
+src/store/api/new/teleApi.ts:208:        method: 'POST',
+src/store/api/new/teleApi.ts:212:      query: (teleSessionId) => ({
+src/store/api/new/teleApi.ts:213:        url: `api/Tele/Sessions/${teleSessionId}/Rejoin`,
+src/store/api/new/teleApi.ts:214:        method: 'POST',
+src/store/api/new/teleApi.ts:221:      query: ({ teleSessionId, body }) => ({
+src/store/api/new/teleApi.ts:222:        url: `api/Tele/Sessions/${teleSessionId}/JoinFailure`,
+src/store/api/new/teleApi.ts:223:        method: 'POST',
+src/store/api/new/teleApi.ts:231:      query: (body) => ({
+src/store/api/new/teleApi.ts:232:        url: 'api/Tele/Consent',
+src/store/api/new/teleApi.ts:233:        method: 'POST',
+src/store/api/new/teleApi.ts:241:      query: (body) => ({
+src/store/api/new/teleApi.ts:242:        url: 'api/Tele/Chat',
+src/store/api/new/teleApi.ts:243:        method: 'POST',
+src/store/api/new/teleApi.ts:249:      query: (teleSessionId) => `api/Tele/Chat/${teleSessionId}`,
+src/store/api/new/teleApi.ts:256:      query: (patientAppId) => `api/Tele/Summary/${patientAppId}`,
+src/store/api/new/teleApi.ts:268:      query: ({ teleSessionId, minutes }) => ({
+src/store/api/new/teleApi.ts:269:        url: `api/Tele/Sessions/${teleSessionId}/RunningLate`,
+src/store/api/new/teleApi.ts:270:        method: 'POST',
+src/store/api/new/homeApi.ts:97:      query: () => 'api/PatientPortal/Home',
+src/store/api/new/homeApi.ts:101:      query: () => 'api/PatientPortal/CareCategories',
+src/store/api/new/homeApi.ts:108:      query: (params) => ({
+src/store/api/new/homeApi.ts:109:        url: 'api/Public/Articles',
+src/store/api/new/homeApi.ts:118:      query: (blogId) => `api/Public/Articles/${blogId}`,
+src/store/api/new/signInApi.ts:32:      query: (body) => ({
+src/store/api/new/signInApi.ts:33:        url: 'api/PatientAuth/RequestOtp',
+src/store/api/new/signInApi.ts:34:        method: 'POST',
+src/store/api/new/appointmentRequestsApi.ts:28:      query: (body) => ({
+src/store/api/new/appointmentRequestsApi.ts:29:        url: 'api/Patient/AppointmentRequests',
+src/store/api/new/appointmentRequestsApi.ts:30:        method: 'POST',
+src/store/api/new/doctorsApi.ts:147:      query: (params) => ({
+src/store/api/new/doctorsApi.ts:148:        url: 'api/Public/Doctors',
+src/store/api/new/doctorsApi.ts:160:      query: (doctorId) => `api/Public/Doctors/${doctorId}`,
+src/store/api/new/doctorsApi.ts:166:      query: (doctorId) => `api/Public/Doctors/${doctorId}/Ranking`,
+src/store/api/new/doctorsApi.ts:172:      query: ({ doctorId, date }) => ({
+src/store/api/new/doctorsApi.ts:173:        url: `api/Public/Doctors/${doctorId}/Slots`,
+src/store/api/new/doctorsApi.ts:181:      query: (doctorId) => `api/Fees/Public/${doctorId}`,
+src/store/api/new/doctorsApi.ts:184:      query: (doctorId) => `api/Reviews/Doctor/${doctorId}`,
+src/store/api/new/doctorsApi.ts:190:      query: (doctorId) => `api/Tele/Availability/${doctorId}`,
+src/store/api/new/symptomDiaryApi.ts:59:      query: () => 'api/Patient/Diary',
+src/store/api/new/symptomDiaryApi.ts:63:      query: (body) => ({
+src/store/api/new/symptomDiaryApi.ts:64:        url: 'api/Patient/Diary',
+src/store/api/new/symptomDiaryApi.ts:65:        method: 'POST',
+src/store/api/new/symptomDiaryApi.ts:71:      query: ({ symptomDiaryId, body }) => ({
+src/store/api/new/symptomDiaryApi.ts:72:        url: `api/Patient/Diary/${symptomDiaryId}`,
+src/store/api/new/symptomDiaryApi.ts:73:        method: 'PUT',
+src/store/api/new/symptomDiaryApi.ts:79:      query: (symptomDiaryId) => ({
+src/store/api/new/symptomDiaryApi.ts:80:        url: `api/Patient/Diary/${symptomDiaryId}`,
+src/store/api/new/symptomDiaryApi.ts:81:        method: 'DELETE',
+src/store/api/new/symptomDiaryApi.ts:86:      query: () => 'api/Patient/Progress',
+src/store/api/new/newBaseApi.ts:65:                url: 'api/Account/RefreshToken',
+src/store/api/new/newBaseApi.ts:66:                method: 'POST',
+src/store/api/new/notificationsApi.ts:58:      query: () => 'api/Notifications',
+src/store/api/new/notificationsApi.ts:65:      query: ({ appNotificationId, isRead = true }) => ({
+src/store/api/new/notificationsApi.ts:66:        url: `api/Notifications/${appNotificationId}?isRead=${isRead}`,
+src/store/api/new/notificationsApi.ts:67:        method: 'PATCH',
+src/store/api/new/notificationsApi.ts:75:      query: () => ({
+src/store/api/new/notificationsApi.ts:76:        url: 'api/Notifications/MarkAllRead',
+src/store/api/new/notificationsApi.ts:77:        method: 'POST',
+src/store/api/new/notificationsApi.ts:82:      query: () => 'api/Notifications/Preferences',
+src/store/api/new/notificationsApi.ts:95:      query: (body) => ({
+src/store/api/new/notificationsApi.ts:96:        url: 'api/Notifications/Preferences',
+src/store/api/new/notificationsApi.ts:97:        method: 'PUT',
+src/store/api/new/medicinesApi.ts:160:      query: () => 'api/Patient/MedicineOrders',
+src/store/api/new/medicinesApi.ts:167:      query: (body) => ({
+src/store/api/new/medicinesApi.ts:168:        url: 'api/MedicineOrders',
+src/store/api/new/medicinesApi.ts:169:        method: 'POST',
+src/store/api/new/medicinesApi.ts:175:      query: (area) =>
+src/store/api/new/medicinesApi.ts:185:      query: (medicineOrderId) => ({
+src/store/api/new/medicinesApi.ts:186:        url: `api/MedicineOrders/${medicineOrderId}/Consent`,
+src/store/api/new/medicinesApi.ts:187:        method: 'POST',
+src/store/api/new/medicinesApi.ts:195:      query: (medicineOrderId) => ({
+src/store/api/new/medicinesApi.ts:196:        url: `api/MedicineOrders/${medicineOrderId}/AcceptQuote`,
+src/store/api/new/medicinesApi.ts:197:        method: 'POST',
+src/store/api/new/medicinesApi.ts:205:      query: (body) => ({
+src/store/api/new/medicinesApi.ts:206:        url: 'api/Payments/MedicineOrders',
+src/store/api/new/medicinesApi.ts:207:        method: 'POST',
+src/store/api/new/medicinesApi.ts:216:      query: (medicineOrderId) =>
+src/store/api/new/medicinesApi.ts:224:      query: (refillRequestId) => ({
+src/store/api/new/medicinesApi.ts:225:        url: `api/MedicineOrders/Refill/${refillRequestId}`,
+src/store/api/new/medicinesApi.ts:226:        method: 'POST',
+src/store/api/new/medicinesApi.ts:231:      query: () => 'api/Erx/Refills',
+src/store/api/new/medicinesApi.ts:238:      query: (body) => ({
+src/store/api/new/medicinesApi.ts:239:        url: 'api/Erx/Refills',
+src/store/api/new/medicinesApi.ts:240:        method: 'POST',
+src/store/api/new/bookingApi.ts:132:      query: ({ doctorId, ...body }) => ({
+src/store/api/new/bookingApi.ts:133:        url: `api/Public/Doctors/${doctorId}/Bookings`,
+src/store/api/new/bookingApi.ts:134:        method: 'POST',
+src/store/api/new/bookingApi.ts:140:      query: (body) => ({
+src/store/api/new/bookingApi.ts:141:        url: 'api/Family/BookAs',
+src/store/api/new/bookingApi.ts:142:        method: 'POST',
+src/store/api/new/bookingApi.ts:148:      query: (bookingToken) => `api/Public/Bookings/${bookingToken}`,
+src/store/api/new/bookingApi.ts:151:      query: () => 'api/Public/Policies/Terms',
+src/store/api/new/bookingApi.ts:154:      query: (body) => ({
+src/store/api/new/bookingApi.ts:155:        url: 'api/Waitlist/Join',
+src/store/api/new/bookingApi.ts:156:        method: 'POST',
+src/store/api/new/bookingApi.ts:169:      query: (contactMobile) => ({
+src/store/api/new/bookingApi.ts:170:        url: 'api/Waitlist/Offers',
+src/store/api/new/devicesApi.ts:50:      query: (body) => ({
+src/store/api/new/devicesApi.ts:51:        url: 'api/Devices/Register',
+src/store/api/new/devicesApi.ts:52:        method: 'POST',
+src/store/api/new/devicesApi.ts:57:      query: (body) => ({
+src/store/api/new/devicesApi.ts:58:        url: 'api/Device/Register',
+src/store/api/new/devicesApi.ts:59:        method: 'POST',
+src/store/api/new/devicesApi.ts:64:      query: (body) => ({
+src/store/api/new/devicesApi.ts:65:        url: 'api/Device/Unregister',
+src/store/api/new/devicesApi.ts:66:        method: 'POST',
+
+=== exported hooks ===
+src/store/api/new/remindersApi.ts:84:export const {
+src/store/api/new/remindersApi.ts:85:  useGetRemindersQuery,
+src/store/api/new/remindersApi.ts:86:  useCreateReminderMutation,
+src/store/api/new/remindersApi.ts:87:  useUpdateReminderMutation,
+src/store/api/new/remindersApi.ts:88:  useDeleteReminderMutation,
+src/store/api/new/visitsApi.ts:248:export const {
+src/store/api/new/visitsApi.ts:249:  useGetPatientVisitsQuery,
+src/store/api/new/visitsApi.ts:250:  useGetVisitDetailQuery,
+src/store/api/new/visitsApi.ts:251:  useCheckInVisitMutation,
+src/store/api/new/visitsApi.ts:252:  useSwitchVisitToTeleMutation,
+src/store/api/new/visitsApi.ts:253:  useGetAppointmentChangeLogQuery,
+src/store/api/new/visitsApi.ts:254:  useRescheduleAppointmentMutation,
+src/store/api/new/visitsApi.ts:255:  useCancelAppointmentMutation,
+src/store/api/new/visitsApi.ts:256:  useGetRefundPolicyQuery,
+src/store/api/new/appConfigApi.ts:41:export const { useGetAppConfigQuery, useLazyGetAppConfigQuery } = appConfigApi;
+src/store/api/new/consentApi.ts:100:export const {
+src/store/api/new/consentApi.ts:101:  useGetConsentsQuery,
+src/store/api/new/consentApi.ts:102:  useGrantConsentMutation,
+src/store/api/new/consentApi.ts:103:  useWithdrawConsentMutation,
+src/store/api/new/consentApi.ts:104:  useCreateDataRequestMutation,
+src/store/api/new/accountApi.ts:52:export const { useRefreshTokenMutation, useLogoutMutation } = accountApi;
+src/store/api/new/otpVerificationApi.ts:59:export const { useVerifyOtpMutation } = otpVerificationApi;
+src/store/api/new/completeProfileApi.ts:149:export const {
+src/store/api/new/completeProfileApi.ts:150:  useGetGendersQuery,
+src/store/api/new/completeProfileApi.ts:151:  useGetCountriesQuery,
+src/store/api/new/completeProfileApi.ts:152:  useGetStatesByCountryQuery,
+src/store/api/new/completeProfileApi.ts:153:  useGetDistrictsByStateQuery,
+src/store/api/new/completeProfileApi.ts:154:  useGetCitiesByDistrictQuery,
+src/store/api/new/completeProfileApi.ts:155:  useCreatePatientMutation,
+src/store/api/new/supportApi.ts:218:export const {
+src/store/api/new/supportApi.ts:219:  useCreateReviewMutation,
+src/store/api/new/supportApi.ts:220:  useGetMyReviewsQuery,
+src/store/api/new/supportApi.ts:221:  useAppealReviewMutation,
+src/store/api/new/supportApi.ts:222:  useCreateTicketMutation,
+src/store/api/new/supportApi.ts:223:  useGetMyTicketsQuery,
+src/store/api/new/supportApi.ts:224:  useGetTicketMessagesQuery,
+src/store/api/new/supportApi.ts:225:  useSendTicketMessageMutation,
+src/store/api/new/supportApi.ts:226:  useGetHelpArticlesQuery,
+src/store/api/new/supportApi.ts:227:  useGetHelpArticleBySlugQuery,
+src/store/api/new/supportApi.ts:228:  useRequestAssistanceMutation,
+src/store/api/new/signInApi.ts:41:export const { useRequestOtpMutation } = signInApi;
+src/store/api/new/devicesApi.ts:73:export const {
+src/store/api/new/devicesApi.ts:74:  useRegisterDevicesMutation,
+src/store/api/new/devicesApi.ts:75:  useRegisterDeviceMutation,
+src/store/api/new/devicesApi.ts:76:  useUnregisterDeviceMutation,
+src/store/api/new/notificationsApi.ts:105:export const {
+src/store/api/new/notificationsApi.ts:106:  useGetNotificationsQuery,
+src/store/api/new/notificationsApi.ts:107:  useMarkNotificationReadMutation,
+src/store/api/new/notificationsApi.ts:108:  useMarkAllNotificationsReadMutation,
+src/store/api/new/notificationsApi.ts:109:  useGetNotificationPreferencesQuery,
+src/store/api/new/notificationsApi.ts:110:  useUpdateNotificationPreferencesMutation,
+src/store/api/new/bookingApi.ts:177:export const {
+src/store/api/new/bookingApi.ts:178:  useCreateBookingMutation,
+src/store/api/new/bookingApi.ts:179:  useBookAsFamilyMutation,
+src/store/api/new/bookingApi.ts:180:  useGetBookingByTokenQuery,
+src/store/api/new/bookingApi.ts:181:  useGetTermsPolicyQuery,
+src/store/api/new/bookingApi.ts:182:  useJoinWaitlistMutation,
+src/store/api/new/bookingApi.ts:183:  useGetWaitlistOffersQuery,
+src/store/api/new/firstLaunchApi.ts:20:export const { useGetLanguagesQuery } = firstLaunchApi;
+src/store/api/new/medicinesApi.ts:248:export const {
+src/store/api/new/medicinesApi.ts:249:  useGetMedicineOrdersQuery,
+src/store/api/new/medicinesApi.ts:250:  useCreateMedicineOrderMutation,
+src/store/api/new/medicinesApi.ts:251:  useGetPharmacySellersQuery,
+src/store/api/new/medicinesApi.ts:252:  useLazyGetPharmacySellersQuery,
+src/store/api/new/medicinesApi.ts:253:  useGrantMedicineConsentMutation,
+src/store/api/new/medicinesApi.ts:254:  useAcceptMedicineQuoteMutation,
+src/store/api/new/medicinesApi.ts:255:  usePayMedicineOrderMutation,
+src/store/api/new/medicinesApi.ts:256:  useGetMedicineOrderTrackingQuery,
+src/store/api/new/medicinesApi.ts:257:  useRefillMedicineOrderMutation,
+src/store/api/new/medicinesApi.ts:258:  useGetRefillsQuery,
+src/store/api/new/medicinesApi.ts:259:  useRequestRefillMutation,
+src/store/api/new/recordsApi.ts:183:export const {
+src/store/api/new/recordsApi.ts:184:  useGetTimelineQuery,
+src/store/api/new/recordsApi.ts:185:  useGetConsultationNoteQuery,
+src/store/api/new/recordsApi.ts:186:  useGetPrescriptionQuery,
+src/store/api/new/recordsApi.ts:187:  useGetDocumentsQuery,
+src/store/api/new/recordsApi.ts:188:  useUploadDocumentMutation,
+src/store/api/new/recordsApi.ts:189:  useDeleteDocumentMutation,
+src/store/api/new/recordsApi.ts:190:  useGetFollowUpsQuery,
+src/store/api/new/recordsApi.ts:191:  useCompleteFollowUpMutation,
+src/store/api/new/homeApi.ts:124:export const {
+src/store/api/new/homeApi.ts:125:  useGetHomeDashboardQuery,
+src/store/api/new/homeApi.ts:126:  useGetCareCategoriesQuery,
+src/store/api/new/homeApi.ts:127:  useGetArticlesQuery,
+src/store/api/new/homeApi.ts:128:  useGetArticleByIdQuery,
+src/store/api/new/symptomDiaryApi.ts:92:export const {
+src/store/api/new/symptomDiaryApi.ts:93:  useGetDiaryEntriesQuery,
+src/store/api/new/symptomDiaryApi.ts:94:  useCreateDiaryEntryMutation,
+src/store/api/new/symptomDiaryApi.ts:95:  useUpdateDiaryEntryMutation,
+src/store/api/new/symptomDiaryApi.ts:96:  useDeleteDiaryEntryMutation,
+src/store/api/new/symptomDiaryApi.ts:97:  useGetProgressQuery,
+src/store/api/new/teleApi.ts:278:export const {
+src/store/api/new/teleApi.ts:279:  useRequestInstantConsultMutation,
+src/store/api/new/teleApi.ts:280:  useGetInstantConsultStatusQuery,
+src/store/api/new/teleApi.ts:281:  useCancelInstantConsultMutation,
+src/store/api/new/teleApi.ts:282:  useGetDeviceCheckQuery,
+src/store/api/new/teleApi.ts:283:  useGetTeleSessionQuery,
+src/store/api/new/teleApi.ts:284:  useGetTeleTokenMutation,
+src/store/api/new/teleApi.ts:285:  useRejoinTeleSessionMutation,
+src/store/api/new/teleApi.ts:286:  useReportJoinFailureMutation,
+src/store/api/new/teleApi.ts:287:  useSendRecordingConsentMutation,
+src/store/api/new/teleApi.ts:288:  useSendChatMessageMutation,
+src/store/api/new/teleApi.ts:289:  useGetChatMessagesQuery,
+src/store/api/new/teleApi.ts:290:  useGetConsultationSummaryQuery,
+src/store/api/new/teleApi.ts:291:  useReportRunningLateMutation,
+src/store/api/new/doctorsApi.ts:195:export const {
+src/store/api/new/doctorsApi.ts:196:  useGetDoctorsQuery,
+src/store/api/new/doctorsApi.ts:197:  useGetDoctorByIdQuery,
+src/store/api/new/doctorsApi.ts:198:  useGetDoctorRankingQuery,
+src/store/api/new/doctorsApi.ts:199:  useGetDoctorSlotsQuery,
+src/store/api/new/doctorsApi.ts:200:  useGetDoctorFeesQuery,
+src/store/api/new/doctorsApi.ts:201:  useGetDoctorReviewsQuery,
+src/store/api/new/doctorsApi.ts:202:  useGetDoctorTeleAvailabilityQuery,
+src/store/api/new/appointmentRequestsApi.ts:38:export const { useCreateAppointmentRequestMutation } = appointmentRequestsApi;
+src/store/api/new/privacyConsentApi.ts:101:export const {
+src/store/api/new/privacyConsentApi.ts:102:  useGetPrivacyStatusQuery,
+src/store/api/new/privacyConsentApi.ts:103:  useGetConsentNoticeQuery,
+src/store/api/new/privacyConsentApi.ts:104:  useGrantPrivacyConsentMutation,
+src/store/api/new/familyApi.ts:260:export const {
+src/store/api/new/familyApi.ts:261:  useGetFamilyQuery,
+src/store/api/new/familyApi.ts:262:  useGetFamilyMemberQuery,
+src/store/api/new/familyApi.ts:263:  useGetRelationsQuery,
+src/store/api/new/familyApi.ts:264:  useCreateFamilyMemberMutation,
+src/store/api/new/familyApi.ts:265:  useUpdateFamilyMemberMutation,
+src/store/api/new/familyApi.ts:266:  useDeleteFamilyMemberMutation,
+src/store/api/new/familyApi.ts:267:  useGetCaregiverMeQuery,
+src/store/api/new/familyApi.ts:268:  useLazyLookupCaregiverQuery,
+src/store/api/new/familyApi.ts:269:  useGrantCaregiverMutation,
+src/store/api/new/familyApi.ts:270:  useRevokeCaregiverMutation,
+src/store/api/new/familyApi.ts:271:  useListCaregiversMineQuery,
+src/store/api/new/familyApi.ts:272:  useListCaregiversActingForQuery,
+src/store/api/new/paymentsApi.ts:140:export const {
+src/store/api/new/paymentsApi.ts:141:  useCreateConsultOrderMutation,
+src/store/api/new/paymentsApi.ts:142:  useVerifyPaymentMutation,
+src/store/api/new/paymentsApi.ts:143:  useGetAppointmentPaymentSummaryQuery,
+src/store/api/new/paymentsApi.ts:144:  useGetPaymentsHistoryQuery,
+src/store/api/new/paymentsApi.ts:145:  useGetRefundPolicyQuery,
+src/store/api/new/patientProfileApi.ts:73:export const {
+src/store/api/new/patientProfileApi.ts:74:  useGetPatientProfileQuery,
+src/store/api/new/patientProfileApi.ts:75:  useUpdatePatientProfileMutation,

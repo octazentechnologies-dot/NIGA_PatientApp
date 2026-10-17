@@ -16,16 +16,10 @@ import { layout, spacing } from '../theme/spacing';
 import { scaleFont } from '../utilities/scale';
 import { UploadDocumentView } from './UploadDocumentView';
 
-const MUTED = '#595959';
-const HAIRLINE = '#E6E6E6';
-const ICON_BLUE = '#2A7BA3';
-const SUCCESS = '#0F7A4E';
-const SUCCESS_FILL = '#E9F5EF';
-const SUCCESS_BORDER = '#CDE8DA';
-const FILL = '#FAFAFA';
-const AMBER = '#E08A2E';
-const ACTION = '#2A7BA3';
-
+const ICON_BLUE = colors.primary;
+const SUCCESS_BORDER = colors.successContainer;
+const FILL = colors.surfaceContainerLow;
+const AMBER = colors.warning;
 export function AppointmentDetailView(vm: AppointmentDetailViewModel) {
   const insets = useSafeAreaInsets();
   const showTimer = vm.showJoin && (vm.phase === 'upcoming' || vm.phase === 'live');
@@ -66,9 +60,9 @@ export function AppointmentDetailView(vm: AppointmentDetailViewModel) {
           onPress={vm.onBack}
           style={styles.iconButton}
         >
-          <Ionicons name="arrow-back" size={24} color="#000000" />
+          <Ionicons name="arrow-back" size={24} color={colors.ink} />
         </Pressable>
-        <AppText variant="headlineMd" color="#000000" style={styles.title}>
+        <AppText variant="headlineMd" color={colors.ink} style={styles.title}>
           {vm.t('aptTitle')}
         </AppText>
         <View style={styles.iconButton} />
@@ -82,8 +76,8 @@ export function AppointmentDetailView(vm: AppointmentDetailViewModel) {
         ]}
       >
         <View style={styles.banner}>
-          <Ionicons name="checkmark-circle" size={22} color={SUCCESS} />
-          <AppText variant="bodyMd" color={SUCCESS} weightOverride="600" style={styles.flex}>
+          <Ionicons name="checkmark-circle" size={22} color={colors.success} />
+          <AppText variant="bodyMd" color={colors.success} weightOverride="600" style={styles.flex}>
             {vm.bannerLabel}
           </AppText>
         </View>
@@ -92,18 +86,18 @@ export function AppointmentDetailView(vm: AppointmentDetailViewModel) {
           <View style={styles.card}>
             {showTimer ? (
               <View style={styles.centerBlock}>
-                <AppText variant="labelSm" color={MUTED} style={styles.timerLabel}>
+                <AppText variant="labelSm" color={colors.muted} style={styles.timerLabel}>
                   {vm.t('aptTimeRemaining')}
                 </AppText>
-                <AppText variant="displayLg" color="#000000" style={styles.timer}>
+                <AppText variant="displayLg" color={colors.ink} style={styles.timer}>
                   {vm.countdown}
                 </AppText>
-                <AppText variant="bodyMd" color={MUTED} style={styles.center}>
+                <AppText variant="bodyMd" color={colors.muted} style={styles.center}>
                   {vm.consultWithLabel}
                 </AppText>
               </View>
             ) : (
-              <AppText variant="bodyMd" color={MUTED} style={styles.center}>
+              <AppText variant="bodyMd" color={colors.muted} style={styles.center}>
                 {vm.consultWithLabel}
               </AppText>
             )}
@@ -126,9 +120,9 @@ export function AppointmentDetailView(vm: AppointmentDetailViewModel) {
                       : 'videocam'
                 }
                 size={20}
-                color="#FFFFFF"
+                color={colors.card}
               />
-              <AppText variant="bodyLg" color="#FFFFFF" weightOverride="600">
+              <AppText variant="bodyLg" color={colors.card} weightOverride="600">
                 {vm.showOpenChat ? vm.t('aptOpenChat') : vm.t('aptJoin')}
               </AppText>
             </Pressable>
@@ -139,32 +133,32 @@ export function AppointmentDetailView(vm: AppointmentDetailViewModel) {
           <View style={styles.card}>
             <View style={styles.visitHead}>
               <Ionicons name="business-outline" size={22} color={ICON_BLUE} />
-              <AppText variant="titleMd" color="#000000">
+              <AppText variant="titleMd" color={colors.ink}>
                 {vm.t('aptWhenToVisit')}
               </AppText>
             </View>
-            <AppText variant="bodyMd" color="#000000">
+            <AppText variant="bodyMd" color={colors.ink}>
               {vm.visitWhenLabel}
             </AppText>
-            <AppText variant="bodyMd" color={MUTED}>
+            <AppText variant="bodyMd" color={colors.muted}>
               {vm.t('aptClinicHint')}
             </AppText>
           </View>
         ) : null}
 
         <View style={styles.card}>
-          <AppText variant="titleMd" color="#000000">
+          <AppText variant="titleMd" color={colors.ink}>
             {vm.t('aptDetails')}
           </AppText>
           <View style={styles.grid}>
             <DetailCell label={vm.t('aptDateTime')} value={`${vm.dateLine}\n${vm.timeLine}`} />
             <View style={styles.cell}>
-              <AppText variant="labelSm" color={MUTED}>
+              <AppText variant="labelSm" color={colors.muted}>
                 {vm.t('aptType')}
               </AppText>
               <View style={styles.typeRow}>
-                <Ionicons name={vm.modeIcon} size={18} color={MUTED} />
-                <AppText variant="bodyMd" color="#000000" style={styles.flex}>
+                <Ionicons name={vm.modeIcon} size={18} color={colors.muted} />
+                <AppText variant="bodyMd" color={colors.ink} style={styles.flex}>
                   {vm.modeConsultLabel}
                 </AppText>
               </View>
@@ -173,7 +167,7 @@ export function AppointmentDetailView(vm: AppointmentDetailViewModel) {
             <DetailCell label={vm.t('aptBookingId')} value={vm.bookingId} />
           </View>
           <View style={styles.bookedOn}>
-            <AppText variant="labelSm" color={MUTED}>
+            <AppText variant="labelSm" color={colors.muted}>
               {vm.t('aptBookedOn').replace('{date}', vm.bookedOnLabel)}
             </AppText>
           </View>
@@ -187,14 +181,14 @@ export function AppointmentDetailView(vm: AppointmentDetailViewModel) {
           </View>
           <View style={styles.flex}>
             <View style={styles.doctorNameRow}>
-              <AppText variant="titleMd" color="#000000" style={styles.flex}>
+              <AppText variant="titleMd" color={colors.ink} style={styles.flex}>
                 {vm.doctorName}
               </AppText>
               {vm.verified ? (
                 <Ionicons name="checkmark-circle" size={18} color={AMBER} />
               ) : null}
             </View>
-            <AppText variant="bodyMd" color={MUTED}>
+            <AppText variant="bodyMd" color={colors.muted}>
               {vm.credentials}
             </AppText>
           </View>
@@ -202,18 +196,18 @@ export function AppointmentDetailView(vm: AppointmentDetailViewModel) {
 
         <View style={styles.card}>
           <View style={styles.field}>
-            <AppText variant="labelSm" color={MUTED}>
+            <AppText variant="labelSm" color={colors.muted}>
               {vm.t('aptReason')}
             </AppText>
             <View style={styles.reasonBox}>
-              <AppText variant="bodyMd" color="#000000">
+              <AppText variant="bodyMd" color={colors.ink}>
                 {vm.reason}
               </AppText>
             </View>
           </View>
           <View style={styles.field}>
             <View style={styles.docsHead}>
-              <AppText variant="labelSm" color={MUTED}>
+              <AppText variant="labelSm" color={colors.muted}>
                 {vm.t('aptDocuments')}
               </AppText>
               <Pressable accessibilityRole="button" onPress={vm.onAddDocuments}>
@@ -224,8 +218,8 @@ export function AppointmentDetailView(vm: AppointmentDetailViewModel) {
             </View>
             {vm.attachedDocuments.length === 0 ? (
               <View style={styles.emptyDocs}>
-                <Ionicons name="document-text-outline" size={20} color={MUTED} />
-                <AppText variant="bodyMd" color={MUTED}>
+                <Ionicons name="document-text-outline" size={20} color={colors.muted} />
+                <AppText variant="bodyMd" color={colors.muted}>
                   {vm.t('aptNoDocuments')}
                 </AppText>
               </View>
@@ -240,13 +234,13 @@ export function AppointmentDetailView(vm: AppointmentDetailViewModel) {
                           : 'image-outline'
                       }
                       size={20}
-                      color={MUTED}
+                      color={colors.muted}
                     />
                     <View style={styles.flex}>
-                      <AppText variant="bodyMd" color="#000000" numberOfLines={1}>
+                      <AppText variant="bodyMd" color={colors.ink} numberOfLines={1}>
                         {doc.name}
                       </AppText>
-                      <AppText variant="labelSm" color={MUTED}>
+                      <AppText variant="labelSm" color={colors.muted}>
                         {doc.sizeLabel}
                       </AppText>
                     </View>
@@ -255,7 +249,7 @@ export function AppointmentDetailView(vm: AppointmentDetailViewModel) {
                       onPress={() => vm.onRemoveDocument(doc.id)}
                       style={styles.docRemove}
                     >
-                      <Ionicons name="close" size={18} color={MUTED} />
+                      <Ionicons name="close" size={18} color={colors.muted} />
                     </Pressable>
                   </View>
                 ))}
@@ -269,10 +263,10 @@ export function AppointmentDetailView(vm: AppointmentDetailViewModel) {
             <Ionicons name="card-outline" size={20} color={ICON_BLUE} />
           </View>
           <View style={styles.flex}>
-            <AppText variant="titleMd" color="#000000">
+            <AppText variant="titleMd" color={colors.ink}>
               {vm.feeLabel}
             </AppText>
-            <AppText variant="labelSm" color={MUTED}>
+            <AppText variant="labelSm" color={colors.muted}>
               {`UPI · ${vm.paymentId}`}
             </AppText>
           </View>
@@ -291,7 +285,7 @@ export function AppointmentDetailView(vm: AppointmentDetailViewModel) {
         <View style={styles.card}>
           <View style={styles.prepTitle}>
             <Ionicons name="information-circle-outline" size={20} color={ICON_BLUE} />
-            <AppText variant="titleMd" color="#000000">
+            <AppText variant="titleMd" color={colors.ink}>
               {vm.t(vm.isClinic ? 'aptClinicPrepTitle' : 'aptPrepTitle')}
             </AppText>
           </View>
@@ -301,7 +295,7 @@ export function AppointmentDetailView(vm: AppointmentDetailViewModel) {
           ).map((key) => (
             <View key={key} style={styles.prepRow}>
               <Ionicons name="checkmark-circle" size={20} color={ICON_BLUE} />
-              <AppText variant="bodyMd" color="#000000" style={styles.flex}>
+              <AppText variant="bodyMd" color={colors.ink} style={styles.flex}>
                 {vm.t(key)}
               </AppText>
             </View>
@@ -328,7 +322,7 @@ export function AppointmentDetailView(vm: AppointmentDetailViewModel) {
             </AppText>
           </Pressable>
         </View>
-        <AppText variant="labelSm" color={MUTED} style={styles.center}>
+        <AppText variant="labelSm" color={colors.muted} style={styles.center}>
           {vm.t('aptRescheduleHint')}
         </AppText>
 
@@ -365,10 +359,10 @@ export function AppointmentDetailView(vm: AppointmentDetailViewModel) {
 function DetailCell({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.cell}>
-      <AppText variant="labelSm" color={MUTED}>
+      <AppText variant="labelSm" color={colors.muted}>
         {label}
       </AppText>
-      <AppText variant="bodyMd" color="#000000">
+      <AppText variant="bodyMd" color={colors.ink}>
         {value}
       </AppText>
     </View>
@@ -387,7 +381,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   title: {
     flex: 1,
@@ -410,7 +404,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: SUCCESS_FILL,
+    backgroundColor: colors.successContainer,
     borderWidth: 1,
     borderColor: SUCCESS_BORDER,
     borderRadius: radii.sm,
@@ -420,7 +414,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     padding: spacing.md,
     gap: 12,
@@ -444,7 +438,7 @@ const styles = StyleSheet.create({
   joinBtn: {
     minHeight: 48,
     borderRadius: radii.button,
-    backgroundColor: ACTION,
+    backgroundColor: colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -472,13 +466,13 @@ const styles = StyleSheet.create({
   },
   bookedOn: {
     borderTopWidth: 1,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
     paddingTop: 12,
   },
   doctorCard: {
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     padding: spacing.md,
     flexDirection: 'row',
@@ -489,9 +483,9 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: radii.full,
-    backgroundColor: '#E6F5FE',
+    backgroundColor: colors.primaryContainer,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -506,7 +500,7 @@ const styles = StyleSheet.create({
   reasonBox: {
     backgroundColor: FILL,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     padding: 12,
   },
@@ -521,7 +515,7 @@ const styles = StyleSheet.create({
     gap: 10,
     backgroundColor: FILL,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderStyle: 'dashed',
     borderRadius: radii.sm,
     padding: 12,
@@ -535,7 +529,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     backgroundColor: FILL,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     padding: 12,
   },
@@ -548,7 +542,7 @@ const styles = StyleSheet.create({
   payCard: {
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     padding: spacing.md,
     flexDirection: 'row',
@@ -587,7 +581,7 @@ const styles = StyleSheet.create({
     minHeight: 52,
     borderRadius: radii.button,
     borderWidth: 1.5,
-    borderColor: ACTION,
+    borderColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.card,
@@ -597,7 +591,7 @@ const styles = StyleSheet.create({
     minHeight: 52,
     borderRadius: radii.button,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.card,
@@ -606,7 +600,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingTop: 20,
     borderTopWidth: 1,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

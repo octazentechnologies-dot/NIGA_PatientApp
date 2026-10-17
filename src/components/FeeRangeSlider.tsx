@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
   track: {
     height: 4,
     borderRadius: radii.full,
-    backgroundColor: '#E6E6E6',
+    backgroundColor: colors.outlineVariant,
   },
   fill: {
     position: 'absolute',
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.full,
     backgroundColor: colors.primary,
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: colors.card,
     top: 4,
   },
 });

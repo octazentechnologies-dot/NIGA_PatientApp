@@ -21,16 +21,7 @@ import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
 import { layout, spacing } from '../theme/spacing';
 
-const INK = '#1F1F1F';
-const MUTED = '#595959';
-const HAIRLINE = '#DDDFE2';
-const CHIP_FILL = '#E6F5FE';
-const CHART = '#3AA9E0';
-const RX = '#F2C14E';
-const SUCCESS = '#0F7A4E';
-const SUCCESS_FILL = '#E9F5EF';
-const ACTION = '#2A7BA3';
-
+const RX = colors.tertiaryContainer;
 export function CliniSightProgressView(vm: CliniSightProgressViewModel) {
   const insets = useSafeAreaInsets();
 
@@ -44,11 +35,11 @@ export function CliniSightProgressView(vm: CliniSightProgressViewModel) {
             onPress={vm.onBack}
             style={styles.iconHit}
           >
-            <Ionicons name="arrow-back" size={24} color={INK} />
+            <Ionicons name="arrow-back" size={24} color={colors.ink} />
           </Pressable>
           <AppText
             variant="headlineMd"
-            color={INK}
+            color={colors.ink}
             style={styles.headerTitle}
             numberOfLines={1}
           >
@@ -83,12 +74,12 @@ function EmptyContent({ vm }: { vm: CliniSightProgressViewModel }) {
 
       <View style={styles.emptyCard}>
         <View style={styles.infoBubble}>
-          <Ionicons name="information-circle-outline" size={32} color={MUTED} />
+          <Ionicons name="information-circle-outline" size={32} color={colors.muted} />
         </View>
-        <AppText variant="titleMd" color={INK} style={styles.center}>
+        <AppText variant="titleMd" color={colors.ink} style={styles.center}>
           {vm.t('cliniSightEmptyTitle')}
         </AppText>
-        <AppText variant="bodyMd" color={MUTED} style={styles.center}>
+        <AppText variant="bodyMd" color={colors.muted} style={styles.center}>
           {vm.t('cliniSightEmptyBody')}
         </AppText>
         <AppButton
@@ -104,29 +95,29 @@ function EmptyContent({ vm }: { vm: CliniSightProgressViewModel }) {
       <View style={styles.metricRow}>
         <View style={styles.metricCard}>
           <View style={styles.metricHead}>
-            <Ionicons name="pulse-outline" size={16} color={MUTED} />
-            <AppText variant="labelSm" color={INK} weightOverride="500">
+            <Ionicons name="pulse-outline" size={16} color={colors.muted} />
+            <AppText variant="labelSm" color={colors.ink} weightOverride="500">
               {vm.t('cliniSightAvgPain')}
             </AppText>
           </View>
-          <AppText variant="displayLg" color={MUTED}>
+          <AppText variant="displayLg" color={colors.muted}>
             {vm.t('cliniSightDash')}
           </AppText>
         </View>
         <View style={styles.metricCard}>
           <View style={styles.metricHead}>
-            <Ionicons name="moon-outline" size={16} color={MUTED} />
-            <AppText variant="labelSm" color={INK} weightOverride="500">
+            <Ionicons name="moon-outline" size={16} color={colors.muted} />
+            <AppText variant="labelSm" color={colors.ink} weightOverride="500">
               {vm.t('cliniSightSleep')}
             </AppText>
           </View>
-          <AppText variant="displayLg" color={MUTED}>
+          <AppText variant="displayLg" color={colors.muted}>
             {vm.t('cliniSightNa')}
           </AppText>
         </View>
       </View>
 
-      <AppText variant="titleMd" color={INK}>
+      <AppText variant="titleMd" color={colors.ink}>
         {vm.t('cliniSightRecentActivity')}
       </AppText>
       <View style={styles.timeline}>
@@ -153,13 +144,13 @@ function ReadyContent({ vm }: { vm: CliniSightProgressViewModel }) {
           onPress={vm.onSelectMember}
           style={styles.memberChip}
         >
-          <AppText variant="labelMd" color={INK} weightOverride="600">
+          <AppText variant="labelMd" color={colors.ink} weightOverride="600">
             {vm.memberLabel}
           </AppText>
-          <Ionicons name="chevron-down" size={18} color={MUTED} />
+          <Ionicons name="chevron-down" size={18} color={colors.muted} />
         </Pressable>
         <Pressable accessibilityRole="button" style={styles.iconHit}>
-          <Ionicons name="information-circle-outline" size={22} color={MUTED} />
+          <Ionicons name="information-circle-outline" size={22} color={colors.muted} />
         </Pressable>
       </View>
 
@@ -173,59 +164,59 @@ function ReadyContent({ vm }: { vm: CliniSightProgressViewModel }) {
       <View style={styles.chartCard}>
         <SeverityChart t={vm.t} />
         <View style={styles.legendRow}>
-          <LegendDot color={CHART} label={vm.t('cliniSightLegendSeverity')} />
+          <LegendDot color={colors.secondary} label={vm.t('cliniSightLegendSeverity')} />
           <LegendDash label={vm.t('cliniSightLegendRx')} />
           <LegendDot
-            color={CHART}
+            color={colors.secondary}
             small
             label={vm.t('cliniSightLegendConsult')}
           />
         </View>
-        <AppText variant="labelSm" color={MUTED} style={styles.center}>
+        <AppText variant="labelSm" color={colors.muted} style={styles.center}>
           {vm.chartCaption}
         </AppText>
       </View>
 
       <View style={styles.statsGrid}>
         <View style={styles.statCard}>
-          <AppText variant="labelSm" color={MUTED}>
+          <AppText variant="labelSm" color={colors.muted}>
             {vm.t('cliniSightAvgSeverity')}
           </AppText>
           <View style={styles.statValueRow}>
-            <AppText variant="titleMd" color={INK}>
+            <AppText variant="titleMd" color={colors.ink}>
               {vm.t('diarySeverityMild')}
             </AppText>
-            <Ionicons name="arrow-down" size={18} color={CHART} />
+            <Ionicons name="arrow-down" size={18} color={colors.secondary} />
           </View>
         </View>
         <View style={styles.statCard}>
-          <AppText variant="labelSm" color={MUTED}>
+          <AppText variant="labelSm" color={colors.muted}>
             {vm.t('cliniSightDaysLogged')}
           </AppText>
-          <AppText variant="titleMd" color={INK}>
+          <AppText variant="titleMd" color={colors.ink}>
             {vm.daysLoggedLine}
           </AppText>
         </View>
         <View style={styles.statCard}>
-          <AppText variant="labelSm" color={MUTED}>
+          <AppText variant="labelSm" color={colors.muted}>
             {vm.t('cliniSightConsultations')}
           </AppText>
-          <AppText variant="titleMd" color={INK}>
+          <AppText variant="titleMd" color={colors.ink}>
             4
           </AppText>
         </View>
         <View style={styles.statCard}>
-          <AppText variant="labelSm" color={MUTED}>
+          <AppText variant="labelSm" color={colors.muted}>
             {vm.t('cliniSightFollowUpResponses')}
           </AppText>
-          <AppText variant="bodyMd" color={INK}>
+          <AppText variant="bodyMd" color={colors.ink}>
             {vm.followUpResponsesLine}
           </AppText>
         </View>
       </View>
 
       <View style={styles.card}>
-        <AppText variant="titleMd" color={INK}>
+        <AppText variant="titleMd" color={colors.ink}>
           {vm.t('cliniSightRecentFollowUps')}
         </AppText>
         <ScrollView
@@ -247,7 +238,7 @@ function ReadyContent({ vm }: { vm: CliniSightProgressViewModel }) {
                 >
                   <AppText
                     variant="labelSm"
-                    color={item.status === 'improved' ? SUCCESS : MUTED}
+                    color={item.status === 'improved' ? colors.success : colors.muted}
                     weightOverride="600"
                   >
                     {vm.t(
@@ -257,7 +248,7 @@ function ReadyContent({ vm }: { vm: CliniSightProgressViewModel }) {
                     )}
                   </AppText>
                 </View>
-                <AppText variant="labelSm" color={MUTED}>
+                <AppText variant="labelSm" color={colors.muted}>
                   {item.dateLabel}
                 </AppText>
               </View>
@@ -268,12 +259,12 @@ function ReadyContent({ vm }: { vm: CliniSightProgressViewModel }) {
 
       <View style={styles.card}>
         <View style={styles.disclaimerHead}>
-          <Ionicons name="information-circle" size={18} color={CHART} />
-          <AppText variant="labelMd" color={INK} weightOverride="600">
+          <Ionicons name="information-circle" size={18} color={colors.secondary} />
+          <AppText variant="labelMd" color={colors.ink} weightOverride="600">
             {vm.t('cliniSightDisclaimerTitle')}
           </AppText>
         </View>
-        <AppText variant="bodyMd" color={MUTED}>
+        <AppText variant="bodyMd" color={colors.muted}>
           {vm.t('cliniSightDisclaimerBody')}
         </AppText>
       </View>
@@ -283,10 +274,10 @@ function ReadyContent({ vm }: { vm: CliniSightProgressViewModel }) {
         onPress={vm.onSeeAllInsights}
         style={styles.linkRow}
       >
-        <AppText variant="titleMd" color={INK}>
+        <AppText variant="titleMd" color={colors.ink}>
           {vm.t('cliniSightSeeAll')}
         </AppText>
-        <Ionicons name="chevron-forward" size={22} color={MUTED} />
+        <Ionicons name="chevron-forward" size={22} color={colors.muted} />
       </Pressable>
 
       <AppButton
@@ -300,7 +291,7 @@ function ReadyContent({ vm }: { vm: CliniSightProgressViewModel }) {
       >
           <AppText
             variant="titleMd"
-            color={ACTION}
+            color={colors.primary}
             weightOverride="600"
           >
           {vm.t('cliniSightDownloadPdf')}
@@ -339,7 +330,7 @@ function RangeRow({
           >
             <AppText
               variant="labelSm"
-              color={on ? INK : MUTED}
+              color={on ? colors.ink : colors.muted}
               weightOverride={on ? '600' : '500'}
             >
               {t(range.labelKey)}
@@ -363,11 +354,11 @@ function ActivityNode({
   return (
     <View style={[styles.node, !last && styles.nodeGap]}>
       <View style={styles.nodeDot} />
-      <AppText variant="labelSm" color={MUTED}>
+      <AppText variant="labelSm" color={colors.muted}>
         {label}
       </AppText>
       <View style={styles.nodeCard}>
-        <AppText variant="bodyMd" color={MUTED} style={styles.italic}>
+        <AppText variant="bodyMd" color={colors.muted} style={styles.italic}>
           {body}
         </AppText>
       </View>
@@ -392,7 +383,7 @@ function LegendDot({
           { backgroundColor: color },
         ]}
       />
-      <AppText variant="labelSm" color={MUTED}>
+      <AppText variant="labelSm" color={colors.muted}>
         {label}
       </AppText>
     </View>
@@ -403,7 +394,7 @@ function LegendDash({ label }: { label: string }) {
   return (
     <View style={styles.legendItem}>
       <View style={styles.legendDash} />
-      <AppText variant="labelSm" color={MUTED}>
+      <AppText variant="labelSm" color={colors.muted}>
         {label}
       </AppText>
     </View>
@@ -427,7 +418,7 @@ function SeverityChart({
     <View style={styles.chartWrap}>
       <View style={styles.yAxis}>
         {labels.map((key) => (
-          <AppText key={key} variant="labelSm" color={MUTED} style={styles.yLabel}>
+          <AppText key={key} variant="labelSm" color={colors.muted} style={styles.yLabel}>
             {t(key)}
           </AppText>
         ))}
@@ -447,8 +438,8 @@ function SeverityChart({
         >
           <Defs>
             <LinearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0%" stopColor={CHART} stopOpacity={0.2} />
-              <Stop offset="100%" stopColor={CHART} stopOpacity={0} />
+              <Stop offset="0%" stopColor={colors.secondary} stopOpacity={0.2} />
+              <Stop offset="100%" stopColor={colors.secondary} stopOpacity={0} />
             </LinearGradient>
           </Defs>
           <Path
@@ -458,26 +449,26 @@ function SeverityChart({
           <Path
             d="M0,20 Q20,30 40,50 T80,70 L100,80"
             fill="none"
-            stroke={CHART}
+            stroke={colors.secondary}
             strokeWidth={2.5}
             vectorEffect="non-scaling-stroke"
           />
-          <Circle cx={20} cy={27} r={3.5} fill={CHART} />
-          <Circle cx={40} cy={50} r={3.5} fill={CHART} />
-          <Circle cx={80} cy={70} r={3.5} fill={CHART} />
+          <Circle cx={20} cy={27} r={3.5} fill={colors.secondary} />
+          <Circle cx={40} cy={50} r={3.5} fill={colors.secondary} />
+          <Circle cx={80} cy={70} r={3.5} fill={colors.secondary} />
         </Svg>
         <View style={[styles.rxLine, { left: '30%' }]}>
           <View style={styles.rxTag}>
-            <Ionicons name="medkit" size={10} color={INK} />
-            <AppText variant="labelSm" color={INK} weightOverride="600">
+            <Ionicons name="medkit" size={10} color={colors.ink} />
+            <AppText variant="labelSm" color={colors.ink} weightOverride="600">
               Rx v1
             </AppText>
           </View>
         </View>
         <View style={[styles.rxLine, { left: '70%' }]}>
           <View style={styles.rxTag}>
-            <Ionicons name="medkit" size={10} color={INK} />
-            <AppText variant="labelSm" color={INK} weightOverride="600">
+            <Ionicons name="medkit" size={10} color={colors.ink} />
+            <AppText variant="labelSm" color={colors.ink} weightOverride="600">
               Rx v2
             </AppText>
           </View>
@@ -497,7 +488,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   headerRow: {
     minHeight: 56,
@@ -528,20 +519,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderRadius: radii.full,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
   rangeChipOn: {
-    backgroundColor: CHIP_FILL,
-    borderColor: CHART,
+    backgroundColor: colors.primaryContainer,
+    borderColor: colors.secondary,
   },
   emptyCard: {
     minHeight: 340,
     borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
@@ -572,7 +563,7 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: radii.default,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     backgroundColor: colors.card,
     padding: spacing.md,
     gap: spacing.sm,
@@ -586,7 +577,7 @@ const styles = StyleSheet.create({
     marginLeft: spacing.md,
     paddingLeft: spacing.lg,
     borderLeftWidth: 2,
-    borderLeftColor: HAIRLINE,
+    borderLeftColor: colors.outlineVariant,
     gap: 0,
   },
   node: {
@@ -602,7 +593,7 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: radii.full,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
     borderWidth: 2,
     borderColor: colors.card,
   },
@@ -611,7 +602,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     backgroundColor: colors.card,
     padding: spacing.md,
   },
@@ -631,13 +622,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderRadius: radii.full,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     backgroundColor: colors.card,
   },
   chartCard: {
     borderRadius: radii.default,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     backgroundColor: colors.card,
     padding: spacing.md,
     gap: spacing.md,
@@ -659,7 +650,7 @@ const styles = StyleSheet.create({
     flex: 1,
     borderLeftWidth: 1,
     borderBottomWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     position: 'relative',
     overflow: 'hidden',
   },
@@ -670,7 +661,7 @@ const styles = StyleSheet.create({
   },
   gridLine: {
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
     opacity: 0.7,
   },
   svg: {
@@ -704,7 +695,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: radii.full,
-    backgroundColor: CHART,
+    backgroundColor: colors.secondary,
     marginLeft: -4,
   },
   legendRow: {
@@ -713,7 +704,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
     paddingTop: spacing.md,
   },
   legendItem: {
@@ -747,7 +738,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     borderRadius: radii.default,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     backgroundColor: colors.card,
     padding: spacing.md,
     gap: spacing.xs,
@@ -762,7 +753,7 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: radii.default,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     backgroundColor: colors.card,
     padding: spacing.md,
     gap: spacing.md,
@@ -778,7 +769,7 @@ const styles = StyleSheet.create({
   followConnector: {
     width: 32,
     height: 1,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
     marginHorizontal: spacing.xs,
   },
   followItem: {
@@ -792,12 +783,12 @@ const styles = StyleSheet.create({
     borderRadius: radii.full,
   },
   followImproved: {
-    backgroundColor: SUCCESS_FILL,
+    backgroundColor: colors.successContainer,
   },
   followSame: {
-    backgroundColor: '#F2F2F2',
+    backgroundColor: colors.surfaceVariant,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
   },
   disclaimerHead: {
     flexDirection: 'row',
@@ -811,7 +802,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     borderRadius: radii.default,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     backgroundColor: colors.card,
     paddingHorizontal: spacing.md,
   },
@@ -819,7 +810,7 @@ const styles = StyleSheet.create({
     minHeight: layout.buttonHeight,
     borderRadius: radii.button,
     borderWidth: 1.5,
-    borderColor: ACTION,
+    borderColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.card,

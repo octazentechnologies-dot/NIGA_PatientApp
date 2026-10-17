@@ -12,6 +12,7 @@ import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
 import { DoctorFiltersSheet } from '../components/DoctorFiltersSheet';
 import { EmptyDoctorsIllustration } from '../components/EmptyDoctorsIllustration';
+import { ErrorState } from '../components/ErrorState';
 import { FacebookLoader } from '../components/FacebookLoader';
 import { PatientTabBar, usePatientTabScrollInset } from '../components/PatientTabBar';
 import { WhyOrderSheet, type WhyOrderChip } from '../components/WhyOrderSheet';
@@ -22,15 +23,6 @@ import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
 import { layout, spacing } from '../theme/spacing';
 
-const SUCCESS_TEXT = '#0F7A4E';
-const SUCCESS_FILL = '#E9F5EF';
-const GOLD_BANNER = '#F2C14E';
-const GOLD_STAR = '#F2C14E';
-const SPONSORED_FILL = '#FDF3DC';
-const CHIP_FILL = '#E6F5FE';
-const MUTED = '#595959';
-const HAIRLINE = '#E6E6E6';
-
 type SearchResultsViewProps = SearchResultsViewModel & {
   selectedTab: HomeTab;
   onSelectTab: (tab: HomeTab) => void;
@@ -40,6 +32,8 @@ export function SearchResultsView({
   language,
   t,
   loading,
+  isError,
+  canLoadMore,
   results,
   filterCount,
   videoFilterOn,
@@ -53,6 +47,8 @@ export function SearchResultsView({
   matchingCount,
   datePickerOpen,
   customDate,
+  cityOptions = [],
+  qualificationOptions = [],
   selectedTab,
   onBack,
   onOpenSearch,
@@ -86,11 +82,13 @@ export function SearchResultsView({
   onSelectLanguage,
   onBook,
   onBookAssistance,
+  onRetry,
+  onLoadMore,
   onSelectTab,
 }: SearchResultsViewProps) {
   const insets = useSafeAreaInsets();
   const tabScrollInset = usePatientTabScrollInset();
-  const isEmpty = !loading && results.length === 0;
+  const isEmpty = !loading && !isError && results.length === 0;
 
   const whyOrderChips: WhyOrderChip[] = [
     {
@@ -134,7 +132,7 @@ export function SearchResultsView({
         </Pressable>
         <AppText
           variant="titleMd"
-          color="#000000"
+          color={colors.ink}
           style={styles.headerTitle}
           numberOfLines={1}
         >
@@ -149,7 +147,7 @@ export function SearchResultsView({
           >
             <AppText
               variant="labelMd"
-              color="#000000"
+              color={colors.ink}
               languageOverride={language === 'en' ? 'mr' : 'en'}
             >
               {language === 'en' ? 'मराठी' : 'EN'}
@@ -191,8 +189,8 @@ export function SearchResultsView({
               onPress={onOpenFilters}
               style={styles.toolButton}
             >
-              <Ionicons name="filter" size={18} color="#000000" />
-              <AppText variant="labelMd" color="#000000">
+              <Ionicons name="filter" size={18} color={colors.ink} />
+              <AppText variant="labelMd" color={colors.ink}>
                 {`${t('searchAllFilters')} (${filterCount})`}
               </AppText>
             </Pressable>
@@ -202,10 +200,10 @@ export function SearchResultsView({
                 onPress={onRemoveSpecialtyFilter}
                 style={styles.activeChip}
               >
-                <AppText variant="labelMd" color="#000000">
+                <AppText variant="labelMd" color={colors.ink}>
                   {t('searchFilterSpecialty')}
                 </AppText>
-                <Ionicons name="close" size={14} color="#000000" />
+                <Ionicons name="close" size={14} color={colors.ink} />
               </Pressable>
             ) : null}
             {availabilityFilterOn ? (
@@ -214,10 +212,10 @@ export function SearchResultsView({
                 onPress={onRemoveAvailabilityFilter}
                 style={styles.activeChip}
               >
-                <AppText variant="labelMd" color="#000000">
+                <AppText variant="labelMd" color={colors.ink}>
                   {t('searchFilterAvailabilityTodayLabel')}
                 </AppText>
-                <Ionicons name="close" size={14} color="#000000" />
+                <Ionicons name="close" size={14} color={colors.ink} />
               </Pressable>
             ) : null}
             {languageFilterOn ? (
@@ -226,10 +224,10 @@ export function SearchResultsView({
                 onPress={onRemoveLanguageFilter}
                 style={styles.activeChip}
               >
-                <AppText variant="labelMd" color="#000000">
+                <AppText variant="labelMd" color={colors.ink}>
                   {t('searchFilterLanguageMarathi')}
                 </AppText>
-                <Ionicons name="close" size={14} color="#000000" />
+                <Ionicons name="close" size={14} color={colors.ink} />
               </Pressable>
             ) : null}
             <Pressable
@@ -237,7 +235,7 @@ export function SearchResultsView({
               onPress={onOpenSort}
               style={styles.toolButton}
             >
-              <AppText variant="labelMd" color="#000000">
+              <AppText variant="labelMd" color={colors.ink}>
                 {t('searchSortDistance')}
               </AppText>
             </Pressable>
@@ -256,8 +254,8 @@ export function SearchResultsView({
               onPress={onOpenFilters}
               style={styles.toolButton}
             >
-              <Ionicons name="options-outline" size={18} color="#000000" />
-              <AppText variant="labelMd" color="#000000">
+              <Ionicons name="options-outline" size={18} color={colors.ink} />
+              <AppText variant="labelMd" color={colors.ink}>
                 {t('searchFilters')}
               </AppText>
               {filterCount > 0 ? (
@@ -277,10 +275,10 @@ export function SearchResultsView({
               onPress={onOpenSort}
               style={styles.toolButton}
             >
-              <AppText variant="labelMd" color="#000000">
+              <AppText variant="labelMd" color={colors.ink}>
                 {t('searchSortRelevance')}
               </AppText>
-              <Ionicons name="chevron-down" size={16} color={MUTED} />
+              <Ionicons name="chevron-down" size={16} color={colors.muted} />
             </Pressable>
             {videoFilterOn ? (
               <Pressable
@@ -288,10 +286,10 @@ export function SearchResultsView({
                 onPress={onRemoveVideoFilter}
                 style={styles.activeChip}
               >
-                <AppText variant="labelMd" color="#000000">
+                <AppText variant="labelMd" color={colors.ink}>
                   {t('searchFilterVideo')}
                 </AppText>
-                <Ionicons name="close" size={14} color="#000000" />
+                <Ionicons name="close" size={14} color={colors.ink} />
               </Pressable>
             ) : null}
             {marathiFilterOn ? (
@@ -302,21 +300,21 @@ export function SearchResultsView({
               >
                 <AppText
                   variant="labelMd"
-                  color="#000000"
+                  color={colors.ink}
                   languageOverride="mr"
                 >
                   {t('searchFilterMarathi')}
                 </AppText>
-                <Ionicons name="close" size={14} color="#000000" />
+                <Ionicons name="close" size={14} color={colors.ink} />
               </Pressable>
             ) : null}
             <View style={styles.toolButton}>
-              <AppText variant="labelMd" color="#000000">
+              <AppText variant="labelMd" color={colors.ink}>
                 {t('searchFilterAvailableToday')}
               </AppText>
             </View>
             <View style={styles.toolButton}>
-              <AppText variant="labelMd" color="#000000">
+              <AppText variant="labelMd" color={colors.ink}>
                 {t('searchFilterUnder500')}
               </AppText>
             </View>
@@ -332,15 +330,17 @@ export function SearchResultsView({
         >
           <FacebookLoader cards={3} />
         </ScrollView>
+      ) : isError ? (
+        <ErrorState message={t('searchResultsEmptyBody')} onRetry={onRetry} />
       ) : isEmpty ? (
         <View style={styles.emptyWrap}>
           <View style={styles.emptyArt}>
             <EmptyDoctorsIllustration />
           </View>
-          <AppText variant="titleMd" color="#000000" style={styles.centerText}>
+          <AppText variant="titleMd" color={colors.ink} style={styles.centerText}>
             {t('searchResultsEmptyTitle')}
           </AppText>
-          <AppText variant="bodyMd" color={MUTED} style={styles.emptyBody}>
+          <AppText variant="bodyMd" color={colors.muted} style={styles.emptyBody}>
             {t('searchResultsEmptyBody')}
           </AppText>
           <View style={styles.emptyActions}>
@@ -358,7 +358,7 @@ export function SearchResultsView({
               style={styles.emptyButton}
             />
           </View>
-          <AppText variant="bodyMd" color={MUTED} style={styles.centerText}>
+          <AppText variant="bodyMd" color={colors.muted} style={styles.centerText}>
             {t('searchResultsHelplinePrefix')}
             <AppText
               variant="labelMd"
@@ -377,7 +377,7 @@ export function SearchResultsView({
           contentContainerStyle={[styles.list, { paddingBottom: tabScrollInset }]}
         >
           <View style={styles.summaryRow}>
-            <AppText variant="bodyMd" color={MUTED}>
+            <AppText variant="bodyMd" color={colors.muted}>
               {t('searchResultsCount')}
             </AppText>
             <Pressable accessibilityRole="button" onPress={onOpenWhyOrder}>
@@ -395,6 +395,14 @@ export function SearchResultsView({
               onOpen={() => onBook(doctor.id)}
             />
           ))}
+          {canLoadMore ? (
+            <AppButton
+              label={t('searchResultsTitle')}
+              variant="secondary"
+              onPress={onLoadMore}
+              style={{ marginTop: spacing.md }}
+            />
+          ) : null}
         </ScrollView>
       )}
 
@@ -430,6 +438,8 @@ export function SearchResultsView({
         onOpenDatePicker={onOpenDatePicker}
         onCloseDatePicker={onCloseDatePicker}
         onSelectCustomDate={onSelectCustomDate}
+        cityOptions={cityOptions}
+        qualificationOptions={qualificationOptions}
       />
 
       <WhyOrderSheet
@@ -457,7 +467,7 @@ function DoctorResultCard({
         <View style={styles.sponsoredTag}>
           <AppText
             variant="labelSm"
-            color="#000000"
+            color={colors.ink}
             style={styles.sponsoredText}
           >
             {t('searchSponsored')}
@@ -482,31 +492,35 @@ function DoctorResultCard({
                 accessibilityLabel={t('homeVerified')}
                 style={styles.verifiedBadge}
               >
-                <Ionicons name="checkmark-circle" size={18} color={SUCCESS_TEXT} />
+                <Ionicons name="checkmark-circle" size={18} color={colors.success} />
               </View>
             ) : null}
           </View>
           <View style={styles.flex}>
-            <AppText variant="titleMd" color="#000000">
+            <AppText variant="titleMd" color={colors.ink} raw>
               {t(doctor.nameKey)}
             </AppText>
-            <AppText variant="bodyMd" color={MUTED}>
-              {t(doctor.credentialsKey)}
-            </AppText>
+            {doctor.credentialsKey ? (
+              <AppText variant="bodyMd" color={colors.muted} raw>
+                {t(doctor.credentialsKey)}
+              </AppText>
+            ) : null}
             {doctor.registrationKey ? (
-              <AppText variant="bodyMd" color={MUTED}>
+              <AppText variant="bodyMd" color={colors.muted} raw>
                 {t(doctor.registrationKey)}
               </AppText>
             ) : null}
-            <AppText variant="labelSm" color={MUTED}>
-              {t(doctor.experienceKey)}
-            </AppText>
+            {doctor.experienceKey ? (
+              <AppText variant="labelSm" color={colors.muted}>
+                {t(doctor.experienceKey)}
+              </AppText>
+            ) : null}
             <View style={styles.tags}>
               {doctor.languageKeys.map((key) => (
                 <View key={key} style={styles.tag}>
                   <AppText
                     variant="labelSm"
-                    color="#000000"
+                    color={colors.ink}
                     languageOverride={
                       key === 'searchLangMarathi' ? 'mr' : undefined
                     }
@@ -520,9 +534,9 @@ function DoctorResultCard({
                   <Ionicons
                     name={mode === 'video' ? 'videocam-outline' : 'storefront-outline'}
                     size={12}
-                    color="#000000"
+                    color={colors.ink}
                   />
-                  <AppText variant="labelSm" color="#000000">
+                  <AppText variant="labelSm" color={colors.ink}>
                     {t(mode === 'video' ? 'searchModeVideo' : 'searchModeClinic')}
                   </AppText>
                 </View>
@@ -533,8 +547,8 @@ function DoctorResultCard({
 
         {doctor.certifiedKey ? (
           <View style={styles.certified}>
-            <Ionicons name="trophy" size={20} color="#000000" />
-            <AppText variant="labelMd" color="#000000" style={styles.flex}>
+            <Ionicons name="trophy" size={20} color={colors.ink} />
+            <AppText variant="labelMd" color={colors.ink} style={styles.flex}>
               {t(doctor.certifiedKey)}
             </AppText>
           </View>
@@ -542,43 +556,48 @@ function DoctorResultCard({
 
         {doctor.sponsored ? (
           <View style={styles.paidNote}>
-            <Ionicons name="information-circle-outline" size={16} color="#000000" />
-            <AppText variant="labelSm" color="#000000" style={styles.flex}>
+            <Ionicons name="information-circle-outline" size={16} color={colors.ink} />
+            <AppText variant="labelSm" color={colors.ink} style={styles.flex}>
               {t('searchPaidPlacement')}
             </AppText>
           </View>
         ) : null}
 
-        <View style={styles.ratingRow}>
-          <Ionicons name="star" size={16} color={GOLD_STAR} />
-          <AppText variant="labelMd" color="#000000">
-            {doctor.rating}
-          </AppText>
-          <AppText variant="bodyMd" color={MUTED} style={styles.reviews}>
-            {t(doctor.reviewsKey)}
-          </AppText>
-        </View>
+        {doctor.rating != null && doctor.reviewCount > 0 ? (
+          <View style={styles.ratingRow}>
+            <Ionicons name="star" size={16} color={colors.tertiaryContainer} />
+            <AppText variant="labelMd" color={colors.ink} raw>
+              {doctor.rating}
+            </AppText>
+            <AppText variant="bodyMd" color={colors.muted} style={styles.reviews} raw>
+              {String(doctor.reviewCount)}
+            </AppText>
+          </View>
+        ) : null}
       </Pressable>
 
       <View style={styles.cardFooter}>
         <View style={styles.flex}>
-          <View style={styles.feeRow}>
-            <AppText variant="labelMd" color="#000000">
-              {t(doctor.feeKey)}
-            </AppText>
-            <AppText variant="labelSm" color={MUTED}>
-              {t('searchConsultation')}
-            </AppText>
-          </View>
+          {doctor.feeLabel ? (
+            <View style={styles.feeRow}>
+              <AppText variant="labelMd" color={colors.ink} raw>
+                {doctor.feeLabel}
+              </AppText>
+              <AppText variant="labelSm" color={colors.muted}>
+                {t('searchConsultation')}
+              </AppText>
+            </View>
+          ) : null}
           <View style={styles.whenRow}>
             <Ionicons
               name="time-outline"
               size={14}
-              color={doctor.availabilitySoon ? SUCCESS_TEXT : MUTED}
+              color={doctor.availabilitySoon ? colors.success : colors.muted}
             />
             <AppText
               variant="labelSm"
-              color={doctor.availabilitySoon ? SUCCESS_TEXT : MUTED}
+              color={doctor.availabilitySoon ? colors.success : colors.muted}
+              raw
             >
               {t(doctor.availabilityKey)}
             </AppText>
@@ -607,7 +626,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   headerSide: {
     width: layout.buttonHeight,
@@ -637,7 +656,7 @@ const styles = StyleSheet.create({
   toolbar: {
     backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
     paddingVertical: spacing.sm,
   },
   toolbarContent: {
@@ -653,7 +672,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.xs,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.full,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
@@ -679,7 +698,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     borderWidth: 1,
     borderColor: colors.primary,
     borderRadius: radii.full,
@@ -713,7 +732,7 @@ const styles = StyleSheet.create({
     height: 208,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
@@ -742,7 +761,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: 12,
     overflow: 'hidden',
   },
@@ -751,7 +770,7 @@ const styles = StyleSheet.create({
     top: 0,
     right: 0,
     zIndex: 1,
-    backgroundColor: SPONSORED_FILL,
+    backgroundColor: colors.tertiaryFixed,
     borderBottomLeftRadius: radii.sm,
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -778,7 +797,7 @@ const styles = StyleSheet.create({
     height: 64,
     borderRadius: radii.full,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     backgroundColor: colors.buttonFill,
     alignItems: 'center',
     justifyContent: 'center',
@@ -790,7 +809,7 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: radii.full,
-    backgroundColor: SUCCESS_FILL,
+    backgroundColor: colors.successContainer,
     borderWidth: 2,
     borderColor: colors.surfaceContainerLowest,
     alignItems: 'center',
@@ -806,7 +825,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.surfaceContainer,
     borderRadius: 4,
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
@@ -815,9 +834,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
-    backgroundColor: GOLD_BANNER,
+    backgroundColor: colors.tertiaryContainer,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     padding: 12,
   },
@@ -825,9 +844,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
-    backgroundColor: SPONSORED_FILL,
+    backgroundColor: colors.tertiaryFixed,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: 4,
     padding: 10,
   },
@@ -846,7 +865,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     padding: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
   },
   whenRow: {
     flexDirection: 'row',

@@ -4,6 +4,8 @@ import type { DoctorProfileSeed } from '../config/doctorProfiles';
 import type { PatientDocument } from '../config/patientDocuments';
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import { useGetDocumentsQuery } from '../store/api/new/recordsApi';
+import { useAppSelector } from '../store/hooks';
 
 export type BookingReviewDraft = {
   profile: DoctorProfileSeed;
@@ -25,6 +27,8 @@ export type BookingReviewViewModel = BookingReviewDraft & {
   attachedLabel: string;
   libraryDocuments: PatientDocument[];
   selectedLibraryId: string | null;
+  /** Real documentId from GET /api/Patient/Documents. Booking body has no documentIds field. */
+  selectedDocumentId: number | null;
   uploadOpen: boolean;
   selectSheetOpen: boolean;
   shareRecords: boolean;
@@ -63,9 +67,11 @@ export function useBookingReviewController({
 }): BookingReviewViewModel {
   const { language, t } = useLocalization();
   const [reason, setReason] = useState('');
-  const [libraryDocuments, setLibraryDocuments] = useState<PatientDocument[]>(
-    [],
-  );
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+  const { data: documentsResponse } = useGetDocumentsQuery(undefined, {
+    skip: !isAuthenticated || !active,
+  });
+  const [extraDocuments, setExtraDocuments] = useState<PatientDocument[]>([]);
   const [attachedId, setAttachedId] = useState<string | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [selectSheetOpen, setSelectSheetOpen] = useState(false);
@@ -77,7 +83,7 @@ export function useBookingReviewController({
   useEffect(() => {
     if (!active) {
       setReason('');
-      setLibraryDocuments([]);
+      setExtraDocuments([]);
       setAttachedId(null);
       setUploadOpen(false);
       setSelectSheetOpen(false);
@@ -88,10 +94,27 @@ export function useBookingReviewController({
     }
   }, [active, draft.profile.id]);
 
+  const libraryDocuments = useMemo(() => {
+    const fromApi: PatientDocument[] = (documentsResponse?.data ?? [])
+      .filter((doc) => Number.isFinite(doc.documentId) && doc.documentId > 0)
+      .map((doc) => ({
+        id: String(doc.documentId),
+        name: doc.fileName?.trim() || `Document ${doc.documentId}`,
+        sizeLabel: doc.size
+          ? `${Math.max(1, Math.round(doc.size / 1024))} KB`
+          : '',
+        kind: doc.mime?.startsWith('image/') ? ('image' as const) : ('pdf' as const),
+        status: 'ready' as const,
+      }));
+    const known = new Set(fromApi.map((doc) => doc.id));
+    return [...fromApi, ...extraDocuments.filter((doc) => !known.has(doc.id))];
+  }, [documentsResponse?.data, extraDocuments]);
+
   const attachedDoc = useMemo(
     () => libraryDocuments.find((doc) => doc.id === attachedId) ?? null,
     [libraryDocuments, attachedId],
   );
+  const selectedDocumentId = attachedDoc ? Number(attachedDoc.id) : null;
 
   return {
     language,
@@ -102,6 +125,13 @@ export function useBookingReviewController({
     attachedLabel: attachedDoc?.name ?? t('reviewAttachFile'),
     libraryDocuments,
     selectedLibraryId: attachedId,
+    // blocked: booking POST has no documentIds — keep the numeric id for when the contract adds it.
+    selectedDocumentId:
+      selectedDocumentId != null &&
+      Number.isFinite(selectedDocumentId) &&
+      selectedDocumentId > 0
+        ? selectedDocumentId
+        : null,
     uploadOpen,
     selectSheetOpen,
     shareRecords,
@@ -136,7 +166,7 @@ export function useBookingReviewController({
     },
     onCloseUpload: () => setUploadOpen(false),
     onUploadSaved: (files) => {
-      setLibraryDocuments((prev) => {
+      setExtraDocuments((prev) => {
         const next = [...prev];
         files.forEach((file) => {
           if (!next.some((item) => item.id === file.id)) {

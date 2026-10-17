@@ -30,9 +30,6 @@ import { AppText } from './AppText';
 import { DatePickerSheet } from './DatePickerSheet';
 import { FeeRangeSlider } from './FeeRangeSlider';
 
-const HAIRLINE = '#E6E6E6';
-const CHIP_FILL = '#E6F5FE';
-
 export const FILTER_CARE_NEEDS: { id: string; titleKey: TranslationKey }[] = [
   { id: 'skin', titleKey: 'searchCareSkin' },
   { id: 'allergy', titleKey: 'searchCareAllergy' },
@@ -71,6 +68,9 @@ const FILTER_LANGUAGES: {
   { id: 'hi', labelKey: 'searchLangHindi' },
 ];
 
+export type FilterCityOption = { id: string; label: string };
+export type FilterQualificationOption = { id: string; label: string };
+
 type DoctorFiltersSheetProps = {
   language: 'en' | 'mr';
   t: (key: TranslationKey) => string;
@@ -79,6 +79,9 @@ type DoctorFiltersSheetProps = {
   matchingCount: number;
   datePickerOpen: boolean;
   customDate: Date;
+  /** BE-009 — from FilterOptions; empty → hide city chips. */
+  cityOptions?: FilterCityOption[];
+  qualificationOptions?: FilterQualificationOption[];
   onClose: () => void;
   onReset: () => void;
   onClear: () => void;
@@ -125,19 +128,18 @@ export function DoctorFiltersSheet({
   onOpenDatePicker,
   onCloseDatePicker,
   onSelectCustomDate,
+  cityOptions = [],
+  qualificationOptions = [],
 }: DoctorFiltersSheetProps) {
   const insets = useSafeAreaInsets();
-  const cityChips = [
-    { id: 'pune', nameKey: 'searchCityPune' as const },
-    { id: 'mumbai', nameKey: 'searchCityMumbai' as const },
-    { id: 'solapur', nameKey: 'searchCitySolapur' as const },
-  ].filter((city) => {
+  const cityChips = cityOptions.filter((city) => {
     const needle = draft.locationQuery.trim().toLowerCase();
     if (!needle) {
-      return city.id !== 'solapur';
+      return true;
     }
-    return t(city.nameKey).toLowerCase().includes(needle);
+    return city.label.toLowerCase().includes(needle);
   });
+  void qualificationOptions;
 
   return (
     <SafeAreaModal
@@ -163,9 +165,9 @@ export function DoctorFiltersSheet({
                 onPress={onClose}
                 style={styles.iconButton}
               >
-                <Ionicons name="close" size={22} color="#000000" />
+                <Ionicons name="close" size={22} color={colors.ink} />
               </Pressable>
-              <AppText variant="titleMd" color="#000000">
+              <AppText variant="titleMd" color={colors.ink}>
                 {t('searchFilters')}
               </AppText>
             </View>
@@ -245,10 +247,10 @@ export function DoctorFiltersSheet({
                   onChange={onChangeFeeRange}
                 />
                 <View style={styles.feeEnds}>
-                  <AppText variant="labelSm" color="#707976">
+                  <AppText variant="labelSm" color={colors.outline}>
                     {t('filterFeeMin')}
                   </AppText>
-                  <AppText variant="labelSm" color="#707976">
+                  <AppText variant="labelSm" color={colors.outline}>
                     {t('filterFeeMax')}
                   </AppText>
                 </View>
@@ -306,7 +308,7 @@ export function DoctorFiltersSheet({
                 style={styles.checkRow}
               >
                 <CheckBox checked={draft.recognizedQualification} />
-                <AppText variant="bodyMd" color="#000000" style={styles.flex}>
+                <AppText variant="bodyMd" color={colors.ink} style={styles.flex}>
                   {t('filterRecognizedQual')}
                 </AppText>
               </Pressable>
@@ -317,7 +319,7 @@ export function DoctorFiltersSheet({
                 style={styles.checkRow}
               >
                 <CheckBox checked={draft.focusCertified} />
-                <AppText variant="bodyMd" color="#000000" style={styles.flex}>
+                <AppText variant="bodyMd" color={colors.ink} style={styles.flex}>
                   {t('filterFocusCert')}
                 </AppText>
               </Pressable>
@@ -325,12 +327,12 @@ export function DoctorFiltersSheet({
 
             <Section title={t('filterLocation')}>
               <View style={styles.searchWrap}>
-                <Ionicons name="search" size={18} color="#707976" />
+                <Ionicons name="search" size={18} color={colors.outline} />
                 <TextInput
                   value={draft.locationQuery}
                   onChangeText={onChangeLocationQuery}
                   placeholder={t('filterLocationPlaceholder')}
-                  placeholderTextColor="#707976"
+                  placeholderTextColor={colors.outline}
                   style={[
                     styles.searchInput,
                     {
@@ -344,7 +346,7 @@ export function DoctorFiltersSheet({
                 {cityChips.map((city) => (
                   <ChoiceChip
                     key={city.id}
-                    label={t(city.nameKey)}
+                    label={city.label}
                     selected={draft.cityIds.includes(city.id)}
                     onPress={() => onToggleCity(city.id)}
                   />
@@ -359,8 +361,8 @@ export function DoctorFiltersSheet({
             </Section>
 
             <View style={styles.disclaimer}>
-              <Ionicons name="information-circle-outline" size={18} color="#707976" />
-              <AppText variant="bodyMd" color="#707976" style={styles.flex}>
+              <Ionicons name="information-circle-outline" size={18} color={colors.outline} />
+              <AppText variant="bodyMd" color={colors.outline} style={styles.flex}>
                 {t('filterResultsDisclaimer')}
               </AppText>
             </View>
@@ -415,11 +417,11 @@ function Section({
     <View style={styles.section}>
       {title ? (
         <View style={styles.sectionHead}>
-          <AppText variant="titleMd" color="#000000" style={styles.flex}>
+          <AppText variant="titleMd" color={colors.ink} style={styles.flex}>
             {title}
           </AppText>
           {trailing ? (
-            <AppText variant="labelMd" color="#000000">
+            <AppText variant="labelMd" color={colors.ink}>
               {trailing}
             </AppText>
           ) : null}
@@ -461,17 +463,17 @@ function ChoiceChip({
       {selected && iconPosition === 'start' ? (
         <Ionicons name="checkmark" size={16} color={colors.primary} />
       ) : icon && iconPosition === 'start' ? (
-        <Ionicons name={icon} size={16} color="#000000" />
+        <Ionicons name={icon} size={16} color={colors.ink} />
       ) : null}
       <AppText
         variant="labelMd"
-        color="#000000"
+        color={colors.ink}
         languageOverride={languageOverride}
       >
         {label}
       </AppText>
       {icon && iconPosition === 'end' ? (
-        <Ionicons name={icon} size={16} color="#000000" />
+        <Ionicons name={icon} size={16} color={colors.ink} />
       ) : null}
     </Pressable>
   );
@@ -502,14 +504,14 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radii.default,
     borderTopRightRadius: radii.default,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
   },
   handle: {
     alignSelf: 'center',
     width: 48,
     height: 6,
     borderRadius: radii.full,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
     marginTop: spacing.sm,
   },
   header: {
@@ -519,7 +521,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   headerStart: {
     flexDirection: 'row',
@@ -541,7 +543,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingBottom: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   sectionHead: {
     flexDirection: 'row',
@@ -561,7 +563,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderRadius: radii.full,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     backgroundColor: colors.card,
   },
   chipCompact: {
@@ -571,7 +573,7 @@ const styles = StyleSheet.create({
   chipSelected: {
     borderWidth: 1.5,
     borderColor: colors.primary,
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
   },
   sliderPad: {
     paddingHorizontal: spacing.xs,
@@ -588,7 +590,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     paddingHorizontal: spacing.md,
   },
@@ -623,8 +625,8 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: radii.sm,
     borderWidth: 1,
-    borderColor: HAIRLINE,
-    backgroundColor: '#F9FAFB',
+    borderColor: colors.outlineVariant,
+    backgroundColor: colors.surfaceContainerLow,
   },
   footer: {
     flexDirection: 'row',
@@ -632,7 +634,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.gutter,
     paddingTop: spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
   },
   footerClear: {
     flex: 1,

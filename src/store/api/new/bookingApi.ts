@@ -12,6 +12,8 @@ export type CreateBookingRequest = {
   bookingSessionId?: number;
   consentPolicyVersion?: string;
   payAtClinic?: boolean;
+  /** BE-027 — same key for retries of one attempt. */
+  idempotencyKey?: string;
 };
 
 export type BookAsFamilyRequest = {
@@ -129,12 +131,15 @@ export const bookingApi = newBaseApi.injectEndpoints({
   overrideExisting: true,
   endpoints: (build) => ({
     createBooking: build.mutation<BookingResponse, CreateBookingRequest>({
-      query: ({ doctorId, ...body }) => ({
+      query: ({ doctorId, idempotencyKey, ...body }) => ({
         url: `api/Public/Doctors/${doctorId}/Bookings`,
         method: 'POST',
         body,
+        headers: idempotencyKey
+          ? { 'Idempotency-Key': idempotencyKey }
+          : undefined,
       }),
-      invalidatesTags: ['Visits'],
+      invalidatesTags: ['Visits', 'VisitDetail', 'Slots', 'Bookings'],
     }),
     bookAsFamily: build.mutation<BookingResponse, BookAsFamilyRequest>({
       query: (body) => ({
@@ -142,7 +147,7 @@ export const bookingApi = newBaseApi.injectEndpoints({
         method: 'POST',
         body,
       }),
-      invalidatesTags: ['Visits'],
+      invalidatesTags: ['Visits', 'VisitDetail', 'Slots', 'Bookings'],
     }),
     getBookingByToken: build.query<BookingDetailResponse, string>({
       query: (bookingToken) => `api/Public/Bookings/${bookingToken}`,

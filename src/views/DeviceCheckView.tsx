@@ -18,19 +18,12 @@ import { radii } from '../theme/radii';
 import { layout, spacing } from '../theme/spacing';
 import { scaleFont } from '../utilities/scale';
 
-const INK = '#1F1F1F';
-const MUTED = '#595959';
-const HAIRLINE = '#E6E6E6';
-const ACTION = '#2A7BA3';
-const ICON_SOLID = '#2E9AD1';
-const CHIP_FILL = '#E6F5FE';
-const PREVIEW_BG = '#F2F2F2';
-const SUCCESS = '#0F7A4E';
-const SUCCESS_FILL = '#E9F5EF';
-const SUCCESS_BORDER = '#CDE8DA';
-const WARN = '#8A5109';
-const WARN_FILL = '#FCF3E4';
-const WARN_BORDER = '#F2C14E';
+const ICON_SOLID = colors.iconFill;
+const PREVIEW_BG = colors.surfaceVariant;
+const SUCCESS_BORDER = colors.successContainer;
+const WARN = colors.warning;
+const WARN_FILL = colors.warningContainer;
+const WARN_BORDER = colors.tertiaryContainer;
 
 export function DeviceCheckView(vm: DeviceCheckViewModel) {
   const insets = useSafeAreaInsets();
@@ -46,21 +39,21 @@ export function DeviceCheckView(vm: DeviceCheckViewModel) {
             onPress={vm.onBack}
             style={styles.iconButton}
           >
-            <Ionicons name="arrow-back" size={24} color={INK} />
+            <Ionicons name="arrow-back" size={24} color={colors.ink} />
           </Pressable>
           <View style={styles.headerCopy}>
             <Pressable onLongPress={vm.onToggleDemoWeak} delayLongPress={600}>
-              <AppText variant="headlineMd" color={INK} style={styles.title} numberOfLines={2}>
+              <AppText variant="headlineMd" color={colors.ink} style={styles.title} numberOfLines={2}>
                 {vm.t('deviceCheckTitle')}
               </AppText>
             </Pressable>
-            <AppText variant="labelSm" color={MUTED} numberOfLines={2}>
+            <AppText variant="labelSm" color={colors.muted} numberOfLines={2}>
               {vm.subtitle}
             </AppText>
           </View>
           {isWeak ? (
             <View style={styles.avatar}>
-              <Ionicons name="person" size={20} color={MUTED} />
+              <Ionicons name="person" size={20} color={colors.muted} />
             </View>
           ) : (
             <View style={styles.iconButton} />
@@ -85,14 +78,14 @@ export function DeviceCheckView(vm: DeviceCheckViewModel) {
         {isWeak ? (
           <View style={styles.warnBanner}>
             <Ionicons name="information-circle" size={20} color={WARN} />
-            <AppText variant="bodyMd" color={INK} style={styles.flex}>
+            <AppText variant="bodyMd" color={colors.ink} style={styles.flex}>
               {vm.tipLabel}
             </AppText>
           </View>
         ) : null}
 
         <View style={styles.modeSection}>
-          <AppText variant="titleMd" color={INK}>
+          <AppText variant="titleMd" color={colors.ink}>
             {vm.t('deviceCheckModeTitle')}
           </AppText>
 
@@ -133,7 +126,7 @@ export function DeviceCheckView(vm: DeviceCheckViewModel) {
         {!isWeak ? (
           <View style={styles.tipStrip}>
             <Ionicons name="bulb" size={20} color={ICON_SOLID} />
-            <AppText variant="bodyMd" color={INK} style={styles.flex}>
+            <AppText variant="bodyMd" color={colors.ink} style={styles.flex}>
               {vm.tipLabel}
             </AppText>
           </View>
@@ -151,7 +144,7 @@ export function DeviceCheckView(vm: DeviceCheckViewModel) {
           onPress={vm.onJoinWaitingRoom}
           icon={
             isWeak ? (
-              <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+              <Ionicons name="arrow-forward" size={18} color={colors.card} />
             ) : undefined
           }
           iconPosition="end"
@@ -175,7 +168,7 @@ function CameraPreview({ vm }: { vm: DeviceCheckViewModel }) {
           <AppText variant="titleMd" color={WARN} style={styles.center}>
             {vm.t('deviceCheckCameraBlocked')}
           </AppText>
-          <AppText variant="bodyMd" color={MUTED} style={styles.center}>
+          <AppText variant="bodyMd" color={colors.muted} style={styles.center}>
             {vm.t('deviceCheckCameraBlockedBody')}
           </AppText>
           <Pressable
@@ -194,19 +187,19 @@ function CameraPreview({ vm }: { vm: DeviceCheckViewModel }) {
 
   return (
     <View style={styles.preview}>
-      <Ionicons name="person" size={96} color={HAIRLINE} />
+      <Ionicons name="person" size={96} color={colors.outlineVariant} />
       <View style={styles.previewControls}>
         <Pressable
           accessibilityRole="button"
           onPress={vm.onToggleCameraFacing}
           style={({ pressed }) => [styles.cameraChip, pressed && styles.pressed]}
         >
-          <AppText variant="labelSm" color={INK}>
+          <AppText variant="labelSm" color={colors.ink}>
             {vm.cameraFacing === 'front'
               ? vm.t('deviceCheckFrontCamera')
               : vm.t('deviceCheckBackCamera')}
           </AppText>
-          <Ionicons name="chevron-down" size={16} color={INK} />
+          <Ionicons name="chevron-down" size={16} color={colors.ink} />
         </Pressable>
         <Pressable
           accessibilityRole="button"
@@ -214,7 +207,7 @@ function CameraPreview({ vm }: { vm: DeviceCheckViewModel }) {
           onPress={vm.onFlipCamera}
           style={({ pressed }) => [styles.flipBtn, pressed && styles.pressed]}
         >
-          <Ionicons name="camera-reverse-outline" size={18} color={INK} />
+          <Ionicons name="camera-reverse-outline" size={18} color={colors.ink} />
         </Pressable>
       </View>
     </View>
@@ -252,7 +245,7 @@ function GoodChecklistCard({ vm }: { vm: DeviceCheckViewModel }) {
             <Ionicons
               name={vm.speakerTesting ? 'pause' : 'play'}
               size={20}
-              color={ACTION}
+              color={colors.primary}
             />
           </Pressable>
         }
@@ -264,8 +257,8 @@ function GoodChecklistCard({ vm }: { vm: DeviceCheckViewModel }) {
         subtitle={vm.networkMbpsLabel}
         trailing={
           <View style={styles.goodPill}>
-            <Ionicons name="checkmark" size={14} color={SUCCESS} />
-            <AppText variant="labelSm" color={SUCCESS} weightOverride="600">
+            <Ionicons name="checkmark" size={14} color={colors.success} />
+            <AppText variant="labelSm" color={colors.success} weightOverride="600">
               {vm.t('deviceCheckGood')}
             </AppText>
           </View>
@@ -278,14 +271,14 @@ function GoodChecklistCard({ vm }: { vm: DeviceCheckViewModel }) {
 function WeakConnectionCard({ vm }: { vm: DeviceCheckViewModel }) {
   return (
     <View style={styles.cardPad}>
-      <AppText variant="titleMd" color={INK} style={styles.cardTitle}>
+      <AppText variant="titleMd" color={colors.ink} style={styles.cardTitle}>
         {vm.t('deviceCheckConnectionStatus')}
       </AppText>
       <View style={styles.weakNetBox}>
         <Ionicons name="wifi" size={22} color={WARN} />
         <View style={styles.flex}>
           <View style={styles.weakTitleRow}>
-            <AppText variant="bodyLg" color={INK} weightOverride="600">
+            <AppText variant="bodyLg" color={colors.ink} weightOverride="600">
               {vm.t('deviceCheckInternet')}
             </AppText>
             <View style={styles.weakPill}>
@@ -294,32 +287,32 @@ function WeakConnectionCard({ vm }: { vm: DeviceCheckViewModel }) {
               </AppText>
             </View>
           </View>
-          <AppText variant="bodyMd" color={MUTED}>
+          <AppText variant="bodyMd" color={colors.muted}>
             {vm.t('deviceCheckWeakRecommend')}
           </AppText>
         </View>
       </View>
 
       <View style={styles.weakRow}>
-        <Ionicons name="mic" size={22} color={INK} />
+        <Ionicons name="mic" size={22} color={colors.ink} />
         <View style={styles.flex}>
-          <AppText variant="bodyLg" color={INK}>
+          <AppText variant="bodyLg" color={colors.ink}>
             {vm.t('deviceCheckMic')}
           </AppText>
-          <AppText variant="bodyMd" color={MUTED}>
+          <AppText variant="bodyMd" color={colors.muted}>
             {vm.micLabel}
           </AppText>
         </View>
-        <Ionicons name="checkmark-circle" size={22} color={SUCCESS} />
+        <Ionicons name="checkmark-circle" size={22} color={colors.success} />
       </View>
 
       <View style={[styles.weakRow, styles.weakRowLast]}>
-        <Ionicons name="volume-high" size={22} color={INK} />
+        <Ionicons name="volume-high" size={22} color={colors.ink} />
         <View style={styles.flex}>
-          <AppText variant="bodyLg" color={INK}>
+          <AppText variant="bodyLg" color={colors.ink}>
             {vm.t('deviceCheckSpeaker')}
           </AppText>
-          <AppText variant="bodyMd" color={MUTED}>
+          <AppText variant="bodyMd" color={colors.muted}>
             {vm.speakerLabel}
           </AppText>
         </View>
@@ -328,7 +321,7 @@ function WeakConnectionCard({ vm }: { vm: DeviceCheckViewModel }) {
           onPress={vm.onPlaySpeakerTest}
           hitSlop={8}
         >
-          <AppText variant="labelSm" color={ACTION} weightOverride="600">
+          <AppText variant="labelSm" color={colors.primary} weightOverride="600">
             {vm.t('deviceCheckTest')}
           </AppText>
         </Pressable>
@@ -365,17 +358,17 @@ function ModeOption({
         {selected ? <View style={styles.radioDot} /> : null}
       </View>
       <View style={styles.flex}>
-        <AppText variant="bodyLg" color={INK} weightOverride="600">
+        <AppText variant="bodyLg" color={colors.ink} weightOverride="600">
           {title}
         </AppText>
         {subtitle ? (
-          <AppText variant="bodyMd" color={MUTED}>
+          <AppText variant="bodyMd" color={colors.muted}>
             {subtitle}
           </AppText>
         ) : null}
       </View>
       {icon ? (
-        <Ionicons name={icon} size={20} color={selected ? ICON_SOLID : MUTED} />
+        <Ionicons name={icon} size={20} color={selected ? ICON_SOLID : colors.muted} />
       ) : null}
     </Pressable>
   );
@@ -399,10 +392,10 @@ function CheckRow({
           <Ionicons name={icon} size={20} color={ICON_SOLID} />
         </View>
         <View style={styles.flex}>
-          <AppText variant="bodyLg" color={INK} weightOverride="600">
+          <AppText variant="bodyLg" color={colors.ink} weightOverride="600">
             {title}
           </AppText>
-          <AppText variant="bodyMd" color={MUTED}>
+          <AppText variant="bodyMd" color={colors.muted}>
             {subtitle}
           </AppText>
         </View>
@@ -415,7 +408,7 @@ function CheckRow({
 function SuccessCheck() {
   return (
     <View style={styles.successCircle}>
-      <Ionicons name="checkmark" size={14} color={SUCCESS} />
+      <Ionicons name="checkmark" size={14} color={colors.success} />
     </View>
   );
 }
@@ -471,7 +464,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.card,
     borderBottomWidth: 1,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   headerRow: {
     flexDirection: 'row',
@@ -514,7 +507,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     backgroundColor: PREVIEW_BG,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -533,7 +526,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.full,
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
@@ -544,7 +537,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.full,
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -573,14 +566,14 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.md,
     overflow: 'hidden',
   },
   cardPad: {
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.md,
     padding: spacing.md,
     gap: spacing.md,
@@ -588,7 +581,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     paddingBottom: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   checkRow: {
     flexDirection: 'row',
@@ -609,20 +602,20 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: radii.full,
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
   },
   divider: {
     height: 1,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
     marginLeft: 68,
   },
   successCircle: {
     width: 24,
     height: 24,
     borderRadius: radii.full,
-    backgroundColor: SUCCESS_FILL,
+    backgroundColor: colors.successContainer,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -630,7 +623,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: radii.full,
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -641,7 +634,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: radii.full,
-    backgroundColor: SUCCESS_FILL,
+    backgroundColor: colors.successContainer,
     borderWidth: 1,
     borderColor: SUCCESS_BORDER,
   },
@@ -654,7 +647,7 @@ const styles = StyleSheet.create({
   meterBar: {
     width: 4,
     borderRadius: 2,
-    backgroundColor: ACTION,
+    backgroundColor: colors.primary,
   },
   weakNetBox: {
     flexDirection: 'row',
@@ -687,7 +680,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   weakRowLast: {
     borderBottomWidth: 0,
@@ -708,9 +701,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     padding: spacing.md,
     borderRadius: radii.sm,
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
   },
   modeSection: {
     gap: spacing.sm,
@@ -723,32 +716,32 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     minHeight: 48,
   },
   modeOptionSelected: {
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     borderWidth: 1.5,
-    borderColor: ACTION,
+    borderColor: colors.primary,
   },
   radio: {
     width: 22,
     height: 22,
     borderRadius: radii.full,
     borderWidth: 2,
-    borderColor: '#D1D5DB',
+    borderColor: colors.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 2,
   },
   radioSelected: {
-    borderColor: ACTION,
+    borderColor: colors.primary,
   },
   radioDot: {
     width: 12,
     height: 12,
     borderRadius: radii.full,
-    backgroundColor: ACTION,
+    backgroundColor: colors.primary,
   },
   footer: {
     position: 'absolute',
@@ -757,7 +750,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: colors.card,
     borderTopWidth: 1,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
     paddingHorizontal: spacing.gutter,
     paddingTop: spacing.sm,
     gap: spacing.sm,

@@ -11,6 +11,9 @@ import { sheetBottomPadding } from '../utilities/sheetInset';
 import { AppButton } from '../components/AppButton';
 import { AppSwitch } from '../components/AppSwitch';
 import { AppText } from '../components/AppText';
+import { EmptyState } from '../components/EmptyState';
+import { ErrorState } from '../components/ErrorState';
+import { LoadingState } from '../components/LoadingState';
 import type { OrderMedicinesViewModel } from '../controllers/useOrderMedicinesController';
 import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
@@ -18,14 +21,6 @@ import { layout, spacing } from '../theme/spacing';
 import { ChoosePharmacyView } from './ChoosePharmacyView';
 import { MedicineCheckoutView } from './MedicineCheckoutView';
 import { ReviewOrderView } from './ReviewOrderView';
-
-const INK = '#1F1F1F';
-const MUTED = '#595959';
-const HAIRLINE = '#DDDFE2';
-const ACTION = '#2A7BA3';
-const ACTION_OUTLINE = '#276F93';
-const SUCCESS = '#0F7A4E';
-const SUCCESS_FILL = '#E9F5EF';
 
 export function OrderMedicinesView(vm: OrderMedicinesViewModel) {
   const insets = useSafeAreaInsets();
@@ -52,14 +47,14 @@ export function OrderMedicinesView(vm: OrderMedicinesViewModel) {
             onPress={vm.onBack}
             style={styles.iconHit}
           >
-            <Ionicons name="arrow-back" size={24} color={INK} />
+            <Ionicons name="arrow-back" size={24} color={colors.ink} />
           </Pressable>
           <View style={styles.brandRow}>
-            <AppText variant="headlineMd" color={INK} numberOfLines={1}>
+            <AppText variant="headlineMd" color={colors.ink} numberOfLines={1}>
               {vm.t('brandName')}
             </AppText>
             <View style={styles.homeoBadge}>
-              <AppText variant="labelSm" color={SUCCESS} weightOverride="600">
+              <AppText variant="labelSm" color={colors.success} weightOverride="600">
                 {vm.t('medsSubtitle')}
               </AppText>
             </View>
@@ -78,59 +73,67 @@ export function OrderMedicinesView(vm: OrderMedicinesViewModel) {
           },
         ]}
       >
-        <AppText variant="headlineLg" color={INK}>
+        <AppText variant="headlineLg" color={colors.ink}>
           {vm.t('orderMedsTitle')}
         </AppText>
 
         <View style={styles.card}>
           <View style={styles.rxTop}>
             <View style={styles.signedBadge}>
-              <Ionicons name="checkmark-circle" size={14} color={SUCCESS} />
-              <AppText variant="labelSm" color={SUCCESS} weightOverride="600">
+              <Ionicons name="checkmark-circle" size={14} color={colors.success} />
+              <AppText variant="labelSm" color={colors.success} weightOverride="600">
                 {vm.t('orderMedsSigned')}
               </AppText>
             </View>
-            <AppText variant="headlineMd" color={INK}>
-              {vm.rxId}
-            </AppText>
+            {vm.rxId ? (
+              <AppText variant="headlineMd" color={colors.ink} raw>
+                {vm.rxId}
+              </AppText>
+            ) : null}
           </View>
-          <AppText variant="bodyMd" color={MUTED}>
-            {vm.doctorLine}
-          </AppText>
-          <AppText variant="bodyMd" color={MUTED}>
-            {vm.patientLine}
-          </AppText>
+          {vm.doctorLine ? (
+            <AppText variant="bodyMd" color={colors.muted} raw>
+              {vm.doctorLine}
+            </AppText>
+          ) : null}
+          {vm.patientLine ? (
+            <AppText variant="bodyMd" color={colors.muted} raw>
+              {vm.patientLine}
+            </AppText>
+          ) : null}
           <View style={styles.rxFooter}>
             <Pressable
               accessibilityRole="button"
               onPress={vm.onViewPrescription}
               style={styles.viewRx}
             >
-              <Ionicons name="eye-outline" size={18} color={ACTION_OUTLINE} />
+              <Ionicons name="eye-outline" size={18} color={colors.primaryOutline} />
               <AppText
                 variant="labelMd"
-                color={ACTION_OUTLINE}
+                color={colors.primaryOutline}
                 weightOverride="600"
               >
                 {vm.t('orderMedsViewRx')}
               </AppText>
             </Pressable>
-            <AppText variant="labelSm" color={MUTED}>
-              {vm.validTill}
-            </AppText>
+            {vm.validTill ? (
+              <AppText variant="labelSm" color={colors.muted} raw>
+                {vm.validTill}
+              </AppText>
+            ) : null}
           </View>
         </View>
 
         <View style={styles.card}>
           <View style={styles.choiceHead}>
             <View style={styles.shield}>
-              <Ionicons name="shield-checkmark" size={22} color={ACTION} />
+              <Ionicons name="shield-checkmark" size={22} color={colors.primary} />
             </View>
             <View style={styles.flex}>
-              <AppText variant="headlineMd" color={INK}>
+              <AppText variant="headlineMd" color={colors.ink}>
                 {vm.t('orderMedsChoiceTitle')}
               </AppText>
-              <AppText variant="bodyMd" color={MUTED}>
+              <AppText variant="bodyMd" color={colors.muted}>
                 {vm.t('orderMedsChoiceBody')}
               </AppText>
             </View>
@@ -146,7 +149,7 @@ export function OrderMedicinesView(vm: OrderMedicinesViewModel) {
           >
             <AppText
               variant="labelMd"
-              color={ACTION_OUTLINE}
+              color={colors.primaryOutline}
               weightOverride="600"
             >
               {vm.t('orderMedsDownloadInstead')}
@@ -154,9 +157,16 @@ export function OrderMedicinesView(vm: OrderMedicinesViewModel) {
           </Pressable>
         </View>
 
-        <AppText variant="headlineMd" color={INK}>
+        <AppText variant="headlineMd" color={colors.ink}>
           {vm.t('orderMedsListTitle')}
         </AppText>
+        {vm.isLoading ? <LoadingState /> : null}
+        {vm.isError ? (
+          <ErrorState message="Could not load the prescription." onRetry={vm.onRetry} />
+        ) : null}
+        {!vm.isLoading && !vm.isError && vm.medicines.length === 0 ? (
+          <EmptyState title="No medicines on this prescription" />
+        ) : null}
         {vm.medicines.map((med) => (
           <View key={med.id} style={styles.medRow}>
             <View style={styles.medLeft}>
@@ -164,14 +174,14 @@ export function OrderMedicinesView(vm: OrderMedicinesViewModel) {
                 <MaterialCommunityIcons
                   name="bottle-tonic-plus-outline"
                   size={22}
-                  color={ACTION_OUTLINE}
+                  color={colors.primaryOutline}
                 />
               </View>
               <View>
-                <AppText variant="labelMd" color={INK} weightOverride="600">
+                <AppText variant="labelMd" color={colors.ink} weightOverride="600">
                   {vm.t(med.nameKey)}
                 </AppText>
-                <AppText variant="labelSm" color={MUTED}>
+                <AppText variant="labelSm" color={colors.muted}>
                   {vm.t(med.qtyKey)}
                 </AppText>
               </View>
@@ -182,32 +192,70 @@ export function OrderMedicinesView(vm: OrderMedicinesViewModel) {
             />
           </View>
         ))}
-        <AppText variant="bodyMd" color={MUTED} style={styles.italic}>
+        <AppText variant="bodyMd" color={colors.muted} style={styles.italic}>
           {vm.t('orderMedsPharmacistNote')}
         </AppText>
 
         <View style={styles.card}>
           <View style={styles.addressHead}>
             <View style={styles.addressLeft}>
-              <Ionicons name="location-outline" size={22} color={ACTION} />
-              <AppText variant="labelMd" color={INK} weightOverride="600">
+              <Ionicons name="location-outline" size={22} color={colors.primary} />
+              <AppText variant="labelMd" color={colors.ink} weightOverride="600">
                 {vm.t('orderMedsDeliveryTitle')}
               </AppText>
             </View>
             <Pressable accessibilityRole="button" onPress={vm.onChangeAddress}>
-              <AppText variant="labelMd" color={ACTION} weightOverride="600">
+              <AppText variant="labelMd" color={colors.primary} weightOverride="600">
                 {vm.t('orderMedsChange')}
               </AppText>
             </Pressable>
           </View>
-          <AppText variant="bodyMd" color={MUTED}>
-            {vm.addressLine}
+          <AppText variant="bodyMd" color={colors.muted} raw>
+            {vm.addressLine || 'Add an address for delivery.'}
           </AppText>
-          <AppText variant="labelSm" color={ACTION_OUTLINE} weightOverride="600">
-            {vm.t('orderMedsDeliveryToday')}
-          </AppText>
+          {vm.addressLine ? (
+            <AppText variant="labelSm" color={colors.primaryOutline} weightOverride="600">
+              {vm.t('orderMedsDeliveryToday')}
+            </AppText>
+          ) : null}
         </View>
       </ScrollView>
+
+      {vm.addressPickerOpen ? (
+        <View style={styles.pickerSheet}>
+          <AppText variant="titleMd" color={colors.ink} weightOverride="600">
+            Delivery address
+          </AppText>
+          {vm.addresses.length === 0 ? (
+            <AppText variant="bodyMd" color={colors.muted} raw>
+              No saved addresses. Add one at checkout.
+            </AppText>
+          ) : (
+            vm.addresses.map((addr) => {
+              const selected = addr.addressId === vm.selectedAddressId;
+              return (
+                <Pressable
+                  key={addr.addressId}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected }}
+                  onPress={() => vm.onSelectAddress(addr.addressId)}
+                  style={[styles.addrPick, selected && styles.addrPickOn]}
+                >
+                  <AppText variant="bodyMd" color={colors.ink} raw>
+                    {addr.line1}
+                    {addr.city ? `, ${addr.city}` : ''}
+                  </AppText>
+                </Pressable>
+              );
+            })
+          )}
+          <AppButton
+            variant="secondary"
+            label="Done"
+            onPress={vm.onCloseAddressPicker}
+          />
+        </View>
+      ) : null}
 
       <View
         style={[
@@ -232,7 +280,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   headerRow: {
     minHeight: 56,
@@ -255,7 +303,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   homeoBadge: {
-    backgroundColor: SUCCESS_FILL,
+    backgroundColor: colors.successContainer,
     borderRadius: radii.full,
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
@@ -268,7 +316,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderRadius: radii.default,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     padding: spacing.lg,
     gap: spacing.sm,
   },
@@ -280,7 +328,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: SUCCESS_FILL,
+    backgroundColor: colors.successContainer,
     borderRadius: radii.full,
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
@@ -289,7 +337,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     paddingTop: spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -311,7 +359,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: radii.full,
-    backgroundColor: SUCCESS_FILL,
+    backgroundColor: colors.successContainer,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -319,7 +367,7 @@ const styles = StyleSheet.create({
     minHeight: layout.buttonHeight,
     borderRadius: radii.button,
     borderWidth: 1.5,
-    borderColor: ACTION,
+    borderColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.card,
@@ -331,7 +379,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderRadius: radii.default,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     padding: spacing.md,
     gap: spacing.md,
   },
@@ -373,9 +421,33 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     backgroundColor: colors.card,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
   },
   flex: {
     flex: 1,
+  },
+  pickerSheet: {
+    position: 'absolute',
+    left: spacing.lg,
+    right: spacing.lg,
+    bottom: 100,
+    backgroundColor: colors.card,
+    borderRadius: radii.default,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
+    padding: spacing.lg,
+    gap: spacing.sm,
+  },
+  addrPick: {
+    minHeight: layout.buttonHeight,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.md,
+    justifyContent: 'center',
+    backgroundColor: colors.page,
+  },
+  addrPickOn: {
+    borderColor: colors.primary,
   },
 });

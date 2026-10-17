@@ -1,0 +1,25 @@
+=== STATIC RESCAN ===
+--- devmaigrationapi ---
+--- Account/Login ---
+--- 1209 ---
+--- PLATFORM_FEE ---
+src/config/appointmentSlots.ts:185:export const PLATFORM_FEE_RUPEES = null as unknown as number;
+src/controllers/useConsultNowController.ts:323:  // BE-011 — fees only from Instant poll; never invent PLATFORM_FEE.
+--- instantConsultEnabled ---
+--- medicineOnlinePayEnabled ---
+--- DELETE /api/Account ---
+--- rzp_ ---
+--- Math.random ---
+src/utilities/idempotency.ts:9:      : `${Date.now()}-${Math.floor(Math.random() * 1e9)}`;
+src/controllers/useUploadDocumentController.ts:93:    id: `up-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+--- faker ---
+--- fixture ---
+--- dummy ---
+--- TODO markers ---
+src/controllers/useBookAppointmentController.ts:685:        // TODO(PAYMENT): phase2 — ConsultOrders + Verify / webhook (BE-P01). Hold UI only if gateway not ready.
+src/controllers/useConsultNowController.ts:291:  // TODO(PAYMENT): do not fake success — ConsultOrders + Verify (BE-P01).
+src/controllers/useConsultNowController.ts:324:  // TODO(PAYMENT): Pay still deferred (BE-P01 ConsultOrders + Verify).
+src/controllers/useConsultNowController.ts:562:      // TODO(PAYMENT): open Razorpay via ConsultOrders create + verify (BE-P01).
+--- hardcoded fee 90 near fee ---
+src/config/appointmentSlots.ts:185:export const PLATFORM_FEE_RUPEES = null as unknown as number;
+src/controllers/useConsultNowController.ts:323:  // BE-011 — fees only from Instant poll; never invent PLATFORM_FEE.

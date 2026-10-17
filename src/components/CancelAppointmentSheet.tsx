@@ -21,13 +21,8 @@ import { fontFamilyFor } from '../utilities/fonts';
 import { sheetBottomPadding } from '../utilities/sheetInset';
 import { AppText } from './AppText';
 
-const MUTED = '#595959';
-const HAIRLINE = '#E6E6E6';
-const SUCCESS = '#0F7A4E';
-const SUCCESS_FILL = '#E9F5EF';
-const SUCCESS_BORDER = '#CDE8DA';
-const ACTION = '#2A7BA3';
-const CANCEL = '#A3231A';
+const SUCCESS_BORDER = colors.successContainer;
+const CANCEL = colors.error;
 
 type Props = Pick<
   AppointmentDetailViewModel,
@@ -73,7 +68,7 @@ export function CancelAppointmentSheet({
         <View style={[styles.sheet, { paddingBottom: sheetBottomPadding(insets, spacing.md) }]}>
           <View style={styles.handle} />
           <View style={styles.header}>
-            <AppText variant="titleMd" color="#000000" style={styles.flex}>
+            <AppText variant="titleMd" color={colors.ink} style={styles.flex}>
               {t('cancelSheetTitle')}
             </AppText>
             <Pressable
@@ -82,7 +77,7 @@ export function CancelAppointmentSheet({
               onPress={onCloseCancelSheet}
               style={styles.iconButton}
             >
-              <Ionicons name="close" size={22} color="#000000" />
+              <Ionicons name="close" size={22} color={colors.ink} />
             </Pressable>
           </View>
 
@@ -92,21 +87,21 @@ export function CancelAppointmentSheet({
           >
             <View style={styles.refundCard}>
               <View style={styles.refundIcon}>
-                <AppText variant="titleMd" color="#FFFFFF">
+                <AppText variant="titleMd" color={colors.card}>
                   ₹
                 </AppText>
               </View>
               <View style={styles.flex}>
-                <AppText variant="bodyLg" color={SUCCESS} weightOverride="600">
+                <AppText variant="bodyLg" color={colors.success} weightOverride="600">
                   {refundTitle}
                 </AppText>
-                <AppText variant="bodyMd" color={MUTED}>
+                <AppText variant="bodyMd" color={colors.muted}>
                   {refundBody}
                 </AppText>
               </View>
             </View>
 
-            <AppText variant="bodyLg" color="#000000" weightOverride="600">
+            <AppText variant="bodyLg" color={colors.ink} weightOverride="600">
               {t('cancelWhyTitle')}
             </AppText>
             <View style={styles.reasons}>
@@ -123,7 +118,7 @@ export function CancelAppointmentSheet({
                     <View style={[styles.radio, selected && styles.radioSelected]}>
                       {selected ? <View style={styles.radioDot} /> : null}
                     </View>
-                    <AppText variant="bodyLg" color="#000000" style={styles.flex}>
+                    <AppText variant="bodyLg" color={colors.ink} style={styles.flex}>
                       {t(item.labelKey)}
                     </AppText>
                   </Pressable>
@@ -135,7 +130,7 @@ export function CancelAppointmentSheet({
               value={cancelNote}
               onChangeText={onChangeCancelNote}
               placeholder={t('cancelMoreOptional')}
-              placeholderTextColor={MUTED}
+              placeholderTextColor={colors.muted}
               multiline
               style={[
                 styles.note,
@@ -155,7 +150,7 @@ export function CancelAppointmentSheet({
                 pressed && canConfirmCancel && styles.pressed,
               ]}
             >
-              <AppText variant="bodyLg" color="#FFFFFF" weightOverride="600">
+              <AppText variant="bodyLg" color={colors.card} weightOverride="600">
                 {t('cancelConfirm')}
               </AppText>
             </Pressable>
@@ -164,7 +159,7 @@ export function CancelAppointmentSheet({
               onPress={onCloseCancelSheet}
               style={({ pressed }) => [styles.keepBtn, pressed && styles.pressed]}
             >
-              <AppText variant="bodyLg" color="#FFFFFF" weightOverride="600">
+              <AppText variant="bodyLg" color={colors.card} weightOverride="600">
                 {t('cancelKeep')}
               </AppText>
             </Pressable>
@@ -190,14 +185,14 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radii.md,
     maxHeight: '88%',
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
   },
   handle: {
     alignSelf: 'center',
     width: 48,
     height: 6,
     borderRadius: radii.full,
-    backgroundColor: '#D6D6D6',
+    backgroundColor: colors.outlineVariant,
     marginTop: spacing.md,
   },
   header: {
@@ -207,7 +202,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   iconButton: {
     width: 40,
@@ -220,7 +215,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   refundCard: {
-    backgroundColor: SUCCESS_FILL,
+    backgroundColor: colors.successContainer,
     borderWidth: 1,
     borderColor: SUCCESS_BORDER,
     borderRadius: radii.sm,
@@ -233,7 +228,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: radii.full,
-    backgroundColor: SUCCESS,
+    backgroundColor: colors.success,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -243,7 +238,7 @@ const styles = StyleSheet.create({
   reasonRow: {
     minHeight: layout.buttonHeight,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     paddingHorizontal: 12,
     flexDirection: 'row',
@@ -252,42 +247,42 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
   },
   reasonRowSelected: {
-    borderColor: ACTION,
-    backgroundColor: '#F9F9F9',
+    borderColor: colors.primary,
+    backgroundColor: colors.surfaceContainerLow,
   },
   radio: {
     width: 20,
     height: 20,
     borderRadius: radii.full,
     borderWidth: 1.5,
-    borderColor: '#707976',
+    borderColor: colors.outline,
     alignItems: 'center',
     justifyContent: 'center',
   },
   radioSelected: {
-    borderColor: ACTION,
+    borderColor: colors.primary,
   },
   radioDot: {
     width: 10,
     height: 10,
     borderRadius: radii.full,
-    backgroundColor: ACTION,
+    backgroundColor: colors.primary,
   },
   note: {
     minHeight: 88,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     paddingHorizontal: spacing.md,
     paddingTop: 12,
-    color: '#000000',
+    color: colors.ink,
     textAlignVertical: 'top',
   },
   footer: {
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
     gap: 12,
   },
   confirmBtn: {
@@ -300,7 +295,7 @@ const styles = StyleSheet.create({
   keepBtn: {
     minHeight: layout.buttonHeight,
     borderRadius: radii.button,
-    backgroundColor: ACTION,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },

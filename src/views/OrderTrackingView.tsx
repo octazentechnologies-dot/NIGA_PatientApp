@@ -2,9 +2,11 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sheetBottomPadding } from '../utilities/sheetInset';
+import { colors } from '../theme/colors';
 
 import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
+import { ErrorState } from '../components/ErrorState';
 import type {
   OrderTrackingStatus,
   OrderTrackingViewModel,
@@ -12,22 +14,6 @@ import type {
 import { trackingStepIndex } from '../controllers/useOrderTrackingController';
 import { radii } from '../theme/radii';
 import { spacing } from '../theme/spacing';
-
-const INK = '#1F1F1F';
-const MUTED = '#595959';
-const HAIRLINE = '#DDDFE2';
-const PAGE = '#F5F6F7';
-const CARD = '#FFFFFF';
-const ACTION = '#2A7BA3';
-const ACTION_OUTLINE = '#276F93';
-const CHART = '#3AA9E0';
-const ICON_CYAN = '#5CCEF7';
-const OTP_FILL = '#E6F5FE';
-const SUCCESS = '#0F7A4E';
-const SUCCESS_FILL = '#E9F5EF';
-const DANGER = '#A3231A';
-const DANGER_FILL = '#FBEBE9';
-const STAR = '#F2C14E';
 
 const STATUS_CYCLE: OrderTrackingStatus[] = [
   'verifying',
@@ -60,11 +46,11 @@ export function OrderTrackingView(vm: OrderTrackingViewModel) {
             onPress={vm.onBack}
             style={styles.iconHit}
           >
-            <Ionicons name="arrow-back" size={24} color={INK} />
+            <Ionicons name="arrow-back" size={24} color={colors.ink} />
           </Pressable>
           <AppText
             variant="headlineMd"
-            color={INK}
+            color={colors.ink}
             style={styles.headerTitle}
             numberOfLines={1}
           >
@@ -76,7 +62,7 @@ export function OrderTrackingView(vm: OrderTrackingViewModel) {
             onPress={vm.onSupport}
             style={styles.iconHit}
           >
-            <Ionicons name="headset-outline" size={22} color={INK} />
+            <Ionicons name="headset-outline" size={22} color={colors.ink} />
           </Pressable>
         </View>
       </View>
@@ -88,6 +74,64 @@ export function OrderTrackingView(vm: OrderTrackingViewModel) {
           { paddingBottom: 24 + sheetBottomPadding(insets, spacing.md) },
         ]}
       >
+        {vm.notFound ? (
+          <AppText variant="bodyMd" color={colors.muted} style={styles.mtXs} raw>
+            Order not found.
+          </AppText>
+        ) : null}
+        {vm.isError ? (
+          <ErrorState message="Could not load tracking." onRetry={vm.onRetry} />
+        ) : null}
+        {vm.timeline.length > 0 ? (
+          <View style={styles.card}>
+            <AppText variant="headlineMd" color={colors.ink}>
+              {vm.t('trackHistory')}
+            </AppText>
+            {vm.timeline.map((ev) => (
+              <View key={ev.id} style={styles.priceRow}>
+                <View style={styles.flex}>
+                  <AppText variant="labelMd" color={colors.ink} raw>
+                    {ev.label || ev.status}
+                  </AppText>
+                  {ev.at ? (
+                    <AppText variant="labelSm" color={colors.muted} raw>
+                      {ev.at}
+                    </AppText>
+                  ) : null}
+                </View>
+              </View>
+            ))}
+          </View>
+        ) : null}
+        {vm.lines.length > 0 ? (
+          <View style={styles.card}>
+            <AppText variant="headlineMd" color={colors.ink}>
+              {vm.t('trackOrderDetails')}
+            </AppText>
+            {vm.lines.map((line) => (
+              <View key={line.id} style={styles.priceRow}>
+                <AppText variant="bodyMd" color={colors.ink} style={styles.flex} raw>
+                  {[line.remedyName, line.potencyCode, line.quantityLabel]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </AppText>
+              </View>
+            ))}
+            {vm.totalLabel ? (
+              <>
+                <View style={styles.divider} />
+                <View style={styles.priceRow}>
+                  <AppText variant="labelMd" color={colors.ink} weightOverride="600">
+                    {vm.t('trackTotal')}
+                  </AppText>
+                  <AppText variant="labelMd" color={colors.ink} weightOverride="600" raw>
+                    {vm.totalLabel}
+                  </AppText>
+                </View>
+              </>
+            ) : null}
+          </View>
+        ) : null}
         {vm.status === 'verifying' ? <VerifyingBlock vm={vm} onCycle={cycleStatus} /> : null}
         {vm.status === 'out_for_delivery' ? (
           <OutForDeliveryBlock vm={vm} onCycle={cycleStatus} />
@@ -113,24 +157,24 @@ function VerifyingBlock({
       <Pressable accessibilityRole="button" onPress={onCycle} style={styles.card}>
         <View style={styles.rowGap}>
           <View style={styles.iconCircle}>
-            <MaterialCommunityIcons name="timer-sand" size={22} color={ICON_CYAN} />
+            <MaterialCommunityIcons name="timer-sand" size={22} color={colors.iconFill} />
           </View>
           <View style={styles.flex}>
-            <AppText variant="headlineMd" color={INK}>
+            <AppText variant="headlineMd" color={colors.ink}>
               {vm.t('trackVerifyingTitle')}
             </AppText>
-            <AppText variant="bodyMd" color={MUTED} style={styles.mtXs}>
+            <AppText variant="bodyMd" color={colors.muted} style={styles.mtXs}>
               {vm.t('trackVerifyingBody')}
             </AppText>
           </View>
         </View>
-        <SegmentProgress filled={2} accent={ACTION} />
+        <SegmentProgress filled={2} accent={colors.primary} />
       </Pressable>
 
       <View style={styles.card}>
         <AppText
           variant="labelSm"
-          color={MUTED}
+          color={colors.muted}
           weightOverride="600"
           style={styles.uppercase}
         >
@@ -141,7 +185,7 @@ function VerifyingBlock({
       </View>
 
       <View style={styles.card}>
-        <AppText variant="headlineMd" color={INK}>
+        <AppText variant="headlineMd" color={colors.ink}>
           {vm.t('trackActivity')}
         </AppText>
         <TimelineItem
@@ -172,10 +216,10 @@ function OutForDeliveryBlock({
       <Pressable accessibilityRole="button" onPress={onCycle} style={styles.card}>
         <View style={styles.statusHead}>
           <View style={styles.flex}>
-            <AppText variant="headlineMd" color={INK}>
+            <AppText variant="headlineMd" color={colors.ink}>
               {vm.t('trackOutForDelivery')}
             </AppText>
-            <AppText variant="bodyMd" color={MUTED} style={styles.mtXs}>
+            <AppText variant="bodyMd" color={colors.muted} style={styles.mtXs}>
               {vm.arrivingBy}
             </AppText>
           </View>
@@ -189,14 +233,14 @@ function OutForDeliveryBlock({
           <Image source={{ uri: MAP_URI }} style={styles.mapImage} />
           <View style={styles.distancePill}>
             <View style={styles.liveDot} />
-            <AppText variant="labelSm" color={INK} weightOverride="600">
+            <AppText variant="labelSm" color={colors.ink} weightOverride="600">
               {vm.distanceAway}
             </AppText>
           </View>
         </View>
         <View style={styles.mapFoot}>
-          <Ionicons name="information-circle-outline" size={16} color={MUTED} />
-          <AppText variant="labelSm" color={MUTED}>
+          <Ionicons name="information-circle-outline" size={16} color={colors.muted} />
+          <AppText variant="labelSm" color={colors.muted}>
             {vm.t('trackLocationApprox')}
           </AppText>
         </View>
@@ -206,15 +250,15 @@ function OutForDeliveryBlock({
         <View style={styles.partnerRow}>
           <Image source={{ uri: PARTNER_URI }} style={styles.partnerAvatar} />
           <View style={styles.flex}>
-            <AppText variant="labelMd" color={INK} weightOverride="600">
+            <AppText variant="labelMd" color={colors.ink} weightOverride="600">
               {vm.partnerName}
             </AppText>
-            <AppText variant="labelSm" color={MUTED}>
+            <AppText variant="labelSm" color={colors.muted}>
               {vm.t('trackPartnerRole')}
             </AppText>
             <View style={styles.ratingRow}>
-              <Ionicons name="star" size={14} color={CHART} />
-              <AppText variant="labelSm" color={INK}>
+              <Ionicons name="star" size={14} color={colors.secondary} />
+              <AppText variant="labelSm" color={colors.ink}>
                 {vm.partnerRating}
               </AppText>
             </View>
@@ -224,80 +268,80 @@ function OutForDeliveryBlock({
             onPress={vm.onChatPartner}
             style={styles.outlineIcon}
           >
-            <Ionicons name="chatbubble-outline" size={20} color={ACTION_OUTLINE} />
+            <Ionicons name="chatbubble-outline" size={20} color={colors.primaryOutline} />
           </Pressable>
           <Pressable
             accessibilityRole="button"
             onPress={vm.onCallPartner}
             style={styles.outlineIcon}
           >
-            <Ionicons name="call-outline" size={20} color={ACTION_OUTLINE} />
+            <Ionicons name="call-outline" size={20} color={colors.primaryOutline} />
           </Pressable>
         </View>
         <View style={styles.maskedBox}>
-          <Ionicons name="lock-closed-outline" size={16} color={MUTED} />
-          <AppText variant="labelSm" color={MUTED} style={styles.flex}>
+          <Ionicons name="lock-closed-outline" size={16} color={colors.muted} />
+          <AppText variant="labelSm" color={colors.muted} style={styles.flex}>
             {vm.t('trackMaskedCall')}
           </AppText>
         </View>
       </View>
 
       <View style={styles.otpCard}>
-        <AppText variant="labelMd" color={INK} weightOverride="600">
+        <AppText variant="labelMd" color={colors.ink} weightOverride="600">
           {vm.t('trackOtpTitle')}
         </AppText>
         <View style={styles.otpRow}>
           {vm.otpDigits.map((digit, index) => (
             <View key={`otp-${index}`} style={styles.otpBox}>
-              <AppText variant="displayLg" color={INK} weightOverride="600">
+              <AppText variant="displayLg" color={colors.ink} weightOverride="600">
                 {digit}
               </AppText>
             </View>
           ))}
         </View>
-        <AppText variant="labelSm" color={MUTED}>
+        <AppText variant="labelSm" color={colors.muted}>
           {vm.t('trackOtpWarn')}
         </AppText>
       </View>
 
       <View style={styles.card}>
-        <AppText variant="headlineMd" color={INK}>
+        <AppText variant="headlineMd" color={colors.ink}>
           {vm.t('trackOrderDetails')}
         </AppText>
         <View style={styles.priceRow}>
-          <AppText variant="bodyMd" color={INK}>
+          <AppText variant="bodyMd" color={colors.ink}>
             {vm.medicineLine}
           </AppText>
-          <AppText variant="bodyMd" color={INK}>
+          <AppText variant="bodyMd" color={colors.ink}>
             {vm.medicinePrice}
           </AppText>
         </View>
         <View style={styles.priceRow}>
-          <AppText variant="bodyMd" color={MUTED}>
+          <AppText variant="bodyMd" color={colors.muted}>
             {vm.t('trackDeliveryFee')}
           </AppText>
-          <AppText variant="bodyMd" color={MUTED}>
+          <AppText variant="bodyMd" color={colors.muted}>
             {vm.deliveryFee}
           </AppText>
         </View>
         <View style={styles.divider} />
         <View style={styles.priceRow}>
-          <AppText variant="labelMd" color={INK} weightOverride="600">
+          <AppText variant="labelMd" color={colors.ink} weightOverride="600">
             {vm.t('trackTotal')}
           </AppText>
-          <AppText variant="labelMd" color={INK} weightOverride="600">
+          <AppText variant="labelMd" color={colors.ink} weightOverride="600">
             {vm.totalLabel}
           </AppText>
         </View>
         <View style={styles.payRow}>
           <View style={styles.codRow}>
-            <Ionicons name="checkmark-circle" size={18} color={SUCCESS} />
-            <AppText variant="bodyMd" color={INK}>
+            <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+            <AppText variant="bodyMd" color={colors.ink}>
               {vm.t('trackCod')}
             </AppText>
           </View>
           <Pressable accessibilityRole="button" onPress={vm.onDownloadInvoice}>
-            <AppText variant="labelMd" color={ACTION_OUTLINE} weightOverride="600">
+            <AppText variant="labelMd" color={colors.primaryOutline} weightOverride="600">
               {vm.t('trackInvoice')}
             </AppText>
           </Pressable>
@@ -323,38 +367,38 @@ function FailedBlock({
       >
         <View style={styles.rowGap}>
           <View style={styles.failedIcon}>
-            <Ionicons name="alert" size={26} color="#FFFFFF" />
+            <Ionicons name="alert" size={26} color={colors.card} />
           </View>
           <View style={styles.flex}>
-            <AppText variant="headlineMd" color={DANGER} weightOverride="600">
+            <AppText variant="headlineMd" color={colors.error} weightOverride="600">
               {vm.t('trackFailedTitle')}
             </AppText>
-            <AppText variant="bodyMd" color={MUTED} style={styles.mtXs}>
+            <AppText variant="bodyMd" color={colors.muted} style={styles.mtXs}>
               {vm.t('trackFailedBody')}
             </AppText>
           </View>
         </View>
-        <SegmentProgress filled={4} accent={DANGER} lastDanger />
+        <SegmentProgress filled={4} accent={colors.error} lastDanger />
       </Pressable>
 
       <AppButton
         label={vm.t('trackReschedule')}
         onPress={vm.onReschedule}
-        icon={<Ionicons name="calendar-outline" size={20} color="#FFFFFF" />}
+        icon={<Ionicons name="calendar-outline" size={20} color={colors.card} />}
       />
       <AppButton
         label={vm.t('trackSwitchPickup')}
         variant="secondary"
         onPress={vm.onSwitchPickup}
         icon={
-          <Ionicons name="storefront-outline" size={20} color={ACTION_OUTLINE} />
+          <Ionicons name="storefront-outline" size={20} color={colors.primaryOutline} />
         }
       />
 
       <View style={styles.card}>
         <AppText
           variant="labelSm"
-          color={MUTED}
+          color={colors.muted}
           weightOverride="600"
           style={[styles.uppercase, styles.sectionRule]}
         >
@@ -369,7 +413,7 @@ function FailedBlock({
       </View>
 
       <View style={styles.card}>
-        <AppText variant="headlineMd" color={INK}>
+        <AppText variant="headlineMd" color={colors.ink}>
           {vm.t('trackHistory')}
         </AppText>
         <TimelineItem
@@ -401,21 +445,21 @@ function DeliveredBlock({
         style={[styles.card, styles.deliveredHero]}
       >
         <View style={styles.deliveredCheck}>
-          <Ionicons name="checkmark" size={36} color="#FFFFFF" />
+          <Ionicons name="checkmark" size={36} color={colors.card} />
         </View>
-        <AppText variant="headlineMd" color={SUCCESS} weightOverride="600">
+        <AppText variant="headlineMd" color={colors.success} weightOverride="600">
           {vm.t('trackDelivered')}
         </AppText>
-        <AppText variant="bodyMd" color={MUTED}>
+        <AppText variant="bodyMd" color={colors.muted}>
           {vm.deliveredAt}
         </AppText>
-        <AppText variant="bodyMd" color={INK}>
+        <AppText variant="bodyMd" color={colors.ink}>
           {vm.t('trackDeliveredTo')}
         </AppText>
       </Pressable>
 
       <View style={styles.card}>
-        <AppText variant="headlineMd" color={INK} style={styles.center}>
+        <AppText variant="headlineMd" color={colors.ink} style={styles.center}>
           {vm.t('trackRateTitle')}
         </AppText>
         <View style={styles.stars}>
@@ -429,25 +473,25 @@ function DeliveredBlock({
               <Ionicons
                 name={value <= vm.rating ? 'star' : 'star-outline'}
                 size={32}
-                color={value <= vm.rating ? STAR : HAIRLINE}
+                color={value <= vm.rating ? colors.tertiaryContainer : colors.outlineVariant}
               />
             </Pressable>
           ))}
         </View>
-        <AppText variant="labelSm" color={MUTED} style={styles.center}>
+        <AppText variant="labelSm" color={colors.muted} style={styles.center}>
           {vm.t('trackRateHint')}
         </AppText>
       </View>
 
       <View style={styles.card}>
-        <AppText variant="labelSm" color={MUTED} weightOverride="600">
+        <AppText variant="labelSm" color={colors.muted} weightOverride="600">
           {vm.t('trackOrderRef')}
         </AppText>
-        <AppText variant="labelMd" color={INK} weightOverride="600">
+        <AppText variant="labelMd" color={colors.ink} weightOverride="600">
           {vm.orderId}
         </AppText>
         <View style={styles.divider} />
-        <AppText variant="headlineMd" color={INK}>
+        <AppText variant="headlineMd" color={colors.ink}>
           {vm.t('trackHistory')}
         </AppText>
         <TimelineItem
@@ -484,12 +528,12 @@ function SegmentProgress({
               styles.segment,
               {
                 backgroundColor: isLast
-                  ? DANGER
+                  ? colors.error
                   : on
                     ? index === filled - 1
                       ? accent
-                      : SUCCESS
-                    : HAIRLINE,
+                      : colors.success
+                    : colors.outlineVariant,
               },
             ]}
           />
@@ -533,7 +577,7 @@ function MilestoneProgress({ activeIndex }: { activeIndex: number }) {
               <Ionicons
                 name={name}
                 size={current ? 16 : 12}
-                color={done ? '#FFFFFF' : MUTED}
+                color={done ? colors.card : colors.muted}
               />
             </View>
           );
@@ -547,12 +591,12 @@ function RxRow({ code, potency }: { code: string; potency: string }) {
   return (
     <View style={styles.rxRow}>
       <View style={styles.rowGap}>
-        <MaterialCommunityIcons name="needle" size={18} color={ICON_CYAN} />
-        <AppText variant="labelMd" color={INK}>
+        <MaterialCommunityIcons name="needle" size={18} color={colors.iconFill} />
+        <AppText variant="labelMd" color={colors.ink}>
           {code}
         </AppText>
       </View>
-      <AppText variant="bodyMd" color={MUTED}>
+      <AppText variant="bodyMd" color={colors.muted}>
         {potency}
       </AppText>
     </View>
@@ -571,13 +615,13 @@ function PkgRow({
   return (
     <View style={styles.pkgRow}>
       <View style={styles.pkgIcon}>
-        <Ionicons name={icon} size={20} color={INK} />
+        <Ionicons name={icon} size={20} color={colors.ink} />
       </View>
       <View>
-        <AppText variant="labelMd" color={INK} weightOverride="600">
+        <AppText variant="labelMd" color={colors.ink} weightOverride="600">
           {title}
         </AppText>
-        <AppText variant="labelSm" color={MUTED}>
+        <AppText variant="labelSm" color={colors.muted}>
           {qty}
         </AppText>
       </View>
@@ -600,24 +644,24 @@ function TimelineItem({
   danger?: boolean;
   success?: boolean;
 }) {
-  const dot = danger ? DANGER : success ? SUCCESS : active ? CHART : HAIRLINE;
+  const dot = danger ? colors.error : success ? colors.success : active ? colors.secondary : colors.outlineVariant;
   return (
     <View style={styles.timelineRow}>
       <View style={[styles.timelineDot, { backgroundColor: dot }]} />
       <View style={styles.flex}>
         <AppText
           variant="labelMd"
-          color={danger ? DANGER : INK}
+          color={danger ? colors.error : colors.ink}
           weightOverride={active ? '600' : '400'}
         >
           {title}
         </AppText>
         {body ? (
-          <AppText variant="bodyMd" color={MUTED} style={styles.mtXs}>
+          <AppText variant="bodyMd" color={colors.muted} style={styles.mtXs}>
             {body}
           </AppText>
         ) : null}
-        <AppText variant="labelSm" color={MUTED} style={styles.mtXs}>
+        <AppText variant="labelSm" color={colors.muted} style={styles.mtXs}>
           {time}
         </AppText>
       </View>
@@ -628,12 +672,12 @@ function TimelineItem({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: PAGE,
+    backgroundColor: colors.page,
   },
   header: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.sm,
   },
@@ -659,9 +703,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   card: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
     gap: spacing.sm,
@@ -686,8 +730,8 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: HAIRLINE,
-    backgroundColor: CARD,
+    borderColor: colors.outlineVariant,
+    backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -700,7 +744,7 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: CHART,
+    backgroundColor: colors.secondary,
     marginTop: 8,
   },
   segmentRow: {
@@ -723,13 +767,13 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 2,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
   },
   milestoneFill: {
     position: 'absolute',
     left: 0,
     height: 2,
-    backgroundColor: CHART,
+    backgroundColor: colors.secondary,
   },
   milestoneRow: {
     flexDirection: 'row',
@@ -743,7 +787,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: CARD,
+    borderColor: colors.card,
   },
   milestoneDotLg: {
     width: 32,
@@ -751,21 +795,21 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   milestoneOn: {
-    backgroundColor: CHART,
+    backgroundColor: colors.secondary,
   },
   milestoneOff: {
-    backgroundColor: PAGE,
+    backgroundColor: colors.page,
   },
   mapCard: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     overflow: 'hidden',
   },
   mapFrame: {
     height: 180,
-    backgroundColor: PAGE,
+    backgroundColor: colors.page,
   },
   mapImage: {
     width: '100%',
@@ -778,9 +822,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -789,7 +833,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: ACTION,
+    backgroundColor: colors.primary,
   },
   mapFoot: {
     flexDirection: 'row',
@@ -797,7 +841,7 @@ const styles = StyleSheet.create({
     gap: 6,
     padding: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
   },
   partnerRow: {
     flexDirection: 'row',
@@ -808,7 +852,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: PAGE,
+    backgroundColor: colors.page,
   },
   ratingRow: {
     flexDirection: 'row',
@@ -821,25 +865,25 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: ACTION_OUTLINE,
+    borderColor: colors.primaryOutline,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
   },
   maskedBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
-    backgroundColor: PAGE,
+    backgroundColor: colors.page,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.button,
     padding: spacing.sm,
   },
   otpCard: {
-    backgroundColor: OTP_FILL,
+    backgroundColor: colors.primaryContainer,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
     alignItems: 'center',
@@ -853,9 +897,9 @@ const styles = StyleSheet.create({
     width: 48,
     height: 56,
     borderRadius: radii.button,
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -866,7 +910,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
     marginVertical: 4,
   },
   payRow: {
@@ -881,28 +925,28 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   failedHero: {
-    backgroundColor: DANGER_FILL,
+    backgroundColor: colors.errorContainer,
   },
   failedIcon: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: DANGER,
+    backgroundColor: colors.error,
     alignItems: 'center',
     justifyContent: 'center',
   },
   sectionRule: {
     borderBottomWidth: 1,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
     paddingBottom: spacing.xs,
   },
   pkgRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: PAGE,
+    backgroundColor: colors.page,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.button,
     padding: spacing.sm,
   },
@@ -910,7 +954,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: ICON_CYAN,
+    backgroundColor: colors.iconFill,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -926,7 +970,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   deliveredHero: {
-    backgroundColor: SUCCESS_FILL,
+    backgroundColor: colors.successContainer,
     alignItems: 'center',
     gap: spacing.xs,
   },
@@ -934,7 +978,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: SUCCESS,
+    backgroundColor: colors.success,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.xs,
@@ -958,7 +1002,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.button,
     padding: spacing.sm,
   },

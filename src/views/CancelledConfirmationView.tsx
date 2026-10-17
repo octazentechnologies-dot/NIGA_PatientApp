@@ -9,16 +9,12 @@ import { radii } from '../theme/radii';
 import { layout, spacing } from '../theme/spacing';
 import { colors } from '../theme/colors';
 
-const MUTED = '#595959';
-const HAIRLINE = '#E6E6E6';
-const ERROR = '#A3231A';
-const ERROR_FILL = '#FBEBE9';
-const SUCCESS = '#0F7A4E';
-const ACTION = '#2A7BA3';
-const AMBER = '#8A5109';
-const AMBER_FILL = '#FCF3E4';
-const ICON_BLUE = '#2A7BA3';
-const FILL = '#F2F2F2';
+const ERROR = colors.error;
+const ERROR_FILL = colors.errorContainer;
+const AMBER = colors.warning;
+const AMBER_FILL = colors.warningContainer;
+const ICON_BLUE = colors.primary;
+const FILL = colors.surfaceVariant;
 
 export function CancelledConfirmationView(vm: AppointmentDetailViewModel) {
   const insets = useSafeAreaInsets();
@@ -37,7 +33,7 @@ export function CancelledConfirmationView(vm: AppointmentDetailViewModel) {
           onPress={vm.onCloseCancelled}
           style={styles.iconButton}
         >
-          <Ionicons name="close" size={24} color="#000000" />
+          <Ionicons name="close" size={24} color={colors.ink} />
         </Pressable>
       </View>
 
@@ -52,7 +48,7 @@ export function CancelledConfirmationView(vm: AppointmentDetailViewModel) {
           <View style={styles.errorMark}>
             <Ionicons name="close" size={28} color={ERROR} />
           </View>
-          <AppText variant="headlineMd" color="#000000" style={styles.center}>
+          <AppText variant="headlineMd" color={colors.ink} style={styles.center}>
             {vm.t('cancelledTitle')}
           </AppText>
         </View>
@@ -65,12 +61,12 @@ export function CancelledConfirmationView(vm: AppointmentDetailViewModel) {
               </AppText>
             </View>
             <View style={styles.flex}>
-              <AppText variant="titleMd" color="#000000">
+              <AppText variant="titleMd" color={colors.ink}>
                 {vm.doctorName}
               </AppText>
               <View style={styles.whenRow}>
-                <Ionicons name="calendar-outline" size={14} color={MUTED} />
-                <AppText variant="bodyMd" color={MUTED}>
+                <Ionicons name="calendar-outline" size={14} color={colors.muted} />
+                <AppText variant="bodyMd" color={colors.muted}>
                   {vm.cancelledWhenLabel}
                 </AppText>
               </View>
@@ -104,7 +100,7 @@ export function CancelledConfirmationView(vm: AppointmentDetailViewModel) {
           onPress={vm.onBookAnother}
           style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]}
         >
-          <AppText variant="bodyLg" color="#FFFFFF" weightOverride="600">
+          <AppText variant="bodyLg" color={colors.card} weightOverride="600">
             {vm.t('cancelledBookAnother')}
           </AppText>
         </Pressable>
@@ -113,7 +109,7 @@ export function CancelledConfirmationView(vm: AppointmentDetailViewModel) {
           onPress={vm.onViewRefund}
           style={({ pressed }) => [styles.secondaryBtn, pressed && styles.pressed]}
         >
-          <AppText variant="bodyLg" color={ACTION} weightOverride="600">
+          <AppText variant="bodyLg" color={colors.primary} weightOverride="600">
             {vm.t('cancelledViewRefund')}
           </AppText>
         </Pressable>
@@ -144,7 +140,7 @@ function TimelineStep({
         ]}
       >
         {state === 'done' ? (
-          <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+          <Ionicons name="checkmark" size={12} color={colors.card} />
         ) : state === 'active' ? (
           <View style={styles.innerDot} />
         ) : null}
@@ -152,13 +148,13 @@ function TimelineStep({
       <View style={styles.flex}>
         <AppText
           variant="bodyMd"
-          color={state === 'pending' ? MUTED : '#000000'}
+          color={state === 'pending' ? colors.muted : colors.ink}
           weightOverride="600"
         >
           {title}
         </AppText>
         {subtitle ? (
-          <AppText variant="labelSm" color={MUTED}>
+          <AppText variant="labelSm" color={colors.muted}>
             {subtitle}
           </AppText>
         ) : null}
@@ -219,7 +215,7 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     padding: spacing.md,
     gap: spacing.md,
@@ -245,7 +241,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
   },
   timeline: {
     gap: 20,
@@ -273,7 +269,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   dotDone: {
-    backgroundColor: SUCCESS,
+    backgroundColor: colors.success,
   },
   dotActive: {
     backgroundColor: AMBER_FILL,
@@ -283,7 +279,7 @@ const styles = StyleSheet.create({
   dotPending: {
     backgroundColor: FILL,
     borderWidth: 1.5,
-    borderColor: '#8A8A8A',
+    borderColor: colors.outline,
   },
   innerDot: {
     width: 8,
@@ -303,7 +299,7 @@ const styles = StyleSheet.create({
     width: '100%',
     minHeight: layout.buttonHeight,
     borderRadius: radii.button,
-    backgroundColor: ACTION,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -313,7 +309,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.button,
     backgroundColor: colors.card,
     borderWidth: 1.5,
-    borderColor: ACTION,
+    borderColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },

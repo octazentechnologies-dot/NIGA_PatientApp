@@ -30,6 +30,8 @@ export type GetMedicineOrdersResponse = {
 export type CreateMedicineOrderRequest = {
   erxSnapshotId: number;
   pharmacyPartnerId: number;
+  /** BE-023 — optional delivery address from the address book. */
+  addressId?: number | null;
 };
 
 export type CreateMedicineOrderResponse = {
@@ -76,30 +78,43 @@ export type PayMedicineOrderRequest = {
 export type PayMedicineOrderResponse = {
   success: boolean;
   gatewayReady?: boolean;
+  /** Public Razorpay Key ID. Null when gateway is not ready. */
+  keyId?: string | null;
   message?: string;
   data?: {
     paymentOrderId: number;
+    /** Amount in rupees (API unit). */
     amount?: number;
     currency?: string;
     status?: string;
+    /** Razorpay order_id — required to open Checkout. */
+    gatewayOrderId?: string | null;
   };
 };
 
 export type TrackingEvent = {
   status: string;
   detail?: string | null;
+  label?: string | null;
   at: string;
 };
 
 export type TrackingItem = {
-  remedyCode: string;
+  remedyCode?: string | null;
   remedyName: string;
+  potencyCode?: string | null;
+  quantityLabel?: string | null;
 };
 
 export type MedicineOrderTrackingData = {
   medicineOrderId: number;
   status: string;
-  items: TrackingItem[];
+  /** Null money → hide; never show ₹0. */
+  quoteAmount?: number | null;
+  currency?: string | null;
+  /** Always arrays per BE-028. */
+  items?: TrackingItem[];
+  lines?: TrackingItem[];
   events: TrackingEvent[];
 };
 
@@ -176,6 +191,7 @@ export const medicinesApi = newBaseApi.injectEndpoints({
         area
           ? `api/Pharmacy/Sellers?area=${encodeURIComponent(area)}`
           : 'api/Pharmacy/Sellers',
+      providesTags: ['PharmacySellers'],
     }),
     grantMedicineConsent: build.mutation<
       MedicineOrderConsentResponse,

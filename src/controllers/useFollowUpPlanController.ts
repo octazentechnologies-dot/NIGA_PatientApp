@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
@@ -20,13 +20,12 @@ export type FollowUpTaskId =
 export type FollowUpTaskBadgeTone = 'success' | 'danger' | 'warn' | 'neutral';
 
 export type FollowUpTask = {
-  id: FollowUpTaskId;
-  titleKey: TranslationKey;
-  metaKey: TranslationKey;
+  id: string;
+  title: string;
+  dueLabel: string | null;
   badgeKey?: TranslationKey;
   badgeTone?: FollowUpTaskBadgeTone;
   done: boolean;
-  uploadAction?: boolean;
 };
 
 export type FollowUpPlanViewModel = {
@@ -35,6 +34,9 @@ export type FollowUpPlanViewModel = {
   doctorPlanLine: string;
   createdLine: string;
   patientLine: string;
+  isLoading: boolean;
+  isError: boolean;
+  onRetry: () => void;
   doneCount: number;
   totalCount: number;
   progress: number;
@@ -52,7 +54,7 @@ export type FollowUpPlanViewModel = {
   onSelectFeeling: (id: FeelingId) => void;
   onChangeNotes: (value: string) => void;
   onRecordResponse: () => void;
-  onToggleTask: (id: FollowUpTaskId) => void;
+  onToggleTask: (id: string) => void;
   onUploadPhoto: () => void;
   prescriptionOpen: boolean;
   consultationNoteOpen: boolean;
@@ -62,48 +64,6 @@ export type FollowUpPlanViewModel = {
   onCloseConsultationNote: () => void;
   onOpenDiary: () => void;
 };
-
-const INITIAL_TASKS: FollowUpTask[] = [
-  {
-    id: 'sulphur',
-    titleKey: 'followUpTaskSulphur',
-    metaKey: 'followUpTaskSulphurMeta',
-    badgeKey: 'followUpBadgeOnTrack',
-    badgeTone: 'success',
-    done: true,
-  },
-  {
-    id: 'diary',
-    titleKey: 'followUpTaskDiary',
-    metaKey: 'followUpTaskDiaryMeta',
-    badgeKey: 'followUpBadgeMissed',
-    badgeTone: 'danger',
-    done: true,
-  },
-  {
-    id: 'avoid',
-    titleKey: 'followUpTaskAvoid',
-    metaKey: 'followUpTaskAvoidMeta',
-    done: true,
-  },
-  {
-    id: 'photo',
-    titleKey: 'followUpTaskPhoto',
-    metaKey: 'followUpTaskPhotoMeta',
-    badgeKey: 'followUpBadgePending',
-    badgeTone: 'warn',
-    done: false,
-    uploadAction: true,
-  },
-  {
-    id: 'book',
-    titleKey: 'followUpTaskBook',
-    metaKey: 'followUpTaskBookMeta',
-    badgeKey: 'followUpBadgePending',
-    badgeTone: 'warn',
-    done: false,
-  },
-];
 
 export function useFollowUpPlanController({
   onBack,
@@ -121,29 +81,42 @@ export function useFollowUpPlanController({
   const [notes, setNotes] = useState('');
   const [responseRecorded, setResponseRecorded] = useState(false);
   const [remindersOn, setRemindersOn] = useState(true);
-  const [tasks, setTasks] = useState(INITIAL_TASKS);
   const [prescriptionOpen, setPrescriptionOpen] = useState(false);
   const [consultationNoteOpen, setConsultationNoteOpen] = useState(false);
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
-  const { data: followUpsResponse } = useGetFollowUpsQuery(undefined, {
+  const {
+    data: followUpsResponse,
+    isLoading,
+    isError,
+    refetch,
+  } = useGetFollowUpsQuery(undefined, {
     skip: !isAuthenticated,
   });
   const [completeFollowUp] = useCompleteFollowUpMutation();
 
-  useEffect(() => {
-    if (followUpsResponse?.data && Array.isArray(followUpsResponse.data) && followUpsResponse.data.length > 0) {
-      setTasks(
-        followUpsResponse.data.map((item) => ({
-          id: String(item.followUpTaskId) as FollowUpTaskId,
-          titleKey: 'followUpTaskSulphur',
-          metaKey: 'followUpTaskSulphurMeta',
-          badgeKey: item.status === 'DONE' ? 'followUpBadgeOnTrack' : 'followUpBadgePending',
-          badgeTone: item.status === 'DONE' ? 'success' : 'warn',
-          done: item.status === 'DONE',
-        })),
-      );
+  const tasks = useMemo<FollowUpTask[]>(() => {
+    const rows = followUpsResponse?.data;
+    if (!Array.isArray(rows)) {
+      return [];
     }
-  }, [followUpsResponse]);
+    return rows.map((item) => ({
+      id: String(item.followUpTaskId),
+      title: item.title?.trim() || '',
+      dueLabel: item.dueDate?.trim() || null,
+      badgeKey:
+        item.status === 'DONE' ? 'followUpBadgeOnTrack' : 'followUpBadgePending',
+      badgeTone: item.status === 'DONE' ? 'success' : 'warn',
+      done: item.status === 'DONE',
+    }));
+  }, [followUpsResponse?.data]);
+
+  const nextDue = useMemo(() => {
+    const dates = tasks
+      .map((task) => task.dueLabel)
+      .filter((value): value is string => Boolean(value))
+      .sort();
+    return dates[0] ?? '';
+  }, [tasks]);
 
   const doneCount = useMemo(
     () => tasks.filter((task) => task.done).length,
@@ -154,17 +127,19 @@ export function useFollowUpPlanController({
   return {
     language,
     t,
-    doctorPlanLine: t('followUpPlanBy').replace(
-      '{name}',
-      t('searchResultAnjaliName'),
-    ),
-    createdLine: t('followUpCreated'),
-    patientLine: t('followUpForPatient'),
+    doctorPlanLine: '',
+    createdLine: '',
+    patientLine: '',
+    isLoading,
+    isError,
+    onRetry: () => {
+      void refetch();
+    },
     doneCount,
     totalCount,
     progress: totalCount === 0 ? 0 : doneCount / totalCount,
-    nextReviewDate: t('followUpNextReviewDate'),
-    nextReviewIn: t('followUpNextReviewIn'),
+    nextReviewDate: nextDue,
+    nextReviewIn: '',
     feeling,
     notes,
     responseRecorded,
@@ -178,20 +153,18 @@ export function useFollowUpPlanController({
     onChangeNotes: setNotes,
     onRecordResponse: () => setResponseRecorded(true),
     onToggleTask: async (id) => {
-      setTasks((prev) =>
-        prev.map((task) =>
-          task.id === id ? { ...task, done: !task.done } : task,
-        ),
-      );
-      if (isAuthenticated) {
-        const numId = Number(id);
-        if (!isNaN(numId) && numId > 0) {
-          try {
-            await completeFollowUp(numId).unwrap();
-          } catch (e) {
-            console.warn('[completeFollowUp] Failed:', e);
-          }
-        }
+      const task = tasks.find((row) => row.id === id);
+      if (!task || task.done || !isAuthenticated) {
+        return;
+      }
+      const numId = Number(id);
+      if (!Number.isFinite(numId) || numId <= 0) {
+        return;
+      }
+      try {
+        await completeFollowUp(numId).unwrap();
+      } catch (e) {
+        console.warn('[completeFollowUp] Failed:', e);
       }
     },
     onUploadPhoto: () => onUploadPhoto?.(),

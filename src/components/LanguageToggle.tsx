@@ -28,7 +28,7 @@ export function LanguageToggle({
         <Ionicons
           name="globe-outline"
           size={18}
-          color={colors.secondary}
+          color={colors.primary}
         />
         <AppText variant="labelMd" color={colors.onSurfaceVariant}>
           {languageLabel}
@@ -68,7 +68,7 @@ function Chip({
     >
       <AppText
         variant="labelMd"
-        color={selected ? colors.onPrimary : colors.secondary}
+        color={selected ? colors.onPrimary : colors.primaryOutline}
       >
         {label}
       </AppText>
@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   chip: {
-    minHeight: 40,
+    minHeight: 48,
     paddingHorizontal: spacing.md,
     borderRadius: radii.full,
     backgroundColor: colors.chipBackground,
@@ -96,6 +96,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   chipSelected: {
-    backgroundColor: colors.secondary,
+    backgroundColor: colors.primary,
   },
 });

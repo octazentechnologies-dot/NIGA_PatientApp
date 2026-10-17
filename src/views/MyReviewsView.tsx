@@ -2,9 +2,13 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sheetBottomPadding } from '../utilities/sheetInset';
+import { colors } from '../theme/colors';
 
 import { AppButton } from '../components/AppButton';
+import { AppScreenHeader } from '../components/AppScreenHeader';
 import { AppText } from '../components/AppText';
+import { ErrorState } from '../components/ErrorState';
+import { LoadingState } from '../components/LoadingState';
 import type {
   MyReviewItem,
   MyReviewsViewModel,
@@ -13,42 +17,20 @@ import type {
 import { radii } from '../theme/radii';
 import { spacing } from '../theme/spacing';
 
-const INK = '#1F1F1F';
-const MUTED = '#595959';
-const HAIRLINE = '#DDDFE2';
-const PAGE = '#F5F6F7';
-const CARD = '#FFFFFF';
-const ACTION = '#2A7BA3';
-const LINK = '#17739F';
-const STAR = '#F2C14E';
-const SUCCESS = '#0F7A4E';
-const SUCCESS_FILL = '#E9F5EF';
-const NEUTRAL_FILL = '#F2F2F2';
-const DANGER = '#A3231A';
-const DANGER_FILL = '#FBEBE9';
-const PENDING_FILL = '#E6F5FE';
+const LINK = colors.link;
+const NEUTRAL_FILL = colors.surfaceVariant;
+const PENDING_FILL = colors.primaryContainer;
 
 export function MyReviewsView(vm: MyReviewsViewModel) {
   const insets = useSafeAreaInsets();
 
   return (
     <View style={styles.root}>
-      <View style={[styles.header, { paddingTop: Math.max(insets.top, spacing.sm) }]}>
-        <View style={styles.headerRow}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={vm.t('back')}
-            onPress={vm.onBack}
-            style={styles.iconHit}
-          >
-            <Ionicons name="arrow-back" size={24} color={INK} />
-          </Pressable>
-          <AppText variant="headlineMd" color={INK} style={styles.headerTitle}>
-            {vm.t('myReviewsTitle')}
-          </AppText>
-          <View style={styles.iconHit} />
-        </View>
-      </View>
+      <AppScreenHeader
+        title={vm.t('myReviewsTitle')}
+        onBack={vm.onBack}
+        backLabel={vm.t('back')}
+      />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -57,33 +39,41 @@ export function MyReviewsView(vm: MyReviewsViewModel) {
           { paddingBottom: 24 + sheetBottomPadding(insets, spacing.md) },
         ]}
       >
-        <View style={styles.pendingCard}>
-          <View style={styles.flex}>
-            <AppText variant="labelMd" color={INK} weightOverride="600">
-              {vm.t('myReviewsPendingTitle')}
-            </AppText>
-            <View style={styles.pendingMeta}>
-              <MaterialCommunityIcons name="stethoscope" size={16} color={MUTED} />
-              <AppText variant="bodyMd" color={MUTED}>
-                {vm.pendingDoctor}, {vm.pendingDate}
+        {vm.isLoading ? <LoadingState /> : null}
+        {vm.isError && !vm.isLoading ? (
+          <ErrorState message={vm.t('myReviewsTitle')} onRetry={vm.onRetry} />
+        ) : null}
+        {vm.pendingDoctor ? (
+          <View style={styles.pendingCard}>
+            <View style={styles.flex}>
+              <AppText variant="labelMd" color={colors.ink} weightOverride="600">
+                {vm.t('myReviewsPendingTitle')}
               </AppText>
+              <View style={styles.pendingMeta}>
+                <MaterialCommunityIcons name="stethoscope" size={16} color={colors.muted} />
+                <AppText variant="bodyMd" color={colors.muted} raw>
+                  {vm.pendingDate
+                    ? `${vm.pendingDoctor}, ${vm.pendingDate}`
+                    : vm.pendingDoctor}
+                </AppText>
+              </View>
             </View>
+            <AppButton
+              label={vm.t('myReviewsRateCta')}
+              onPress={vm.onRatePending}
+              icon={<Ionicons name="create-outline" size={18} color={colors.card} />}
+              style={styles.rateBtn}
+            />
           </View>
-          <AppButton
-            label={vm.t('myReviewsRateCta')}
-            onPress={vm.onRatePending}
-            icon={<Ionicons name="create-outline" size={18} color="#FFFFFF" />}
-            style={styles.rateBtn}
-          />
-        </View>
+        ) : null}
 
         {vm.reviews.map((item) => (
           <ReviewCard key={item.id} item={item} vm={vm} />
         ))}
 
         <View style={styles.infoCard}>
-          <Ionicons name="information-circle-outline" size={20} color={MUTED} />
-          <AppText variant="bodyMd" color={MUTED} style={styles.flex}>
+          <Ionicons name="information-circle-outline" size={20} color={colors.muted} />
+          <AppText variant="bodyMd" color={colors.muted} style={styles.flex}>
             {vm.t('myReviewsPolicyNote')}
           </AppText>
         </View>
@@ -105,15 +95,17 @@ function ReviewCard({
     <View style={styles.card}>
       <View style={styles.cardTop}>
         <View style={styles.flex}>
-          <AppText variant="labelMd" color={INK} weightOverride="600">
+          <AppText variant="labelMd" color={colors.ink} weightOverride="600" raw>
             {item.doctorName}
           </AppText>
-          <AppText variant="bodyMd" color={MUTED}>
-            {item.dateLabel}
-          </AppText>
+          {item.dateLabel ? (
+            <AppText variant="bodyMd" color={colors.muted} raw>
+              {item.dateLabel}
+            </AppText>
+          ) : null}
         </View>
         <Pressable accessibilityRole="button" style={styles.moreHit}>
-          <Ionicons name="ellipsis-vertical" size={18} color={MUTED} />
+          <Ionicons name="ellipsis-vertical" size={18} color={colors.muted} />
         </Pressable>
       </View>
 
@@ -123,18 +115,21 @@ function ReviewCard({
             key={`${item.id}-star-${index}`}
             name={index < item.rating ? 'star' : 'star-outline'}
             size={18}
-            color={index < item.rating ? STAR : HAIRLINE}
+            color={index < item.rating ? colors.tertiaryContainer : colors.outlineVariant}
           />
         ))}
       </View>
 
-      <AppText
-        variant="bodyMd"
-        color={item.struck ? MUTED : INK}
-        style={[styles.quote, item.struck && styles.struck]}
-      >
-        “{vm.t(item.quoteKey)}”
-      </AppText>
+      {item.quoteText ? (
+        <AppText
+          variant="bodyMd"
+          color={item.struck ? colors.muted : colors.ink}
+          style={[styles.quote, item.struck && styles.struck]}
+          raw
+        >
+          {`“${item.quoteText}”`}
+        </AppText>
+      ) : null}
 
       <View
         style={[
@@ -148,10 +143,17 @@ function ReviewCard({
             {vm.t(status.labelKey)}
           </AppText>
         </View>
+        {item.appealStatusLabel ? (
+          <View style={[styles.statusPill, { backgroundColor: colors.primaryContainer }]}>
+            <AppText variant="labelSm" color={colors.primaryOutline} weightOverride="600" raw>
+              {item.appealStatusLabel}
+            </AppText>
+          </View>
+        ) : null}
 
         {item.status === 'rejected' ? (
           <View style={styles.rejectedCopy}>
-            <AppText variant="bodyMd" color={MUTED} style={styles.flex}>
+            <AppText variant="bodyMd" color={colors.muted} style={styles.flex}>
               {vm.t(item.footerKey)}{' '}
               <AppText
                 variant="bodyMd"
@@ -169,14 +171,14 @@ function ReviewCard({
                 onPress={() => vm.onAppeal(item.id)}
                 style={styles.appealHit}
               >
-                <AppText variant="labelMd" color={ACTION} weightOverride="600">
+                <AppText variant="labelMd" color={colors.primary} weightOverride="600">
                   {vm.t('myReviewsAppeal')}
                 </AppText>
               </Pressable>
             ) : null}
           </View>
         ) : (
-          <AppText variant="bodyMd" color={MUTED} style={styles.flex}>
+          <AppText variant="bodyMd" color={colors.muted} style={styles.flex}>
             {vm.t(item.footerKey)}
           </AppText>
         )}
@@ -195,35 +197,35 @@ function statusStyle(status: ReviewStatus): {
     return {
       labelKey: 'myReviewsStatusPublished',
       icon: 'checkmark-circle',
-      color: SUCCESS,
-      fill: SUCCESS_FILL,
+      color: colors.success,
+      fill: colors.successContainer,
     };
   }
   if (status === 'moderation') {
     return {
       labelKey: 'myReviewsStatusModeration',
       icon: 'time-outline',
-      color: ACTION,
+      color: colors.primary,
       fill: PENDING_FILL,
     };
   }
   return {
     labelKey: 'myReviewsStatusRejected',
     icon: 'close-circle',
-    color: DANGER,
-    fill: DANGER_FILL,
+    color: colors.error,
+    fill: colors.errorContainer,
   };
 }
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: PAGE,
+    backgroundColor: colors.page,
   },
   header: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
     paddingHorizontal: spacing.sm,
     paddingBottom: spacing.sm,
   },
@@ -248,9 +250,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   pendingCard: {
-    backgroundColor: SUCCESS_FILL,
+    backgroundColor: colors.successContainer,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
     gap: spacing.md,
@@ -266,9 +268,9 @@ const styles = StyleSheet.create({
     minWidth: 140,
   },
   card: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
     gap: spacing.sm,
@@ -295,16 +297,16 @@ const styles = StyleSheet.create({
   },
   statusBox: {
     marginTop: spacing.xs,
-    backgroundColor: PAGE,
+    backgroundColor: colors.page,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.sm,
     gap: spacing.sm,
   },
   statusBoxRejected: {
-    backgroundColor: DANGER_FILL,
-    borderColor: '#F5C6C2',
+    backgroundColor: colors.errorContainer,
+    borderColor: colors.errorContainer,
   },
   statusPill: {
     alignSelf: 'flex-start',

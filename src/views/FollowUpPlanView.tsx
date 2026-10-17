@@ -14,6 +14,9 @@ import { sheetBottomPadding } from '../utilities/sheetInset';
 
 import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
+import { EmptyState } from '../components/EmptyState';
+import { ErrorState } from '../components/ErrorState';
+import { LoadingState } from '../components/LoadingState';
 import { useConsultationRecordController } from '../controllers/useConsultationRecordController';
 import type {
   FeelingId,
@@ -28,19 +31,9 @@ import { fontFamilyFor } from '../utilities/fonts';
 import { ConsultationRecordView } from './ConsultationRecordView';
 import { PrescriptionView } from './PrescriptionView';
 
-const INK = '#1F1F1F';
-const MUTED = '#595959';
-const HAIRLINE = '#E6E6E6';
-const ACTION = '#2A7BA3';
-const ACTION_OUTLINE = '#276F93';
-const SUCCESS = '#0F7A4E';
-const SUCCESS_FILL = '#E9F5EF';
-const WARN = '#8A5109';
-const WARN_FILL = '#FCF3E4';
-const DANGER = '#A3231A';
-const DANGER_FILL = '#FBEBE9';
-const CHIP_FILL = '#E6F5FE';
-const PLACEHOLDER = '#8A8A8A';
+const WARN = colors.warning;
+const WARN_FILL = colors.warningContainer;
+const PLACEHOLDER = colors.outline;
 
 const FEELINGS: {
   id: FeelingId;
@@ -53,14 +46,14 @@ const FEELINGS: {
     id: 'improved',
     labelKey: 'followUpFeelingImproved',
     icon: 'happy-outline',
-    ink: SUCCESS,
-    fill: SUCCESS_FILL,
+    ink: colors.success,
+    fill: colors.successContainer,
   },
   {
     id: 'same',
     labelKey: 'followUpFeelingSame',
     icon: 'remove-outline',
-    ink: MUTED,
+    ink: colors.muted,
     fill: colors.page,
   },
   {
@@ -74,8 +67,8 @@ const FEELINGS: {
     id: 'returned',
     labelKey: 'followUpFeelingReturned',
     icon: 'alert-circle-outline',
-    ink: DANGER,
-    fill: DANGER_FILL,
+    ink: colors.error,
+    fill: colors.errorContainer,
   },
 ];
 
@@ -127,11 +120,11 @@ export function FollowUpPlanView({
             onPress={vm.onBack}
             style={styles.iconHit}
           >
-            <Ionicons name="arrow-back" size={24} color={INK} />
+            <Ionicons name="arrow-back" size={24} color={colors.ink} />
           </Pressable>
           <AppText
             variant="headlineMd"
-            color={INK}
+            color={colors.ink}
             style={styles.headerTitle}
             numberOfLines={1}
           >
@@ -146,11 +139,11 @@ export function FollowUpPlanView({
               <Ionicons
                 name={vm.remindersOn ? 'notifications' : 'notifications-outline'}
                 size={22}
-                color={ACTION}
+                color={colors.primary}
               />
               {vm.remindersOn ? <View style={styles.bellDot} /> : null}
             </View>
-            <AppText variant="labelSm" color={MUTED}>
+            <AppText variant="labelSm" color={colors.muted}>
               {vm.t(vm.remindersOn ? 'followUpRemindersOn' : 'followUpRemindersOff')}
             </AppText>
           </Pressable>
@@ -168,15 +161,25 @@ export function FollowUpPlanView({
         <View style={styles.card}>
           <View style={styles.planRow}>
             <View style={styles.flex}>
-              <AppText variant="titleMd" color={INK}>
-                {vm.doctorPlanLine}
-              </AppText>
-              <AppText variant="bodyMd" color={MUTED}>
-                {vm.createdLine}
-              </AppText>
-              <AppText variant="bodyMd" color={INK} weightOverride="600">
-                {vm.patientLine}
-              </AppText>
+              {vm.doctorPlanLine ? (
+                <AppText variant="titleMd" color={colors.ink} raw>
+                  {vm.doctorPlanLine}
+                </AppText>
+              ) : (
+                <AppText variant="titleMd" color={colors.ink}>
+                  {vm.t('followUpTasks')}
+                </AppText>
+              )}
+              {vm.createdLine ? (
+                <AppText variant="bodyMd" color={colors.muted} raw>
+                  {vm.createdLine}
+                </AppText>
+              ) : null}
+              {vm.patientLine ? (
+                <AppText variant="bodyMd" color={colors.ink} weightOverride="600" raw>
+                  {vm.patientLine}
+                </AppText>
+              ) : null}
             </View>
             <ProgressRing
               progress={vm.progress}
@@ -192,22 +195,26 @@ export function FollowUpPlanView({
           <View style={styles.reviewTop}>
             <View style={styles.reviewLeft}>
               <View style={styles.calendarBubble}>
-                <Ionicons name="calendar-outline" size={20} color={ACTION} />
+                <Ionicons name="calendar-outline" size={20} color={colors.primary} />
               </View>
               <View>
-                <AppText variant="labelSm" color={MUTED} style={styles.caps}>
+                <AppText variant="labelSm" color={colors.muted} style={styles.caps}>
                   {vm.t('followUpNextReview')}
                 </AppText>
-                <AppText variant="titleMd" color={INK}>
-                  {vm.nextReviewDate}
-                </AppText>
+                {vm.nextReviewDate ? (
+                  <AppText variant="titleMd" color={colors.ink} raw>
+                    {vm.nextReviewDate}
+                  </AppText>
+                ) : null}
               </View>
             </View>
-            <View style={styles.inDaysPill}>
-              <AppText variant="labelSm" color={ACTION} weightOverride="600">
-                {vm.nextReviewIn}
-              </AppText>
-            </View>
+            {vm.nextReviewIn ? (
+              <View style={styles.inDaysPill}>
+                <AppText variant="labelSm" color={colors.primary} weightOverride="600" raw>
+                  {vm.nextReviewIn}
+                </AppText>
+              </View>
+            ) : null}
           </View>
           <AppButton label={vm.t('followUpBook')} onPress={vm.onBookFollowUp} />
           <AppButton
@@ -218,7 +225,7 @@ export function FollowUpPlanView({
         </View>
 
         <View style={styles.card}>
-          <AppText variant="titleMd" color={INK}>
+          <AppText variant="titleMd" color={colors.ink}>
             {vm.t('followUpFeelingTitle')}
           </AppText>
           <View style={styles.feelingGrid}>
@@ -268,8 +275,8 @@ export function FollowUpPlanView({
           />
           <View style={styles.responseRow}>
             <View style={styles.doctorSees}>
-              <Ionicons name="eye-outline" size={14} color={MUTED} />
-              <AppText variant="labelSm" color={MUTED} style={styles.flex}>
+              <Ionicons name="eye-outline" size={14} color={colors.muted} />
+              <AppText variant="labelSm" color={colors.muted} style={styles.flex}>
                 {vm.t('followUpDoctorSees')}
               </AppText>
             </View>
@@ -288,9 +295,16 @@ export function FollowUpPlanView({
         </View>
 
         <View style={styles.card}>
-          <AppText variant="titleMd" color={INK}>
+          <AppText variant="titleMd" color={colors.ink}>
             {vm.t('followUpTasks')}
           </AppText>
+          {vm.isLoading ? <LoadingState /> : null}
+          {vm.isError ? (
+            <ErrorState message="Could not load follow-up tasks." onRetry={vm.onRetry} />
+          ) : null}
+          {!vm.isLoading && !vm.isError && vm.tasks.length === 0 ? (
+            <EmptyState title="No follow-up tasks" />
+          ) : null}
           {vm.tasks.map((task, index) => (
             <View
               key={task.id}
@@ -310,13 +324,17 @@ export function FollowUpPlanView({
                 ) : null}
               </Pressable>
               <View style={styles.flex}>
-                <AppText variant="bodyMd" color={INK} weightOverride="600">
-                  {vm.t(task.titleKey)}
-                </AppText>
-                <View style={styles.taskMeta}>
-                  <AppText variant="labelSm" color={MUTED}>
-                    {vm.t(task.metaKey)}
+                {task.title ? (
+                  <AppText variant="bodyMd" color={colors.ink} weightOverride="600" raw>
+                    {task.title}
                   </AppText>
+                ) : null}
+                <View style={styles.taskMeta}>
+                  {task.dueLabel ? (
+                    <AppText variant="labelSm" color={colors.muted} raw>
+                      {task.dueLabel}
+                    </AppText>
+                  ) : null}
                   {task.badgeKey && task.badgeTone ? (
                     <View
                       style={[
@@ -333,20 +351,13 @@ export function FollowUpPlanView({
                       </AppText>
                     </View>
                   ) : null}
-                  {task.uploadAction ? (
-                    <Pressable onPress={vm.onUploadPhoto}>
-                      <AppText variant="labelMd" color={ACTION} weightOverride="600">
-                        {vm.t('followUpUpload')}
-                      </AppText>
-                    </Pressable>
-                  ) : null}
                 </View>
               </View>
             </View>
           ))}
         </View>
 
-        <AppText variant="labelSm" color={MUTED} style={styles.linkedLabel}>
+        <AppText variant="labelSm" color={colors.muted} style={styles.linkedLabel}>
           {vm.t('followUpLinked')}
         </AppText>
         <LinkedRow
@@ -394,7 +405,7 @@ function ProgressRing({
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke={HAIRLINE}
+          stroke={colors.outlineVariant}
           strokeWidth={stroke}
           fill="none"
         />
@@ -402,7 +413,7 @@ function ProgressRing({
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke={ACTION}
+          stroke={colors.primary}
           strokeWidth={stroke}
           fill="none"
           strokeDasharray={`${circumference} ${circumference}`}
@@ -413,10 +424,10 @@ function ProgressRing({
         />
       </Svg>
       <View style={styles.ringLabel}>
-        <AppText variant="labelSm" color={ACTION} weightOverride="600">
+        <AppText variant="labelSm" color={colors.primary} weightOverride="600">
           {doneLabel}
         </AppText>
-        <AppText variant="labelSm" color={MUTED}>
+        <AppText variant="labelSm" color={colors.muted}>
           {doneCaption}
         </AppText>
       </View>
@@ -438,33 +449,33 @@ function LinkedRow({
   return (
     <Pressable accessibilityRole="button" onPress={onPress} style={styles.linkedCard}>
       <View style={styles.linkedIcon}>
-        <Ionicons name={icon} size={18} color={ACTION} />
+        <Ionicons name={icon} size={18} color={colors.primary} />
       </View>
       <View style={styles.flex}>
-        <AppText variant="bodyMd" color={INK} weightOverride="600">
+        <AppText variant="bodyMd" color={colors.ink} weightOverride="600">
           {title}
         </AppText>
-        <AppText variant="labelSm" color={MUTED}>
+        <AppText variant="labelSm" color={colors.muted}>
           {meta}
         </AppText>
       </View>
-      <Ionicons name="chevron-forward" size={20} color={MUTED} />
+      <Ionicons name="chevron-forward" size={20} color={colors.muted} />
     </Pressable>
   );
 }
 
 function badgeFill(tone: FollowUpTaskBadgeTone): string {
-  if (tone === 'success') return SUCCESS_FILL;
-  if (tone === 'danger') return DANGER_FILL;
+  if (tone === 'success') return colors.successContainer;
+  if (tone === 'danger') return colors.errorContainer;
   if (tone === 'warn') return WARN_FILL;
   return colors.page;
 }
 
 function badgeInk(tone: FollowUpTaskBadgeTone): string {
-  if (tone === 'success') return SUCCESS;
-  if (tone === 'danger') return DANGER;
+  if (tone === 'success') return colors.success;
+  if (tone === 'danger') return colors.error;
   if (tone === 'warn') return WARN;
-  return MUTED;
+  return colors.muted;
 }
 
 const styles = StyleSheet.create({
@@ -475,7 +486,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   headerRow: {
     minHeight: 56,
@@ -507,7 +518,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: radii.full,
-    backgroundColor: ACTION,
+    backgroundColor: colors.primary,
   },
   body: {
     padding: spacing.lg,
@@ -516,7 +527,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
     gap: spacing.md,
@@ -564,7 +575,7 @@ const styles = StyleSheet.create({
   inDaysPill: {
     borderRadius: radii.full,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     backgroundColor: colors.page,
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
@@ -580,7 +591,7 @@ const styles = StyleSheet.create({
     minHeight: 96,
     borderRadius: radii.sm,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
@@ -588,7 +599,7 @@ const styles = StyleSheet.create({
   },
   feelingSelected: {
     borderWidth: 2,
-    borderColor: ACTION,
+    borderColor: colors.primary,
   },
   feelingCheck: {
     position: 'absolute',
@@ -597,7 +608,7 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     borderRadius: radii.full,
-    backgroundColor: ACTION,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -605,11 +616,11 @@ const styles = StyleSheet.create({
     minHeight: 88,
     borderRadius: radii.sm,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     backgroundColor: colors.page,
     padding: spacing.md,
     fontSize: 14,
-    color: INK,
+    color: colors.ink,
   },
   responseRow: {
     flexDirection: 'row',
@@ -638,21 +649,21 @@ const styles = StyleSheet.create({
   },
   taskBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   checkbox: {
     width: 22,
     height: 22,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: MUTED,
+    borderColor: colors.muted,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 2,
   },
   checkboxOn: {
-    backgroundColor: ACTION,
-    borderColor: ACTION,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   taskMeta: {
     flexDirection: 'row',
@@ -677,7 +688,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
     minHeight: layout.listRowMinHeight,

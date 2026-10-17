@@ -77,13 +77,16 @@ export function SignInView({
           { paddingBottom: sheetBottomPadding(insets, spacing.xl) },
         ]}
       >
+        <View style={styles.heroBadge}>
+          <Ionicons name="shield-checkmark" size={22} color={colors.primary} />
+        </View>
         <View style={styles.copy}>
-          <AppText variant="headlineMd" color="#000000" style={styles.center}>
+          <AppText variant="headlineMd" color={colors.ink} style={styles.center}>
             {t('signInTitle')}
           </AppText>
           <AppText
             variant="bodyMd"
-            color={colors.onSurfaceVariant}
+            color={colors.muted}
             style={styles.center}
           >
             {t('signInSubtitle')}
@@ -399,6 +402,16 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     gap: spacing.lg,
   },
+  heroBadge: {
+    alignSelf: 'center',
+    width: 56,
+    height: 56,
+    borderRadius: radii.full,
+    backgroundColor: colors.primaryContainer,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xs,
+  },
   copy: {
     alignItems: 'center',
     gap: spacing.sm,
@@ -415,10 +428,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
-    backgroundColor: colors.card,
+    backgroundColor: colors.inputFill,
     borderWidth: 1,
-    borderColor: colors.outlineVariant,
-    borderRadius: radii.sm,
+    borderColor: colors.outline,
+    borderRadius: radii.default,
     gap: spacing.sm,
   },
   inputWrapError: {
@@ -548,7 +561,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
   },
   countryOptionSelected: {
-    backgroundColor: '#EBF4F8',
+    backgroundColor: colors.primaryContainer,
   },
   countryOptionName: {
     flex: 1,

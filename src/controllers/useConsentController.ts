@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Alert } from 'react-native';
 
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
@@ -108,6 +109,17 @@ export function useConsentController({
 
       setTogglingConsentId(consentTypeId);
 
+      // B-021 — Caregiver is managed via Caregiver APIs, never Consents Grant.
+      if ((item.code || '').toLowerCase() === 'caregiver') {
+        Alert.alert(
+          'Caregiver',
+          item.manageLink
+            ? 'Manage caregiver access from the Caregiver page.'
+            : 'Caregiver access is managed separately.',
+        );
+        return;
+      }
+
       if (!item.granted) {
         // Switch ON -> Call Grant API
         try {
@@ -126,10 +138,20 @@ export function useConsentController({
             ),
           );
         } catch (error) {
+          const err = error as {
+            status?: number;
+            data?: { code?: string; message?: string };
+          };
+          const message =
+            err?.data?.message ||
+            (err?.status === 409
+              ? 'This consent must be managed from the Caregiver page.'
+              : 'Could not update consent.');
           console.error(
             `[POST Grant Consent] Error for consentTypeId ${consentTypeId}:`,
             error,
           );
+          Alert.alert('Consent', message);
         } finally {
           setTogglingConsentId(null);
         }

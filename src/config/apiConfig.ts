@@ -1,8 +1,10 @@
 import Constants from 'expo-constants';
 
+/** Single New API origin for every patient-app HTTP call. */
+export const API_BASE_URL = 'https://devapi.homeocentrum.com/';
+
 const configuredBaseUrl: string =
-  Constants.expoConfig?.extra?.apiBaseUrl ||
-  'https://devmaigrationapi.homeocentrum.com/';
+  Constants.expoConfig?.extra?.apiBaseUrl || API_BASE_URL;
 
 const normalizedBaseUrl = configuredBaseUrl.endsWith('/')
   ? configuredBaseUrl
@@ -10,12 +12,13 @@ const normalizedBaseUrl = configuredBaseUrl.endsWith('/')
 
 /**
  * API configuration for the Patient Mobile App.
- * Uses devmaigrationapi.homeocentrum.com as the primary backend host.
+ * One host only: https://devapi.homeocentrum.com/
  */
 export const API_CONFIG = {
   environment: __DEV__ ? 'development' : 'production',
+  /** @deprecated Same origin as `new` — kept so legacyBaseApi still resolves. */
   legacy: {
-    baseUrl: 'https://devapi1.homeocentrum.com/',
+    baseUrl: normalizedBaseUrl,
   },
   new: {
     baseUrl: normalizedBaseUrl,
@@ -24,4 +27,3 @@ export const API_CONFIG = {
 } as const;
 
 export type ApiTarget = keyof Pick<typeof API_CONFIG, 'legacy' | 'new'>;
-

@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sheetBottomPadding } from '../utilities/sheetInset';
+import { colors } from '../theme/colors';
 
 import { AppButton } from '../components/AppButton';
 import { AppSwitch } from '../components/AppSwitch';
@@ -18,19 +19,7 @@ import type { RateConsultationViewModel } from '../controllers/useRateConsultati
 import { radii } from '../theme/radii';
 import { spacing } from '../theme/spacing';
 
-const INK = '#1F1F1F';
-const MUTED = '#595959';
-const HAIRLINE = '#DDDFE2';
-const PAGE = '#F5F6F7';
-const CARD = '#FFFFFF';
-const ACTION = '#2A7BA3';
-const ICON_CYAN = '#5CCEF7';
-const SUCCESS = '#0F7A4E';
-const SUCCESS_FILL = '#E9F5EF';
-const CHIP_FILL = '#E6F5FE';
-const CHIP_BORDER = '#3AA9E0';
-const STAR = '#F2C14E';
-
+const CHIP_BORDER = colors.secondary;
 export function RateConsultationView(vm: RateConsultationViewModel) {
   const insets = useSafeAreaInsets();
 
@@ -48,11 +37,11 @@ export function RateConsultationView(vm: RateConsultationViewModel) {
             onPress={vm.onClose}
             style={styles.iconHit}
           >
-            <Ionicons name="close" size={24} color={INK} />
+            <Ionicons name="close" size={24} color={colors.ink} />
           </Pressable>
           <AppText
             variant="headlineMd"
-            color={INK}
+            color={colors.ink}
             style={styles.headerTitle}
             numberOfLines={2}
           >
@@ -75,19 +64,19 @@ export function RateConsultationView(vm: RateConsultationViewModel) {
             <Image source={images.doctorPortrait} style={styles.avatar} />
             <View style={styles.flex}>
               <View style={styles.nameRow}>
-                <AppText variant="labelMd" color={INK} weightOverride="600" style={styles.flex}>
+                <AppText variant="labelMd" color={colors.ink} weightOverride="600" style={styles.flex}>
                   {vm.doctorName}
                 </AppText>
-                <Ionicons name="checkmark-circle" size={18} color={SUCCESS} />
+                <Ionicons name="checkmark-circle" size={18} color={colors.success} />
               </View>
-              <AppText variant="bodyMd" color={MUTED} style={styles.mtXs}>
+              <AppText variant="bodyMd" color={colors.muted} style={styles.mtXs}>
                 {vm.consultMeta}
               </AppText>
             </View>
           </View>
           <View style={styles.verifiedPill}>
-            <Ionicons name="shield-checkmark-outline" size={14} color={SUCCESS} />
-            <AppText variant="labelSm" color={SUCCESS} weightOverride="600">
+            <Ionicons name="shield-checkmark-outline" size={14} color={colors.success} />
+            <AppText variant="labelSm" color={colors.success} weightOverride="600">
               {vm.t('rateVerifiedConsultation')}
             </AppText>
           </View>
@@ -100,7 +89,7 @@ export function RateConsultationView(vm: RateConsultationViewModel) {
             onSelect={vm.onSelectOverall}
           />
           {vm.overallLabel ? (
-            <AppText variant="headlineMd" color={INK} style={styles.center}>
+            <AppText variant="headlineMd" color={colors.ink} style={styles.center}>
               {vm.overallLabel}
             </AppText>
           ) : null}
@@ -113,7 +102,7 @@ export function RateConsultationView(vm: RateConsultationViewModel) {
             <View key={aspect.id}>
               {index > 0 ? <View style={styles.aspectDivider} /> : null}
               <View style={styles.aspectRow}>
-                <AppText variant="bodyMd" color={INK} style={styles.flex}>
+                <AppText variant="bodyMd" color={colors.ink} style={styles.flex}>
                   {vm.t(aspect.labelKey)}
                 </AppText>
                 <StarRow
@@ -139,7 +128,7 @@ export function RateConsultationView(vm: RateConsultationViewModel) {
               >
                 <AppText
                   variant="bodyMd"
-                  color={selected ? INK : MUTED}
+                  color={selected ? colors.ink : colors.muted}
                   weightOverride={selected ? '600' : undefined}
                 >
                   {vm.t(tag.labelKey)}
@@ -154,7 +143,7 @@ export function RateConsultationView(vm: RateConsultationViewModel) {
             value={vm.reviewText}
             onChangeText={vm.onChangeReviewText}
             placeholder={vm.t('rateReviewPlaceholder')}
-            placeholderTextColor={MUTED}
+            placeholderTextColor={colors.muted}
             multiline
             textAlignVertical="top"
             style={styles.reviewInput}
@@ -168,26 +157,26 @@ export function RateConsultationView(vm: RateConsultationViewModel) {
             onPress={vm.onVoiceInput}
             style={styles.micHit}
           >
-            <Ionicons name="mic-outline" size={22} color={ACTION} />
+            <Ionicons name="mic-outline" size={22} color={colors.primary} />
           </Pressable>
-          <AppText variant="labelSm" color={MUTED}>
+          <AppText variant="labelSm" color={colors.muted}>
             {`${vm.reviewText.length} / ${vm.reviewMax}`}
           </AppText>
         </View>
 
         <View style={styles.guidance}>
-          <Ionicons name="information-circle" size={18} color={ICON_CYAN} />
-          <AppText variant="bodyMd" color={MUTED} style={styles.flex}>
+          <Ionicons name="information-circle" size={18} color={colors.iconFill} />
+          <AppText variant="bodyMd" color={colors.muted} style={styles.flex}>
             {vm.t('rateGuidance')}
           </AppText>
         </View>
 
         <View style={styles.identityCard}>
           <View style={styles.flex}>
-            <AppText variant="labelMd" color={INK} weightOverride="600">
+            <AppText variant="labelMd" color={colors.ink} weightOverride="600">
               {vm.postAsName}
             </AppText>
-            <AppText variant="bodyMd" color={MUTED}>
+            <AppText variant="bodyMd" color={colors.muted}>
               {vm.t('ratePrivacyNote')}
             </AppText>
           </View>
@@ -198,10 +187,10 @@ export function RateConsultationView(vm: RateConsultationViewModel) {
         </View>
 
         <View style={styles.complaintBlock}>
-          <AppText variant="labelMd" color={INK} weightOverride="600">
+          <AppText variant="labelMd" color={colors.ink} weightOverride="600">
             {vm.t('rateComplaintTitle')}
           </AppText>
-          <AppText variant="bodyMd" color={MUTED}>
+          <AppText variant="bodyMd" color={colors.muted}>
             {vm.t('rateComplaintBody')}
           </AppText>
           <AppButton
@@ -218,10 +207,15 @@ export function RateConsultationView(vm: RateConsultationViewModel) {
           { paddingBottom: sheetBottomPadding(insets, spacing.md) },
         ]}
       >
+        {vm.submitError ? (
+          <AppText variant="bodyMd" color={colors.error} raw>
+            {vm.submitError}
+          </AppText>
+        ) : null}
         <AppButton
           label={vm.t('rateSubmit')}
           onPress={vm.onSubmit}
-          disabled={vm.overallRating < 1}
+          disabled={!vm.canSubmit}
         />
       </View>
     </View>
@@ -246,18 +240,18 @@ function ReviewSubmittedView({
           onPress={vm.onClose}
           style={styles.iconHit}
         >
-          <Ionicons name="close" size={24} color={INK} />
+          <Ionicons name="close" size={24} color={colors.ink} />
         </Pressable>
       </View>
 
       <View style={styles.submittedBody}>
         <View style={styles.successCircle}>
-          <Ionicons name="checkmark-circle" size={64} color={SUCCESS} />
+          <Ionicons name="checkmark-circle" size={64} color={colors.success} />
         </View>
-        <AppText variant="headlineLg" color={INK} style={styles.center}>
+        <AppText variant="headlineLg" color={colors.ink} style={styles.center}>
           {vm.t('rateThankYou')}
         </AppText>
-        <AppText variant="bodyLg" color={MUTED} style={styles.center}>
+        <AppText variant="bodyLg" color={colors.muted} style={styles.center}>
           {vm.t('rateThankYouBody')}
         </AppText>
         <AppButton
@@ -265,11 +259,13 @@ function ReviewSubmittedView({
           onPress={vm.onSeeReviews}
           style={styles.seeReviewsBtn}
         />
-        <View style={styles.reviewIdPill}>
-          <AppText variant="labelSm" color={MUTED}>
-            {vm.t('rateReviewId').replace('{id}', vm.reviewId)}
-          </AppText>
-        </View>
+        {vm.reviewId ? (
+          <View style={styles.reviewIdPill}>
+            <AppText variant="labelSm" color={colors.muted}>
+              {vm.t('rateReviewId').replace('{id}', vm.reviewId)}
+            </AppText>
+          </View>
+        ) : null}
       </View>
 
       <View style={{ height: Math.max(insetsBottom, spacing.lg) }} />
@@ -299,7 +295,7 @@ function StarRow({
           <Ionicons
             name={star <= value ? 'star' : 'star-outline'}
             size={size}
-            color={star <= value ? STAR : HAIRLINE}
+            color={star <= value ? colors.tertiaryContainer : colors.outlineVariant}
           />
         </Pressable>
       ))}
@@ -310,12 +306,12 @@ function StarRow({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: PAGE,
+    backgroundColor: colors.page,
   },
   header: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
     paddingHorizontal: spacing.sm,
     paddingBottom: spacing.sm,
   },
@@ -340,9 +336,9 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   card: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
     gap: spacing.sm,
@@ -357,8 +353,8 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: 28,
     borderWidth: 1,
-    borderColor: HAIRLINE,
-    backgroundColor: PAGE,
+    borderColor: colors.outlineVariant,
+    backgroundColor: colors.page,
   },
   flex: {
     flex: 1,
@@ -376,7 +372,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: SUCCESS_FILL,
+    backgroundColor: colors.successContainer,
     borderRadius: radii.full,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -401,7 +397,7 @@ const styles = StyleSheet.create({
   },
   hairline: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
   },
   aspectRow: {
     flexDirection: 'row',
@@ -411,7 +407,7 @@ const styles = StyleSheet.create({
   },
   aspectDivider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
     marginVertical: spacing.sm,
   },
   tagWrap: {
@@ -425,18 +421,18 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: radii.full,
     borderWidth: 1,
-    borderColor: HAIRLINE,
-    backgroundColor: CARD,
+    borderColor: colors.outlineVariant,
+    backgroundColor: colors.card,
     justifyContent: 'center',
   },
   tagOn: {
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     borderColor: CHIP_BORDER,
   },
   reviewBox: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: MUTED,
+    borderColor: colors.muted,
     borderRadius: radii.default,
     minHeight: 120,
   },
@@ -444,7 +440,7 @@ const styles = StyleSheet.create({
     minHeight: 120,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
-    color: INK,
+    color: colors.ink,
     fontSize: 16,
     lineHeight: 24,
   },
@@ -464,16 +460,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
-    backgroundColor: PAGE,
+    backgroundColor: colors.page,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
   },
   identityCard: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
     flexDirection: 'row',
@@ -484,21 +480,21 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingTop: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
   },
   footer: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderTopWidth: 1,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
   },
   submittedRoot: {
-    backgroundColor: PAGE,
+    backgroundColor: colors.page,
   },
   submittedHeader: {
     paddingHorizontal: spacing.sm,
@@ -514,7 +510,7 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: SUCCESS_FILL,
+    backgroundColor: colors.successContainer,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.sm,
@@ -525,9 +521,9 @@ const styles = StyleSheet.create({
   },
   reviewIdPill: {
     marginTop: spacing.md,
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.full,
     paddingHorizontal: 16,
     paddingVertical: 6,

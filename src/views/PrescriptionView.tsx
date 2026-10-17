@@ -17,14 +17,6 @@ import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
 import { layout, spacing } from '../theme/spacing';
 
-const INK = '#1F1F1F';
-const MUTED = '#595959';
-const HAIRLINE = '#E6E6E6';
-const ACTION = '#2A7BA3';
-const ACTION_OUTLINE = '#276F93';
-const SUCCESS = '#0F7A4E';
-const SUCCESS_FILL = '#E9F5EF';
-
 export function PrescriptionView(vm: PrescriptionViewModel) {
   const insets = useSafeAreaInsets();
 
@@ -38,11 +30,11 @@ export function PrescriptionView(vm: PrescriptionViewModel) {
             onPress={vm.onBack}
             style={styles.iconHit}
           >
-            <Ionicons name="arrow-back" size={24} color={INK} />
+            <Ionicons name="arrow-back" size={24} color={colors.ink} />
           </Pressable>
           <AppText
             variant="headlineMd"
-            color={INK}
+            color={colors.ink}
             style={styles.headerTitle}
             numberOfLines={1}
           >
@@ -53,14 +45,14 @@ export function PrescriptionView(vm: PrescriptionViewModel) {
             onPress={vm.onShare}
             style={styles.iconHit}
           >
-            <Ionicons name="share-outline" size={22} color={INK} />
+            <Ionicons name="share-outline" size={22} color={colors.ink} />
           </Pressable>
           <Pressable
             accessibilityRole="button"
             onPress={vm.onDownload}
             style={styles.iconHit}
           >
-            <Ionicons name="download-outline" size={22} color={INK} />
+            <Ionicons name="download-outline" size={22} color={colors.ink} />
           </Pressable>
         </View>
       </View>
@@ -78,8 +70,8 @@ export function PrescriptionView(vm: PrescriptionViewModel) {
         ]}
       >
         <View style={styles.statusBanner}>
-          <Ionicons name="checkmark-circle" size={20} color={SUCCESS} />
-          <AppText variant="bodyMd" color={SUCCESS} style={styles.flex}>
+          <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+          <AppText variant="bodyMd" color={colors.success} style={styles.flex}>
             {vm.t('rxStatusBanner')}
           </AppText>
         </View>
@@ -88,14 +80,14 @@ export function PrescriptionView(vm: PrescriptionViewModel) {
           <View style={styles.docCard}>
             <View style={styles.docHeader}>
               <View style={styles.flex}>
-                <AppText variant="headlineMd" color={INK}>
+                <AppText variant="headlineMd" color={colors.ink}>
                   HelloHomeo
                 </AppText>
-                <AppText variant="labelSm" color={MUTED}>
+                <AppText variant="labelSm" color={colors.muted}>
                   {vm.t('rxNumber')}
                 </AppText>
               </View>
-              <AppText variant="bodyMd" color={MUTED}>
+              <AppText variant="bodyMd" color={colors.muted}>
                 {vm.t('rxDate')}
               </AppText>
             </View>
@@ -104,15 +96,15 @@ export function PrescriptionView(vm: PrescriptionViewModel) {
               <Image source={images.doctorPortrait} style={styles.avatar} />
               <View style={styles.flex}>
                 <View style={styles.doctorNameRow}>
-                  <AppText variant="titleMd" color={INK} style={styles.flex}>
+                  <AppText variant="titleMd" color={colors.ink} style={styles.flex}>
                     {vm.t('searchResultAnjaliName')}
                   </AppText>
-                  <Ionicons name="checkmark-circle" size={18} color={SUCCESS} />
+                  <Ionicons name="checkmark-circle" size={18} color={colors.success} />
                 </View>
-                <AppText variant="bodyMd" color={MUTED}>
+                <AppText variant="bodyMd" color={colors.muted}>
                   {vm.t('rxDoctorCredentials')}
                 </AppText>
-                <AppText variant="labelSm" color={MUTED}>
+                <AppText variant="labelSm" color={colors.muted}>
                   {vm.t('rxDoctorCouncil')}
                 </AppText>
               </View>
@@ -126,15 +118,15 @@ export function PrescriptionView(vm: PrescriptionViewModel) {
             </View>
 
             <View style={styles.medsHeader}>
-              <Ionicons name="document-text-outline" size={22} color={INK} />
-              <AppText variant="titleMd" color={INK}>
+              <Ionicons name="document-text-outline" size={22} color={colors.ink} />
+              <AppText variant="titleMd" color={colors.ink}>
                 {vm.t('rxMedicinesHeading')}
               </AppText>
             </View>
 
             {vm.medicines.map((med) => (
               <View key={med.nameKey} style={styles.medCard}>
-                <AppText variant="bodyLg" color={INK} weightOverride="600">
+                <AppText variant="bodyLg" color={colors.ink} weightOverride="600">
                   {vm.t(med.nameKey)}
                 </AppText>
                 <View style={styles.medGrid}>
@@ -155,14 +147,14 @@ export function PrescriptionView(vm: PrescriptionViewModel) {
 
             <View style={styles.adviceBox}>
               <View style={styles.adviceHeader}>
-                <Ionicons name="bulb-outline" size={20} color={INK} />
-                <AppText variant="bodyLg" color={INK} weightOverride="600">
+                <Ionicons name="bulb-outline" size={20} color={colors.ink} />
+                <AppText variant="bodyLg" color={colors.ink} weightOverride="600">
                   {vm.t('rxAdviceHeading')}
                 </AppText>
               </View>
               {vm.adviceKeys.map((key) => (
                 <View key={key} style={styles.adviceRow}>
-                  <AppText variant="bodyMd" color={MUTED}>
+                  <AppText variant="bodyMd" color={colors.muted}>
                     {'\u2022  '}
                     {vm.t(key)}
                   </AppText>
@@ -172,7 +164,7 @@ export function PrescriptionView(vm: PrescriptionViewModel) {
 
             <View style={styles.signatureBlock}>
               <View style={styles.flex}>
-                <AppText variant="labelSm" color={MUTED}>
+                <AppText variant="labelSm" color={colors.muted}>
                   {vm.t('rxSignedAt')}
                 </AppText>
                 <Pressable
@@ -180,17 +172,17 @@ export function PrescriptionView(vm: PrescriptionViewModel) {
                   onPress={vm.onVerify}
                   style={styles.verifyRow}
                 >
-                  <AppText variant="labelSm" color={ACTION} weightOverride="600">
+                  <AppText variant="labelSm" color={colors.primary} weightOverride="600">
                     {vm.t('rxVerify')}
                   </AppText>
-                  <Ionicons name="open-outline" size={14} color={ACTION} />
+                  <Ionicons name="open-outline" size={14} color={colors.primary} />
                 </Pressable>
               </View>
               <View style={styles.signatureRight}>
-                <AppText variant="headlineMd" color={ACTION} style={styles.signatureScript}>
+                <AppText variant="headlineMd" color={colors.primary} style={styles.signatureScript}>
                   Dr. Anjali Deshmukh
                 </AppText>
-                <AppText variant="bodyMd" color={INK} weightOverride="600">
+                <AppText variant="bodyMd" color={colors.ink} weightOverride="600">
                   {vm.t('searchResultAnjaliName')}
                 </AppText>
               </View>
@@ -206,19 +198,19 @@ export function PrescriptionView(vm: PrescriptionViewModel) {
             label={vm.t('rxDownloadPdf')}
             variant="secondary"
             onPress={vm.onDownload}
-            icon={<Ionicons name="download-outline" size={20} color={ACTION_OUTLINE} />}
+            icon={<Ionicons name="download-outline" size={20} color={colors.primaryOutline} />}
           />
           <AppButton
             label={vm.t('rxShare')}
             variant="secondary"
             onPress={vm.onShare}
-            icon={<Ionicons name="share-outline" size={20} color={ACTION_OUTLINE} />}
+            icon={<Ionicons name="share-outline" size={20} color={colors.primaryOutline} />}
           />
 
           <View style={styles.versionStrip}>
             <View style={styles.versionLeft}>
-              <Ionicons name="time-outline" size={18} color={MUTED} />
-              <AppText variant="bodyMd" color={MUTED} style={styles.flex}>
+              <Ionicons name="time-outline" size={18} color={colors.muted} />
+              <AppText variant="bodyMd" color={colors.muted} style={styles.flex}>
                 {vm.t('rxVersionStrip')}
               </AppText>
             </View>
@@ -227,7 +219,7 @@ export function PrescriptionView(vm: PrescriptionViewModel) {
               onPress={vm.onOpenVersionHistory}
               style={styles.versionLink}
             >
-              <AppText variant="labelMd" color={ACTION} weightOverride="600">
+              <AppText variant="labelMd" color={colors.primary} weightOverride="600">
                 {vm.t('rxVersionHistory')}
               </AppText>
             </Pressable>
@@ -241,10 +233,10 @@ export function PrescriptionView(vm: PrescriptionViewModel) {
 function PatientField({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.patientField}>
-      <AppText variant="labelSm" color={MUTED}>
+      <AppText variant="labelSm" color={colors.muted}>
         {label}
       </AppText>
-      <AppText variant="bodyMd" color={INK} weightOverride="600">
+      <AppText variant="bodyMd" color={colors.ink} weightOverride="600">
         {value}
       </AppText>
     </View>
@@ -262,10 +254,10 @@ function MedField({
 }) {
   return (
     <View style={styles.medField}>
-      <AppText variant="labelSm" color={MUTED}>
+      <AppText variant="labelSm" color={colors.muted}>
         {label}
       </AppText>
-      <AppText variant="bodyMd" color={alert ? colors.error : INK}>
+      <AppText variant="bodyMd" color={alert ? colors.error : colors.ink}>
         {value}
       </AppText>
     </View>
@@ -280,7 +272,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   headerRow: {
     minHeight: 48,
@@ -305,9 +297,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: SUCCESS_FILL,
+    backgroundColor: colors.successContainer,
     borderBottomWidth: 1,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
@@ -318,7 +310,7 @@ const styles = StyleSheet.create({
   docCard: {
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.lg,
     gap: spacing.lg,
@@ -328,7 +320,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
     paddingBottom: spacing.md,
   },
   doctorBox: {
@@ -337,7 +329,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     backgroundColor: colors.surfaceContainerLow,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     padding: spacing.md,
   },
@@ -345,9 +337,9 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: radii.full,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
   },
   doctorNameRow: {
     flexDirection: 'row',
@@ -358,7 +350,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     borderBottomWidth: 1,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
     paddingBottom: spacing.md,
     rowGap: spacing.md,
   },
@@ -374,7 +366,7 @@ const styles = StyleSheet.create({
   },
   medCard: {
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     padding: spacing.md,
     gap: spacing.sm,
@@ -393,7 +385,7 @@ const styles = StyleSheet.create({
   adviceBox: {
     backgroundColor: colors.surfaceContainerLow,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     padding: spacing.md,
     gap: spacing.sm,
@@ -408,7 +400,7 @@ const styles = StyleSheet.create({
   },
   signatureBlock: {
     borderTopWidth: 1,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
     paddingTop: spacing.md,
     flexDirection: 'row',
     alignItems: 'flex-end',
@@ -435,7 +427,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,

@@ -7,6 +7,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaModal } from '../components/SafeAreaModal';
+import { colors } from '../theme/colors';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -20,20 +21,9 @@ import { radii } from '../theme/radii';
 import { spacing } from '../theme/spacing';
 import { sheetBottomPadding } from '../utilities/sheetInset';
 
-const INK = '#1F1F1F';
-const MUTED = '#595959';
-const HAIRLINE = '#DDDFE2';
-const PAGE = '#F5F6F7';
-const CARD = '#FFFFFF';
-const ACTION = '#2A7BA3';
-const ACTION_OUTLINE = '#276F93';
-const SUCCESS = '#0F7A4E';
-const SUCCESS_FILL = '#E9F5EF';
-const DANGER = '#A3231A';
-const DANGER_FILL = '#FBEBE9';
-const ASTRO = '#6B3FA0';
-const ASTRO_FILL = '#F3EEFA';
-const NEUTRAL_FILL = '#F2F2F2';
+const ASTRO = colors.astro;
+const ASTRO_FILL = colors.astroContainer;
+const NEUTRAL_FILL = colors.surfaceVariant;
 
 type DataRight = {
   id: string;
@@ -84,9 +74,9 @@ export function ConsentCentreView(vm: ConsentCentreViewModel) {
             onPress={vm.onBack}
             style={styles.iconHit}
           >
-            <Ionicons name="arrow-back" size={24} color={INK} />
+            <Ionicons name="arrow-back" size={24} color={colors.ink} />
           </Pressable>
-          <AppText variant="headlineMd" color={INK} style={styles.headerTitle}>
+          <AppText variant="headlineMd" color={colors.ink} style={styles.headerTitle}>
             {vm.t('consentCentreTitle')}
           </AppText>
           <Pressable
@@ -95,7 +85,7 @@ export function ConsentCentreView(vm: ConsentCentreViewModel) {
             onPress={vm.onHelp}
             style={styles.iconHit}
           >
-            <Ionicons name="help-circle-outline" size={22} color={INK} />
+            <Ionicons name="help-circle-outline" size={22} color={colors.ink} />
           </Pressable>
         </View>
       </View>
@@ -108,14 +98,14 @@ export function ConsentCentreView(vm: ConsentCentreViewModel) {
         ]}
       >
         <View style={styles.explainer}>
-          <Ionicons name="shield-checkmark-outline" size={22} color={SUCCESS} />
-          <AppText variant="bodyMd" color={INK} style={styles.flex}>
+          <Ionicons name="shield-checkmark-outline" size={22} color={colors.success} />
+          <AppText variant="bodyMd" color={colors.ink} style={styles.flex}>
             {vm.t('consentCentreIntro')}
           </AppText>
         </View>
 
         <View style={styles.memberRow}>
-          <AppText variant="labelMd" color={MUTED}>
+          <AppText variant="labelMd" color={colors.muted}>
             {vm.t('consentCentreShowingFor')}
           </AppText>
           <Pressable
@@ -123,16 +113,16 @@ export function ConsentCentreView(vm: ConsentCentreViewModel) {
             onPress={vm.onOpenMemberPicker}
             style={styles.memberBtn}
           >
-            <AppText variant="labelMd" color={ACTION} weightOverride="600">
+            <AppText variant="labelMd" color={colors.primary} weightOverride="600">
               {vm.memberLabel}
             </AppText>
-            <Ionicons name="chevron-down" size={16} color={ACTION} />
+            <Ionicons name="chevron-down" size={16} color={colors.primary} />
           </Pressable>
         </View>
 
         <AppText
           variant="labelSm"
-          color={MUTED}
+          color={colors.muted}
           weightOverride="600"
           style={styles.sectionLabel}
         >
@@ -141,11 +131,11 @@ export function ConsentCentreView(vm: ConsentCentreViewModel) {
 
         {vm.isLoading && vm.consents.length === 0 ? (
           <View style={styles.loaderWrap}>
-            <ActivityIndicator size="large" color={ACTION} />
+            <ActivityIndicator size="large" color={colors.primary} />
           </View>
         ) : vm.isError && vm.consents.length === 0 ? (
           <View style={styles.errorWrap}>
-            <AppText variant="bodyMd" color={DANGER}>
+            <AppText variant="bodyMd" color={colors.error}>
               Failed to load consents.
             </AppText>
             <Pressable
@@ -153,7 +143,7 @@ export function ConsentCentreView(vm: ConsentCentreViewModel) {
               onPress={vm.onRetry}
               style={styles.retryBtn}
             >
-              <AppText variant="labelMd" color={ACTION} weightOverride="600">
+              <AppText variant="labelMd" color={colors.primary} weightOverride="600">
                 Retry
               </AppText>
             </Pressable>
@@ -174,7 +164,7 @@ export function ConsentCentreView(vm: ConsentCentreViewModel) {
 
         <AppText
           variant="labelSm"
-          color={MUTED}
+          color={colors.muted}
           weightOverride="600"
           style={styles.sectionLabel}
         >
@@ -195,24 +185,24 @@ export function ConsentCentreView(vm: ConsentCentreViewModel) {
               <Ionicons
                 name={right.icon}
                 size={22}
-                color={right.danger ? DANGER : ACTION}
+                color={right.danger ? colors.error : colors.primary}
               />
               <View style={styles.flex}>
                 <AppText
                   variant="labelMd"
-                  color={right.danger ? DANGER : INK}
+                  color={right.danger ? colors.error : colors.ink}
                   weightOverride="600"
                 >
                   {vm.t(right.titleKey)}
                 </AppText>
-                <AppText variant="bodyMd" color={MUTED}>
+                <AppText variant="bodyMd" color={colors.muted}>
                   {vm.t(right.bodyKey)}
                 </AppText>
-                <AppText variant="labelSm" color={MUTED}>
+                <AppText variant="labelSm" color={colors.muted}>
                   {vm.t('consentCentreRespondDays')}
                 </AppText>
               </View>
-              <Ionicons name="chevron-forward" size={18} color={MUTED} />
+              <Ionicons name="chevron-forward" size={18} color={colors.muted} />
             </Pressable>
           ))}
         </View>
@@ -222,11 +212,11 @@ export function ConsentCentreView(vm: ConsentCentreViewModel) {
           onPress={vm.onOpenRequest}
           style={styles.requestBanner}
         >
-          <Ionicons name="time-outline" size={22} color={SUCCESS} />
-          <AppText variant="labelMd" color={INK} style={styles.flex}>
+          <Ionicons name="time-outline" size={22} color={colors.success} />
+          <AppText variant="labelMd" color={colors.ink} style={styles.flex}>
             {vm.t('consentCentreOpenRequest')}
           </AppText>
-          <Ionicons name="chevron-forward" size={18} color={MUTED} />
+          <Ionicons name="chevron-forward" size={18} color={colors.muted} />
         </Pressable>
 
         <Pressable
@@ -235,14 +225,14 @@ export function ConsentCentreView(vm: ConsentCentreViewModel) {
           style={styles.historyCard}
         >
           <View style={styles.flex}>
-            <AppText variant="labelMd" color={INK} weightOverride="600">
+            <AppText variant="labelMd" color={colors.ink} weightOverride="600">
               {vm.t('consentCentreHistory')}
             </AppText>
-            <AppText variant="bodyMd" color={MUTED}>
+            <AppText variant="bodyMd" color={colors.muted}>
               {vm.t('consentCentreHistoryBody')}
             </AppText>
           </View>
-          <Ionicons name="chevron-forward" size={18} color={MUTED} />
+          <Ionicons name="chevron-forward" size={18} color={colors.muted} />
         </Pressable>
       </ScrollView>
 
@@ -307,25 +297,25 @@ function ConsentCard({
         <View style={styles.flex}>
           <AppText
             variant="titleMd"
-            color={muted ? MUTED : astro ? ASTRO : INK}
+            color={muted ? colors.muted : astro ? ASTRO : colors.ink}
             weightOverride="600"
           >
             {title}
           </AppText>
           {body ? (
-            <AppText variant="bodyMd" color={MUTED} style={styles.mtXs}>
+            <AppText variant="bodyMd" color={colors.muted} style={styles.mtXs}>
               {body}
             </AppText>
           ) : null}
           {meta ? (
-            <AppText variant="labelSm" color={MUTED} style={styles.mtXs}>
+            <AppText variant="labelSm" color={colors.muted} style={styles.mtXs}>
               {meta}
             </AppText>
           ) : null}
         </View>
         {isToggling ? (
           <View style={styles.switchLoader}>
-            <ActivityIndicator size="small" color={ACTION} />
+            <ActivityIndicator size="small" color={colors.primary} />
           </View>
         ) : onToggle ? (
           <AppSwitch value={Boolean(value)} onValueChange={onToggle} />
@@ -346,10 +336,10 @@ function ConsentCard({
                 variant="labelSm"
                 color={
                   badgeTone === 'danger'
-                    ? DANGER
+                    ? colors.error
                     : badgeTone === 'astro'
                       ? ASTRO
-                      : MUTED
+                      : colors.muted
                 }
                 weightOverride="600"
               >
@@ -361,7 +351,7 @@ function ConsentCard({
             <Pressable accessibilityRole="link" onPress={onLink}>
               <AppText
                 variant="labelMd"
-                color={ACTION_OUTLINE}
+                color={colors.primaryOutline}
                 weightOverride="600"
                 style={styles.link}
               >
@@ -374,14 +364,14 @@ function ConsentCard({
 
       {warning ? (
         <View style={styles.warnRow}>
-          <Ionicons name="alert-circle-outline" size={14} color={DANGER} />
-          <AppText variant="labelSm" color={DANGER} style={styles.flex}>
+          <Ionicons name="alert-circle-outline" size={14} color={colors.error} />
+          <AppText variant="labelSm" color={colors.error} style={styles.flex}>
             {warning}
           </AppText>
         </View>
       ) : null}
       {note ? (
-        <AppText variant="labelSm" color={MUTED}>
+        <AppText variant="labelSm" color={colors.muted}>
           {note}
         </AppText>
       ) : null}
@@ -407,7 +397,7 @@ function MemberPickerSheet({ vm }: { vm: ConsentCentreViewModel }) {
           ]}
         >
           <View style={styles.sheetHandle} />
-          <AppText variant="titleMd" color={INK} style={styles.sheetTitle}>
+          <AppText variant="titleMd" color={colors.ink} style={styles.sheetTitle}>
             {vm.t('consentCentreShowingFor')}
           </AppText>
           {vm.members.map((member) => {
@@ -421,14 +411,14 @@ function MemberPickerSheet({ vm }: { vm: ConsentCentreViewModel }) {
               >
                 <AppText
                   variant="bodyLg"
-                  color={INK}
+                  color={colors.ink}
                   weightOverride={selected ? '600' : undefined}
                   style={styles.flex}
                 >
                   {vm.t(member.labelKey)}
                 </AppText>
                 {selected ? (
-                  <Ionicons name="checkmark" size={20} color={ACTION} />
+                  <Ionicons name="checkmark" size={20} color={colors.primary} />
                 ) : null}
               </Pressable>
             );
@@ -442,12 +432,12 @@ function MemberPickerSheet({ vm }: { vm: ConsentCentreViewModel }) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: PAGE,
+    backgroundColor: colors.page,
   },
   header: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
     paddingHorizontal: spacing.sm,
     paddingBottom: spacing.sm,
   },
@@ -475,10 +465,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
-    backgroundColor: SUCCESS_FILL,
+    backgroundColor: colors.successContainer,
     borderRadius: radii.default,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     padding: spacing.md,
   },
   flex: {
@@ -490,7 +480,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingBottom: spacing.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   memberBtn: {
     minHeight: 40,
@@ -505,9 +495,9 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   card: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
     gap: spacing.sm,
@@ -517,7 +507,7 @@ const styles = StyleSheet.create({
   },
   cardAstro: {
     backgroundColor: ASTRO_FILL,
-    borderColor: '#D4C4E8',
+    borderColor: colors.astroContainer,
   },
   cardTop: {
     flexDirection: 'row',
@@ -540,10 +530,10 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   badgeDanger: {
-    backgroundColor: DANGER_FILL,
+    backgroundColor: colors.errorContainer,
   },
   badgeAstro: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: ASTRO,
   },
@@ -556,9 +546,9 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   rightsCard: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     overflow: 'hidden',
   },
@@ -571,15 +561,15 @@ const styles = StyleSheet.create({
   },
   rightRowBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   requestBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: SUCCESS_FILL,
+    backgroundColor: colors.successContainer,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
     minHeight: 56,
@@ -588,9 +578,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
     minHeight: 56,
@@ -604,7 +594,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(31, 31, 31, 0.45)',
   },
   sheet: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderTopLeftRadius: radii.lg,
     borderTopRightRadius: radii.lg,
     paddingHorizontal: spacing.md,
@@ -614,7 +604,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: radii.full,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
     marginTop: spacing.sm,
     marginBottom: spacing.md,
   },
@@ -626,7 +616,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
   },
   loaderWrap: {
     paddingVertical: spacing.xl,

@@ -1,8 +1,15 @@
 import { Alert } from 'react-native';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import {
+  type PatientReminder,
+  useCreateReminderMutation,
+  useDeleteReminderMutation,
+  useGetRemindersQuery,
+  useUpdateReminderMutation,
+} from '../store/api/new/remindersApi';
 
 export type ReminderMemberId = 'aarav' | 'self';
 
@@ -107,54 +114,14 @@ export type RemindersCentreViewModel = {
   onSelectSnooze: (id: ReminderSnoozeId) => void;
   onChangeNotes: (value: string) => void;
   onSaveReminder: () => void;
+  onDeleteReminder: (id: string) => void;
+  editingReminderId: string | null;
 };
 
-const DOCTOR_SEED: DoctorReminderItem[] = [
-  {
-    id: 'med-sulphur',
-    kind: 'done',
-    titleKey: 'remDoctorMedTitle',
-    detailKey: 'remDoctorMedDetail',
-    done: true,
-  },
-  {
-    id: 'diary',
-    kind: 'toggle',
-    titleKey: 'remDoctorDiaryTitle',
-    detailKey: 'remDoctorDiaryDetail',
-    enabled: false,
-  },
-  {
-    id: 'follow-up',
-    kind: 'action',
-    titleKey: 'remDoctorFollowTitle',
-    detailKey: 'remDoctorFollowDetail',
-  },
-  {
-    id: 'pain',
-    kind: 'nav',
-    titleKey: 'remDoctorPainTitle',
-    detailKey: 'remDoctorPainDetail',
-  },
-];
-
-const SELF_CARE_SEED: SelfCareReminderItem[] = [
-  {
-    id: 'window',
-    kind: 'info',
-    titleKey: 'remAstroWindowTitle',
-    detailKey: 'remAstroWindowDetail',
-  },
-  {
-    id: 'dinner',
-    kind: 'toggle',
-    titleKey: 'remAstroDinnerTitle',
-    detailKey: 'remAstroDinnerDetail',
-    enabled: true,
-  },
-];
-
 const DEFAULT_DAYS: ReminderWeekdayId[] = ['m', 't', 'w', 'f'];
+
+/** Stable empty list — inline `= []` would re-trigger effects every render. */
+const EMPTY_REMINDERS: PatientReminder[] = [];
 
 export function useRemindersCentreController({
   onBack,
@@ -164,10 +131,38 @@ export function useRemindersCentreController({
   onBookConsultation?: () => void;
 }): RemindersCentreViewModel {
   const { language, t } = useLocalization();
+  const { data } = useGetRemindersQuery();
+  const apiReminders = data ?? EMPTY_REMINDERS;
+  const [createReminder] = useCreateReminderMutation();
+  const [updateReminder] = useUpdateReminderMutation();
+  const [deleteReminder] = useDeleteReminderMutation();
   const [memberId, setMemberId] = useState<ReminderMemberId>('self');
   const [memberPickerOpen, setMemberPickerOpen] = useState(false);
-  const [doctorItems, setDoctorItems] = useState(DOCTOR_SEED);
-  const [selfCareItems, setSelfCareItems] = useState(SELF_CARE_SEED);
+  const [doctorItems, setDoctorItems] = useState<DoctorReminderItem[]>([]);
+  const [selfCareItems, setSelfCareItems] = useState<SelfCareReminderItem[]>([]);
+  const [editingReminderId, setEditingReminderId] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Wait until the query has a defined payload (including empty list).
+    if (data === undefined) {
+      return;
+    }
+    setDoctorItems(
+      data.map((row) => ({
+        id: String(row.patientReminderId),
+        kind: row.isDone ? ('done' as const) : ('toggle' as const),
+        titleKey: (row.title || '') as TranslationKey,
+        detailKey: (row.timeOfDay ||
+          row.dueAt ||
+          row.kind ||
+          '') as TranslationKey,
+        enabled: !row.isDone,
+        done: row.isDone,
+      })),
+    );
+    // Astro / self-care seeds removed — not returned by Patient/Reminders.
+    setSelfCareItems((prev) => (prev.length === 0 ? prev : []));
+  }, [data]);
   const [quietHoursOn, setQuietHoursOn] = useState(true);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorMode, setEditorMode] = useState<'add' | 'edit'>('add');
@@ -196,23 +191,39 @@ export function useRemindersCentreController({
   const memberLabel =
     members.find((item) => item.id === memberId)?.label ?? t('remMemberSelf');
 
-  const isEmpty = memberId === 'self';
-  const todayDone = 1;
-  const todayTotal = 3;
+  const isEmpty = doctorItems.length === 0;
+  const todayDone = doctorItems.filter((item) => item.done).length;
+  const todayTotal = doctorItems.length;
 
-  const openEditor = (mode: 'add' | 'edit') => {
+  const openEditor = (mode: 'add' | 'edit', reminderId: string | null = null) => {
     setEditorMode(mode);
+    setEditingReminderId(mode === 'edit' ? reminderId : null);
     if (mode === 'edit') {
-      setEditorCategory('medicine');
-      setEditorTitle(t('remEditorTitleDefault'));
+      const apiRow = apiReminders.find(
+        (row) => String(row.patientReminderId) === reminderId,
+      );
+      setEditorCategory((apiRow?.kind as ReminderCategoryId) || 'medicine');
+      setEditorTitle(apiRow?.title ?? t('remEditorTitleDefault'));
       setEditorFrequency('daily');
       setEditorDays(DEFAULT_DAYS);
-      setEditorTimes(['7:00 AM', '2:00 PM']);
-      setEditorNotifyPush(true);
+      setEditorTimes(
+        apiRow?.timeOfDay ? [apiRow.timeOfDay] : ['7:00 AM', '2:00 PM'],
+      );
+      setEditorNotifyPush(apiRow?.notifyPush !== false);
       setEditorNotifySms(false);
-      setEditorNotifyWhatsApp(true);
-      setEditorSnoozeOn(true);
-      setEditorSnooze('5');
+      setEditorNotifyWhatsApp(false);
+      {
+        const snooze = apiRow?.snoozeMinutes;
+        if (snooze == null || snooze <= 0) {
+          setEditorSnoozeOn(false);
+          setEditorSnooze('5');
+        } else {
+          setEditorSnoozeOn(true);
+          const chip: ReminderSnoozeId =
+            snooze <= 5 ? '5' : snooze <= 10 ? '10' : '30';
+          setEditorSnooze(chip);
+        }
+      }
       setEditorNotes('');
     } else {
       setEditorCategory('custom');
@@ -294,18 +305,47 @@ export function useRemindersCentreController({
     onBookConsultation: () => onBookConsultation?.(),
     onOpenPainPoints: () => undefined,
     onMarkMedicineDone: (id) => {
+      const current = doctorItems.find((item) => item.id === id);
+      const nextDone = !(current?.done ?? false);
       setDoctorItems((prev) =>
         prev.map((item) =>
-          item.id === id ? { ...item, done: !item.done, kind: 'done' } : item,
+          item.id === id
+            ? { ...item, done: nextDone, kind: nextDone ? 'done' : 'toggle', enabled: !nextDone }
+            : item,
         ),
       );
+      const apiRow = apiReminders.find(
+        (row) => String(row.patientReminderId) === id,
+      );
+      if (apiRow) {
+        void updateReminder({
+          id: apiRow.patientReminderId,
+          body: {
+            title: apiRow.title,
+            dueAt: apiRow.dueAt,
+            kind: apiRow.kind,
+            timeOfDay: apiRow.timeOfDay,
+            weekdays: apiRow.weekdays,
+            memberPatientId: apiRow.memberPatientId,
+            snoozeMinutes: apiRow.snoozeMinutes ?? null,
+            notifyPush: apiRow.notifyPush ?? true,
+            isDone: nextDone,
+          },
+        })
+          .unwrap()
+          .catch(() => undefined);
+      }
     },
     onViewPastReminders: () => {
       setMemberId('aarav');
     },
+    editingReminderId,
     onAddReminder: () => openEditor('add'),
-    onEditMedicineReminder: (_id: string) => openEditor('edit'),
-    onCloseEditor: () => setEditorOpen(false),
+    onEditMedicineReminder: (id: string) => openEditor('edit', id),
+    onCloseEditor: () => {
+      setEditorOpen(false);
+      setEditingReminderId(null);
+    },
     onSelectCategory: setEditorCategory,
     onChangeTitle: setEditorTitle,
     onSelectFrequency: setEditorFrequency,
@@ -328,6 +368,70 @@ export function useRemindersCentreController({
     onToggleSnooze: () => setEditorSnoozeOn((prev) => !prev),
     onSelectSnooze: setEditorSnooze,
     onChangeNotes: setEditorNotes,
-    onSaveReminder: () => setEditorOpen(false),
+    onDeleteReminder: (id) => {
+      const numericId = Number(id);
+      if (!Number.isFinite(numericId) || numericId <= 0) return;
+      setDoctorItems((prev) => prev.filter((item) => item.id !== id));
+      void deleteReminder(numericId)
+        .unwrap()
+        .catch(() => undefined)
+        .finally(() => {
+          setEditorOpen(false);
+          setEditingReminderId(null);
+        });
+    },
+    onSaveReminder: () => {
+      const title = editorTitle.trim();
+      if (!title) {
+        setEditorOpen(false);
+        setEditingReminderId(null);
+        return;
+      }
+      const due = new Date();
+      due.setHours(due.getHours() + 1, 0, 0, 0);
+      const existing = editingReminderId
+        ? apiReminders.find(
+            (row) => String(row.patientReminderId) === editingReminderId,
+          )
+        : undefined;
+      const finish = () => {
+        setEditorOpen(false);
+        setEditingReminderId(null);
+      };
+      const snoozeMinutes = editorSnoozeOn
+        ? Math.min(1440, Math.max(0, Number(editorSnooze) || 0))
+        : null;
+      if (existing) {
+        void updateReminder({
+          id: existing.patientReminderId,
+          body: {
+            title,
+            dueAt: existing.dueAt || due.toISOString(),
+            kind: editorCategory,
+            timeOfDay: editorTimes[0] ?? null,
+            weekdays: editorDays.join(',') || null,
+            memberPatientId: existing.memberPatientId,
+            snoozeMinutes,
+            notifyPush: editorNotifyPush,
+            isDone: existing.isDone,
+          },
+        })
+          .unwrap()
+          .finally(finish);
+        return;
+      }
+      void createReminder({
+        title,
+        dueAt: due.toISOString(),
+        kind: editorCategory,
+        timeOfDay: editorTimes[0] ?? null,
+        weekdays: editorDays.join(',') || null,
+        snoozeMinutes,
+        notifyPush: editorNotifyPush,
+        isDone: false,
+      })
+        .unwrap()
+        .finally(finish);
+    },
   };
 }

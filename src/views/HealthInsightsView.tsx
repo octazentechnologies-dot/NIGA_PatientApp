@@ -18,29 +18,21 @@ import { radii } from '../theme/radii';
 import { layout, spacing } from '../theme/spacing';
 import { sheetBottomPadding } from '../utilities/sheetInset';
 
-const INK = '#1F1F1F';
-const MUTED = '#595959';
-const HAIRLINE = '#DDDFE2';
-const CHIP_FILL = '#E6F5FE';
-const CHART = '#3AA9E0';
-const ACTION = '#2A7BA3';
-const OUTLINE_ACTION = '#276F93';
-const RX = '#F2C14E';
-const RX_LABEL = '#8A6508';
-const RX_LEGEND = '#B2821E';
-const SUCCESS = '#0F7A4E';
-const SUCCESS_FILL = '#E9F5EF';
-const SUCCESS_BORDER = '#D1EBE0';
-const PAIN = '#E05252';
-const GRID = '#F0F2F4';
-const SAME_FILL = '#F2F2F2';
+const OUTLINE_ACTION = colors.primaryOutline;
+const RX = colors.tertiaryContainer;
+const RX_LABEL = colors.warning;
+const RX_LEGEND = colors.warning;
+const SUCCESS_BORDER = colors.successContainer;
+const PAIN = colors.error;
+const GRID = colors.page;
+const SAME_FILL = colors.surfaceVariant;
 
 const ADHERENCE_COLORS = [
-  HAIRLINE,
-  CHIP_FILL,
-  '#79C5EC',
-  CHART,
-  ACTION,
+  colors.outlineVariant,
+  colors.primaryContainer,
+  colors.secondary,
+  colors.secondary,
+  colors.primary,
 ] as const;
 
 const WEEKDAYS: Parameters<HealthInsightsViewModel['t']>[0][] = [
@@ -66,11 +58,11 @@ export function HealthInsightsView(vm: HealthInsightsViewModel) {
             onPress={vm.onBack}
             style={styles.iconHit}
           >
-            <Ionicons name="arrow-back" size={22} color={INK} />
+            <Ionicons name="arrow-back" size={22} color={colors.ink} />
           </Pressable>
           <AppText
             variant="headlineMd"
-            color={INK}
+            color={colors.ink}
             style={styles.headerTitle}
             numberOfLines={1}
           >
@@ -81,10 +73,10 @@ export function HealthInsightsView(vm: HealthInsightsViewModel) {
             onPress={vm.onOpenMemberPicker}
             style={styles.memberChip}
           >
-            <AppText variant="labelSm" color={INK} weightOverride="600">
+            <AppText variant="labelSm" color={colors.ink} weightOverride="600">
               {vm.memberLabel}
             </AppText>
-            <Ionicons name="chevron-down" size={16} color={MUTED} />
+            <Ionicons name="chevron-down" size={16} color={colors.muted} />
           </Pressable>
           <Pressable
             accessibilityRole="button"
@@ -92,7 +84,7 @@ export function HealthInsightsView(vm: HealthInsightsViewModel) {
             onPress={vm.onShareHeader}
             style={styles.iconHit}
           >
-            <Ionicons name="share-outline" size={22} color={INK} />
+            <Ionicons name="share-outline" size={22} color={colors.ink} />
           </Pressable>
           <Pressable
             accessibilityRole="button"
@@ -100,7 +92,7 @@ export function HealthInsightsView(vm: HealthInsightsViewModel) {
             onPress={vm.onDownloadHeader}
             style={styles.iconHit}
           >
-            <Ionicons name="download-outline" size={22} color={INK} />
+            <Ionicons name="download-outline" size={22} color={colors.ink} />
           </Pressable>
         </View>
       </View>
@@ -129,7 +121,7 @@ export function HealthInsightsView(vm: HealthInsightsViewModel) {
               >
                 <AppText
                   variant="labelSm"
-                  color={on ? INK : MUTED}
+                  color={on ? colors.ink : colors.muted}
                   weightOverride={on ? '600' : '500'}
                 >
                   {vm.t(range.labelKey)}
@@ -140,17 +132,17 @@ export function HealthInsightsView(vm: HealthInsightsViewModel) {
         </ScrollView>
 
         <View style={styles.card}>
-          <AppText variant="bodyLg" color={INK} style={styles.summaryLine}>
+          <AppText variant="bodyLg" color={colors.ink} style={styles.summaryLine}>
             {vm
               .t('insightsSummaryLead')
               .replace('{name}', vm.memberLabel)}
-            <AppText variant="bodyLg" color={INK} weightOverride="600">
+            <AppText variant="bodyLg" color={colors.ink} weightOverride="600">
               {vm.t('insightsSeverityModerate')}
               {vm.t('insightsSummaryTo')}
               {vm.t('insightsSeverityMild')}
             </AppText>
             {vm.t('insightsSummaryLogged')}
-            <AppText variant="bodyLg" color={INK} weightOverride="600">
+            <AppText variant="bodyLg" color={colors.ink} weightOverride="600">
               {vm
                 .t('insightsSummaryDays')
                 .replace('{logged}', String(vm.daysLogged))
@@ -158,14 +150,14 @@ export function HealthInsightsView(vm: HealthInsightsViewModel) {
             </AppText>
             {vm.t('insightsSummaryEnd')}
           </AppText>
-          <AppText variant="labelSm" color={MUTED} style={styles.italic}>
+          <AppText variant="labelSm" color={colors.muted} style={styles.italic}>
             {vm.t('insightsSummaryDisclaimer')}
           </AppText>
         </View>
 
         <View style={styles.card}>
           <View style={styles.chartHead}>
-            <AppText variant="titleMd" color={INK} style={styles.flex}>
+            <AppText variant="titleMd" color={colors.ink} style={styles.flex}>
               {vm.t('insightsSymptomSeverity')}
             </AppText>
             <View style={styles.legendInline}>
@@ -176,8 +168,8 @@ export function HealthInsightsView(vm: HealthInsightsViewModel) {
                 </AppText>
               </View>
               <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: ACTION }]} />
-                <AppText variant="labelSm" color={ACTION}>
+                <View style={[styles.legendDot, { backgroundColor: colors.primary }]} />
+                <AppText variant="labelSm" color={colors.primary}>
                   {vm.t('insightsLegendConsults')}
                 </AppText>
               </View>
@@ -185,7 +177,7 @@ export function HealthInsightsView(vm: HealthInsightsViewModel) {
           </View>
 
           <SeverityChart t={vm.t} />
-          <AppText variant="labelSm" color={MUTED} style={styles.right}>
+          <AppText variant="labelSm" color={colors.muted} style={styles.right}>
             {vm
               .t('insightsChartCaption')
               .replace('{count}', String(vm.daysLogged))}
@@ -206,13 +198,13 @@ export function HealthInsightsView(vm: HealthInsightsViewModel) {
             spark="up"
           />
           <View style={styles.statCard}>
-            <AppText variant="labelSm" color={MUTED}>
+            <AppText variant="labelSm" color={colors.muted}>
               {vm.t('insightsDaysLogged')}
             </AppText>
             <View style={styles.statValueRow}>
-              <AppText variant="titleMd" color={INK}>
+              <AppText variant="titleMd" color={colors.ink}>
                 {vm.daysLogged}
-                <AppText variant="bodyMd" color={MUTED}>
+                <AppText variant="bodyMd" color={colors.muted}>
                   /{vm.daysTotal}
                 </AppText>
               </AppText>
@@ -239,20 +231,20 @@ export function HealthInsightsView(vm: HealthInsightsViewModel) {
         </View>
 
         <View style={styles.card}>
-          <AppText variant="titleMd" color={INK}>
+          <AppText variant="titleMd" color={colors.ink}>
             {vm.t('insightsCorrelation')}
           </AppText>
           <View style={styles.corrRow}>
             <MiniChart
               label={vm.t('insightsCorrSeverity')}
               path="M 0,30 Q 50,40 100,70"
-              stroke={ACTION}
+              stroke={colors.primary}
               borderRight
             />
             <MiniChart
               label={vm.t('insightsCorrSleep')}
               path="M 0,70 Q 50,60 100,20"
-              stroke={CHART}
+              stroke={colors.secondary}
               borderRight
             />
             <MiniChart
@@ -261,18 +253,18 @@ export function HealthInsightsView(vm: HealthInsightsViewModel) {
               stroke={RX}
             />
           </View>
-          <AppText variant="labelSm" color={MUTED} style={styles.italic}>
+          <AppText variant="labelSm" color={colors.muted} style={styles.italic}>
             {vm.t('insightsCorrelationNote')}
           </AppText>
         </View>
 
         <View style={styles.pairRow}>
           <View style={[styles.card, styles.pairCard]}>
-            <AppText variant="titleMd" color={INK}>
+            <AppText variant="titleMd" color={colors.ink}>
               {vm.t('insightsActivePain')}
             </AppText>
             <View style={styles.bodyMap}>
-              <Ionicons name="body-outline" size={64} color={HAIRLINE} />
+              <Ionicons name="body-outline" size={64} color={colors.outlineVariant} />
               <View style={[styles.painDot, styles.painDotTop]} />
               <View style={[styles.painDot, styles.painDotBottom]} />
             </View>
@@ -281,15 +273,15 @@ export function HealthInsightsView(vm: HealthInsightsViewModel) {
               onPress={vm.onViewPainPoints}
               style={styles.linkBtn}
             >
-              <AppText variant="labelSm" color={ACTION} weightOverride="600">
+              <AppText variant="labelSm" color={colors.primary} weightOverride="600">
                 {vm.t('insightsViewPain')}
               </AppText>
-              <Ionicons name="chevron-forward" size={18} color={ACTION} />
+              <Ionicons name="chevron-forward" size={18} color={colors.primary} />
             </Pressable>
           </View>
 
           <View style={[styles.card, styles.pairCard]}>
-            <AppText variant="titleMd" color={INK}>
+            <AppText variant="titleMd" color={colors.ink}>
               {vm.t('insightsAdherence')}
             </AppText>
             <View style={styles.heatGrid}>
@@ -297,7 +289,7 @@ export function HealthInsightsView(vm: HealthInsightsViewModel) {
                 <AppText
                   key={key}
                   variant="labelSm"
-                  color={MUTED}
+                  color={colors.muted}
                   style={styles.heatLabel}
                 >
                   {vm.t(key)}
@@ -321,14 +313,14 @@ export function HealthInsightsView(vm: HealthInsightsViewModel) {
                 />
               ))}
             </View>
-            <AppText variant="labelSm" color={MUTED} style={styles.center}>
+            <AppText variant="labelSm" color={colors.muted} style={styles.center}>
               {vm.t('insightsLoggedByYou')}
             </AppText>
           </View>
         </View>
 
         <View style={styles.card}>
-          <AppText variant="titleMd" color={INK}>
+          <AppText variant="titleMd" color={colors.ink}>
             {vm.t('insightsFollowUpStatus')}
           </AppText>
           <ScrollView
@@ -350,13 +342,13 @@ export function HealthInsightsView(vm: HealthInsightsViewModel) {
                   >
                     <AppText
                       variant="labelSm"
-                      color={item.tone === 'improved' ? SUCCESS : MUTED}
+                      color={item.tone === 'improved' ? colors.success : colors.muted}
                       weightOverride="600"
                     >
                       {vm.t(item.labelKey)}
                     </AppText>
                   </View>
-                  <AppText variant="labelSm" color={MUTED}>
+                  <AppText variant="labelSm" color={colors.muted}>
                     {vm.t(item.dateKey)}
                   </AppText>
                 </View>
@@ -367,12 +359,12 @@ export function HealthInsightsView(vm: HealthInsightsViewModel) {
 
         <View style={styles.card}>
           <View style={styles.disclaimerHead}>
-            <Ionicons name="information-circle-outline" size={20} color={MUTED} />
+            <Ionicons name="information-circle-outline" size={20} color={colors.muted} />
             <View style={styles.flex}>
-              <AppText variant="labelMd" color={INK} weightOverride="600">
+              <AppText variant="labelMd" color={colors.ink} weightOverride="600">
                 {vm.t('insightsDisclaimerTitle')}
               </AppText>
-              <AppText variant="bodyMd" color={MUTED} style={styles.disclaimerBody}>
+              <AppText variant="bodyMd" color={colors.muted} style={styles.disclaimerBody}>
                 {vm.t('insightsDisclaimerBody')}
               </AppText>
             </View>
@@ -398,7 +390,7 @@ export function HealthInsightsView(vm: HealthInsightsViewModel) {
             {vm.t('insightsDownloadPdf')}
           </AppText>
         </Pressable>
-        <AppText variant="labelSm" color={MUTED} style={styles.center}>
+        <AppText variant="labelSm" color={colors.muted} style={styles.center}>
           {vm.t('insightsShareCaption')}
         </AppText>
       </ScrollView>
@@ -428,20 +420,20 @@ function MetricTile({
 
   return (
     <View style={styles.statCard}>
-      <AppText variant="labelSm" color={MUTED}>
+      <AppText variant="labelSm" color={colors.muted}>
         {label}
       </AppText>
       <View style={styles.statValueRow}>
         <View style={styles.statValueGroup}>
-          <AppText variant="titleMd" color={INK}>
+          <AppText variant="titleMd" color={colors.ink}>
             {value}
           </AppText>
-          <AppText variant="labelSm" color={ACTION}>
+          <AppText variant="labelSm" color={colors.primary}>
             {trend === 'down' ? '↓' : '↑'}
           </AppText>
         </View>
         <Svg width={40} height={24} viewBox="0 0 40 24">
-          <Path d={path} fill="none" stroke={CHART} strokeWidth={1.75} />
+          <Path d={path} fill="none" stroke={colors.secondary} strokeWidth={1.75} />
         </Svg>
       </View>
     </View>
@@ -461,7 +453,7 @@ function MiniChart({
 }) {
   return (
     <View style={[styles.miniCol, borderRight && styles.miniBorder]}>
-      <AppText variant="labelSm" color={MUTED} style={styles.center} numberOfLines={1}>
+      <AppText variant="labelSm" color={colors.muted} style={styles.center} numberOfLines={1}>
         {label}
       </AppText>
       <View style={styles.miniPlot}>
@@ -498,7 +490,7 @@ function SeverityChart({ t }: { t: HealthInsightsViewModel['t'] }) {
     <View style={styles.chartWrap}>
       <View style={styles.yAxis}>
         {labels.map((key) => (
-          <AppText key={key} variant="labelSm" color={MUTED} style={styles.yLabel}>
+          <AppText key={key} variant="labelSm" color={colors.muted} style={styles.yLabel}>
             {t(key)}
           </AppText>
         ))}
@@ -520,21 +512,21 @@ function SeverityChart({ t }: { t: HealthInsightsViewModel['t'] }) {
           <Path
             d="M 0,50 Q 20,40 40,60 T 80,75 L 100,80"
             fill="none"
-            stroke={CHART}
+            stroke={colors.secondary}
             strokeWidth={2.5}
             vectorEffect="non-scaling-stroke"
           />
-          <Circle cx={0} cy={50} r={2} fill={ACTION} />
-          <Circle cx={20} cy={40} r={2} fill={ACTION} />
-          <Circle cx={40} cy={60} r={2} fill={ACTION} />
-          <Circle cx={60} cy={65} r={2} fill={ACTION} />
-          <Circle cx={80} cy={75} r={2} fill={ACTION} />
+          <Circle cx={0} cy={50} r={2} fill={colors.primary} />
+          <Circle cx={20} cy={40} r={2} fill={colors.primary} />
+          <Circle cx={40} cy={60} r={2} fill={colors.primary} />
+          <Circle cx={60} cy={65} r={2} fill={colors.primary} />
+          <Circle cx={80} cy={75} r={2} fill={colors.primary} />
           <Circle
             cx={100}
             cy={80}
             r={3.5}
             fill={colors.card}
-            stroke={ACTION}
+            stroke={colors.primary}
             strokeWidth={2}
             vectorEffect="non-scaling-stroke"
           />
@@ -559,13 +551,13 @@ function SeverityChart({ t }: { t: HealthInsightsViewModel['t'] }) {
         <View style={[styles.consultDot, { left: '45%' }]} />
         <View style={[styles.consultDot, { left: '85%' }]} />
         <View style={styles.xAxis}>
-          <AppText variant="labelSm" color={MUTED} style={styles.xLabel}>
+          <AppText variant="labelSm" color={colors.muted} style={styles.xLabel}>
             {t('insightsAxisOct')}
           </AppText>
-          <AppText variant="labelSm" color={MUTED} style={styles.xLabel}>
+          <AppText variant="labelSm" color={colors.muted} style={styles.xLabel}>
             {t('insightsAxisNov')}
           </AppText>
-          <AppText variant="labelSm" color={MUTED} style={styles.xLabel}>
+          <AppText variant="labelSm" color={colors.muted} style={styles.xLabel}>
             {t('insightsAxisDec')}
           </AppText>
         </View>
@@ -592,7 +584,7 @@ function MemberPickerSheet({ vm }: { vm: HealthInsightsViewModel }) {
           ]}
         >
           <View style={styles.sheetHandle} />
-          <AppText variant="titleMd" color={INK} style={styles.sheetTitle}>
+          <AppText variant="titleMd" color={colors.ink} style={styles.sheetTitle}>
             {vm.t('insightsShowingFor')}
           </AppText>
           {vm.members.map((member) => {
@@ -606,14 +598,14 @@ function MemberPickerSheet({ vm }: { vm: HealthInsightsViewModel }) {
               >
                 <AppText
                   variant="bodyLg"
-                  color={INK}
+                  color={colors.ink}
                   weightOverride={selected ? '600' : undefined}
                   style={styles.flex}
                 >
                   {member.label}
                 </AppText>
                 {selected ? (
-                  <Ionicons name="checkmark" size={20} color={ACTION} />
+                  <Ionicons name="checkmark" size={20} color={colors.primary} />
                 ) : null}
               </Pressable>
             );
@@ -632,7 +624,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   headerRow: {
     minHeight: 56,
@@ -660,7 +652,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     borderRadius: radii.full,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     backgroundColor: colors.card,
     marginRight: 2,
   },
@@ -677,20 +669,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderRadius: radii.full,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
   rangeChipOn: {
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     borderWidth: 1.5,
-    borderColor: CHART,
+    borderColor: colors.secondary,
   },
   card: {
     borderRadius: radii.default,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     backgroundColor: colors.card,
     padding: spacing.md,
     gap: spacing.sm,
@@ -748,7 +740,7 @@ const styles = StyleSheet.create({
     flex: 1,
     borderLeftWidth: 1,
     borderBottomWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     position: 'relative',
     marginBottom: 24,
   },
@@ -793,7 +785,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: radii.full,
-    backgroundColor: ACTION,
+    backgroundColor: colors.primary,
     marginLeft: -4,
   },
   xAxis: {
@@ -818,7 +810,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     borderRadius: radii.default,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     backgroundColor: colors.card,
     padding: spacing.md,
     gap: spacing.xs,
@@ -841,14 +833,14 @@ const styles = StyleSheet.create({
     width: 40,
     height: 8,
     borderRadius: radii.full,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
     overflow: 'hidden',
     alignSelf: 'center',
   },
   progressFill: {
     height: '100%',
     borderRadius: radii.full,
-    backgroundColor: ACTION,
+    backgroundColor: colors.primary,
   },
   corrRow: {
     flexDirection: 'row',
@@ -862,13 +854,13 @@ const styles = StyleSheet.create({
   },
   miniBorder: {
     borderRightWidth: 1,
-    borderRightColor: HAIRLINE,
+    borderRightColor: colors.outlineVariant,
   },
   miniPlot: {
     flex: 1,
     borderLeftWidth: 1,
     borderBottomWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     position: 'relative',
   },
   pairRow: {
@@ -936,7 +928,7 @@ const styles = StyleSheet.create({
   followConnector: {
     width: 28,
     height: 2,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
     marginHorizontal: 2,
   },
   followItem: {
@@ -951,12 +943,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   followImproved: {
-    backgroundColor: SUCCESS_FILL,
+    backgroundColor: colors.successContainer,
     borderColor: SUCCESS_BORDER,
   },
   followSame: {
     backgroundColor: SAME_FILL,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
   },
   disclaimerHead: {
     flexDirection: 'row',
@@ -998,7 +990,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: radii.full,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
     marginBottom: spacing.sm,
   },
   sheetTitle: {

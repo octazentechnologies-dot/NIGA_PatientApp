@@ -57,8 +57,8 @@ export function AuthHeader({
           accessibilityLabel={brandName}
         />
         <AppText
-          variant="headlineMd"
-          color="#000000"
+          variant="titleMd"
+          color={colors.ink}
           style={styles.brandName}
           numberOfLines={1}
         >
@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
   brandMark: {
     width: 28,
     height: 28,
-    tintColor: '#000000',
+    tintColor: colors.ink,
   },
   brandName: {
     flexShrink: 1,

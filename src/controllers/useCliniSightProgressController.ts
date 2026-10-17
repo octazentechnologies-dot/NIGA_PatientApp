@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
@@ -28,6 +28,7 @@ export type CliniSightProgressViewModel = {
   chartCaption: string;
   daysLoggedLine: string;
   followUpResponsesLine: string;
+  adherenceLabel: string | null;
   onBack: () => void;
   onToggleLanguage: () => void;
   onSelectMember: () => void;
@@ -53,13 +54,6 @@ const READY_RANGES: CliniSightProgressViewModel['readyRanges'] = [
   { id: 'custom', labelKey: 'cliniSightRangeCustom' },
 ];
 
-const FOLLOW_UPS: FollowUpChip[] = [
-  { id: 'fu1', status: 'improved', dateLabel: 'Oct 12' },
-  { id: 'fu2', status: 'improved', dateLabel: 'Oct 26' },
-  { id: 'fu3', status: 'same', dateLabel: 'Nov 9' },
-  { id: 'fu4', status: 'improved', dateLabel: 'Nov 23' },
-];
-
 export function useCliniSightProgressController({
   onBack,
   onAddTodayEntry,
@@ -70,7 +64,6 @@ export function useCliniSightProgressController({
   onToggleLanguage?: () => void;
 }): CliniSightProgressViewModel {
   const { language, setLanguage, t } = useLocalization();
-  const [hasEnoughData, setHasEnoughData] = useState(false);
   const [emptyRange, setEmptyRange] = useState<EmptyRangeId>('7d');
   const [readyRange, setReadyRange] = useState<ReadyRangeId>('3m');
 
@@ -80,45 +73,50 @@ export function useCliniSightProgressController({
     skip: !isAuthenticated,
   });
 
+  const progress = progressResponse?.data;
+  const seriesCount = progress?.series?.length ?? 0;
+  const visitCount = progress?.visitCount ?? 0;
+  const hasEnoughData = seriesCount > 0 || visitCount > 0;
+
   const userDisplayName =
     authUser?.patientName ||
     [authUser?.firstName, authUser?.lastName].filter(Boolean).join(' ');
-  const memberLabel = userDisplayName || t('diaryMemberAarav');
+  const memberLabel = userDisplayName || t('bookMyself');
 
-  useEffect(() => {
-    if (progressResponse?.data) {
-      const seriesCount = progressResponse.data.series?.length ?? 0;
-      if (seriesCount > 0 || (progressResponse.data.visitCount ?? 0) > 0) {
-        setHasEnoughData(true);
-      }
-    }
-  }, [progressResponse]);
+  const followUpsCompleted =
+    progress?.followUpsCompleted ?? progress?.completedFollowUps ?? 0;
+  const followUpsTotal = progress?.followUpsTotal ?? 0;
+  const openFollowUps = progress?.openFollowUps ?? 0;
 
-  const chartCaption = useMemo(
-    () => {
-      const logged = progressResponse?.data?.series?.length ?? 42;
-      return t('cliniSightChartCaption')
-        .replace('{logged}', String(logged))
-        .replace('{total}', '56');
-    },
-    [t, progressResponse],
-  );
+  const chartCaption = useMemo(() => {
+    if (!hasEnoughData) return '';
+    return t('cliniSightChartCaption')
+      .replace('{logged}', String(seriesCount))
+      .replace('{total}', String(Math.max(seriesCount, visitCount)));
+  }, [hasEnoughData, seriesCount, t, visitCount]);
 
-  const daysLoggedLine = useMemo(
-    () =>
-      t('cliniSightDaysLoggedValue')
-        .replace('{logged}', '42')
-        .replace('{total}', '56'),
-    [t],
-  );
+  const daysLoggedLine = useMemo(() => {
+    if (!hasEnoughData) return '';
+    return t('cliniSightDaysLoggedValue')
+      .replace('{logged}', String(seriesCount))
+      .replace('{total}', String(Math.max(seriesCount, visitCount)));
+  }, [hasEnoughData, seriesCount, t, visitCount]);
 
-  const followUpResponsesLine = useMemo(
-    () =>
-      t('cliniSightFollowUpResponsesValue')
-        .replace('{improved}', '3')
-        .replace('{same}', '1'),
-    [t],
-  );
+  const followUpResponsesLine = useMemo(() => {
+    if (!hasEnoughData) return '';
+    return t('cliniSightFollowUpResponsesValue')
+      .replace('{improved}', String(followUpsCompleted))
+      .replace('{same}', String(openFollowUps));
+  }, [followUpsCompleted, hasEnoughData, openFollowUps, t]);
+
+  const adherenceLabel =
+    // BE-021 — adherencePercent not planned / always null — do not invent.
+    progress?.adherencePercent != null && Number.isFinite(progress.adherencePercent)
+      ? String(progress.adherencePercent)
+      : null;
+
+  // No fabricated follow-up chips — API does not return per-chip rows.
+  const followUps: FollowUpChip[] = [];
 
   return {
     language,
@@ -129,10 +127,11 @@ export function useCliniSightProgressController({
     readyRange,
     emptyRanges: EMPTY_RANGES,
     readyRanges: READY_RANGES,
-    followUps: FOLLOW_UPS,
+    followUps,
     chartCaption,
     daysLoggedLine,
     followUpResponsesLine,
+    adherenceLabel,
     onBack,
     onToggleLanguage: () => {
       if (onToggleLanguage) {
@@ -145,7 +144,6 @@ export function useCliniSightProgressController({
     onSelectEmptyRange: setEmptyRange,
     onSelectReadyRange: setReadyRange,
     onAddTodayEntry: () => {
-      setHasEnoughData(true);
       onAddTodayEntry?.();
     },
     onSeeAllInsights: () => undefined,

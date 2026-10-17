@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import type { ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sheetBottomPadding } from '../utilities/sheetInset';
+import { colors } from '../theme/colors';
 
 import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
@@ -11,20 +11,9 @@ import type { TranslationKey } from '../localization/types';
 import { radii } from '../theme/radii';
 import { spacing } from '../theme/spacing';
 
-const INK = '#1F1F1F';
-const MUTED = '#595959';
-const HAIRLINE = '#DDDFE2';
-const PAGE = '#F5F6F7';
-const CARD = '#FFFFFF';
-const ACTION = '#2A7BA3';
-const ACTION_OUTLINE = '#276F93';
-const SUCCESS = '#0F7A4E';
-const SUCCESS_FILL = '#E9F5EF';
-const SUCCESS_BORDER = '#B8E4D0';
-const WARN = '#8A5109';
-const WARN_FILL = '#FCF3E4';
-const WARN_BORDER = '#F6E0B5';
-const DISABLED_FILL = '#F2F2F2';
+const WARN = colors.warning;
+const WARN_FILL = colors.warningContainer;
+const DISABLED_FILL = colors.surfaceVariant;
 
 export type ClinicCheckInViewModel = {
   t: (key: TranslationKey) => string;
@@ -33,13 +22,14 @@ export type ClinicCheckInViewModel = {
   appointmentWhenLabel: string;
   checkInState: ClinicCheckInState;
   checkedInAtLabel: string;
-  queuePosition: number;
-  waitMinutes: number;
+  queuePosition: number | null;
+  waitMinutes: number | null;
+  readyAtLabel: string | null;
   doctorName: string;
+  checkInBusy?: boolean;
   onBack: () => void;
   onConfirmCheckIn: () => void;
   onTellClinic: () => void;
-  onSelectDemoState: (state: ClinicCheckInState) => void;
 };
 
 export function ClinicCheckInView(vm: ClinicCheckInViewModel) {
@@ -55,9 +45,9 @@ export function ClinicCheckInView(vm: ClinicCheckInViewModel) {
             onPress={vm.onBack}
             style={styles.iconHit}
           >
-            <Ionicons name="arrow-back" size={24} color={INK} />
+            <Ionicons name="arrow-back" size={24} color={colors.ink} />
           </Pressable>
-          <AppText variant="headlineMd" color={INK} style={styles.headerTitle}>
+          <AppText variant="headlineMd" color={colors.ink} style={styles.headerTitle}>
             {vm.t('clinicAptTitle')}
           </AppText>
           <View style={styles.iconHit} />
@@ -71,115 +61,122 @@ export function ClinicCheckInView(vm: ClinicCheckInViewModel) {
           { paddingBottom: 28 + sheetBottomPadding(insets, spacing.md) },
         ]}
       >
-        <AppText variant="headlineLg" color={INK}>
-          {vm.t('clinicCheckInDemoTitle')}
-        </AppText>
-        <AppText variant="bodyMd" color={MUTED}>
-          {vm.t('clinicCheckInDemoBody')}
-        </AppText>
+        {(vm.clinicName || vm.clinicAddress) ? (
+          <View style={styles.clinicCard}>
+            {vm.clinicName ? (
+              <AppText variant="titleMd" color={colors.ink}>
+                {vm.clinicName}
+              </AppText>
+            ) : null}
+            {vm.clinicAddress ? (
+              <AppText variant="bodyMd" color={colors.muted}>
+                {vm.clinicAddress}
+              </AppText>
+            ) : null}
+            {vm.appointmentWhenLabel ? (
+              <AppText variant="bodyMd" color={colors.muted}>
+                {vm.appointmentWhenLabel}
+              </AppText>
+            ) : null}
+          </View>
+        ) : null}
 
-        <StateCard
-          title={vm.t('clinicCheckInVariantEarly')}
-          clinicName={vm.clinicName}
-          clinicAddress={vm.clinicAddress}
-          whenLabel={vm.appointmentWhenLabel}
-          active={vm.checkInState === 'early'}
-          onPress={() => vm.onSelectDemoState('early')}
-        >
+        {vm.checkInState === 'waiting' ? (
+          <View style={styles.waitingBox}>
+            <View style={styles.waitingTop}>
+              <Ionicons name="checkmark-circle" size={22} color={colors.success} />
+              <AppText variant="labelMd" color={colors.success} weightOverride="600">
+                {vm.checkedInAtLabel
+                  ? vm
+                      .t('clinicCheckInCheckedAt')
+                      .replace('{time}', vm.checkedInAtLabel)
+                  : vm.t('clinicCheckInLabel')}
+              </AppText>
+            </View>
+            {vm.queuePosition != null ? (
+              <View style={styles.queueCard}>
+                <View style={styles.queueBadge}>
+                  <AppText variant="headlineMd" color={colors.success}>
+                    {String(vm.queuePosition)}
+                  </AppText>
+                </View>
+                <View style={styles.flex}>
+                  <AppText variant="labelMd" color={colors.ink} weightOverride="600">
+                    {vm
+                      .t('clinicCheckInQueue')
+                      .replace('{n}', String(vm.queuePosition))}
+                  </AppText>
+                  {vm.waitMinutes != null ? (
+                    <AppText variant="bodyMd" color={colors.muted}>
+                      {vm
+                        .t('clinicCheckInWait')
+                        .replace('{minutes}', String(vm.waitMinutes))}
+                    </AppText>
+                  ) : null}
+                </View>
+              </View>
+            ) : null}
+            {vm.readyAtLabel ? (
+              <AppText variant="bodyMd" color={colors.muted}>
+                {vm.readyAtLabel}
+              </AppText>
+            ) : null}
+            {vm.doctorName ? (
+              <AppText variant="bodyMd" color={colors.muted} style={styles.waitingNote}>
+                {vm
+                  .t('clinicCheckInSeatNote')
+                  .replace('{name}', vm.doctorName)}
+              </AppText>
+            ) : null}
+          </View>
+        ) : vm.checkInState === 'early' ? (
           <View style={styles.statusBox}>
-            <Ionicons name="location-outline" size={36} color={MUTED} />
+            <Ionicons name="location-outline" size={36} color={colors.muted} />
             <AppText
               variant="labelSm"
-              color={MUTED}
+              color={colors.muted}
               weightOverride="600"
               style={styles.uppercase}
             >
               {vm.t('clinicCheckInLabel')}
             </AppText>
-            <AppText variant="bodyMd" color={INK} style={styles.center}>
+            <AppText variant="bodyMd" color={colors.ink} style={styles.center}>
               {vm.t('clinicCheckInEarlyBody')}
             </AppText>
             <View style={[styles.checkBtn, styles.checkBtnDisabled]}>
-              <Ionicons name="person-add-outline" size={18} color={MUTED} />
-              <AppText variant="labelMd" color={MUTED} weightOverride="600">
+              <Ionicons name="person-add-outline" size={18} color={colors.muted} />
+              <AppText variant="labelMd" color={colors.muted} weightOverride="600">
                 {vm.t('clinicCheckInCta')}
               </AppText>
             </View>
           </View>
-        </StateCard>
-
-        <StateCard
-          title={vm.t('clinicCheckInVariantWaiting')}
-          clinicName={vm.clinicName}
-          clinicAddress={vm.clinicAddress}
-          whenLabel={vm.appointmentWhenLabel}
-          active={vm.checkInState === 'waiting'}
-          onPress={() => vm.onSelectDemoState('waiting')}
-        >
-          <View style={styles.waitingBox}>
-            <View style={styles.waitingTop}>
-              <Ionicons name="checkmark-circle" size={22} color={SUCCESS} />
-              <AppText variant="labelMd" color={SUCCESS} weightOverride="600">
-                {vm.t('clinicCheckInCheckedAt').replace('{time}', vm.checkedInAtLabel)}
-              </AppText>
-            </View>
-            <View style={styles.queueCard}>
-              <View style={styles.queueBadge}>
-                <AppText variant="headlineMd" color={SUCCESS}>
-                  {String(vm.queuePosition)}
-                </AppText>
-              </View>
-              <View style={styles.flex}>
-                <AppText variant="labelMd" color={INK} weightOverride="600">
-                  {vm
-                    .t('clinicCheckInQueue')
-                    .replace('{n}', String(vm.queuePosition))}
-                </AppText>
-                <AppText variant="bodyMd" color={MUTED}>
-                  {vm
-                    .t('clinicCheckInWait')
-                    .replace('{minutes}', String(vm.waitMinutes))}
-                </AppText>
-              </View>
-            </View>
-            <AppText variant="bodyMd" color={MUTED} style={styles.waitingNote}>
-              {vm
-                .t('clinicCheckInSeatNote')
-                .replace('{name}', vm.doctorName)}
-            </AppText>
-          </View>
-        </StateCard>
-
-        <StateCard
-          title={vm.t('clinicCheckInVariantReady')}
-          clinicName={vm.clinicName}
-          clinicAddress={vm.clinicAddress}
-          whenLabel={vm.appointmentWhenLabel}
-          active={vm.checkInState === 'ready'}
-          onPress={() => vm.onSelectDemoState('ready')}
-        >
+        ) : (
           <View style={styles.statusBox}>
-            <Ionicons name="location" size={36} color={ACTION} />
+            <Ionicons name="location" size={36} color={colors.primary} />
             <AppText
               variant="labelSm"
-              color={MUTED}
+              color={colors.muted}
               weightOverride="600"
               style={styles.uppercase}
             >
               {vm.t('clinicCheckInLabel')}
             </AppText>
-            <AppText variant="bodyMd" color={INK} style={styles.center}>
+            <AppText variant="bodyMd" color={colors.ink} style={styles.center}>
               {vm.t('clinicCheckInReadyBody')}
             </AppText>
             <AppButton
               label={vm.t('clinicCheckInNowCta')}
               onPress={vm.onConfirmCheckIn}
+              disabled={vm.checkInBusy}
               icon={
-                <Ionicons name="person-add-outline" size={18} color="#FFFFFF" />
+                <Ionicons name="person-add-outline" size={18} color={colors.card} />
               }
               style={styles.checkBtnActive}
             />
           </View>
+        )}
+
+        {vm.checkInState === 'ready' || vm.checkInState === 'waiting' ? (
           <View style={styles.lateStrip}>
             <View style={styles.lateLeft}>
               <Ionicons name="time-outline" size={20} color={WARN} />
@@ -190,221 +187,109 @@ export function ClinicCheckInView(vm: ClinicCheckInViewModel) {
             <Pressable
               accessibilityRole="button"
               onPress={vm.onTellClinic}
-              style={styles.tellBtn}
+              style={styles.lateBtn}
             >
-              <AppText variant="labelMd" color={ACTION_OUTLINE} weightOverride="600">
+              <AppText variant="labelMd" color={colors.primary} weightOverride="600">
                 {vm.t('clinicCheckInTellClinic')}
               </AppText>
             </Pressable>
           </View>
-        </StateCard>
+        ) : null}
       </ScrollView>
     </View>
   );
 }
 
-function StateCard({
-  title,
-  clinicName,
-  clinicAddress,
-  whenLabel,
-  active,
-  onPress,
-  children,
-}: {
-  title: string;
-  clinicName: string;
-  clinicAddress: string;
-  whenLabel: string;
-  active: boolean;
-  onPress: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={[styles.stateWrap, active && styles.stateWrapActive]}
-    >
-      <AppText variant="headlineMd" color={INK} style={styles.variantTitle}>
-        {title}
-      </AppText>
-      <View style={styles.card}>
-        <View style={styles.clinicHead}>
-          <View style={styles.storeIcon}>
-            <Ionicons name="storefront-outline" size={22} color={MUTED} />
-          </View>
-          <View style={styles.flex}>
-            <AppText variant="headlineMd" color={INK}>
-              {clinicName}
-            </AppText>
-            <AppText variant="bodyMd" color={MUTED}>
-              {clinicAddress}
-            </AppText>
-            <AppText variant="bodyMd" color={MUTED}>
-              {whenLabel}
-            </AppText>
-          </View>
-        </View>
-        {children}
-      </View>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: PAGE },
+  root: { flex: 1, backgroundColor: colors.page },
   header: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
-    paddingHorizontal: spacing.sm,
+    borderBottomColor: colors.outlineVariant,
+    paddingHorizontal: spacing.md,
     paddingBottom: spacing.sm,
   },
-  headerRow: {
-    minHeight: 48,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    flex: 1,
-    textAlign: 'left',
-  },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  headerTitle: { flex: 1 },
   iconHit: {
     width: 48,
     height: 48,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  body: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.lg,
-    gap: spacing.md,
-  },
-  stateWrap: {
-    gap: spacing.sm,
-  },
-  stateWrapActive: {
-    opacity: 1,
-  },
-  variantTitle: {
-    paddingBottom: spacing.xs,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+  body: { padding: spacing.md, gap: spacing.md },
+  clinicCard: {
+    backgroundColor: colors.card,
+    borderRadius: radii.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.outlineVariant,
+    padding: spacing.md,
+    gap: spacing.xs,
   },
   card: {
-    backgroundColor: CARD,
-    borderWidth: 1,
-    borderColor: HAIRLINE,
-    borderRadius: radii.default,
+    backgroundColor: colors.card,
+    borderRadius: radii.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.outlineVariant,
     padding: spacing.md,
-    gap: spacing.md,
-  },
-  clinicHead: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.md,
-  },
-  storeIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: DISABLED_FILL,
-    alignItems: 'center',
-    justifyContent: 'center',
+    gap: spacing.sm,
   },
   statusBox: {
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: HAIRLINE,
-    borderRadius: radii.default,
-    backgroundColor: PAGE,
-    padding: spacing.md,
+    backgroundColor: colors.card,
+    borderRadius: radii.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.outlineVariant,
+    padding: spacing.lg,
     alignItems: 'center',
     gap: spacing.sm,
-  },
-  uppercase: {
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
   },
   center: { textAlign: 'center' },
+  uppercase: { textTransform: 'uppercase' },
   checkBtn: {
-    width: '100%',
+    marginTop: spacing.sm,
     minHeight: 48,
-    borderRadius: radii.full,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     gap: spacing.sm,
-    marginTop: spacing.xs,
   },
-  checkBtnDisabled: {
-    backgroundColor: DISABLED_FILL,
-  },
-  checkBtnActive: {
-    width: '100%',
-    marginTop: spacing.xs,
-  },
+  checkBtnDisabled: { backgroundColor: DISABLED_FILL },
+  checkBtnActive: { alignSelf: 'stretch', marginTop: spacing.sm },
   waitingBox: {
-    backgroundColor: SUCCESS_FILL,
-    borderWidth: 1,
-    borderColor: SUCCESS_BORDER,
-    borderRadius: radii.default,
+    backgroundColor: colors.successContainer,
+    borderRadius: radii.md,
     padding: spacing.md,
     gap: spacing.md,
   },
-  waitingTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
+  waitingTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   queueCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: CARD,
-    borderWidth: 1,
-    borderColor: HAIRLINE,
-    borderRadius: radii.default,
+    backgroundColor: colors.card,
+    borderRadius: radii.md,
     padding: spacing.md,
   },
   queueBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: SUCCESS_FILL,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  waitingNote: {
-    textAlign: 'center',
-    fontStyle: 'italic',
-  },
-  lateStrip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-    backgroundColor: WARN_FILL,
-    borderWidth: 1,
-    borderColor: WARN_BORDER,
-    borderRadius: radii.default,
-    padding: spacing.md,
-  },
-  lateLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    flexShrink: 1,
-  },
-  tellBtn: {
-    minHeight: 40,
-    paddingHorizontal: 14,
-    borderRadius: radii.full,
-    borderWidth: 1,
-    borderColor: ACTION_OUTLINE,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.successContainer,
     alignItems: 'center',
     justifyContent: 'center',
   },
   flex: { flex: 1 },
+  waitingNote: { marginTop: spacing.xs },
+  lateStrip: {
+    backgroundColor: WARN_FILL,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  lateLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 },
+  lateBtn: { minHeight: 48, justifyContent: 'center', paddingHorizontal: spacing.sm },
 });

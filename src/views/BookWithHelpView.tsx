@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaModal } from '../components/SafeAreaModal';
+import { colors } from '../theme/colors';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -22,17 +23,9 @@ import { radii } from '../theme/radii';
 import { spacing } from '../theme/spacing';
 import { sheetBottomPadding } from '../utilities/sheetInset';
 
-const INK = '#1F1F1F';
-const MUTED = '#595959';
-const HAIRLINE = '#DDDFE2';
-const PAGE = '#F5F6F7';
-const CARD = '#FFFFFF';
-const ACTION = '#2A7BA3';
-const CHIP_FILL = '#E6F5FE';
-const CHIP_BORDER = '#3AA9E0';
-const OUTLINE = '#8A8A8A';
-const ICON_CYAN = '#5CCEF7';
-const WHATSAPP = '#128C7E';
+const CHIP_BORDER = colors.secondary;
+const OUTLINE = colors.outline;
+const WHATSAPP = colors.success;
 
 const CALL_TIMES: { id: CallBackTimeId; labelKey: TranslationKey }[] = [
   { id: 'now', labelKey: 'bookHelpTimeNow' },
@@ -54,11 +47,11 @@ export function BookWithHelpView(vm: BookWithHelpViewModel) {
             onPress={vm.onBack}
             style={styles.iconHit}
           >
-            <Ionicons name="arrow-back" size={24} color={INK} />
+            <Ionicons name="arrow-back" size={24} color={colors.ink} />
           </Pressable>
           <AppText
             variant="headlineMd"
-            color={INK}
+            color={colors.ink}
             style={styles.headerTitle}
             numberOfLines={1}
           >
@@ -77,62 +70,72 @@ export function BookWithHelpView(vm: BookWithHelpViewModel) {
       >
         <View style={styles.introCard}>
           <View style={styles.introIcon}>
-            <Ionicons name="headset" size={26} color={INK} />
+            <Ionicons name="headset" size={26} color={colors.ink} />
             <View style={styles.cyanFill} />
           </View>
-          <AppText variant="bodyMd" color={INK} style={styles.flex}>
+          <AppText variant="bodyMd" color={colors.ink} style={styles.flex}>
             {vm.t('bookHelpIntro')}
           </AppText>
         </View>
 
-        <Pressable
-          accessibilityRole="button"
-          onPress={vm.onCallHelpline}
-          style={styles.channelCard}
-        >
-          <View style={styles.channelIcon}>
-            <Ionicons name="call" size={22} color={INK} />
-          </View>
-          <View style={styles.flex}>
-            <AppText variant="labelMd" color={INK} weightOverride="600">
-              {vm.t('bookHelpCallTitle')}
-            </AppText>
-            <AppText variant="labelSm" color={MUTED}>
-              {vm.t('bookHelpCallMeta')}
-            </AppText>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={MUTED} />
-        </Pressable>
+        {vm.supportUnavailable ? (
+          <AppText variant="bodyMd" color={colors.muted} style={styles.flex} raw>
+            Support contact not available yet
+          </AppText>
+        ) : null}
 
-        <Pressable
-          accessibilityRole="button"
-          onPress={vm.onWhatsApp}
-          style={styles.channelCard}
-        >
-          <View style={[styles.channelIcon, styles.whatsappIcon]}>
-            <Ionicons name="logo-whatsapp" size={22} color={WHATSAPP} />
-          </View>
-          <View style={styles.flex}>
-            <AppText variant="labelMd" color={INK} weightOverride="600">
-              {vm.t('bookHelpWhatsAppTitle')}
-            </AppText>
-            <AppText variant="labelSm" color={MUTED}>
-              {vm.t('bookHelpWhatsAppMeta')}
-            </AppText>
-          </View>
-          <Ionicons name="open-outline" size={20} color={MUTED} />
-        </Pressable>
+        {vm.showCallHelpline ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={vm.onCallHelpline}
+            style={styles.channelCard}
+          >
+            <View style={styles.channelIcon}>
+              <Ionicons name="call" size={22} color={colors.ink} />
+            </View>
+            <View style={styles.flex}>
+              <AppText variant="labelMd" color={colors.ink} weightOverride="600">
+                {vm.t('bookHelpCallTitle')}
+              </AppText>
+              <AppText variant="labelSm" color={colors.muted}>
+                {vm.t('bookHelpCallMeta')}
+              </AppText>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.muted} />
+          </Pressable>
+        ) : null}
+
+        {vm.showWhatsApp ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={vm.onWhatsApp}
+            style={styles.channelCard}
+          >
+            <View style={[styles.channelIcon, styles.whatsappIcon]}>
+              <Ionicons name="logo-whatsapp" size={22} color={WHATSAPP} />
+            </View>
+            <View style={styles.flex}>
+              <AppText variant="labelMd" color={colors.ink} weightOverride="600">
+                {vm.t('bookHelpWhatsAppTitle')}
+              </AppText>
+              <AppText variant="labelSm" color={colors.muted}>
+                {vm.t('bookHelpWhatsAppMeta')}
+              </AppText>
+            </View>
+            <Ionicons name="open-outline" size={20} color={colors.muted} />
+          </Pressable>
+        ) : null}
 
         <View style={styles.formCard}>
           <View style={styles.formHeader}>
             <View style={styles.callbackIcon}>
-              <Ionicons name="call" size={22} color="#FFFFFF" />
+              <Ionicons name="call" size={22} color={colors.card} />
             </View>
             <View style={styles.flex}>
-              <AppText variant="labelMd" color={INK} weightOverride="600">
+              <AppText variant="labelMd" color={colors.ink} weightOverride="600">
                 {vm.t('bookHelpCallbackTitle')}
               </AppText>
-              <AppText variant="labelSm" color={MUTED}>
+              <AppText variant="labelSm" color={colors.muted}>
                 {vm.t('bookHelpCallbackMeta')}
               </AppText>
             </View>
@@ -144,7 +147,7 @@ export function BookWithHelpView(vm: BookWithHelpViewModel) {
                 value={vm.patientName}
                 editable={false}
                 style={styles.input}
-                placeholderTextColor={MUTED}
+                placeholderTextColor={colors.muted}
               />
             </Field>
             <Field label={vm.t('bookHelpMobile')}>
@@ -152,11 +155,11 @@ export function BookWithHelpView(vm: BookWithHelpViewModel) {
                 value={vm.mobileNumber}
                 editable={false}
                 style={styles.input}
-                placeholderTextColor={MUTED}
+                placeholderTextColor={colors.muted}
               />
             </Field>
 
-            <AppText variant="labelSm" color={MUTED}>
+            <AppText variant="labelSm" color={colors.muted}>
               {vm.t('bookHelpBestTime')}
             </AppText>
             <View style={styles.chipRow}>
@@ -171,11 +174,11 @@ export function BookWithHelpView(vm: BookWithHelpViewModel) {
                     style={[styles.chip, on && styles.chipOn]}
                   >
                     {on ? (
-                      <Ionicons name="checkmark" size={14} color={INK} />
+                      <Ionicons name="checkmark" size={14} color={colors.ink} />
                     ) : null}
                     <AppText
                       variant="labelMd"
-                      color={on ? INK : MUTED}
+                      color={on ? colors.ink : colors.muted}
                       weightOverride="600"
                     >
                       {vm.t(item.labelKey)}
@@ -185,7 +188,7 @@ export function BookWithHelpView(vm: BookWithHelpViewModel) {
               })}
             </View>
 
-            <AppText variant="labelSm" color={MUTED}>
+            <AppText variant="labelSm" color={colors.muted}>
               {vm.t('bookHelpNeedLabel')}
             </AppText>
             <Pressable
@@ -193,16 +196,16 @@ export function BookWithHelpView(vm: BookWithHelpViewModel) {
               onPress={vm.onOpenHelpNeedPicker}
               style={styles.selectField}
             >
-              <AppText variant="bodyMd" color={INK} style={styles.flex}>
+              <AppText variant="bodyMd" color={colors.ink} style={styles.flex}>
                 {vm.helpNeedLabel}
               </AppText>
-              <Ionicons name="chevron-down" size={20} color={MUTED} />
+              <Ionicons name="chevron-down" size={20} color={colors.muted} />
             </Pressable>
 
             {vm.submitted ? (
               <View style={styles.successBox}>
-                <Ionicons name="checkmark-circle" size={20} color="#0F7A4E" />
-                <AppText variant="bodyMd" color="#0F7A4E" style={styles.flex}>
+                <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+                <AppText variant="bodyMd" color={colors.success} style={styles.flex}>
                   {vm.t('bookHelpSubmitted')}
                 </AppText>
               </View>
@@ -216,11 +219,11 @@ export function BookWithHelpView(vm: BookWithHelpViewModel) {
         </View>
 
         <View style={styles.disclaimer}>
-          <Ionicons name="information-circle-outline" size={20} color={MUTED} />
-          <AppText variant="labelSm" color={MUTED} style={styles.center}>
+          <Ionicons name="information-circle-outline" size={20} color={colors.muted} />
+          <AppText variant="labelSm" color={colors.muted} style={styles.center}>
             {vm.t('bookHelpDisclaimer')}
           </AppText>
-          <AppText variant="labelSm" color={MUTED} style={styles.center}>
+          <AppText variant="labelSm" color={colors.muted} style={styles.center}>
             {vm.t('bookHelpDisclaimerMr')}
           </AppText>
         </View>
@@ -239,7 +242,7 @@ export function BookWithHelpView(vm: BookWithHelpViewModel) {
               { paddingBottom: sheetBottomPadding(insets, spacing.lg) },
             ]}
           >
-            <AppText variant="headlineMd" color={INK}>
+            <AppText variant="headlineMd" color={colors.ink}>
               {vm.t('bookHelpNeedLabel')}
             </AppText>
             {vm.helpNeedOptions.map((option) => (
@@ -249,11 +252,11 @@ export function BookWithHelpView(vm: BookWithHelpViewModel) {
                 onPress={() => vm.onSelectHelpNeed(option.id)}
                 style={styles.sheetRow}
               >
-                <AppText variant="bodyMd" color={INK} style={styles.flex}>
+                <AppText variant="bodyMd" color={colors.ink} style={styles.flex}>
                   {vm.t(option.labelKey)}
                 </AppText>
                 {option.id === vm.helpNeed ? (
-                  <Ionicons name="checkmark" size={20} color={ACTION} />
+                  <Ionicons name="checkmark" size={20} color={colors.primary} />
                 ) : null}
               </Pressable>
             ))}
@@ -273,7 +276,7 @@ function Field({
 }) {
   return (
     <View style={styles.field}>
-      <AppText variant="labelSm" color={MUTED}>
+      <AppText variant="labelSm" color={colors.muted}>
         {label}
       </AppText>
       {children}
@@ -282,11 +285,11 @@ function Field({
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: PAGE },
+  root: { flex: 1, backgroundColor: colors.page },
   header: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
     paddingHorizontal: spacing.sm,
     paddingBottom: spacing.sm,
   },
@@ -314,9 +317,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.md,
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
   },
@@ -324,14 +327,14 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
   },
   cyanFill: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: ICON_CYAN,
+    backgroundColor: colors.iconFill,
     opacity: 0.35,
   },
   channelCard: {
@@ -339,9 +342,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     minHeight: 88,
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
   },
@@ -349,17 +352,17 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: PAGE,
+    backgroundColor: colors.page,
     alignItems: 'center',
     justifyContent: 'center',
   },
   whatsappIcon: {
-    backgroundColor: '#E8F8F0',
+    backgroundColor: colors.successContainer,
   },
   formCard: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     overflow: 'hidden',
   },
@@ -369,13 +372,13 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     padding: spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   callbackIcon: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: ACTION,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -389,9 +392,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: OUTLINE,
     borderRadius: radii.default,
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     paddingHorizontal: spacing.md,
-    color: INK,
+    color: colors.ink,
     fontSize: 16,
   },
   chipRow: {
@@ -408,11 +411,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: radii.full,
     borderWidth: 1,
-    borderColor: HAIRLINE,
-    backgroundColor: CARD,
+    borderColor: colors.outlineVariant,
+    backgroundColor: colors.card,
   },
   chipOn: {
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     borderColor: CHIP_BORDER,
   },
   selectField: {
@@ -429,16 +432,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: '#E9F5EF',
+    backgroundColor: colors.successContainer,
     borderRadius: radii.default,
     padding: spacing.md,
   },
   disclaimer: {
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
   },
@@ -449,7 +452,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderTopLeftRadius: radii.lg,
     borderTopRightRadius: radii.lg,
     padding: spacing.md,

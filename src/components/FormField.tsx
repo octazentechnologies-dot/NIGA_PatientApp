@@ -147,10 +147,10 @@ const styles = StyleSheet.create({
     minHeight: layout.buttonHeight,
     borderWidth: 1,
     borderColor: colors.outline,
-    borderRadius: radii.sm,
+    borderRadius: radii.default,
     paddingHorizontal: spacing.md,
-    color: colors.onSurface,
-    backgroundColor: colors.card,
+    color: colors.ink,
+    backgroundColor: colors.inputFill,
   },
   inputWithIcon: {
     paddingRight: 44,

@@ -1,15 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import {
-  BOOKING_MEMBERS,
-  DEFAULT_MEMBER_ID,
   DEFAULT_SLOT_ID,
   MONTH_KEYS,
-  PLATFORM_FEE_RUPEES,
-  TAX_RUPEES,
   WEEKDAY_KEYS,
   buildDaysForMonth,
-  consultFeeRupees,
   firstSelectableDay,
   formatRupees,
   resolveBookingMembers,
@@ -19,17 +14,29 @@ import {
   type BookingMember,
   type BookingMonthOption,
   type ConsultMode,
+  type DayStatus,
   type TimeSlot,
 } from '../config/appointmentSlots';
 import { formatBookedOn, slotStartIso } from '../config/bookedAppointments';
-import { getDoctorProfile, type DoctorProfileSeed } from '../config/doctorProfiles';
+import type { DoctorProfileSeed } from '../config/doctorProfiles';
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
 import { useAppSelector } from '../store/hooks';
 import { useGetFamilyQuery } from '../store/api/new/familyApi';
 import { useGetHomeDashboardQuery } from '../store/api/new/homeApi';
-import { useGetDoctorByIdQuery, useGetDoctorFeesQuery } from '../store/api/new/doctorsApi';
-import { useJoinWaitlistMutation } from '../store/api/new/bookingApi';
+import {
+  useGetDoctorByIdQuery,
+  useGetDoctorFeesQuery,
+  useGetDoctorSlotsQuery,
+} from '../store/api/new/doctorsApi';
+import {
+  useBookAsFamilyMutation,
+  useCreateBookingMutation,
+} from '../store/api/new/bookingApi';
+import { useCreateAppointmentRequestMutation } from '../store/api/new/appointmentRequestsApi';
+import { createIdempotencyKey } from '../utilities/idempotency';
+import { formatMoney } from '../utilities/formatters';
+import { extractErrorMessage } from '../store/api/new/newBaseApi';
 
 export type PaymentStatus = 'success' | 'failed' | 'pending';
 
@@ -68,14 +75,27 @@ export type BookAppointmentViewModel = {
   modeConsultLabel: string;
   patientLabel: string;
   doctorFeeLabel: string;
+  /** Empty when platformFee is null — UI must hide the row. */
   platformFeeLabel: string;
   taxesLabel: string;
+  slotsLoading: boolean;
+  slotsEmpty: boolean;
+  bookingError: string | null;
+  holdExpiresAt: string | null;
+  /** From booking create — required for ConsultOrders. */
+  patientAppId: number | null;
+  bookingToken: string | null;
+  payAtClinicEnabled: boolean;
+  /** Server payment order id after Checkout confirm (never a seed). */
+  lastPaymentOrderId: number | null;
+  bookingInFlight: boolean;
   onBack: () => void;
   onCloseReview: () => void;
   onOpenPayment: () => void;
   onClosePayment: () => void;
   onOpenPaymentStatus: (status: PaymentStatus) => void;
   onClosePaymentStatus: () => void;
+  onPaymentConfirmed: (paymentOrderId: number) => void;
   onChooseOtherSlot: () => void;
   onOpenMemberPicker: () => void;
   onCloseMemberPicker: () => void;
@@ -135,70 +155,133 @@ export function useBookAppointmentController({
   onAddMember?: () => void;
 }): BookAppointmentViewModel {
   const { language, t } = useLocalization();
-  const isNumeric = !isNaN(Number(doctorId));
+  const isNumeric = Boolean(doctorId) && /^\d+$/.test(doctorId);
   const { data: doctorDetailResponse } = useGetDoctorByIdQuery(doctorId, {
-    skip: !isNumeric,
+    skip: !isNumeric || !active,
   });
-  const baseProfile = useMemo(() => getDoctorProfile(doctorId), [doctorId]);
+  const emptyShell = useMemo(
+    (): DoctorProfileSeed => ({
+      id: doctorId || '0',
+      initials: 'DR',
+      verified: false,
+      nameKey: '' as TranslationKey,
+      credentialsKey: '' as TranslationKey,
+      experienceKey: '',
+      rating: null,
+      reviewCount: 0,
+      reviewsKey: '' as TranslationKey,
+      consultsKey: '',
+      aboutKey: '',
+      regVerifiedKey: '' as TranslationKey,
+      lastVerifiedKey: '',
+      nextAvailableKey: '',
+      feeKey: '',
+      clinicFeeKey: '',
+      teleFeeLabel: null,
+      clinicFeeLabel: null,
+      registrationNumber: null,
+      passingUniversity: null,
+      photoUrl: null,
+      careNeedKeys: [],
+      languageKeys: [],
+      reviewIds: [],
+      credentialsDetail: { qualifications: [] },
+    }),
+    [doctorId],
+  );
   const profile = useMemo(() => {
-    if (!doctorDetailResponse?.data) return baseProfile;
+    if (!isNumeric || !doctorDetailResponse?.data) return emptyShell;
     const doc = doctorDetailResponse.data;
-    const docName = doc.displayName || 'Doctor';
-    const initials = docName
-      .split(' ')
-      .filter(Boolean)
-      .map((w) => w[0])
-      .join('')
-      .slice(0, 2)
-      .toUpperCase() || baseProfile.initials;
+    const docName = (doc.displayName || '').trim() || 'Doctor';
+    const initials =
+      docName
+        .split(' ')
+        .filter(Boolean)
+        .map((w) => w[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase() || 'DR';
 
-    return {
-      ...baseProfile,
+    const teleFeeLabel = formatMoney(doc.consultFeeTele, 'INR');
+    const clinicFeeLabel = formatMoney(doc.consultFeeInClinic, 'INR');
+    const mapped: DoctorProfileSeed = {
+      ...emptyShell,
       id: String(doc.doctorId),
       nameKey: docName as TranslationKey,
-      credentialsKey: (doc.qualification || t(baseProfile.credentialsKey)) as TranslationKey,
+      credentialsKey: (doc.qualification || '') as TranslationKey,
       initials,
-      verified: doc.isVerified ?? baseProfile.verified,
-      feeKey: doc.consultFeeTele ? (`₹${doc.consultFeeTele}` as TranslationKey) : baseProfile.feeKey,
-      clinicFeeKey: doc.consultFeeInClinic ? (`₹${doc.consultFeeInClinic}` as TranslationKey) : baseProfile.clinicFeeKey,
+      verified: Boolean(doc.verified ?? doc.isVerified),
+      feeKey: (teleFeeLabel || '') as TranslationKey,
+      clinicFeeKey: (clinicFeeLabel || '') as TranslationKey,
+      teleFeeLabel,
+      clinicFeeLabel,
+      registrationNumber: doc.registrationNumber?.trim() || null,
+      passingUniversity: doc.passingUniversity?.trim() || null,
+      photoUrl: doc.photoUrl ?? null,
+      experienceKey: '',
+      languageKeys: [],
+      careNeedKeys: [],
     };
-  }, [baseProfile, doctorDetailResponse?.data, t]);
+    return mapped;
+  }, [emptyShell, doctorDetailResponse?.data, isNumeric]);
+
+  useEffect(() => {
+    if (active && !isNumeric) {
+      onBack();
+    }
+  }, [active, isNumeric, onBack]);
   const today = todayStart();
   const monthOptions = useMemo(() => upcomingMonths(12), []);
-  const [memberId, setMemberId] = useState(DEFAULT_MEMBER_ID);
+  const [memberId, setMemberId] = useState('self');
   const [memberPickerOpen, setMemberPickerOpen] = useState(false);
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | null>(null);
   const [mode, setMode] = useState<ConsultMode>('video');
+  const [bookingError, setBookingError] = useState<string | null>(null);
+  const [holdExpiresAt, setHoldExpiresAt] = useState<string | null>(null);
+  const [patientAppId, setPatientAppId] = useState<number | null>(null);
+  const [bookingToken, setBookingToken] = useState<string | null>(null);
+  const [payAtClinicEnabled, setPayAtClinicEnabled] = useState(false);
+  const [lastPaymentOrderId, setLastPaymentOrderId] = useState<number | null>(
+    null,
+  );
+  const [holdConsultFee, setHoldConsultFee] = useState<number | null>(null);
   const [visibleMonth, setVisibleMonth] = useState<BookingMonthOption>({
     year: today.getFullYear(),
     month: today.getMonth(),
   });
-  const days = useMemo(
+  const calendarDays = useMemo(
     () => buildDaysForMonth(visibleMonth.year, visibleMonth.month),
     [visibleMonth.month, visibleMonth.year],
   );
   const [dayId, setDayId] = useState(
     () => firstSelectableDay(buildDaysForMonth(today.getFullYear(), today.getMonth()))?.id ?? '',
   );
-  const [slotId, setSlotId] = useState<string | null>(DEFAULT_SLOT_ID);
+  const [slotId, setSlotId] = useState<string | null>(null);
 
   useEffect(() => {
-    setMemberId(DEFAULT_MEMBER_ID);
+    setMemberId('self');
     setMode('video');
     setMemberPickerOpen(false);
     setMonthPickerOpen(false);
     setReviewOpen(false);
     setPaymentOpen(false);
     setPaymentStatus(null);
+    setBookingError(null);
+    setHoldExpiresAt(null);
+    setPatientAppId(null);
+    setBookingToken(null);
+    setPayAtClinicEnabled(false);
+    setLastPaymentOrderId(null);
+    setHoldConsultFee(null);
     const nextMonth = { year: today.getFullYear(), month: today.getMonth() };
     setVisibleMonth(nextMonth);
     const nextDays = buildDaysForMonth(nextMonth.year, nextMonth.month);
     const first = firstSelectableDay(nextDays);
     setDayId(first?.id ?? '');
-    setSlotId(first ? firstOpenSlot(first) : null);
+    setSlotId(null);
   }, [doctorId]);
 
   useEffect(() => {
@@ -217,8 +300,98 @@ export function useBookAppointmentController({
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const authUser = useAppSelector((state) => state.auth.user);
   const authMobile = useAppSelector((state) => state.auth.mobile);
-  const [joinWaitlistMutation] = useJoinWaitlistMutation();
+  const bookingSessionId = useAppSelector(
+    (state) => state.auth.bookingSessionId,
+  );
+  const [createAppointmentRequest] = useCreateAppointmentRequestMutation();
+  const [createBookingMutation, { isLoading: createBookingLoading }] =
+    useCreateBookingMutation();
+  const [bookAsFamilyMutation, { isLoading: bookAsFamilyLoading }] =
+    useBookAsFamilyMutation();
+  const bookingInFlight = createBookingLoading || bookAsFamilyLoading;
   const [waitlistJoined, setWaitlistJoined] = useState(false);
+
+  const {
+    data: slotsResponse,
+    isFetching: slotsLoading,
+  } = useGetDoctorSlotsQuery(
+    { doctorId, date: dayId },
+    { skip: !isNumericDoctorId || !dayId || !active },
+  );
+
+  const days = useMemo((): BookingDay[] => {
+    if (!isNumericDoctorId) {
+      // Seed doctor ids — no slots API; show empty slot lists (no fabricated grids).
+      return calendarDays.map((day) => ({
+        ...day,
+        status: (day.status === 'past' || day.status === 'closed'
+          ? day.status
+          : 'open') as DayStatus,
+        morning: [] as TimeSlot[],
+        afternoon: [] as TimeSlot[],
+        evening: [] as TimeSlot[],
+      }));
+    }
+
+    return calendarDays.map((day) => {
+      const isSelected = day.id === dayId;
+      if (!isSelected) {
+        return {
+          ...day,
+          // Drop synthetic full/closed heuristics for API doctors.
+          status: (day.status === 'past' ? day.status : 'open') as DayStatus,
+          morning: [] as TimeSlot[],
+          afternoon: [] as TimeSlot[],
+          evening: [] as TimeSlot[],
+        };
+      }
+
+      const apiSlots = slotsResponse?.data?.slots ?? [];
+      const mapped: TimeSlot[] = apiSlots
+        .filter((slot) => slot.status !== 'break')
+        .map((slot) => {
+          const time = (slot.time || '').slice(0, 5);
+          return {
+            id: time,
+            labelKey: (slot.label || time) as TranslationKey,
+            booked: slot.status !== 'available',
+          };
+        });
+
+      const morning = mapped.filter((s) => {
+        const h = Number(s.id.split(':')[0]);
+        return h < 12;
+      });
+      const afternoon = mapped.filter((s) => {
+        const h = Number(s.id.split(':')[0]);
+        return h >= 12 && h < 17;
+      });
+      const evening = mapped.filter((s) => {
+        const h = Number(s.id.split(':')[0]);
+        return h >= 17;
+      });
+      const anyOpen = mapped.some((s) => !s.booked);
+      const status: DayStatus =
+        mapped.length === 0 ? 'open' : anyOpen ? 'open' : 'full';
+      return {
+        ...day,
+        status,
+        morning,
+        afternoon,
+        evening,
+      };
+    });
+  }, [calendarDays, dayId, isNumericDoctorId, slotsResponse?.data?.slots]);
+
+  useEffect(() => {
+    if (!slotsResponse?.data?.slots || !dayId) {
+      return;
+    }
+    const available = slotsResponse.data.slots.find(
+      (slot) => slot.status === 'available',
+    );
+    setSlotId(available ? available.time.slice(0, 5) : null);
+  }, [dayId, slotsResponse?.data?.slots]);
 
   const { data: homeDashboardResponse } = useGetHomeDashboardQuery(undefined, {
     skip: !isAuthenticated,
@@ -245,48 +418,79 @@ export function useBookAppointmentController({
 
   const handleJoinWaitlist = useCallback(async () => {
     if (waitlistJoined) return;
-    const docIdNum = Number(profile.id) || 104;
-    const phone =
-      authUser?.mobile ||
-      authUser?.mobileNo ||
-      authMobile ||
-      '9876500011';
-    const patientName =
-      authUser?.patientName ||
-      [authUser?.firstName, authUser?.lastName].filter(Boolean).join(' ') ||
-      'Patient';
+    const docIdNum = Number(profile.id);
+    if (!docIdNum) {
+      setBookingError('Doctor id is required to ask for a time.');
+      return;
+    }
+    const requestedDate = selectedDay?.id || dayId || '';
+    if (!requestedDate) {
+      setBookingError('Select a date first.');
+      return;
+    }
+    // Contract §7 — preferred time; use selected slot or midday placeholder.
+    const requestedTime = (slotId || '12:00').slice(0, 5);
 
+    const idempotencyKey = createIdempotencyKey('ar');
     try {
-      await joinWaitlistMutation({
-        doctorId: docIdNum,
-        patientId: authUser?.patientId,
-        requestedDate: selectedDay?.id || dayId || '',
-        consultMode: mode === 'clinic' ? 'InClinic' : 'Tele',
-        contactName: patientName,
-        contactMobile: phone,
+      await createAppointmentRequest({
+        body: {
+          doctorId: docIdNum,
+          requestedDate,
+          requestedTime,
+          consultMode: mode === 'clinic' ? 'InClinic' : 'Tele',
+          reason: 'Request for available time',
+        },
+        idempotencyKey,
       }).unwrap();
       setWaitlistJoined(true);
+      setBookingError(null);
     } catch (err) {
-      console.warn('[POST api/Waitlist/Join] Failed to join waitlist:', err);
+      const e = err as { data?: { code?: string; message?: string } };
+      if (e?.data?.code === 'IDEMPOTENCY_CONFLICT') {
+        setBookingError(
+          e.data.message ||
+            'That request conflicted with a previous attempt. Please try again.',
+        );
+      } else {
+        setBookingError(extractErrorMessage(err));
+      }
     }
   }, [
     waitlistJoined,
     profile.id,
-    authUser,
-    authMobile,
     selectedDay?.id,
     dayId,
+    slotId,
     mode,
-    joinWaitlistMutation,
+    createAppointmentRequest,
   ]);
 
   const member =
     members.find((item) => item.id === memberId) ?? members[0];
   const isFull = selectedDay?.status === 'full';
   const realFee = doctorFeesResponse?.data;
-  const feeLabel = realFee
-    ? formatRupees(mode === 'clinic' ? realFee.inClinicFee : realFee.teleFee, language)
-    : t(mode === 'clinic' ? profile.clinicFeeKey : profile.feeKey);
+  const apiConsultFee =
+    mode === 'clinic' ? realFee?.inClinicFee : realFee?.teleFee;
+  const detailFee =
+    mode === 'clinic'
+      ? doctorDetailResponse?.data?.consultFeeInClinic
+      : doctorDetailResponse?.data?.consultFeeTele;
+  const resolvedFee =
+    holdConsultFee != null
+      ? holdConsultFee
+      : apiConsultFee != null
+        ? apiConsultFee
+        : detailFee != null
+          ? detailFee
+          : null;
+  const feeLabel =
+    formatMoney(resolvedFee, realFee?.currency ?? 'INR') ?? '';
+  const slotsEmpty =
+    isNumericDoctorId &&
+    !slotsLoading &&
+    Boolean(dayId) &&
+    (slotsResponse?.data?.slots?.length ?? 0) === 0;
   const modeLabel = t(
     mode === 'audio'
       ? 'bookAudio'
@@ -311,9 +515,11 @@ export function useBookAppointmentController({
           ? 'reviewChatConsult'
           : 'reviewVideoConsult',
   );
-  const totalRupees = consultFeeRupees(profile.id, mode);
-  const doctorFeeRupees = Math.max(0, totalRupees - PLATFORM_FEE_RUPEES - TAX_RUPEES);
-  const canContinue = Boolean(selectedSlot) && !isFull;
+  const canContinue = Boolean(selectedSlot) && !isFull && !slotsEmpty;
+  const doctorFeeLabel = feeLabel;
+  // Contract: platformFee only from visit/payment — never invent 90.
+  const platformFeeLabel = '';
+  const taxesLabel = '';
   const patientLabel = member.self
     ? member.name
     : member.relationshipName
@@ -385,26 +591,136 @@ export function useBookAppointmentController({
     paymentSummaryLine,
     modeConsultLabel,
     patientLabel,
-    doctorFeeLabel: formatRupees(doctorFeeRupees, language),
-    platformFeeLabel: formatRupees(PLATFORM_FEE_RUPEES, language),
-    taxesLabel: formatRupees(TAX_RUPEES, language),
+    doctorFeeLabel,
+    platformFeeLabel,
+    taxesLabel,
+    slotsLoading,
+    slotsEmpty,
+    bookingError,
+    holdExpiresAt,
+    patientAppId,
+    bookingToken,
+    payAtClinicEnabled,
+    lastPaymentOrderId,
+    bookingInFlight,
     onBack,
     onCloseReview: () => {
       setPaymentStatus(null);
       setPaymentOpen(false);
       setReviewOpen(false);
+      setBookingError(null);
     },
-    onOpenPayment: () => setPaymentOpen(true),
+    onOpenPayment: async () => {
+      if (bookingInFlight || !selectedDay || !selectedSlot) {
+        return;
+      }
+      setBookingError(null);
+      const docIdNum = Number(profile.id);
+      if (!docIdNum) {
+        setBookingError('Doctor id is required.');
+        return;
+      }
+      const phone = authUser?.mobile || authUser?.mobileNo || authMobile;
+      if (!phone) {
+        setBookingError('Mobile number is required.');
+        return;
+      }
+      const patientName =
+        patientFullName ||
+        authUser?.patientName ||
+        [authUser?.firstName, authUser?.lastName].filter(Boolean).join(' ') ||
+        '';
+      const consultMode = mode === 'clinic' ? 'InClinic' : 'Tele';
+      const appointmentDate = selectedDay.id;
+      const appointmentTime = selectedSlot.id;
+
+      try {
+        const memberPatientId = Number(member.id);
+        const isFamilyMember =
+          !member.self && Number.isFinite(memberPatientId) && memberPatientId > 0;
+
+        const applyHold = (data: {
+          patientAppId?: number;
+          bookingToken?: string;
+          holdExpiresAt?: string;
+          consultFee?: number;
+          payAtClinicEnabled?: boolean;
+          payAtClinicAllowed?: boolean;
+        } | null | undefined) => {
+          setPatientAppId(data?.patientAppId ?? null);
+          setBookingToken(data?.bookingToken ?? null);
+          setHoldExpiresAt(data?.holdExpiresAt ?? null);
+          setHoldConsultFee(
+            data?.consultFee != null ? Number(data.consultFee) : null,
+          );
+          setPayAtClinicEnabled(
+            Boolean(data?.payAtClinicEnabled ?? data?.payAtClinicAllowed),
+          );
+        };
+
+        if (isFamilyMember) {
+          const booking = await bookAsFamilyMutation({
+            memberPatientId,
+            doctorId: docIdNum,
+            appointmentDate,
+            appointmentTime,
+            consultMode,
+          }).unwrap();
+          applyHold(booking.data);
+        } else {
+          const booking = await createBookingMutation({
+            doctorId: docIdNum,
+            mobile: phone,
+            patientName: patientName || 'Patient',
+            appointmentDate,
+            appointmentTime,
+            consultMode,
+            visitType: consultMode,
+            bookingSessionId: bookingSessionId ?? undefined,
+            idempotencyKey: createIdempotencyKey(`pa-${docIdNum}`),
+          }).unwrap();
+          applyHold(booking.data);
+        }
+
+        // TODO(PAYMENT): phase2 — ConsultOrders + Verify / webhook (BE-P01). Hold UI only if gateway not ready.
+        setLastPaymentOrderId(null);
+        setPaymentOpen(true);
+        setPaymentStatus(null);
+      } catch (err) {
+        const e = err as { status?: number; data?: { message?: string; code?: string } };
+        if (e?.data?.code === 'IDEMPOTENCY_CONFLICT') {
+          setBookingError(
+            e?.data?.message ||
+              'That booking attempt conflicted. Please try again.',
+          );
+        } else if (e?.status === 409 || e?.data?.code === 'CONFLICT') {
+          setBookingError(
+            e?.data?.message ||
+              'That slot is no longer available. Please choose another time.',
+          );
+        } else {
+          setBookingError(extractErrorMessage(err));
+        }
+      }
+    },
     onClosePayment: () => {
       setPaymentStatus(null);
       setPaymentOpen(false);
     },
     onOpenPaymentStatus: (status) => setPaymentStatus(status),
     onClosePaymentStatus: () => setPaymentStatus(null),
+    onPaymentConfirmed: (paymentOrderId) => {
+      setLastPaymentOrderId(paymentOrderId);
+      setPaymentStatus('success');
+    },
     onChooseOtherSlot: () => {
       setPaymentStatus(null);
       setPaymentOpen(false);
       setReviewOpen(false);
+      setPatientAppId(null);
+      setBookingToken(null);
+      setHoldExpiresAt(null);
+      setLastPaymentOrderId(null);
     },
     onOpenMemberPicker: () => setMemberPickerOpen(true),
     onCloseMemberPicker: () => setMemberPickerOpen(false),

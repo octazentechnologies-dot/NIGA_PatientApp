@@ -42,14 +42,14 @@ export function FirstLaunchView({
         <View style={styles.header}>
           <Image
             source={images.favicon}
-            style={{ width: markSize, height: markSize, tintColor: '#000000' }}
+            style={{ width: markSize, height: markSize, tintColor: colors.ink }}
             resizeMode="contain"
             accessibilityRole="image"
             accessibilityLabel={t('brandName')}
           />
           <AppText
             variant="displayLg"
-            color="#000000"
+            color={colors.ink}
             style={styles.brand}
           >
             {t('brandName')}
@@ -63,7 +63,7 @@ export function FirstLaunchView({
           </AppText>
           <AppText
             variant="bodyLg"
-            color="#000000"
+            color={colors.ink}
             style={styles.headline}
           >
             {t('welcomeHeadline')}
@@ -71,7 +71,7 @@ export function FirstLaunchView({
         </View>
 
         <View style={styles.card}>
-          <AppText variant="titleMd" color="#000000" style={styles.cardTitle}>
+          <AppText variant="titleMd" color={colors.ink} style={styles.cardTitle}>
             {t('chooseLanguageTitle')}
           </AppText>
           <View style={styles.options}>

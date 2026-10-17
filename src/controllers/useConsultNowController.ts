@@ -1,44 +1,37 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import {
-  BOOKING_MEMBERS,
   MONTH_KEYS,
-  PLATFORM_FEE_RUPEES,
-  TAX_RUPEES,
   formatRupees,
   resolveBookingMembers,
   type BookingMember,
   type ConsultMode,
 } from '../config/appointmentSlots';
+import { formatMoney } from '../utilities/formatters';
 import { formatBookedOn } from '../config/bookedAppointments';
 import {
-  CONSULT_NOW_AVAILABLE_DOCTORS,
-  CONSULT_NOW_CITIES,
-  CONSULT_NOW_FEE_RUPEES,
   CONSULT_NOW_LANGUAGES,
-  CONSULT_NOW_MAX_DECLINES,
   CONSULT_NOW_MODES,
   CONSULT_NOW_NEEDS,
   CONSULT_NOW_OFFER_SECONDS,
-  CONSULT_NOW_SEARCH_MS,
-  CONSULT_NOW_WAIT_MAX,
-  CONSULT_NOW_WAIT_MIN,
-  formatConsultDigits,
   formatOfferClock,
-  matchingConsultNowOffers,
   nextWidenLanguage,
   type ConsultNowGender,
   type ConsultNowLanguage,
   type ConsultNowMode,
   type ConsultNowNeed,
   type ConsultNowNeedId,
-  type ConsultNowOfferSeed,
 } from '../config/consultNow';
-import { getDoctorProfile } from '../config/doctorProfiles';
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import { useGetDoctorFilterOptionsQuery } from '../store/api/new/doctorsApi';
 import { useGetFamilyQuery } from '../store/api/new/familyApi';
 import { useGetHomeDashboardQuery } from '../store/api/new/homeApi';
+import {
+  useCancelInstantConsultMutation,
+  useGetInstantConsultStatusQuery,
+  useRequestInstantConsultMutation,
+} from '../store/api/new/teleApi';
 import { useAppSelector } from '../store/hooks';
 import type { PaymentStatus } from './useBookAppointmentController';
 
@@ -77,7 +70,7 @@ export type ConsultNowViewModel = {
   recognizedQualification: boolean;
   focusCertified: boolean;
   locationQuery: string;
-  visibleCities: typeof CONSULT_NOW_CITIES;
+  visibleCities: { id: string; nameKey?: TranslationKey; label?: string }[];
   selectedCityIds: string[];
   useCurrentLocation: boolean;
   note: string;
@@ -112,7 +105,7 @@ export type ConsultNowViewModel = {
   instantPatientLabel: string;
   offeredDoctorId: string;
   offeredDoctorInitials: string;
-  offeredExperienceKey: TranslationKey;
+  offeredExperienceKey: TranslationKey | '';
   bookingMode: ConsultMode;
   onBack: () => void;
   onOpenMemberPicker: () => void;
@@ -143,16 +136,6 @@ export type ConsultNowViewModel = {
   onClosePaymentStatus: () => void;
   onFinishInstantPay: () => void;
 };
-
-function shortCredsFor(id: string): TranslationKey {
-  if (id === 'rajesh') {
-    return 'bookRajeshShortCreds';
-  }
-  if (id === 'sunita') {
-    return 'bookSunitaShortCreds';
-  }
-  return 'bookAnjaliShortCreds';
-}
 
 function modeConsultKey(mode: ConsultNowMode): TranslationKey {
   if (mode === 'audio') {
@@ -209,19 +192,19 @@ export function useConsultNowController({
   const [note, setNote] = useState('');
   const [searchingOpen, setSearchingOpen] = useState(false);
   const [matchState, setMatchState] = useState<ConsultNowMatchState>('searching');
-  const [declinedIds, setDeclinedIds] = useState<string[]>([]);
-  const [offerSeed, setOfferSeed] = useState<ConsultNowOfferSeed | null>(null);
+  const [instantRequestId, setInstantRequestId] = useState<number | null>(null);
   const [offerSeconds, setOfferSeconds] = useState(CONSULT_NOW_OFFER_SECONDS);
   const [feeDetailsOpen, setFeeDetailsOpen] = useState(false);
   const [callbackRequested, setCallbackRequested] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | null>(null);
+  const [requestInstant] = useRequestInstantConsultMutation();
+  const [cancelInstant] = useCancelInstantConsultMutation();
 
   const resetSearch = useCallback(() => {
     setSearchingOpen(false);
     setMatchState('searching');
-    setDeclinedIds([]);
-    setOfferSeed(null);
+    setInstantRequestId(null);
     setOfferSeconds(CONSULT_NOW_OFFER_SECONDS);
     setFeeDetailsOpen(false);
     setCallbackRequested(false);
@@ -248,39 +231,35 @@ export function useConsultNowController({
     resetSearch();
   }, [active, resetSearch]);
 
-  const startMatch = useCallback(
-    (languages: ConsultNowLanguage[], skipped: string[]) => {
-      setSearchingOpen(true);
-      setMatchState('searching');
-      setOfferSeed(null);
-      setFeeDetailsOpen(false);
-      setPaymentOpen(false);
-      setPaymentStatus(null);
-      const matches = matchingConsultNowOffers({
-        languages,
-        genders,
-        declinedIds: skipped,
-      });
-      const timer = setTimeout(() => {
-        if (matches[0]) {
-          setOfferSeed(matches[0]);
-          setOfferSeconds(CONSULT_NOW_OFFER_SECONDS);
-          setMatchState('offer');
-          return;
-        }
-        setMatchState('none');
-      }, CONSULT_NOW_SEARCH_MS);
-      return () => clearTimeout(timer);
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+  const authUser = useAppSelector((state) => state.auth.user);
+  const authMobile = useAppSelector((state) => state.auth.mobile);
+
+  const { data: filterOptions } = useGetDoctorFilterOptionsQuery(undefined, {
+    skip: !active,
+  });
+
+  const { data: instantStatusResponse } = useGetInstantConsultStatusQuery(
+    instantRequestId as number,
+    {
+      skip: instantRequestId == null || !searchingOpen,
+      pollingInterval: searchingOpen ? 2500 : 0,
     },
-    [genders],
   );
+  const instantPoll = instantStatusResponse?.data;
 
   useEffect(() => {
-    if (!searchingOpen || matchState !== 'searching') {
+    if (!searchingOpen || !instantPoll) return;
+    const status = String(instantPoll.status || '').toUpperCase();
+    if (status === 'OFFERED' || status === 'ACCEPTED') {
+      setMatchState('offer');
+      setOfferSeconds(CONSULT_NOW_OFFER_SECONDS);
       return;
     }
-    return startMatch(selectedLanguages, declinedIds);
-  }, [declinedIds, matchState, searchingOpen, selectedLanguages, startMatch]);
+    if (status === 'NO_DOCTOR' || status === 'UNAVAILABLE' || status === 'CANCELLED') {
+      setMatchState('none');
+    }
+  }, [instantPoll, searchingOpen]);
 
   useEffect(() => {
     if (!searchingOpen || matchState !== 'offer' || paymentOpen) {
@@ -293,29 +272,15 @@ export function useConsultNowController({
   }, [matchState, paymentOpen, searchingOpen]);
 
   const onDeclineOffer = useCallback(() => {
-    if (!offerSeed) {
-      setMatchState('none');
-      return;
+    if (instantRequestId != null) {
+      void cancelInstant(instantRequestId)
+        .unwrap()
+        .catch(() => undefined);
     }
-    const nextDeclined = [...declinedIds, offerSeed.doctorId];
-    setDeclinedIds(nextDeclined);
-    setOfferSeed(null);
     setFeeDetailsOpen(false);
-    if (nextDeclined.length >= CONSULT_NOW_MAX_DECLINES) {
-      setMatchState('none');
-      return;
-    }
-    const remaining = matchingConsultNowOffers({
-      languages: selectedLanguages,
-      genders,
-      declinedIds: nextDeclined,
-    });
-    if (!remaining[0]) {
-      setMatchState('none');
-      return;
-    }
-    setMatchState('searching');
-  }, [declinedIds, genders, offerSeed, selectedLanguages]);
+    setMatchState('none');
+    setInstantRequestId(null);
+  }, [cancelInstant, instantRequestId]);
 
   useEffect(() => {
     if (matchState === 'offer' && offerSeconds === 0 && !paymentOpen) {
@@ -323,16 +288,13 @@ export function useConsultNowController({
     }
   }, [matchState, offerSeconds, onDeclineOffer, paymentOpen]);
 
+  // TODO(PAYMENT): do not fake success — ConsultOrders + Verify (BE-P01).
   useEffect(() => {
     if (paymentStatus !== 'pending') {
       return;
     }
-    const timer = setTimeout(() => setPaymentStatus('success'), 2500);
-    return () => clearTimeout(timer);
+    setPaymentStatus(null);
   }, [paymentStatus]);
-
-  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
-  const authUser = useAppSelector((state) => state.auth.user);
 
   const { data: homeDashboardResponse } = useGetHomeDashboardQuery(undefined, {
     skip: !isAuthenticated,
@@ -358,33 +320,52 @@ export function useConsultNowController({
     members.find((item) => item.id === memberId) ?? members[0];
   const selectedNeed =
     CONSULT_NOW_NEEDS.find((item) => item.id === selectedNeedId) ?? CONSULT_NOW_NEEDS[0];
-  const feeLabel = formatRupees(CONSULT_NOW_FEE_RUPEES[mode], language);
+  // BE-011 — fees only from Instant poll; never invent PLATFORM_FEE.
+  // TODO(PAYMENT): Pay still deferred (BE-P01 ConsultOrders + Verify).
+  const currency = instantPoll?.currency ?? 'INR';
+  const doctorFeeLabel = formatMoney(instantPoll?.consultFee ?? null, currency) ?? '';
+  const platformFeeLabel =
+    formatMoney(instantPoll?.platformFee ?? null, currency) ?? '';
+  const taxesLabel = '';
+  const totalLabel =
+    formatMoney(instantPoll?.totalPayable ?? null, currency) ?? '';
+  const feeLabel = totalLabel || doctorFeeLabel;
+  void formatRupees;
   const selectedMemberLabel = member.self
     ? t('bookMyself')
     : member.relationshipName
       ? `${member.name} (${member.relationshipName})`
       : member.name;
+  const apiCities = useMemo(
+    () =>
+      (filterOptions?.cities ?? []).map((city) => {
+        const label = city.trim();
+        return { id: label.toLowerCase(), label };
+      }).filter((c) => c.label.length > 0),
+    [filterOptions?.cities],
+  );
   const visibleCities = useMemo(() => {
     const needle = locationQuery.trim().toLowerCase();
-    if (!needle) {
-      return CONSULT_NOW_CITIES;
-    }
-    return CONSULT_NOW_CITIES.filter((city) =>
-      t(city.nameKey).toLowerCase().includes(needle),
-    );
-  }, [locationQuery, t]);
+    if (!needle) return apiCities;
+    return apiCities.filter((city) => city.label.toLowerCase().includes(needle));
+  }, [apiCities, locationQuery]);
 
-  const profile = offerSeed ? getDoctorProfile(offerSeed.doctorId) : getDoctorProfile('rajesh');
-  const offerLanguageId =
-    offerSeed?.languages.find((item) => selectedLanguages.includes(item)) ??
-    selectedLanguages[0] ??
-    'mr';
+  const offerDoctorName = (instantPoll?.doctorName || '').trim();
+  const offerDoctorId =
+    instantPoll?.doctorId != null ? String(instantPoll.doctorId) : '';
+  const offerInitials = offerDoctorName
+    ? offerDoctorName
+        .split(' ')
+        .filter(Boolean)
+        .map((w) => w[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase()
+    : 'DR';
+  const offerLanguageId = selectedLanguages[0] ?? 'mr';
   const modeLabel = t(
     CONSULT_NOW_MODES.find((item) => item.id === mode)?.labelKey ?? 'searchModeVideo',
   );
-  const totalRupees = offerSeed?.feeRupees ?? CONSULT_NOW_FEE_RUPEES[mode];
-  const doctorFeeRupees = Math.max(0, totalRupees - PLATFORM_FEE_RUPEES - TAX_RUPEES);
-  const totalLabel = formatRupees(totalRupees, language);
   const today = new Date();
   const instantDateLine = formatBookedOn(today, language, t(MONTH_KEYS[today.getMonth()]));
   const instantTimeLine = t('searchingNow');
@@ -401,30 +382,27 @@ export function useConsultNowController({
   const bookingMode: ConsultMode =
     mode === 'audio' ? 'audio' : mode === 'chat' ? 'chat' : 'video';
 
-  const offer: ConsultNowOfferVm | null = offerSeed
-    ? {
-        doctorId: offerSeed.doctorId,
-        doctorName: t(profile.nameKey),
-        initials: profile.initials,
-        credentialsLine: `${t(shortCredsFor(profile.id))} · ${t('offerYears').replace(
-          '{years}',
-          formatConsultDigits(offerSeed.years, language),
-        )}`,
-        ratingLabel: `${formatConsultDigits(offerSeed.rating, language)} (${formatConsultDigits(
-          offerSeed.reviewCount,
-          language,
-        )})`,
-        languageLabel: t(languageLabelKey(offerLanguageId)),
-        modeLabel,
-        feeLabel: totalLabel,
-        acceptLabel: t('offerAcceptPay').replace('{amount}', totalLabel),
-        acceptInLabel: t('offerAcceptIn').replace(
-          '{time}',
-          formatOfferClock(offerSeconds, language),
-        ),
-        clockLabel: formatOfferClock(offerSeconds, language),
-      }
-    : null;
+  const offer: ConsultNowOfferVm | null =
+    matchState === 'offer' && offerDoctorId
+      ? {
+          doctorId: offerDoctorId,
+          doctorName: offerDoctorName || 'Doctor',
+          initials: offerInitials,
+          credentialsLine: '',
+          ratingLabel: '',
+          languageLabel: t(languageLabelKey(offerLanguageId)),
+          modeLabel,
+          feeLabel: feeLabel,
+          acceptLabel: feeLabel
+            ? t('offerAcceptPay').replace('{amount}', feeLabel)
+            : t('offerAcceptPay').replace('{amount}', ''),
+          acceptInLabel: t('offerAcceptIn').replace(
+            '{time}',
+            formatOfferClock(offerSeconds, language),
+          ),
+          clockLabel: formatOfferClock(offerSeconds, language),
+        }
+      : null;
 
   const onCancelSearch = useCallback(() => {
     resetSearch();
@@ -433,13 +411,10 @@ export function useConsultNowController({
   return {
     language,
     t,
-    availableLabel: t('consultNowAvailable').replace(
-      '{count}',
-      language === 'mr' ? '१४' : String(CONSULT_NOW_AVAILABLE_DOCTORS),
-    ),
+    availableLabel: t('consultNowAvailable').replace('{count}', ''),
     waitLabel: t('consultNowWait')
-      .replace('{min}', language === 'mr' ? '४' : String(CONSULT_NOW_WAIT_MIN))
-      .replace('{max}', language === 'mr' ? '८' : String(CONSULT_NOW_WAIT_MAX)),
+      .replace('{min}', '')
+      .replace('{max}', ''),
     members,
     member,
     selectedMemberLabel,
@@ -467,14 +442,14 @@ export function useConsultNowController({
       selectedLanguages.map((id) => t(languageLabelKey(id))).join(', '),
       modeLabel,
     ].join(' · '),
-    queueLabel: t('searchingQueue').replace(
-      '{position}',
-      language === 'mr' ? '२ऱ्या' : '2nd',
-    ),
-    queueWaitLabel: t('searchingQueueWait').replace(
-      '{minutes}',
-      language === 'mr' ? '५' : '5',
-    ),
+    queueLabel:
+      instantPoll?.queuePosition != null
+        ? t('searchingQueue').replace(
+            '{position}',
+            String(instantPoll.queuePosition),
+          )
+        : '',
+    queueWaitLabel: '',
     offer,
     feeDetailsOpen,
     callbackRequested,
@@ -485,12 +460,14 @@ export function useConsultNowController({
     earliestSlotLabel: t('noDoctorBookSlotWhen'),
     paymentOpen,
     paymentStatus,
-    paymentSummaryLine: t('payConsultWith')
-      .replace('{name}', t(profile.nameKey))
-      .replace('{when}', instantWhenLabel),
-    doctorFeeLabel: formatRupees(doctorFeeRupees, language),
-    platformFeeLabel: formatRupees(PLATFORM_FEE_RUPEES, language),
-    taxesLabel: formatRupees(TAX_RUPEES, language),
+    paymentSummaryLine: offerDoctorName
+      ? t('payConsultWith')
+          .replace('{name}', offerDoctorName)
+          .replace('{when}', instantWhenLabel)
+      : '',
+    doctorFeeLabel,
+    platformFeeLabel,
+    taxesLabel,
     totalLabel,
     instantWhenLabel,
     instantDateLine,
@@ -499,9 +476,9 @@ export function useConsultNowController({
     instantBookedOn: instantDateLine,
     instantModeConsultLabel,
     instantPatientLabel,
-    offeredDoctorId: profile.id,
-    offeredDoctorInitials: profile.initials,
-    offeredExperienceKey: profile.experienceKey,
+    offeredDoctorId: offerDoctorId,
+    offeredDoctorInitials: offerInitials,
+    offeredExperienceKey: '' as TranslationKey | '',
     bookingMode,
     onBack,
     onOpenMemberPicker: () => setMemberPickerOpen(true),
@@ -541,17 +518,48 @@ export function useConsultNowController({
     onToggleCurrentLocation: () => setUseCurrentLocation((current) => !current),
     onChangeNote: setNote,
     onFindDoctor: () => {
-      setDeclinedIds([]);
       setCallbackRequested(false);
       setSearchingOpen(true);
       setMatchState('searching');
+      const contactName = (patientFullName || member.name || '').trim() || 'Patient';
+      const contactMobile = (authMobile || authUser?.mobile || authUser?.mobileNo || '')
+        .replace(/\D/g, '')
+        .slice(-10);
+      if (contactMobile.length < 10) {
+        setMatchState('none');
+        return;
+      }
+      void requestInstant({ contactName, contactMobile })
+        .unwrap()
+        .then((res) => {
+          const id = res.instantConsultRequestId;
+          if (id != null) {
+            setInstantRequestId(id);
+            if (String(res.status).toUpperCase() === 'OFFERED') {
+              setMatchState('offer');
+            }
+          } else {
+            setMatchState('none');
+          }
+        })
+        .catch(() => {
+          setMatchState('none');
+        });
     },
-    onCancelSearch,
+    onCancelSearch: () => {
+      if (instantRequestId != null) {
+        void cancelInstant(instantRequestId)
+          .unwrap()
+          .catch(() => undefined);
+      }
+      onCancelSearch();
+    },
     onAcceptOffer: () => {
-      if (!offerSeed) {
+      if (!offer) {
         return;
       }
       setFeeDetailsOpen(false);
+      // TODO(PAYMENT): open Razorpay via ConsultOrders create + verify (BE-P01).
       setPaymentOpen(true);
     },
     onDeclineOffer,
@@ -564,6 +572,20 @@ export function useConsultNowController({
       );
       setCallbackRequested(false);
       setMatchState('searching');
+      const contactName = (patientFullName || member.name || '').trim() || 'Patient';
+      const contactMobile = (authMobile || authUser?.mobile || authUser?.mobileNo || '')
+        .replace(/\D/g, '')
+        .slice(-10);
+      if (contactMobile.length >= 10) {
+        void requestInstant({ contactName, contactMobile })
+          .unwrap()
+          .then((res) => {
+            if (res.instantConsultRequestId != null) {
+              setInstantRequestId(res.instantConsultRequestId);
+            }
+          })
+          .catch(() => setMatchState('none'));
+      }
     },
     onBookEarliest: () => onBookEarliest(t(selectedNeed.titleKey)),
     onRequestCallback: () => setCallbackRequested(true),

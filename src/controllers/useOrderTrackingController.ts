@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
 import { useGetMedicineOrderTrackingQuery } from '../store/api/new/medicinesApi';
 import { useAppSelector } from '../store/hooks';
+import { formatMoney } from '../utilities/formatters';
 
 export type OrderTrackingStatus =
   | 'verifying'
@@ -17,6 +18,20 @@ export type TrackingStepId =
   | 'verified'
   | 'out'
   | 'home';
+
+export type TrackingTimelineEvent = {
+  id: string;
+  at: string;
+  status: string;
+  label: string;
+};
+
+export type TrackingLineVm = {
+  id: string;
+  remedyName: string;
+  potencyCode: string | null;
+  quantityLabel: string | null;
+};
 
 export type OrderTrackingViewModel = {
   language: AppLanguage;
@@ -34,6 +49,12 @@ export type OrderTrackingViewModel = {
   medicinePrice: string;
   deliveryFee: string;
   totalLabel: string;
+  timeline: TrackingTimelineEvent[];
+  lines: TrackingLineVm[];
+  isLoading: boolean;
+  isError: boolean;
+  notFound: boolean;
+  onRetry: () => void;
   onBack: () => void;
   onSupport: () => void;
   onCallPartner: () => void;
@@ -45,54 +66,120 @@ export type OrderTrackingViewModel = {
   onSetStatus: (status: OrderTrackingStatus) => void;
 };
 
-const OTP = ['4', '7', '2', '9'];
+function mapStatus(serverStatus: string | undefined): OrderTrackingStatus {
+  if (serverStatus === 'DELIVERED') return 'delivered';
+  if (serverStatus === 'DISPATCHED') return 'out_for_delivery';
+  if (serverStatus === 'REJECTED') return 'failed';
+  return 'verifying';
+}
 
 export function useOrderTrackingController({
+  orderId,
   onBack,
 }: {
+  orderId: string;
   onBack: () => void;
 }): OrderTrackingViewModel {
   const { language, t } = useLocalization();
-  const [status, setStatus] = useState<OrderTrackingStatus>('out_for_delivery');
+  const [status, setStatus] = useState<OrderTrackingStatus>('verifying');
   const [rating, setRating] = useState(0);
 
+  const numericOrderId = Number(String(orderId).replace(/\D/g, ''));
+  const hasValidId = Number.isFinite(numericOrderId) && numericOrderId > 0;
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
-  const { data: trackingResponse } = useGetMedicineOrderTrackingQuery(1209, {
-    skip: !isAuthenticated,
+  const {
+    data: trackingResponse,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useGetMedicineOrderTrackingQuery(numericOrderId, {
+    skip: !isAuthenticated || !hasValidId,
     pollingInterval: 5000,
   });
 
+  const data = trackingResponse?.data;
+
   useEffect(() => {
-    if (trackingResponse?.data?.status) {
-      const serverStatus = trackingResponse.data.status;
-      if (serverStatus === 'DELIVERED') {
-        setStatus('delivered');
-      } else if (serverStatus === 'DISPATCHED') {
-        setStatus('out_for_delivery');
-      } else if (serverStatus === 'REJECTED') {
-        setStatus('failed');
-      } else {
-        setStatus('verifying');
-      }
+    if (data?.status) {
+      setStatus(mapStatus(data.status));
     }
-  }, [trackingResponse]);
+  }, [data?.status]);
+
+  const timeline = useMemo<TrackingTimelineEvent[]>(() => {
+    const events = Array.isArray(data?.events) ? data.events : [];
+    return events.map((ev, index) => ({
+      id: `ev-${index}-${ev.at}`,
+      at: ev.at || '',
+      status: ev.status || '',
+      label: (ev.label || ev.detail || ev.status || '').trim(),
+    }));
+  }, [data?.events]);
+
+  const lines = useMemo<TrackingLineVm[]>(() => {
+    const rows = Array.isArray(data?.lines)
+      ? data.lines
+      : Array.isArray(data?.items)
+        ? data.items
+        : [];
+    return rows.map((row, index) => ({
+      id: `line-${index}`,
+      remedyName: (row.remedyName || '').trim() || 'Medicine',
+      potencyCode: row.potencyCode?.trim() || null,
+      quantityLabel: row.quantityLabel?.trim() || null,
+    }));
+  }, [data?.items, data?.lines]);
+
+  const medicineLine = lines
+    .map((line) =>
+      [line.remedyName, line.potencyCode, line.quantityLabel]
+        .filter(Boolean)
+        .join(' · '),
+    )
+    .filter(Boolean)
+    .join('; ');
+
+  const currency = data?.currency ?? 'INR';
+  const totalLabel = formatMoney(data?.quoteAmount ?? null, currency) ?? '';
+
+  const apiOrderId = data?.medicineOrderId;
+  const displayOrderId =
+    apiOrderId != null
+      ? `#HM-${apiOrderId}`
+      : hasValidId
+        ? `#HM-${numericOrderId}`
+        : '';
+
+  const errStatus =
+    error && typeof error === 'object' && 'status' in error
+      ? Number((error as { status?: number }).status)
+      : undefined;
+  const notFound = errStatus === 404;
 
   return {
     language,
     t,
-    orderId: trackingResponse?.data?.medicineOrderId ? `#HM-${trackingResponse.data.medicineOrderId}` : '#HM-4821',
+    orderId: displayOrderId,
     status,
-    otpDigits: language === 'mr' ? ['४', '७', '२', '९'] : OTP,
-    partnerName: t('trackPartnerName'),
-    partnerRating: '4.8',
-    distanceAway: t('trackDistanceAway'),
-    arrivingBy: t('trackArrivingBy'),
-    deliveredAt: t('trackDeliveredAt'),
+    otpDigits: [],
+    partnerName: '',
+    partnerRating: '',
+    distanceAway: '',
+    arrivingBy: '',
+    deliveredAt: status === 'delivered' ? (timeline[timeline.length - 1]?.at ?? '') : '',
     rating,
-    medicineLine: t('trackMedsLine'),
-    medicinePrice: '₹185.00',
-    deliveryFee: '₹14.00',
-    totalLabel: '₹199.00',
+    medicineLine,
+    medicinePrice: '',
+    deliveryFee: '',
+    totalLabel,
+    timeline,
+    lines,
+    isLoading: hasValidId && isLoading,
+    isError: hasValidId && isError && !notFound,
+    notFound: !hasValidId || notFound,
+    onRetry: () => {
+      void refetch();
+    },
     onBack,
     onSupport: () => undefined,
     onCallPartner: () => undefined,
@@ -106,15 +193,8 @@ export function useOrderTrackingController({
 }
 
 export function trackingStepIndex(status: OrderTrackingStatus): number {
-  switch (status) {
-    case 'verifying':
-      return 2;
-    case 'out_for_delivery':
-    case 'failed':
-      return 3;
-    case 'delivered':
-      return 4;
-    default:
-      return 0;
-  }
+  if (status === 'delivered') return 4;
+  if (status === 'out_for_delivery') return 3;
+  if (status === 'failed') return 1;
+  return 2;
 }

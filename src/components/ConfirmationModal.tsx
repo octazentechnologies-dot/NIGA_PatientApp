@@ -75,25 +75,25 @@ export function ConfirmationModal({
   const iconColor = isDanger
     ? colors.error
     : isWarning
-      ? '#B76E00'
+      ? colors.warning
       : colors.primary;
 
   const iconBgColor = isDanger
-    ? '#FDECEA'
+    ? colors.errorContainer
     : isWarning
-      ? '#FFF4E5'
+      ? colors.warningContainer
       : colors.buttonFill;
 
   const iconBorderColor = isDanger
-    ? '#F8D7DA'
+    ? colors.errorContainer
     : isWarning
-      ? '#FFE2B3'
+      ? colors.warningContainer
       : colors.primaryContainer;
 
   const confirmBtnBg = isDanger
     ? colors.error
     : isWarning
-      ? '#B76E00'
+      ? colors.warning
       : colors.button;
 
   return (
@@ -167,9 +167,9 @@ export function ConfirmationModal({
               ]}
             >
               {loading ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
+                <ActivityIndicator size="small" color={colors.card} />
               ) : (
-                <AppText variant="titleMd" color="#FFFFFF" weightOverride="600">
+                <AppText variant="titleMd" color={colors.card} weightOverride="600">
                   {confirmLabel}
                 </AppText>
               )}
@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     borderWidth: 1,
     borderColor: colors.outlineVariant,
-    shadowColor: '#000',
+    shadowColor: colors.ink,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,

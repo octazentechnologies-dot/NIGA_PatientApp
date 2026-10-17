@@ -3,17 +3,30 @@ import { newBaseApi } from './newBaseApi';
 export type PublicDoctor = {
   doctorId: number;
   displayName: string;
+  firstName?: string | null;
+  middleName?: string | null;
+  lastName?: string | null;
   qualification: string | null;
   city: string;
   clinicName: string;
-  consultFeeInClinic: number;
-  consultFeeTele: number;
+  /** BE-014 — hide when null. */
+  clinicAddressLine?: string | null;
+  /** BE-013 — hide when null. */
+  nextAvailableAt?: string | null;
+  consultFeeInClinic: number | null;
+  consultFeeTele: number | null;
   isOnline: boolean;
   verified: boolean;
-  isVerified: boolean;
+  isVerified?: boolean;
   photoPath: string | null;
-  rankingSummary: string;
-  rankingReasons: string[];
+  /** Absolute photo URL when stored; otherwise null. */
+  photoUrl?: string | null;
+  registrationNumber?: string | null;
+  passingUniversity?: string | null;
+  /** Always null / not planned — hide. */
+  yearsExperience?: number | null;
+  rankingSummary?: string;
+  rankingReasons?: string[];
   averageRating: number | null;
   reviewCount: number;
 };
@@ -29,12 +42,30 @@ export type GetDoctorsResponse = {
 export type SearchDoctorsParams = {
   q?: string;
   city?: string;
+  /** Matches qualification name (contract §2). */
+  qualification?: string;
   isOnline?: boolean;
   teleOnly?: boolean;
   minFee?: number;
   maxFee?: number;
+  /** `online` (default) | `name` | `fee` */
+  sortBy?: 'online' | 'name' | 'fee';
+  /** BE-029 — unknown/≤0 → empty data, not error. */
+  careCategoryId?: number;
   pageNumber?: number;
   pageSize?: number;
+};
+
+export type DoctorFilterOptionsData = {
+  cities: string[];
+  qualifications: string[];
+  cityDetails?: Array<{ city: string; doctorCount: number }>;
+  qualificationDetails?: Array<{ name: string; doctorCount: number }>;
+};
+
+export type DoctorFilterOptionsResponse = {
+  success: boolean;
+  data: DoctorFilterOptionsData;
 };
 
 export type DoctorProfileDetail = PublicDoctor & {
@@ -109,10 +140,14 @@ export type DoctorSlotsResponse = {
   message?: string;
 };
 
+/** BE-030 — defensive optional fields. */
 export type DoctorTeleAvailabilityData = {
-  doctorId: number;
-  isOnline: boolean;
-  lastHeartbeat?: string;
+  doctorId?: number;
+  isOnline?: boolean;
+  available?: boolean;
+  nextAvailableAt?: string | null;
+  lastHeartbeat?: string | null;
+  message?: string | null;
 };
 
 export type DoctorTeleAvailabilityResponse = {
@@ -148,7 +183,9 @@ export const doctorsApi = newBaseApi.injectEndpoints({
     }),
     getDoctorById: build.query<DoctorDetailResponse, number | string>({
       query: (doctorId) => `api/Public/Doctors/${doctorId}`,
-      providesTags: ['Doctors'],
+      providesTags: (_result, _err, doctorId) => [
+        { type: 'DoctorProfile', id: String(doctorId) },
+      ],
     }),
     getDoctorRanking: build.query<DoctorRankingResponse, number | string>({
       query: (doctorId) => `api/Public/Doctors/${doctorId}/Ranking`,
@@ -161,6 +198,9 @@ export const doctorsApi = newBaseApi.injectEndpoints({
         url: `api/Public/Doctors/${doctorId}/Slots`,
         params: { date },
       }),
+      providesTags: (_result, _err, { doctorId, date }) => [
+        { type: 'Slots', id: `${doctorId}-${date}` },
+      ],
     }),
     getDoctorFees: build.query<DoctorFeeResponse, number | string>({
       query: (doctorId) => `api/Fees/Public/${doctorId}`,
@@ -174,6 +214,21 @@ export const doctorsApi = newBaseApi.injectEndpoints({
     >({
       query: (doctorId) => `api/Tele/Availability/${doctorId}`,
     }),
+    getDoctorFilterOptions: build.query<DoctorFilterOptionsData, void>({
+      query: () => 'api/Public/Doctors/FilterOptions',
+      transformResponse: (response: DoctorFilterOptionsResponse) => {
+        const data = response?.data;
+        return {
+          cities: Array.isArray(data?.cities) ? data.cities : [],
+          qualifications: Array.isArray(data?.qualifications)
+            ? data.qualifications
+            : [],
+          cityDetails: data?.cityDetails,
+          qualificationDetails: data?.qualificationDetails,
+        };
+      },
+      providesTags: ['Doctors'],
+    }),
   }),
 });
 
@@ -185,4 +240,5 @@ export const {
   useGetDoctorFeesQuery,
   useGetDoctorReviewsQuery,
   useGetDoctorTeleAvailabilityQuery,
+  useGetDoctorFilterOptionsQuery,
 } = doctorsApi;

@@ -4,7 +4,10 @@ import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
 import { extractErrorMessage } from '../store/api/new/newBaseApi';
 import { useVerifyOtpMutation } from '../store/api/new/otpVerificationApi';
-import { useRequestOtpMutation } from '../store/api/new/signInApi';
+import {
+  extractDevOtp,
+  useRequestOtpMutation,
+} from '../store/api/new/signInApi';
 import { useAppDispatch } from '../store/hooks';
 import {
   saveAccessToken,
@@ -215,7 +218,7 @@ export function useOtpVerificationController({
       try {
         const response = await requestOtp({ mobile: mobileNumber }).unwrap();
         if (response.success) {
-          const safeDevCode = __DEV__ ? response.devCode : undefined;
+          const safeDevCode = extractDevOtp(response);
           if (safeDevCode) {
             setDevOtp(safeDevCode);
           }

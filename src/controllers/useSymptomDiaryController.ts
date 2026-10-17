@@ -88,48 +88,51 @@ export type SymptomDiaryViewModel = {
   onSaveEntry: () => void;
 };
 
-/** Seeded week shown in the day strip (Aug 2026). */
-const DIARY_YEAR = 2026;
-const DIARY_MONTH = 7; // August (0-indexed)
-
-const DAYS: SymptomDiaryViewModel['days'] = [
-  { id: '20', weekdayKey: 'diaryWeekdayTue', dateLabel: '20' },
-  { id: '21', weekdayKey: 'diaryWeekdayWed', dateLabel: '21' },
-  { id: '22', weekdayKey: 'diaryWeekdayThu', dateLabel: '22' },
-  { id: '23', weekdayKey: 'diaryWeekdayFri', dateLabel: '23' },
-  { id: '24', weekdayKey: 'diaryWeekdaySat', dateLabel: '24' },
-  { id: '25', weekdayKey: 'diaryWeekdaySun', dateLabel: '25' },
-  { id: '26', weekdayKey: 'diaryWeekdayMon', dateLabel: '26' },
+const WEEKDAY_KEYS: TranslationKey[] = [
+  'diaryWeekdaySun',
+  'diaryWeekdayMon',
+  'diaryWeekdayTue',
+  'diaryWeekdayWed',
+  'diaryWeekdayThu',
+  'diaryWeekdayFri',
+  'diaryWeekdaySat',
 ];
 
-const SEEDED_ENTRIES: DiaryListEntry[] = [
-  {
-    id: 'e-26',
-    dayId: '26',
-    sectionKey: 'diarySectionToday',
-    severity: 'mild',
-    noteKey: 'diaryEntryMildNote',
-    hasPhotos: true,
-  },
-  {
-    id: 'e-25',
-    dayId: '25',
-    sectionKey: 'diarySectionYesterday',
-    severity: 'moderate',
-    noteKey: 'diaryEntryModerateNote',
-  },
-];
-
-function dayIdFromDate(date: Date): DiaryDayId | null {
-  if (date.getFullYear() !== DIARY_YEAR || date.getMonth() !== DIARY_MONTH) {
-    return null;
+function buildLastSevenDays(anchor: Date): SymptomDiaryViewModel['days'] {
+  const days: SymptomDiaryViewModel['days'] = [];
+  for (let i = 6; i >= 0; i -= 1) {
+    const d = new Date(anchor);
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - i);
+    const id = String(d.getDate()) as DiaryDayId;
+    days.push({
+      id,
+      weekdayKey: WEEKDAY_KEYS[d.getDay()] ?? 'diaryWeekdayMon',
+      dateLabel: String(d.getDate()),
+    });
   }
-  const day = String(date.getDate()) as DiaryDayId;
-  return DAYS.some((item) => item.id === day) ? day : null;
+  return days;
 }
 
-function dateFromDayId(dayId: DiaryDayId): Date {
-  return new Date(DIARY_YEAR, DIARY_MONTH, Number(dayId));
+function dayIdFromDate(date: Date, days: SymptomDiaryViewModel['days']): DiaryDayId | null {
+  const day = String(date.getDate()) as DiaryDayId;
+  return days.some((item) => item.id === day) ? day : null;
+}
+
+function dateFromDayId(dayId: DiaryDayId, anchor: Date): Date {
+  const d = new Date(anchor);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(Number(dayId));
+  // Prefer matching day within the last-7 window around anchor.
+  for (let i = 0; i < 7; i += 1) {
+    const candidate = new Date(anchor);
+    candidate.setHours(0, 0, 0, 0);
+    candidate.setDate(candidate.getDate() - i);
+    if (candidate.getDate() === Number(dayId)) {
+      return candidate;
+    }
+  }
+  return d;
 }
 
 export function useSymptomDiaryController({
@@ -140,11 +143,19 @@ export function useSymptomDiaryController({
   onAddMember?: () => void;
 }): SymptomDiaryViewModel {
   const { language, t } = useLocalization();
+  const today = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
+  const days = useMemo(() => buildLastSevenDays(today), [today]);
   const [memberId, setMemberId] = useState(BOOKING_MEMBERS[0]?.id ?? 'self');
   const [memberPickerOpen, setMemberPickerOpen] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
-  const [selectedDayId, setSelectedDayId] = useState<DiaryDayId>('26');
-  const [entries, setEntries] = useState(SEEDED_ENTRIES);
+  const [selectedDayId, setSelectedDayId] = useState<DiaryDayId>(
+    () => days[days.length - 1]?.id ?? ('1' as DiaryDayId),
+  );
+  const [entries, setEntries] = useState<DiaryListEntry[]>([]);
   const [entryOpen, setEntryOpen] = useState(false);
   const [severity, setSeverity] = useState<DiarySeverity>('mild');
   const [symptoms, setSymptoms] = useState<DiarySymptomId[]>(['redness']);
@@ -170,29 +181,31 @@ export function useSymptomDiaryController({
   const [createDiaryEntryApi] = useCreateDiaryEntryMutation();
 
   useEffect(() => {
-    if (diaryResponse?.data && Array.isArray(diaryResponse.data) && diaryResponse.data.length > 0) {
-      setEntries(
-        diaryResponse.data.map((item) => {
-          let sev: DiarySeverity = 'none';
-          if (item.severity >= 9) sev = 'verySevere';
-          else if (item.severity >= 7) sev = 'severe';
-          else if (item.severity >= 4) sev = 'moderate';
-          else if (item.severity >= 1) sev = 'mild';
-
-          const entryDateObj = new Date(item.entryDate);
-          const dayId = (entryDateObj.getDate().toString() as DiaryDayId) || '26';
-
-          return {
-            id: String(item.symptomDiaryId),
-            dayId,
-            sectionKey: 'diarySectionToday',
-            severity: sev,
-            noteText: item.note || undefined,
-            hasPhotos: false,
-          };
-        }),
-      );
+    if (!diaryResponse?.data || !Array.isArray(diaryResponse.data)) {
+      setEntries([]);
+      return;
     }
+    setEntries(
+      diaryResponse.data.map((item) => {
+        let sev: DiarySeverity = 'none';
+        if (item.severity >= 9) sev = 'verySevere';
+        else if (item.severity >= 7) sev = 'severe';
+        else if (item.severity >= 4) sev = 'moderate';
+        else if (item.severity >= 1) sev = 'mild';
+
+        const entryDateObj = new Date(item.entryDate);
+        const dayId = String(entryDateObj.getDate()) as DiaryDayId;
+
+        return {
+          id: String(item.symptomDiaryId),
+          dayId,
+          sectionKey: 'diarySectionToday' as TranslationKey,
+          severity: sev,
+          noteText: item.note || undefined,
+          hasPhotos: false,
+        };
+      }),
+    );
   }, [diaryResponse]);
 
   const { data: familyResponse } = useGetFamilyQuery(undefined, {
@@ -212,16 +225,16 @@ export function useSymptomDiaryController({
     : member.name.split(' ')[0];
 
   const calendarMinimumDate = useMemo(
-    () => dateFromDayId(DAYS[0].id),
-    [],
+    () => dateFromDayId(days[0].id, today),
+    [days, today],
   );
   const calendarMaximumDate = useMemo(
-    () => dateFromDayId(DAYS[DAYS.length - 1].id),
-    [],
+    () => dateFromDayId(days[days.length - 1].id, today),
+    [days, today],
   );
   const calendarValue = useMemo(
-    () => dateFromDayId(selectedDayId),
-    [selectedDayId],
+    () => dateFromDayId(selectedDayId, today),
+    [selectedDayId, today],
   );
 
   const entriesForDay = useMemo(
@@ -229,9 +242,10 @@ export function useSymptomDiaryController({
     [entries, selectedDayId],
   );
 
+  const selectedMeta = days.find((day) => day.id === selectedDayId);
   const entryDateLabel = t('diaryEntryDate').replace(
     '{date}',
-    `${t(DAYS.find((day) => day.id === selectedDayId)?.weekdayKey ?? 'diaryWeekdaySat')}, ${selectedDayId} Aug 2026`,
+    `${t(selectedMeta?.weekdayKey ?? 'diaryWeekdayMon')}, ${selectedDayId}`,
   );
 
   const resetForm = () => {
@@ -246,33 +260,11 @@ export function useSymptomDiaryController({
 
   const saveCurrentEntry = () => {
     const sectionKey: TranslationKey =
-      selectedDayId === '26'
+      selectedDayId === days[days.length - 1]?.id
         ? 'diarySectionToday'
-        : selectedDayId === '25'
+        : selectedDayId === days[days.length - 2]?.id
           ? 'diarySectionYesterday'
           : 'diarySectionOther';
-    const severityNoteKey: TranslationKey =
-      severity === 'mild'
-        ? 'diaryEntryMildNote'
-        : severity === 'moderate'
-          ? 'diaryEntryModerateNote'
-          : 'diaryEntryGenericNote';
-
-    setEntries((prev) => {
-      const withoutDay = prev.filter((entry) => entry.dayId !== selectedDayId);
-      return [
-        {
-          id: `e-${selectedDayId}-${Date.now()}`,
-          dayId: selectedDayId,
-          sectionKey,
-          severity,
-          noteKey: notes.trim() ? undefined : severityNoteKey,
-          noteText: notes.trim() || undefined,
-          hasPhotos: photoAdded,
-        },
-        ...withoutDay,
-      ];
-    });
 
     if (isAuthenticated) {
       const numSeverity =
@@ -285,16 +277,38 @@ export function useSymptomDiaryController({
               : severity === 'mild'
                 ? 2
                 : 0;
-      const todayIso = new Date().toISOString().split('T')[0];
-      createDiaryEntryApi({
-        entryDate: todayIso,
+      const entryDate = dateFromDayId(selectedDayId, today)
+        .toISOString()
+        .split('T')[0];
+      void createDiaryEntryApi({
+        entryDate,
         severity: numSeverity,
         note: notes.trim() || undefined,
-      }).catch((err) => {
-        console.warn('[createDiaryEntryApi] Failed:', err);
-      });
+      })
+        .unwrap()
+        .then(() => {
+          setEntryOpen(false);
+        })
+        .catch((err) => {
+          console.warn('[createDiaryEntryApi] Failed:', err);
+        });
+      return;
     }
 
+    setEntries((prev) => {
+      const withoutDay = prev.filter((entry) => entry.dayId !== selectedDayId);
+      return [
+        {
+          id: `e-${selectedDayId}-${Date.now()}`,
+          dayId: selectedDayId,
+          sectionKey,
+          severity,
+          noteText: notes.trim() || undefined,
+          hasPhotos: photoAdded,
+        },
+        ...withoutDay,
+      ];
+    });
     setEntryOpen(false);
   };
 
@@ -310,7 +324,7 @@ export function useSymptomDiaryController({
     calendarMinimumDate,
     calendarMaximumDate,
     selectedDayId,
-    days: DAYS,
+    days,
     entriesForDay,
     isEmptyDay: entriesForDay.length === 0,
     entryOpen,
@@ -337,7 +351,7 @@ export function useSymptomDiaryController({
     onCloseCalendar: () => setCalendarOpen(false),
     onConfirmCalendarDate: (date) => {
       setCalendarOpen(false);
-      const next = dayIdFromDate(date);
+      const next = dayIdFromDate(date, days);
       if (next) {
         setSelectedDayId(next);
       }

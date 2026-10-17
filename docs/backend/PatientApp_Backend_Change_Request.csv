@@ -1,0 +1,27 @@
+ID,Priority,Type,Screens,Method,Path,Purpose,Unblocks,Status,Backend owner,ETA,Notes
+B-002,P2,CLARIFY,Sign in; OTP,POST,api/PatientAuth/VerifyOtp,Confirm this route issues the Bearer token,—,Open,,,Contract also names Account/Login
+B-003,P1,CONFIG,Help; Book with help; Offline,GET,api/Public/AppConfig,Populate support contacts or leave null,—,Open,,,Null hides the button
+B-004,P1,CONFIG,Home; Consult now; medicine pay,GET,api/Public/AppConfig,Add instantConsultEnabled and medicineOnlinePayEnabled,home CTAs,Open,,,Null or false hides the CTA
+B-005,P1,NEW_ROUTE,My appointments,GET,api/Patient/AppointmentRequests,List and respond to proposed times,appointments UI,Open,,,Create POST already exists
+B-006,P2,EXTEND_ROUTE,Notifications,GET,api/Notifications,Add type and deepLink,inbox routing,Open,,,Title filter stays until this ships
+B-007,P2,EXTEND_ROUTE,Check-in,POST,api/Patient/Visits/{patientAppId}/CheckIn,Say when readyAt is set,check-in,Open,,,Null stays hidden
+B-008,P1,EXTEND_ROUTE,Visit detail; Join; Running late,GET,api/Patient/Visits/{patientAppId},teleSessionId on tele visits,join and running late,Open,,,Null hides the buttons
+B-009,P2,NEW_ROUTE,Search,GET,api/Public/Doctors/FilterOptions,Cities and qualifications,search chips,Open,,,Public
+B-010,P2,CLARIFY,Choose pharmacy,GET,api/Pharmacy/Sellers,Keep price ETA distance null,—,Open,,,App shows name and area only
+B-011,P1,EXTEND_ROUTE,Consult now,POST,api/Tele/Instant,Fee breakdown on the offer,M-030,Open,,,Do not send a fixed platform fee
+B-012,P2,CLARIFY,Prescription,GET,api/Erx/{erxSnapshotId}/Pdf,URL or bytes,PDF button,Open,,,Button stays hidden until defined
+B-017,P2,EXTEND_ROUTE,My reviews; Appeal,GET,api/Reviews/Mine,Add appealStatus,appeal row,Open,,,Appeal POST already exists
+B-020,P3,CLARIFY,Complete profile,—,—,Profile photo upload needed?,—,Open,,,Proposed default: no upload
+B-020b,P2,CLARIFY,Help,GET,api/Help/{slug},Publish slug list,M-048,Open,,,List route already called
+B-021,P2,CLARIFY,Consent; Family,POST,api/Caregiver/Grant,Which consent type is caregiver-only,M-006,Open,,,Routes already exist
+B-023,P2,NEW_ROUTE,Order medicines; Review,GET,api/Patient/Addresses,Address book,address row,Open,,,Hidden until this exists
+B-025,P3,CLARIFY,Notifications,GET,api/Notifications,Pagination needed?,—,Open,,,Proposed default: no
+B-027,P2,EXTEND_ROUTE,Book,POST,api/Public/Doctors/{doctorId}/Bookings,Idempotency-Key,—,Open,,,Optional header
+B-028,P1,EXTEND_ROUTE,Order tracking; Order details,GET,api/MedicineOrders/{medicineOrderId}/Tracking,Document events and lines,tracking UI,Open,,,Null quote stays null
+B-029,P2,EXTEND_ROUTE,Search,GET,api/Public/Doctors,careCategoryId query,category search,Open,,,Unknown id returns empty data
+B-P01,—,PHASE2,Booking payment,POST,api/Payments/ConsultOrders,Consult checkout plus Verify,M-P01,Open,,,Phase 2
+B-P02,—,PHASE2,Booking,—,holdExpiresAt,Release unpaid holds,—,Open,,,Phase 2
+B-P03,—,PHASE2,Medicine checkout,POST,api/Payments/MedicineOrders,Medicine gateway,M-P03,Open,,,keyId null when not ready
+B-P10,—,PHASE2,Device check,GET,api/Tele/DeviceCheck,Device check JSON,M-V01,Open,,,Phase 2
+B-P11,—,PHASE2,Waiting room,GET,api/Tele/Sessions/{teleSessionId},Session status,M-V02,Open,,,Phase 2
+B-P12,—,PHASE2,Video call,POST,api/Tele/Sessions/{teleSessionId}/Token,Join token,M-V04,Open,,,Phase 2

@@ -22,13 +22,8 @@ import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
 import { spacing } from '../theme/spacing';
 
-const INK = '#1F1F1F';
-const MUTED = '#595959';
-const HAIRLINE = '#E6E6E6';
-const ACTION = '#2A7BA3';
-const ACTION_OUTLINE = '#276F93';
-const CLOSED_FILL = '#FCF3E4';
-const CLOSED_BORDER = '#F2C14E';
+const CLOSED_FILL = colors.warningContainer;
+const CLOSED_BORDER = colors.tertiaryContainer;
 
 export function ConsultationChatView(vm: ConsultationChatViewModel) {
   const insets = useSafeAreaInsets();
@@ -44,7 +39,7 @@ export function ConsultationChatView(vm: ConsultationChatViewModel) {
         {showDate ? (
           <View style={styles.datePillWrap}>
             <View style={styles.datePill}>
-              <AppText variant="labelSm" color={MUTED} style={styles.datePillText}>
+              <AppText variant="labelSm" color={colors.muted} style={styles.datePillText}>
                 {dateLabel}
               </AppText>
             </View>
@@ -52,8 +47,8 @@ export function ConsultationChatView(vm: ConsultationChatViewModel) {
         ) : null}
         {item.kind === 'prescription' ? (
           <View style={styles.rxCard}>
-            <Ionicons name="document-text" size={20} color={ACTION} />
-            <AppText variant="labelMd" color={INK} style={styles.rxText}>
+            <Ionicons name="document-text" size={20} color={colors.primary} />
+            <AppText variant="labelMd" color={colors.ink} style={styles.rxText}>
               {item.body}
             </AppText>
             <Pressable
@@ -75,11 +70,11 @@ export function ConsultationChatView(vm: ConsultationChatViewModel) {
                 resizeMode="cover"
               />
               <View style={styles.fileRow}>
-                <AppText variant="labelSm" color={MUTED} style={styles.fileMeta} numberOfLines={1}>
+                <AppText variant="labelSm" color={colors.muted} style={styles.fileMeta} numberOfLines={1}>
                   {item.fileName}
                   {item.fileSize ? ` · ${item.fileSize}` : ''}
                 </AppText>
-                <Ionicons name="download-outline" size={18} color={ACTION} />
+                <Ionicons name="download-outline" size={18} color={colors.primary} />
               </View>
             </View>
           </View>
@@ -98,14 +93,14 @@ export function ConsultationChatView(vm: ConsultationChatViewModel) {
             >
               <AppText
                 variant="bodyMd"
-                color={item.from === 'patient' ? colors.onButton : INK}
+                color={item.from === 'patient' ? colors.onButton : colors.ink}
               >
                 {item.body}
               </AppText>
               <View style={styles.metaRow}>
                 <AppText
                   variant="labelSm"
-                  color={item.from === 'patient' ? 'rgba(255,255,255,0.85)' : MUTED}
+                  color={item.from === 'patient' ? 'rgba(255,255,255,0.85)' : colors.muted}
                 >
                   {item.timeLabel}
                 </AppText>
@@ -130,7 +125,7 @@ export function ConsultationChatView(vm: ConsultationChatViewModel) {
             onPress={vm.onBack}
             style={styles.iconHit}
           >
-            <Ionicons name="arrow-back" size={24} color={INK} />
+            <Ionicons name="arrow-back" size={24} color={colors.ink} />
           </Pressable>
           <Image source={images.doctorPortrait} style={styles.avatar} />
           <Pressable
@@ -138,16 +133,16 @@ export function ConsultationChatView(vm: ConsultationChatViewModel) {
             onLongPress={vm.onToggleClosedDemo}
             delayLongPress={600}
           >
-            <AppText variant="titleMd" color={INK} numberOfLines={1}>
+            <AppText variant="titleMd" color={colors.ink} numberOfLines={1}>
               {vm.doctorName}
             </AppText>
-            <AppText variant="labelSm" color={MUTED} numberOfLines={1}>
+            <AppText variant="labelSm" color={colors.muted} numberOfLines={1}>
               {vm.statusLabel}
             </AppText>
           </Pressable>
           {vm.closed ? (
             <Pressable style={styles.iconHit} accessibilityRole="button">
-              <Ionicons name="ellipsis-vertical" size={20} color={INK} />
+              <Ionicons name="ellipsis-vertical" size={20} color={colors.ink} />
             </Pressable>
           ) : (
             <Pressable
@@ -156,18 +151,18 @@ export function ConsultationChatView(vm: ConsultationChatViewModel) {
               onPress={vm.onOpenVideo}
               style={styles.iconHit}
             >
-              <Ionicons name="videocam" size={24} color={ACTION} />
+              <Ionicons name="videocam" size={24} color={colors.primary} />
             </Pressable>
           )}
         </View>
       </View>
 
       <View style={styles.linkedBar}>
-        <AppText variant="labelSm" color={INK} style={styles.linkedText} numberOfLines={2}>
+        <AppText variant="labelSm" color={colors.ink} style={styles.linkedText} numberOfLines={2}>
           {vm.linkedLabel}
         </AppText>
         <Pressable onPress={vm.onViewLinked} accessibilityRole="button" style={styles.viewLink}>
-          <AppText variant="labelMd" color={ACTION_OUTLINE} weightOverride="600">
+          <AppText variant="labelMd" color={colors.primaryOutline} weightOverride="600">
             {vm.t('chatView')}
           </AppText>
         </Pressable>
@@ -182,8 +177,8 @@ export function ConsultationChatView(vm: ConsultationChatViewModel) {
         ListFooterComponent={
           vm.closed ? (
             <View style={styles.closedBanner}>
-              <Ionicons name="lock-closed" size={14} color={MUTED} />
-              <AppText variant="labelSm" color={MUTED} style={styles.closedBannerText}>
+              <Ionicons name="lock-closed" size={14} color={colors.muted} />
+              <AppText variant="labelSm" color={colors.muted} style={styles.closedBannerText}>
                 {vm.t('chatClosedBanner').replace('{date}', vm.closedDateLabel)}
               </AppText>
             </View>
@@ -198,7 +193,7 @@ export function ConsultationChatView(vm: ConsultationChatViewModel) {
             { paddingBottom: sheetBottomPadding(insets, spacing.md) },
           ]}
         >
-          <AppText variant="bodyMd" color={MUTED} style={styles.closedHint}>
+          <AppText variant="bodyMd" color={colors.muted} style={styles.closedHint}>
             {vm.t('chatClosedHint')}
           </AppText>
           <AppButton
@@ -213,7 +208,7 @@ export function ConsultationChatView(vm: ConsultationChatViewModel) {
             { paddingBottom: sheetBottomPadding(insets, spacing.md) },
           ]}
         >
-          <AppText variant="labelSm" color={MUTED} style={styles.sla}>
+          <AppText variant="labelSm" color={colors.muted} style={styles.sla}>
             {vm.replySlaLabel}
           </AppText>
           <View style={styles.composerRow}>
@@ -223,14 +218,14 @@ export function ConsultationChatView(vm: ConsultationChatViewModel) {
               onPress={vm.onAttach}
               style={styles.iconHit}
             >
-              <Ionicons name="attach" size={24} color={MUTED} />
+              <Ionicons name="attach" size={24} color={colors.muted} />
             </Pressable>
             <View style={styles.inputWrap}>
               <TextInput
                 value={vm.draft}
                 onChangeText={vm.onChangeDraft}
                 placeholder={vm.t('chatPlaceholder')}
-                placeholderTextColor={MUTED}
+                placeholderTextColor={colors.muted}
                 style={styles.input}
                 multiline
               />
@@ -259,7 +254,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   headerRow: {
     minHeight: 56,
@@ -278,7 +273,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: radii.full,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
   },
   headerCopy: {
     flex: 1,
@@ -287,7 +282,7 @@ const styles = StyleSheet.create({
   linkedBar: {
     backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     flexDirection: 'row',
@@ -313,7 +308,7 @@ const styles = StyleSheet.create({
     marginVertical: spacing.sm,
   },
   datePill: {
-    backgroundColor: '#DDDFE2',
+    backgroundColor: colors.outlineVariant,
     borderRadius: radii.full,
     paddingHorizontal: spacing.md,
     paddingVertical: 4,
@@ -340,11 +335,11 @@ const styles = StyleSheet.create({
   doctorBubble: {
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderBottomLeftRadius: 4,
   },
   patientBubble: {
-    backgroundColor: ACTION,
+    backgroundColor: colors.primary,
     borderBottomRightRadius: 4,
   },
   metaRow: {
@@ -357,7 +352,7 @@ const styles = StyleSheet.create({
   imageBubble: {
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     borderBottomRightRadius: 4,
     padding: spacing.sm,
@@ -367,7 +362,7 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     borderRadius: radii.sm,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
   },
   fileRow: {
     flexDirection: 'row',
@@ -383,7 +378,7 @@ const styles = StyleSheet.create({
     maxWidth: '100%',
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
     gap: spacing.sm,
@@ -397,7 +392,7 @@ const styles = StyleSheet.create({
     minHeight: 40,
     paddingHorizontal: spacing.md,
     borderRadius: radii.button,
-    backgroundColor: ACTION,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -420,13 +415,13 @@ const styles = StyleSheet.create({
   composer: {
     backgroundColor: colors.card,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
   },
   sla: {
     textAlign: 'center',
     paddingVertical: spacing.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   composerRow: {
     flexDirection: 'row',
@@ -440,14 +435,14 @@ const styles = StyleSheet.create({
     minHeight: 48,
     maxHeight: 120,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     backgroundColor: colors.card,
     paddingHorizontal: spacing.md,
     justifyContent: 'center',
   },
   input: {
-    color: INK,
+    color: colors.ink,
     fontSize: 16,
     lineHeight: 22,
     paddingVertical: spacing.sm,
@@ -457,7 +452,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: radii.full,
-    backgroundColor: ACTION,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -467,7 +462,7 @@ const styles = StyleSheet.create({
   closedFooter: {
     backgroundColor: colors.card,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     gap: spacing.md,

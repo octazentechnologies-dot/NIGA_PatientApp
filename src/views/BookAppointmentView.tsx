@@ -26,14 +26,11 @@ import { layout, spacing } from '../theme/spacing';
 import { scaleFont } from '../utilities/scale';
 import { sheetBottomPadding } from '../utilities/sheetInset';
 
-const MUTED = '#595959';
-const HAIRLINE = '#E6E6E6';
-const CHIP_FILL = '#E6F5FE';
-const GREY_FILL = '#F2F2F2';
-const AMBER_FILL = '#FCF3E4';
-const AMBER = '#8A5109';
-const AMBER_BORDER = '#F2C14E';
-const ICON_BLUE = '#2A7BA3';
+const GREY_FILL = colors.surfaceVariant;
+const AMBER_FILL = colors.warningContainer;
+const AMBER = colors.warning;
+const AMBER_BORDER = colors.tertiaryContainer;
+const ICON_BLUE = colors.primary;
 
 const MODES: { id: ConsultMode; icon: keyof typeof Ionicons.glyphMap; labelKey: TranslationKey }[] =
   [
@@ -63,6 +60,9 @@ export function BookAppointmentView({
   waitlistTitle,
   isFull,
   canContinue,
+  slotsEmpty,
+  slotsLoading,
+  bookingError,
   onBack,
   onOpenMemberPicker,
   onCloseMemberPicker,
@@ -87,7 +87,9 @@ export function BookAppointmentView({
         ? `${member.name} (${t(member.metaKey).replace(' • ', ', ')})`
         : member.name;
   const modeFee = (id: ConsultMode) =>
-    t(id === 'clinic' ? profile.clinicFeeKey : profile.feeKey);
+    id === 'clinic'
+      ? profile.clinicFeeLabel || (profile.clinicFeeKey ? t(profile.clinicFeeKey) : '')
+      : profile.teleFeeLabel || (profile.feeKey ? t(profile.feeKey) : '');
 
   return (
     <View style={styles.root}>
@@ -104,9 +106,9 @@ export function BookAppointmentView({
             onPress={onBack}
             style={styles.iconButton}
           >
-            <Ionicons name="arrow-back" size={24} color="#000000" />
+            <Ionicons name="arrow-back" size={24} color={colors.ink} />
           </Pressable>
-          <AppText variant="headlineMd" color="#000000" style={styles.title}>
+          <AppText variant="headlineMd" color={colors.ink} style={styles.title}>
             {t('bookTitle')}
           </AppText>
           <View style={styles.iconButton} />
@@ -119,14 +121,14 @@ export function BookAppointmentView({
             </AppText>
           </View>
           <View style={styles.flex}>
-            <AppText variant="titleMd" color="#000000" style={styles.doctorName}>
+            <AppText variant="titleMd" color={colors.ink} style={styles.doctorName}>
               {t(profile.nameKey)}
             </AppText>
-            <AppText variant="bodyMd" color={MUTED} style={styles.creds}>
+            <AppText variant="bodyMd" color={colors.muted} style={styles.creds}>
               {t(shortCredsKey)}
             </AppText>
           </View>
-          <AppText variant="titleMd" color="#000000" style={styles.fee}>
+          <AppText variant="titleMd" color={colors.ink} style={styles.fee}>
             {feeLabel}
           </AppText>
         </View>
@@ -142,16 +144,16 @@ export function BookAppointmentView({
           onPress={onOpenMemberPicker}
           style={styles.consultingChip}
         >
-          <AppText variant="bodyMd" color="#000000">
+          <AppText variant="bodyMd" color={colors.ink}>
             {`${t('bookConsultingFor')} `}
-            <AppText variant="bodyMd" color="#000000" weightOverride="600">
+            <AppText variant="bodyMd" color={colors.ink} weightOverride="600">
               {consultingLabel}
             </AppText>
           </AppText>
-          <Ionicons name="chevron-down" size={18} color={MUTED} />
+          <Ionicons name="chevron-down" size={18} color={colors.muted} />
         </Pressable>
 
-        <AppText variant="titleMd" color="#000000" style={styles.sectionTitle}>
+        <AppText variant="titleMd" color={colors.ink} style={styles.sectionTitle}>
           {t('bookMode')}
         </AppText>
         <ScrollView
@@ -171,22 +173,22 @@ export function BookAppointmentView({
               >
                 {selected ? (
                   <View style={styles.modeCheck}>
-                    <Ionicons name="checkmark" size={10} color="#FFFFFF" />
+                    <Ionicons name="checkmark" size={10} color={colors.card} />
                   </View>
                 ) : null}
                 <Ionicons
                   name={item.icon}
                   size={24}
-                  color={selected ? ICON_BLUE : MUTED}
+                  color={selected ? ICON_BLUE : colors.muted}
                 />
                 <AppText
                   variant="bodyMd"
-                  color="#000000"
+                  color={colors.ink}
                   weightOverride={selected ? '600' : '400'}
                 >
                   {t(item.labelKey)}
                 </AppText>
-                <AppText variant="labelSm" color={MUTED}>
+                <AppText variant="labelSm" color={colors.muted}>
                   {modeFee(item.id)}
                 </AppText>
               </Pressable>
@@ -195,7 +197,7 @@ export function BookAppointmentView({
         </ScrollView>
 
         <View style={styles.dateHead}>
-          <AppText variant="titleMd" color="#000000" style={styles.sectionTitle}>
+          <AppText variant="titleMd" color={colors.ink} style={styles.sectionTitle}>
             {t('bookSelectDate')}
           </AppText>
           <Pressable
@@ -227,6 +229,35 @@ export function BookAppointmentView({
           ))}
         </ScrollView>
 
+        {slotsEmpty ? (
+          <View style={styles.waitlist}>
+            <AppText variant="bodyMd" color={colors.muted} raw>
+              No slots available — ask the doctor for a time
+            </AppText>
+            <Pressable
+              accessibilityRole="button"
+              onPress={onJoinWaitlist}
+              style={({ pressed }) => [styles.waitButton, pressed && styles.pressed]}
+            >
+              <AppText variant="labelMd" color={ICON_BLUE} weightOverride="600">
+                {t('bookJoinWaitlist')}
+              </AppText>
+            </Pressable>
+          </View>
+        ) : null}
+
+        {bookingError ? (
+          <AppText variant="bodyMd" color={colors.error} raw>
+            {bookingError}
+          </AppText>
+        ) : null}
+
+        {slotsLoading ? (
+          <AppText variant="bodyMd" color={colors.muted} raw>
+            Loading slots…
+          </AppText>
+        ) : null}
+
         {isFull ? (
           <View style={styles.waitlist}>
             <View style={styles.waitlistRow}>
@@ -237,7 +268,7 @@ export function BookAppointmentView({
                 <AppText variant="titleMd" color={AMBER} style={styles.waitTitle}>
                   {waitlistTitle}
                 </AppText>
-                <AppText variant="bodyMd" color={MUTED}>
+                <AppText variant="bodyMd" color={colors.muted}>
                   {t('bookWaitlistBody')}
                 </AppText>
               </View>
@@ -247,7 +278,7 @@ export function BookAppointmentView({
               onPress={onJoinWaitlist}
               style={({ pressed }) => [styles.waitButton, pressed && styles.pressed]}
             >
-              <AppText variant="bodyLg" color="#FFFFFF" weightOverride="600">
+              <AppText variant="bodyLg" color={colors.card} weightOverride="600">
                 {t('bookJoinWaitlist')}
               </AppText>
             </Pressable>
@@ -256,7 +287,7 @@ export function BookAppointmentView({
 
         {selectedDay ? (
           <>
-            <AppText variant="titleMd" color="#000000" style={styles.sectionTitle}>
+            <AppText variant="titleMd" color={colors.ink} style={styles.sectionTitle}>
               {t('bookSlots')}
             </AppText>
             <SlotGroup
@@ -301,8 +332,8 @@ export function BookAppointmentView({
         ) : null}
 
         <View style={styles.tzNote}>
-          <Ionicons name="information-circle-outline" size={16} color={MUTED} />
-          <AppText variant="labelSm" color={MUTED} style={styles.flex}>
+          <Ionicons name="information-circle-outline" size={16} color={colors.muted} />
+          <AppText variant="labelSm" color={colors.muted} style={styles.flex}>
             {t('bookTimezone')}
           </AppText>
         </View>
@@ -310,15 +341,15 @@ export function BookAppointmentView({
 
       <View style={[styles.footer, { paddingBottom: sheetBottomPadding(insets, spacing.md) }]}>
         <View style={styles.flex}>
-          <AppText variant="labelSm" color={MUTED}>
+          <AppText variant="labelSm" color={colors.muted}>
             {t('bookSummary')}
           </AppText>
-          <AppText variant="titleMd" color="#000000" style={styles.summary}>
+          <AppText variant="titleMd" color={colors.ink} style={styles.summary}>
             {summaryLine}
           </AppText>
         </View>
         <View style={styles.footerActions}>
-          <AppText variant="titleMd" color="#000000" style={styles.fee}>
+          <AppText variant="titleMd" color={colors.ink} style={styles.fee}>
             {isFull ? '' : feeLabel}
           </AppText>
           <Pressable
@@ -331,7 +362,7 @@ export function BookAppointmentView({
               pressed && styles.pressed,
             ]}
           >
-            <AppText variant="bodyLg" color="#FFFFFF" weightOverride="600">
+            <AppText variant="bodyLg" color={colors.card} weightOverride="600">
               {t(isFull ? 'bookJoinWaitlist' : 'continue')}
             </AppText>
           </Pressable>
@@ -354,11 +385,11 @@ export function BookAppointmentView({
           >
             <View style={styles.handle} />
             <View style={styles.sheetHead}>
-              <AppText variant="headlineMd" color="#000000">
+              <AppText variant="headlineMd" color={colors.ink}>
                 {t('bookWhoFor')}
               </AppText>
               <Pressable onPress={onCloseMemberPicker} style={styles.iconButton}>
-                <Ionicons name="close" size={22} color="#000000" />
+                <Ionicons name="close" size={22} color={colors.ink} />
               </Pressable>
             </View>
             {members.map((item) => {
@@ -379,14 +410,14 @@ export function BookAppointmentView({
                             : 'person-outline'
                       }
                       size={22}
-                      color="#000000"
+                      color={colors.ink}
                     />
                   </View>
                   <View style={styles.flex}>
-                    <AppText variant="titleMd" color="#000000" style={styles.memberName}>
+                    <AppText variant="titleMd" color={colors.ink} style={styles.memberName}>
                       {item.self ? t('bookMyself') : item.name}
                     </AppText>
-                    <AppText variant="bodyMd" color={selected ? '#000000' : MUTED}>
+                    <AppText variant="bodyMd" color={selected ? colors.ink : colors.muted}>
                       {item.self
                         ? item.name
                         : item.relationshipName
@@ -404,9 +435,9 @@ export function BookAppointmentView({
             })}
             <Pressable onPress={onAddMember} style={styles.addMember}>
               <View style={styles.addAvatar}>
-                <Ionicons name="add" size={22} color="#000000" />
+                <Ionicons name="add" size={22} color={colors.ink} />
               </View>
-              <AppText variant="titleMd" color="#000000" style={styles.memberName}>
+              <AppText variant="titleMd" color={colors.ink} style={styles.memberName}>
                 {t('bookAddMember')}
               </AppText>
             </Pressable>
@@ -430,11 +461,11 @@ export function BookAppointmentView({
           >
             <View style={styles.handle} />
             <View style={styles.sheetHead}>
-              <AppText variant="headlineMd" color="#000000">
+              <AppText variant="headlineMd" color={colors.ink}>
                 {t('bookSelectMonth')}
               </AppText>
               <Pressable onPress={onCloseMonthPicker} style={styles.iconButton}>
-                <Ionicons name="close" size={22} color="#000000" />
+                <Ionicons name="close" size={22} color={colors.ink} />
               </Pressable>
             </View>
             <View style={styles.monthGrid}>
@@ -452,13 +483,13 @@ export function BookAppointmentView({
                   >
                     <AppText
                       variant="bodyMd"
-                      color="#000000"
+                      color={colors.ink}
                       weightOverride={selected ? '600' : '400'}
                     >
                       {t(MONTH_KEYS[option.month])}
                     </AppText>
                     {sameYear ? null : (
-                      <AppText variant="labelSm" color={MUTED}>
+                      <AppText variant="labelSm" color={colors.muted}>
                         {String(option.year)}
                       </AppText>
                     )}
@@ -485,7 +516,7 @@ function DateChip({
   onPress: () => void;
 }) {
   const disabled = day.status === 'closed' || day.status === 'past';
-  const dot = disabled ? HAIRLINE : day.status === 'full' ? MUTED : ICON_BLUE;
+  const dot = disabled ? colors.outlineVariant : day.status === 'full' ? colors.muted : ICON_BLUE;
   return (
     <Pressable
       accessibilityRole="button"
@@ -497,10 +528,10 @@ function DateChip({
         disabled && styles.dateChipClosed,
       ]}
     >
-      <AppText variant="labelSm" color={MUTED} style={styles.dateWeek}>
+      <AppText variant="labelSm" color={colors.muted} style={styles.dateWeek}>
         {weekday}
       </AppText>
-      <AppText variant="titleMd" color="#000000" style={styles.dateNum}>
+      <AppText variant="titleMd" color={colors.ink} style={styles.dateNum}>
         {day.dayLabel}
       </AppText>
       <View style={[styles.dateDot, { backgroundColor: dot }]} />
@@ -532,10 +563,10 @@ function SlotGroup({
     <View style={styles.slotGroup}>
       <View style={styles.slotHead}>
         <Ionicons name={icon} size={18} color={ICON_BLUE} />
-        <AppText variant="bodyMd" color="#000000" weightOverride="600" style={styles.flex}>
+        <AppText variant="bodyMd" color={colors.ink} weightOverride="600" style={styles.flex}>
           {title}
         </AppText>
-        <AppText variant="labelSm" color={MUTED}>
+        <AppText variant="labelSm" color={colors.muted}>
           {count}
         </AppText>
       </View>
@@ -555,7 +586,7 @@ function SlotGroup({
             >
               <AppText
                 variant="bodyMd"
-                color={selected ? '#FFFFFF' : slot.booked ? MUTED : '#000000'}
+                color={selected ? colors.card : slot.booked ? colors.muted : colors.ink}
                 style={slot.booked ? styles.struck : undefined}
               >
                 {t(slot.labelKey)}
@@ -580,7 +611,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   title: {
     flex: 1,
@@ -601,13 +632,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.gutter,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   avatar: {
     width: 48,
     height: 48,
     borderRadius: radii.full,
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -636,7 +667,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.full,
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -653,14 +684,14 @@ const styles = StyleSheet.create({
     minWidth: 120,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     alignItems: 'center',
     gap: 6,
     backgroundColor: colors.card,
   },
   modeCardSelected: {
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     borderWidth: 1.5,
     borderColor: ICON_BLUE,
   },
@@ -696,7 +727,7 @@ const styles = StyleSheet.create({
     width: '31%',
     minHeight: 52,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     alignItems: 'center',
     justifyContent: 'center',
@@ -706,7 +737,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   monthCellSelected: {
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     borderWidth: 1.5,
     borderColor: ICON_BLUE,
   },
@@ -719,14 +750,14 @@ const styles = StyleSheet.create({
     height: 76,
     borderRadius: radii.sm,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 2,
     backgroundColor: colors.card,
   },
   dateChipSelected: {
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     borderWidth: 1.5,
     borderColor: ICON_BLUE,
   },
@@ -797,7 +828,7 @@ const styles = StyleSheet.create({
     width: '31%',
     minHeight: 40,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     alignItems: 'center',
     justifyContent: 'center',
@@ -819,7 +850,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     padding: 12,
   },
@@ -829,7 +860,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     borderTopWidth: 1,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
     backgroundColor: colors.card,
     paddingHorizontal: spacing.gutter,
     paddingTop: spacing.sm,
@@ -873,7 +904,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 5,
     borderRadius: radii.full,
-    backgroundColor: '#D6D6D6',
+    backgroundColor: colors.outlineVariant,
     marginBottom: 4,
   },
   sheetHead: {
@@ -888,11 +919,11 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
   },
   memberRowSelected: {
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     borderWidth: 1.5,
     borderColor: ICON_BLUE,
   },
@@ -900,14 +931,14 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: radii.full,
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     borderWidth: 1.5,
-    borderColor: '#000000',
+    borderColor: colors.ink,
     alignItems: 'center',
     justifyContent: 'center',
   },
   memberAvatarSelected: {
-    backgroundColor: '#5CCEF7',
+    backgroundColor: colors.iconFill,
   },
   memberName: {
     fontSize: scaleFont(18),
@@ -920,7 +951,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderWidth: 1.5,
     borderStyle: 'dashed',
-    borderColor: '#8A8A8A',
+    borderColor: colors.outline,
     borderRadius: radii.sm,
     marginTop: 8,
   },
@@ -928,7 +959,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: radii.full,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.surfaceContainer,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -16,16 +16,11 @@ import { spacing } from '../theme/spacing';
 import { sheetBottomPadding } from '../utilities/sheetInset';
 import { AppText } from './AppText';
 
-const INK = '#1F1F1F';
-const MUTED = '#595959';
-const HAIRLINE = '#E6E6E6';
-const CHIP_FILL = '#E6F5FE';
-const BANNER_BORDER = '#3AA9E0';
-const BAR_FILL = '#3AA9E0';
-const INFO_ICON = '#2E9AD1';
-const ACTION = '#2A7BA3';
-const HANDLE = '#D6D6D6';
-const SPONSORED_BG = '#F9F9F9';
+const BANNER_BORDER = colors.secondary;
+const BAR_FILL = colors.secondary;
+const INFO_ICON = colors.iconFill;
+const HANDLE = colors.outlineVariant;
+const SPONSORED_BG = colors.surfaceContainerLow;
 
 export type WhyOrderChip = {
   id: string;
@@ -96,7 +91,7 @@ export function WhyOrderSheet({
           <View style={styles.handle} />
 
           <View style={styles.header}>
-            <AppText variant="headlineMd" color={INK} style={styles.title}>
+            <AppText variant="headlineMd" color={colors.ink} style={styles.title}>
               {t('searchWhyOrderTitle')}
             </AppText>
             <Pressable
@@ -106,7 +101,7 @@ export function WhyOrderSheet({
               style={styles.closeButton}
               hitSlop={8}
             >
-              <Ionicons name="close" size={22} color={INK} />
+              <Ionicons name="close" size={22} color={colors.ink} />
             </Pressable>
           </View>
 
@@ -122,19 +117,19 @@ export function WhyOrderSheet({
                 color={INFO_ICON}
                 style={styles.bannerIcon}
               />
-              <AppText variant="bodyMd" color={INK} style={styles.flex} weightOverride="500">
+              <AppText variant="bodyMd" color={colors.ink} style={styles.flex} weightOverride="500">
                 {t('searchWhyOrderBanner')}
               </AppText>
             </View>
 
             <View style={styles.section}>
-              <AppText variant="labelSm" color={MUTED} weightOverride="600" style={styles.sectionLabel}>
+              <AppText variant="labelSm" color={colors.muted} weightOverride="600" style={styles.sectionLabel}>
                 {t('searchWhyOrderYourSearch')}
               </AppText>
               <View style={styles.chipWrap}>
                 {chips.map((chip) => (
                   <View key={chip.id} style={styles.chip}>
-                    <AppText variant="bodyMd" color={INK}>
+                    <AppText variant="bodyMd" color={colors.ink}>
                       {chip.label}
                     </AppText>
                     {chip.onRemove ? (
@@ -145,7 +140,7 @@ export function WhyOrderSheet({
                         hitSlop={8}
                         style={styles.chipRemove}
                       >
-                        <Ionicons name="close" size={16} color={INK} />
+                        <Ionicons name="close" size={16} color={colors.ink} />
                       </Pressable>
                     ) : null}
                   </View>
@@ -154,17 +149,17 @@ export function WhyOrderSheet({
             </View>
 
             <View style={styles.section}>
-              <AppText variant="labelSm" color={MUTED} weightOverride="600" style={styles.sectionLabel}>
+              <AppText variant="labelSm" color={colors.muted} weightOverride="600" style={styles.sectionLabel}>
                 {t('searchWhyOrderWhatWeWeigh')}
               </AppText>
               <View style={styles.weightList}>
                 {WEIGHTS.map((item) => (
                   <View key={item.id} style={styles.weightRow}>
                     <View style={styles.weightHead}>
-                      <AppText variant="bodyMd" color={INK} style={styles.flex} weightOverride="500">
+                      <AppText variant="bodyMd" color={colors.ink} style={styles.flex} weightOverride="500">
                         {t(item.labelKey)}
                       </AppText>
-                      <AppText variant="labelSm" color={INK} weightOverride="600">
+                      <AppText variant="labelSm" color={colors.ink} weightOverride="600">
                         {`${item.percent}%`}
                       </AppText>
                     </View>
@@ -176,17 +171,17 @@ export function WhyOrderSheet({
                   </View>
                 ))}
               </View>
-              <AppText variant="labelSm" color={MUTED} style={styles.version}>
+              <AppText variant="labelSm" color={colors.muted} style={styles.version}>
                 {t('searchWhyOrderRankingVersion')}
               </AppText>
             </View>
 
             <View style={styles.section}>
-              <AppText variant="labelSm" color={MUTED} weightOverride="600" style={styles.sectionLabel}>
+              <AppText variant="labelSm" color={colors.muted} weightOverride="600" style={styles.sectionLabel}>
                 {t('searchWhyOrderThisDoctor')}
               </AppText>
               <View style={styles.doctorCard}>
-                <AppText variant="titleMd" color={INK} style={styles.doctorTitle}>
+                <AppText variant="titleMd" color={colors.ink} style={styles.doctorTitle}>
                   {t('searchWhyOrderDoctorReasonsTitle')}
                 </AppText>
                 {DOCTOR_REASONS.map((key) => (
@@ -196,7 +191,7 @@ export function WhyOrderSheet({
                       size={20}
                       color={INFO_ICON}
                     />
-                    <AppText variant="bodyMd" color={INK} style={styles.flex}>
+                    <AppText variant="bodyMd" color={colors.ink} style={styles.flex}>
                       {t(key)}
                     </AppText>
                   </View>
@@ -205,10 +200,10 @@ export function WhyOrderSheet({
             </View>
 
             <View style={styles.sponsoredCard}>
-            <AppText variant="titleMd" color={INK} weightOverride="500" style={styles.sponsoredTitle}>
+            <AppText variant="titleMd" color={colors.ink} weightOverride="500" style={styles.sponsoredTitle}>
               {t('searchWhyOrderSponsoredTitle')}
             </AppText>
-              <AppText variant="bodyMd" color={MUTED}>
+              <AppText variant="bodyMd" color={colors.muted}>
                 {t('searchWhyOrderSponsoredBody')}
               </AppText>
             </View>
@@ -220,7 +215,7 @@ export function WhyOrderSheet({
               onPress={onReport}
               style={styles.reportHit}
             >
-              <AppText variant="labelSm" color={ACTION} weightOverride="600">
+              <AppText variant="labelSm" color={colors.primary} weightOverride="600">
                 {t('searchWhyOrderReport')}
               </AppText>
             </Pressable>
@@ -243,7 +238,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radii.md,
     borderTopRightRadius: radii.md,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     overflow: 'hidden',
   },
   handle: {
@@ -261,7 +256,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
     gap: spacing.sm,
   },
   title: {
@@ -282,7 +277,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     borderWidth: 1,
     borderColor: BANNER_BORDER,
     borderRadius: radii.sm,
@@ -307,9 +302,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.full,
     paddingHorizontal: spacing.md,
     paddingVertical: 6,
@@ -335,7 +330,7 @@ const styles = StyleSheet.create({
   barTrack: {
     height: 6,
     borderRadius: radii.full,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
     overflow: 'hidden',
   },
   barFill: {
@@ -348,7 +343,7 @@ const styles = StyleSheet.create({
   },
   doctorCard: {
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
     gap: spacing.sm,
@@ -365,7 +360,7 @@ const styles = StyleSheet.create({
   sponsoredCard: {
     backgroundColor: SPONSORED_BG,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
     gap: spacing.sm,
@@ -375,7 +370,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
     alignItems: 'center',
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,

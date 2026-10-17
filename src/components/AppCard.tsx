@@ -13,7 +13,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderColor: colors.outlineVariant,
     borderWidth: 1,
-    borderRadius: radii.default,
+    borderRadius: radii.md,
     padding: layout.cardPadding,
     gap: spacing.ms,
   },

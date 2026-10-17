@@ -5,6 +5,7 @@ import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
 import type { ConsultModeChoice } from './useDeviceCheckController';
 
+// TODO(VIDEO-SDK): BE-P08/B-P11 — waiting-room ETA from API only; never invent ETA.
 export type WaitingRoomVariant = 'standard' | 'doctorLate';
 
 export type WaitingRoomViewModel = {
@@ -114,9 +115,9 @@ export function useWaitingRoomController({
   const credentialsLine = appointment
     ? t(appointment.credentialsKey)
     : t('searchResultAnjaliCredentials');
-  const experienceLine = appointment
+  const experienceLine = appointment?.experienceKey
     ? t(appointment.experienceKey)
-    : t('searchResultAnjaliExperience');
+    : '';
 
   const mins = Math.floor(elapsedSec / 60);
   const secs = elapsedSec % 60;

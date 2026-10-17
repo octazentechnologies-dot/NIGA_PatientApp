@@ -27,19 +27,11 @@ import { radii } from '../theme/radii';
 import { layout, spacing } from '../theme/spacing';
 import { sheetBottomPadding } from '../utilities/sheetInset';
 
-const INK = '#1F1F1F';
-const MUTED = '#595959';
-const HAIRLINE = '#DDDFE2';
-const PAGE = '#F5F6F7';
-const CARD = '#FFFFFF';
-const ACTION = '#2A7BA3';
-const CHART = '#3AA9E0';
-const CHIP_FILL = '#E6F5FE';
-const ERROR = '#BA1A1A';
-const ASTRO = '#6B3FA0';
-const ASTRO_FILL = '#F3EEFA';
-const FIELD_BORDER = '#8A8A8A';
-const OUTLINE_ACTION = '#276F93';
+const ERROR = colors.error;
+const ASTRO = colors.astro;
+const ASTRO_FILL = colors.astroContainer;
+const FIELD_BORDER = colors.outline;
+const OUTLINE_ACTION = colors.primaryOutline;
 
 const CATEGORIES: {
   id: ReminderCategoryId;
@@ -93,11 +85,11 @@ export function RemindersCentreView(vm: RemindersCentreViewModel) {
             onPress={vm.onBack}
             style={styles.iconHit}
           >
-            <Ionicons name="arrow-back" size={22} color={INK} />
+            <Ionicons name="arrow-back" size={22} color={colors.ink} />
           </Pressable>
           <AppText
             variant="headlineMd"
-            color={INK}
+            color={colors.ink}
             style={styles.headerTitle}
             numberOfLines={1}
           >
@@ -108,10 +100,10 @@ export function RemindersCentreView(vm: RemindersCentreViewModel) {
             onPress={vm.onOpenMemberPicker}
             style={styles.memberChip}
           >
-            <AppText variant="labelSm" color={INK} weightOverride="600">
+            <AppText variant="labelSm" color={colors.ink} weightOverride="600">
               {vm.memberLabel}
             </AppText>
-            <Ionicons name="chevron-down" size={16} color={MUTED} />
+            <Ionicons name="chevron-down" size={16} color={colors.muted} />
           </Pressable>
           <Pressable
             accessibilityRole="button"
@@ -119,7 +111,7 @@ export function RemindersCentreView(vm: RemindersCentreViewModel) {
             onPress={vm.onOpenSettings}
             style={styles.iconHit}
           >
-            <Ionicons name="settings-outline" size={22} color={INK} />
+            <Ionicons name="settings-outline" size={22} color={colors.ink} />
           </Pressable>
         </View>
       </View>
@@ -161,12 +153,12 @@ function EmptyState({ vm }: { vm: RemindersCentreViewModel }) {
   return (
     <View style={styles.emptyWrap}>
       <View style={styles.emptyIcon}>
-        <Ionicons name="checkmark-circle" size={48} color={CHART} />
+        <Ionicons name="checkmark-circle" size={48} color={colors.secondary} />
       </View>
-      <AppText variant="headlineMd" color={INK} style={styles.center}>
+      <AppText variant="headlineMd" color={colors.ink} style={styles.center}>
         {vm.t('remEmptyTitle')}
       </AppText>
-      <AppText variant="bodyMd" color={MUTED} style={styles.center}>
+      <AppText variant="bodyMd" color={colors.muted} style={styles.center}>
         {vm.t('remEmptyBody')}
       </AppText>
       <Pressable
@@ -192,10 +184,10 @@ function FilledState({ vm }: { vm: RemindersCentreViewModel }) {
     <>
       <View style={styles.progressCard}>
         <View style={styles.flex}>
-          <AppText variant="titleMd" color={INK}>
+          <AppText variant="titleMd" color={colors.ink}>
             {vm.t('remTodayProgress')}
           </AppText>
-          <AppText variant="bodyMd" color={MUTED}>
+          <AppText variant="bodyMd" color={colors.muted}>
             {vm.progressLabel}
           </AppText>
         </View>
@@ -206,7 +198,7 @@ function FilledState({ vm }: { vm: RemindersCentreViewModel }) {
               cy={24}
               r={20}
               fill="none"
-              stroke={HAIRLINE}
+              stroke={colors.outlineVariant}
               strokeWidth={4}
             />
             <Circle
@@ -214,7 +206,7 @@ function FilledState({ vm }: { vm: RemindersCentreViewModel }) {
               cy={24}
               r={20}
               fill="none"
-              stroke={CHART}
+              stroke={colors.secondary}
               strokeWidth={4}
               strokeLinecap="round"
               strokeDasharray={`${circumference}`}
@@ -224,7 +216,7 @@ function FilledState({ vm }: { vm: RemindersCentreViewModel }) {
             />
           </Svg>
           <View style={styles.ringLabel}>
-            <AppText variant="labelSm" color={INK} weightOverride="600">
+            <AppText variant="labelSm" color={colors.ink} weightOverride="600">
               {vm.todayDone}/{vm.todayTotal}
             </AppText>
           </View>
@@ -233,12 +225,12 @@ function FilledState({ vm }: { vm: RemindersCentreViewModel }) {
 
       <View style={styles.sectionHead}>
         <View style={styles.sectionTitleRow}>
-          <Ionicons name="medkit" size={20} color={INK} />
-          <AppText variant="titleMd" color={INK}>
+          <Ionicons name="medkit" size={20} color={colors.ink} />
+          <AppText variant="titleMd" color={colors.ink}>
             {vm.t('remFromDoctor')}
           </AppText>
         </View>
-        <AppText variant="labelSm" color={MUTED}>
+        <AppText variant="labelSm" color={colors.muted}>
           {vm.t('remFromDoctorHint')}
         </AppText>
       </View>
@@ -257,16 +249,16 @@ function FilledState({ vm }: { vm: RemindersCentreViewModel }) {
                 <View style={styles.flex}>
                   <AppText
                     variant="bodyLg"
-                    color={INK}
+                    color={colors.ink}
                     style={item.done ? styles.struck : undefined}
-                  >
+                   raw>
                     {vm.t(item.titleKey)}
                   </AppText>
                   <AppText
                     variant="bodyMd"
-                    color={MUTED}
+                    color={colors.muted}
                     style={item.done ? styles.struckMuted : undefined}
-                  >
+                   raw>
                     {vm.t(item.detailKey)}
                   </AppText>
                 </View>
@@ -279,7 +271,7 @@ function FilledState({ vm }: { vm: RemindersCentreViewModel }) {
                   <Ionicons
                     name={item.done ? 'checkmark-circle' : 'ellipse-outline'}
                     size={28}
-                    color={ACTION}
+                    color={colors.primary}
                   />
                 </Pressable>
               </Pressable>
@@ -292,10 +284,10 @@ function FilledState({ vm }: { vm: RemindersCentreViewModel }) {
                 style={[styles.listRow, !last && styles.listRowBorder]}
               >
                 <View style={styles.flex}>
-                  <AppText variant="bodyLg" color={INK}>
+                  <AppText variant="bodyLg" color={colors.ink} raw>
                     {vm.t(item.titleKey)}
                   </AppText>
-                  <AppText variant="bodyMd" color={MUTED}>
+                  <AppText variant="bodyMd" color={colors.muted} raw>
                     {vm.t(item.detailKey)}
                   </AppText>
                 </View>
@@ -312,12 +304,12 @@ function FilledState({ vm }: { vm: RemindersCentreViewModel }) {
                 key={item.id}
                 style={[styles.actionBlock, !last && styles.listRowBorder]}
               >
-                <AppText variant="bodyLg" color={INK}>
-                  {vm.t(item.titleKey)}
+                <AppText variant="bodyLg" color={colors.ink} raw>
+                    {vm.t(item.titleKey)}
                 </AppText>
                 <View style={styles.warnRow}>
                   <Ionicons name="warning" size={16} color={ERROR} />
-                  <AppText variant="bodyMd" color={ERROR}>
+                  <AppText variant="bodyMd" color={ERROR} raw>
                     {vm.t(item.detailKey)}
                   </AppText>
                 </View>
@@ -336,14 +328,14 @@ function FilledState({ vm }: { vm: RemindersCentreViewModel }) {
               style={[styles.listRow, !last && styles.listRowBorder]}
             >
               <View style={styles.flex}>
-                <AppText variant="bodyLg" color={INK}>
-                  {vm.t(item.titleKey)}
+                <AppText variant="bodyLg" color={colors.ink} raw>
+                    {vm.t(item.titleKey)}
                 </AppText>
-                <AppText variant="bodyMd" color={MUTED}>
-                  {vm.t(item.detailKey)}
+                <AppText variant="bodyMd" color={colors.muted} raw>
+                    {vm.t(item.detailKey)}
                 </AppText>
               </View>
-              <Ionicons name="chevron-forward" size={22} color={MUTED} />
+              <Ionicons name="chevron-forward" size={22} color={colors.muted} />
             </Pressable>
           );
         })}
@@ -366,7 +358,7 @@ function FilledState({ vm }: { vm: RemindersCentreViewModel }) {
             {vm.t('remAstroStrip')}
           </AppText>
         </View>
-        <AppText variant="labelSm" color={MUTED}>
+        <AppText variant="labelSm" color={colors.muted}>
           {vm.t('remAstroHint')}
         </AppText>
       </View>
@@ -381,10 +373,10 @@ function FilledState({ vm }: { vm: RemindersCentreViewModel }) {
                 style={[styles.listRow, !last && styles.listRowBorder]}
               >
                 <View style={styles.flex}>
-                  <AppText variant="bodyLg" color={INK}>
+                  <AppText variant="bodyLg" color={colors.ink} raw>
                     {vm.t(item.titleKey)}
                   </AppText>
-                  <AppText variant="bodyMd" color={ASTRO} weightOverride="600">
+                  <AppText variant="bodyMd" color={ASTRO} weightOverride="600" raw>
                     {vm.t(item.detailKey)}
                   </AppText>
                 </View>
@@ -400,11 +392,11 @@ function FilledState({ vm }: { vm: RemindersCentreViewModel }) {
               style={[styles.listRow, !last && styles.listRowBorder]}
             >
               <View style={styles.flex}>
-                <AppText variant="bodyLg" color={INK}>
-                  {vm.t(item.titleKey)}
+                <AppText variant="bodyLg" color={colors.ink} raw>
+                    {vm.t(item.titleKey)}
                 </AppText>
-                <AppText variant="bodyMd" color={MUTED}>
-                  {vm.t(item.detailKey)}
+                <AppText variant="bodyMd" color={colors.muted} raw>
+                    {vm.t(item.detailKey)}
                 </AppText>
               </View>
               <AppSwitch
@@ -419,17 +411,17 @@ function FilledState({ vm }: { vm: RemindersCentreViewModel }) {
       <View style={styles.quietCard}>
         <View style={styles.flex}>
           <View style={styles.sectionTitleRow}>
-            <Ionicons name="moon" size={20} color={INK} />
-            <AppText variant="bodyLg" color={INK} weightOverride="600">
+            <Ionicons name="moon" size={20} color={colors.ink} />
+            <AppText variant="bodyLg" color={colors.ink} weightOverride="600">
               {vm.t('remQuietHours')}
             </AppText>
           </View>
           <View style={styles.quietRange}>
-            <AppText variant="bodyMd" color={INK} weightOverride="600">
+            <AppText variant="bodyMd" color={colors.ink} weightOverride="600">
               {vm.quietHoursRange}
             </AppText>
           </View>
-          <AppText variant="labelSm" color={MUTED}>
+          <AppText variant="labelSm" color={colors.muted}>
             {vm.t('remQuietHint')}
           </AppText>
         </View>
@@ -460,7 +452,7 @@ function MemberPickerSheet({ vm }: { vm: RemindersCentreViewModel }) {
           ]}
         >
           <View style={styles.sheetHandle} />
-          <AppText variant="titleMd" color={INK} style={styles.sheetTitle}>
+          <AppText variant="titleMd" color={colors.ink} style={styles.sheetTitle}>
             {vm.t('remShowingFor')}
           </AppText>
           {vm.members.map((member) => {
@@ -474,14 +466,14 @@ function MemberPickerSheet({ vm }: { vm: RemindersCentreViewModel }) {
               >
                 <AppText
                   variant="bodyLg"
-                  color={INK}
+                  color={colors.ink}
                   weightOverride={selected ? '600' : undefined}
                   style={styles.flex}
                 >
                   {member.label}
                 </AppText>
                 {selected ? (
-                  <Ionicons name="checkmark" size={20} color={ACTION} />
+                  <Ionicons name="checkmark" size={20} color={colors.primary} />
                 ) : null}
               </Pressable>
             );
@@ -513,7 +505,7 @@ function EditReminderSheet({ vm }: { vm: RemindersCentreViewModel }) {
         >
           <View style={styles.sheetHandle} />
           <View style={styles.editorHeader}>
-            <AppText variant="headlineMd" color={INK} style={styles.flex}>
+            <AppText variant="headlineMd" color={colors.ink} style={styles.flex}>
               {vm.t(isEdit ? 'remEditorEditTitle' : 'remEditorAddTitle')}
             </AppText>
             <Pressable
@@ -522,7 +514,7 @@ function EditReminderSheet({ vm }: { vm: RemindersCentreViewModel }) {
               onPress={vm.onCloseEditor}
               style={styles.iconHit}
             >
-              <Ionicons name="close" size={22} color={INK} />
+              <Ionicons name="close" size={22} color={colors.ink} />
             </Pressable>
           </View>
 
@@ -534,27 +526,27 @@ function EditReminderSheet({ vm }: { vm: RemindersCentreViewModel }) {
               <View style={styles.linkedCard}>
                 <View style={styles.linkedHead}>
                   <View style={styles.linkedIcon}>
-                    <Ionicons name="medkit" size={22} color={ACTION} />
+                    <Ionicons name="medkit" size={22} color={colors.primary} />
                   </View>
                   <View style={styles.flex}>
-                    <AppText variant="titleMd" color={INK}>
+                    <AppText variant="titleMd" color={colors.ink}>
                       {vm.t('remLinkedTo').replace('{name}', vm.linkedMedicineName)}
                     </AppText>
-                    <AppText variant="bodyMd" color={MUTED}>
+                    <AppText variant="bodyMd" color={colors.muted}>
                       {vm.linkedRxId}
                     </AppText>
                   </View>
                 </View>
                 <View style={styles.infoBox}>
-                  <Ionicons name="information-circle-outline" size={16} color={MUTED} />
-                  <AppText variant="labelSm" color={MUTED} style={styles.flex}>
+                  <Ionicons name="information-circle-outline" size={16} color={colors.muted} />
+                  <AppText variant="labelSm" color={colors.muted} style={styles.flex}>
                     {vm.t('remLinkedNote')}
                   </AppText>
                 </View>
               </View>
             ) : null}
 
-            <AppText variant="bodyLg" color={INK} weightOverride="600">
+            <AppText variant="bodyLg" color={colors.ink} weightOverride="600">
               {vm.t('remWhatFor')}
             </AppText>
             <View style={styles.catGrid}>
@@ -575,11 +567,11 @@ function EditReminderSheet({ vm }: { vm: RemindersCentreViewModel }) {
                     <Ionicons
                       name={cat.icon}
                       size={22}
-                      color={on ? ACTION : MUTED}
+                      color={on ? colors.primary : colors.muted}
                     />
                     <AppText
                       variant="labelSm"
-                      color={INK}
+                      color={colors.ink}
                       weightOverride={on ? '600' : '500'}
                       style={styles.center}
                     >
@@ -591,19 +583,19 @@ function EditReminderSheet({ vm }: { vm: RemindersCentreViewModel }) {
             </View>
 
             <View style={styles.field}>
-              <AppText variant="labelSm" color={MUTED} style={styles.fieldLabel}>
+              <AppText variant="labelSm" color={colors.muted} style={styles.fieldLabel}>
                 {vm.t('remFieldTitle')}
               </AppText>
               <TextInput
                 value={vm.editorTitle}
                 onChangeText={vm.onChangeTitle}
                 placeholder={vm.t('remFieldTitle')}
-                placeholderTextColor={MUTED}
+                placeholderTextColor={colors.muted}
                 style={styles.input}
               />
             </View>
 
-            <AppText variant="titleMd" color={INK}>
+            <AppText variant="titleMd" color={colors.ink}>
               {vm.t('remWhen')}
             </AppText>
             <ScrollView
@@ -622,7 +614,7 @@ function EditReminderSheet({ vm }: { vm: RemindersCentreViewModel }) {
                   >
                     <AppText
                       variant="labelSm"
-                      color={on ? INK : MUTED}
+                      color={on ? colors.ink : colors.muted}
                       weightOverride={on ? '600' : '500'}
                     >
                       {vm.t(freq.labelKey)}
@@ -644,7 +636,7 @@ function EditReminderSheet({ vm }: { vm: RemindersCentreViewModel }) {
                   >
                     <AppText
                       variant="labelSm"
-                      color={on ? INK : MUTED}
+                      color={on ? colors.ink : colors.muted}
                       weightOverride={on ? '600' : '500'}
                     >
                       {vm.t(day.labelKey)}
@@ -654,13 +646,13 @@ function EditReminderSheet({ vm }: { vm: RemindersCentreViewModel }) {
               })}
             </View>
 
-            <AppText variant="bodyMd" color={MUTED}>
+            <AppText variant="bodyMd" color={colors.muted}>
               {vm.t('remTimes')}
             </AppText>
             <View style={styles.timesRow}>
               {vm.editorTimes.map((time) => (
                 <View key={time} style={styles.timeChip}>
-                  <AppText variant="bodyMd" color={INK}>
+                  <AppText variant="bodyMd" color={colors.ink}>
                     {time}
                   </AppText>
                   <Pressable
@@ -668,7 +660,7 @@ function EditReminderSheet({ vm }: { vm: RemindersCentreViewModel }) {
                     onPress={() => vm.onRemoveTime(time)}
                     hitSlop={8}
                   >
-                    <Ionicons name="close" size={16} color={MUTED} />
+                    <Ionicons name="close" size={16} color={colors.muted} />
                   </Pressable>
                 </View>
               ))}
@@ -677,8 +669,8 @@ function EditReminderSheet({ vm }: { vm: RemindersCentreViewModel }) {
                 onPress={vm.onAddTime}
                 style={styles.addTimeChip}
               >
-                <Ionicons name="add" size={18} color={ACTION} />
-                <AppText variant="labelSm" color={ACTION} weightOverride="600">
+                <Ionicons name="add" size={18} color={colors.primary} />
+                <AppText variant="labelSm" color={colors.primary} weightOverride="600">
                   {vm.t('remAddTime')}
                 </AppText>
               </Pressable>
@@ -686,7 +678,7 @@ function EditReminderSheet({ vm }: { vm: RemindersCentreViewModel }) {
 
             <View style={styles.divider} />
 
-            <AppText variant="bodyLg" color={INK} weightOverride="600">
+            <AppText variant="bodyLg" color={colors.ink} weightOverride="600">
               {vm.t('remNotifyBy')}
             </AppText>
             <NotifyRow
@@ -709,7 +701,7 @@ function EditReminderSheet({ vm }: { vm: RemindersCentreViewModel }) {
             />
 
             <View style={styles.snoozeHead}>
-              <AppText variant="bodyLg" color={INK} weightOverride="600">
+              <AppText variant="bodyLg" color={colors.ink} weightOverride="600">
                 {vm.t('remSnoozeAllowed')}
               </AppText>
               <AppSwitch
@@ -730,7 +722,7 @@ function EditReminderSheet({ vm }: { vm: RemindersCentreViewModel }) {
                     >
                       <AppText
                         variant="labelSm"
-                        color={on ? INK : MUTED}
+                        color={on ? colors.ink : colors.muted}
                         weightOverride={on ? '600' : '500'}
                       >
                         {vm.t(item.labelKey)}
@@ -742,14 +734,14 @@ function EditReminderSheet({ vm }: { vm: RemindersCentreViewModel }) {
             ) : null}
 
             <View style={styles.field}>
-              <AppText variant="labelSm" color={MUTED} style={styles.fieldLabel}>
+              <AppText variant="labelSm" color={colors.muted} style={styles.fieldLabel}>
                 {vm.t('remNotes')}
               </AppText>
               <TextInput
                 value={vm.editorNotes}
                 onChangeText={vm.onChangeNotes}
                 placeholder={vm.t('remNotes')}
-                placeholderTextColor={MUTED}
+                placeholderTextColor={colors.muted}
                 multiline
                 style={[styles.input, styles.notesInput]}
               />
@@ -761,6 +753,14 @@ function EditReminderSheet({ vm }: { vm: RemindersCentreViewModel }) {
               label={vm.t('remSave')}
               onPress={vm.onSaveReminder}
             />
+            {vm.editorMode === 'edit' && vm.editingReminderId ? (
+              <AppButton
+                label={vm.t('notifActionDelete')}
+                variant="secondary"
+                onPress={() => vm.onDeleteReminder(vm.editingReminderId!)}
+                style={{ marginTop: spacing.sm }}
+              />
+            ) : null}
           </View>
         </View>
       </View>
@@ -782,8 +782,8 @@ function NotifyRow({
   return (
     <View style={styles.notifyRow}>
       <View style={styles.notifyLabel}>
-        <Ionicons name={icon} size={20} color={MUTED} />
-        <AppText variant="bodyMd" color={INK}>
+        <Ionicons name={icon} size={20} color={colors.muted} />
+        <AppText variant="bodyMd" color={colors.ink}>
           {label}
         </AppText>
       </View>
@@ -795,12 +795,12 @@ function NotifyRow({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: PAGE,
+    backgroundColor: colors.page,
   },
   header: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   headerRow: {
     minHeight: 56,
@@ -834,8 +834,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     borderRadius: radii.full,
     borderWidth: 1,
-    borderColor: HAIRLINE,
-    backgroundColor: PAGE,
+    borderColor: colors.outlineVariant,
+    backgroundColor: colors.page,
     marginRight: 2,
   },
   body: {
@@ -851,8 +851,8 @@ const styles = StyleSheet.create({
   progressCard: {
     borderRadius: radii.default,
     borderWidth: 1,
-    borderColor: HAIRLINE,
-    backgroundColor: CARD,
+    borderColor: colors.outlineVariant,
+    backgroundColor: colors.card,
     padding: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
@@ -882,8 +882,8 @@ const styles = StyleSheet.create({
   listCard: {
     borderRadius: radii.default,
     borderWidth: 1,
-    borderColor: HAIRLINE,
-    backgroundColor: CARD,
+    borderColor: colors.outlineVariant,
+    backgroundColor: colors.card,
     overflow: 'hidden',
   },
   listRow: {
@@ -896,7 +896,7 @@ const styles = StyleSheet.create({
   },
   listRowBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   struck: {
     textDecorationLine: 'line-through',
@@ -939,8 +939,8 @@ const styles = StyleSheet.create({
   quietCard: {
     borderRadius: radii.default,
     borderWidth: 1,
-    borderColor: HAIRLINE,
-    backgroundColor: CARD,
+    borderColor: colors.outlineVariant,
+    backgroundColor: colors.card,
     padding: spacing.md,
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -953,9 +953,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
     borderRadius: radii.sm,
-    backgroundColor: PAGE,
+    backgroundColor: colors.page,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
   },
   emptyWrap: {
     minHeight: 420,
@@ -969,8 +969,8 @@ const styles = StyleSheet.create({
     height: 96,
     borderRadius: radii.default,
     borderWidth: 1,
-    borderColor: HAIRLINE,
-    backgroundColor: CARD,
+    borderColor: colors.outlineVariant,
+    backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.md,
@@ -983,7 +983,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.button,
     borderWidth: 1.5,
     borderColor: OUTLINE_ACTION,
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -995,7 +995,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
     paddingHorizontal: spacing.md,
     borderRadius: radii.default,
-    backgroundColor: ACTION,
+    backgroundColor: colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
@@ -1009,7 +1009,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(31, 31, 31, 0.4)',
   },
   sheet: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderTopLeftRadius: radii.md,
     borderTopRightRadius: radii.md,
     paddingHorizontal: spacing.lg,
@@ -1021,7 +1021,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: radii.full,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
     marginBottom: spacing.sm,
   },
   sheetTitle: {
@@ -1035,18 +1035,18 @@ const styles = StyleSheet.create({
   },
   editorSheet: {
     maxHeight: '92%',
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderTopLeftRadius: radii.md,
     borderTopRightRadius: radii.md,
     borderTopWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
   },
   editorHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
     paddingBottom: spacing.sm,
   },
   editorBody: {
@@ -1056,15 +1056,15 @@ const styles = StyleSheet.create({
   },
   editorFooter: {
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
     padding: spacing.lg,
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
   },
   linkedCard: {
     borderRadius: radii.default,
     borderWidth: 1,
-    borderColor: HAIRLINE,
-    backgroundColor: CARD,
+    borderColor: colors.outlineVariant,
+    backgroundColor: colors.card,
     padding: spacing.md,
     gap: spacing.sm,
   },
@@ -1076,7 +1076,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: radii.sm,
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1086,9 +1086,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     padding: spacing.sm,
     borderRadius: radii.sm,
-    backgroundColor: PAGE,
+    backgroundColor: colors.page,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
   },
   catGrid: {
     flexDirection: 'row',
@@ -1101,8 +1101,8 @@ const styles = StyleSheet.create({
     minHeight: 72,
     borderRadius: radii.default,
     borderWidth: 1,
-    borderColor: HAIRLINE,
-    backgroundColor: CARD,
+    borderColor: colors.outlineVariant,
+    backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.sm,
@@ -1112,8 +1112,8 @@ const styles = StyleSheet.create({
     width: '47%',
   },
   catCellOn: {
-    backgroundColor: CHIP_FILL,
-    borderColor: CHART,
+    backgroundColor: colors.primaryContainer,
+    borderColor: colors.secondary,
   },
   field: {
     position: 'relative',
@@ -1128,7 +1128,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.default,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    color: INK,
+    color: colors.ink,
     fontSize: 16,
   },
   notesInput: {
@@ -1143,14 +1143,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderRadius: radii.full,
     borderWidth: 1,
-    borderColor: HAIRLINE,
-    backgroundColor: CARD,
+    borderColor: colors.outlineVariant,
+    backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
   freqChipOn: {
-    backgroundColor: CHIP_FILL,
-    borderColor: CHART,
+    backgroundColor: colors.primaryContainer,
+    borderColor: colors.secondary,
   },
   dayRow: {
     flexDirection: 'row',
@@ -1163,14 +1163,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderRadius: radii.full,
     borderWidth: 1,
-    borderColor: HAIRLINE,
-    backgroundColor: CARD,
+    borderColor: colors.outlineVariant,
+    backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
   dayChipOn: {
-    backgroundColor: CHIP_FILL,
-    borderColor: CHART,
+    backgroundColor: colors.primaryContainer,
+    borderColor: colors.secondary,
   },
   timesRow: {
     flexDirection: 'row',
@@ -1188,7 +1188,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.default,
     borderWidth: 1,
     borderColor: FIELD_BORDER,
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
   },
   addTimeChip: {
     minHeight: 48,
@@ -1199,12 +1199,12 @@ const styles = StyleSheet.create({
     borderRadius: radii.default,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: ACTION,
-    backgroundColor: CARD,
+    borderColor: colors.primary,
+    backgroundColor: colors.card,
   },
   divider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
   },
   notifyRow: {
     minHeight: 48,
@@ -1214,8 +1214,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderRadius: radii.default,
     borderWidth: 1,
-    borderColor: HAIRLINE,
-    backgroundColor: CARD,
+    borderColor: colors.outlineVariant,
+    backgroundColor: colors.card,
   },
   notifyLabel: {
     flexDirection: 'row',
@@ -1236,13 +1236,13 @@ const styles = StyleSheet.create({
     minHeight: 48,
     borderRadius: radii.default,
     borderWidth: 1,
-    borderColor: HAIRLINE,
-    backgroundColor: CARD,
+    borderColor: colors.outlineVariant,
+    backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
   snoozeChipOn: {
-    backgroundColor: CHIP_FILL,
-    borderColor: CHART,
+    backgroundColor: colors.primaryContainer,
+    borderColor: colors.secondary,
   },
 });

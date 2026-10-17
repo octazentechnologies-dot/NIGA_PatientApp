@@ -21,15 +21,11 @@ import { NotificationBell } from '../components/NotificationBell';
 import { PatientTabBar, usePatientTabScrollInset } from '../components/PatientTabBar';
 import { Screen } from '../components/Screen';
 import { WhoForMemberSheet } from '../components/WhoForMemberSheet';
-import { formatRupees } from '../config/appointmentSlots';
-import { CARE_CATEGORIES } from '../config/careCategories';
 import {
   CONSULT_NOW_AVAILABLE_DOCTORS,
-  CONSULT_NOW_FEE_RUPEES,
   CONSULT_NOW_WAIT_MAX,
   CONSULT_NOW_WAIT_MIN,
 } from '../config/consultNow';
-import { getHomeHealthTips } from '../config/healthTips';
 import { images } from '../config/images';
 import type { HomeViewModel } from '../controllers/useHomeController';
 import type { TranslationKey } from '../localization/types';
@@ -37,15 +33,11 @@ import type { PublicDoctor } from '../store/api/new/doctorsApi';
 import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
 import { spacing } from '../theme/spacing';
+import { resolveApiUrl } from '../utilities/formatters';
 import { scaleFont } from '../utilities/scale';
 
-function getDoctorPhotoUrl(photoPath: string | null): string | null {
-  if (!photoPath) return null;
-  if (photoPath.startsWith('http://') || photoPath.startsWith('https://')) {
-    return photoPath;
-  }
-  const clean = photoPath.startsWith('/') ? photoPath.slice(1) : photoPath;
-  return `https://devapi2.homeocentrum.com/${clean}`;
+function getDoctorPhotoUrl(photoPath: string | null | undefined): string | null {
+  return resolveApiUrl(photoPath ?? null);
 }
 
 function getDoctorInitials(name: string): string {
@@ -79,7 +71,7 @@ function DoctorCard({
   onInstantConsult: () => void;
 }) {
   const [imgError, setImgError] = useState(false);
-  const photoUrl = getDoctorPhotoUrl(doctor.photoPath);
+  const photoUrl = getDoctorPhotoUrl(doctor.photoUrl ?? doctor.photoPath);
   const initials = getDoctorInitials(doctor.displayName);
   const formattedName = formatDoctorDisplayName(doctor.displayName);
   const isOnline = doctor.isOnline;
@@ -115,7 +107,7 @@ function DoctorCard({
           <View style={styles.docNameRow}>
             <AppText
               variant="titleMd"
-              color="#0F172A"
+              color={colors.ink}
               weightOverride="700"
               style={styles.docName}
               numberOfLines={2}
@@ -124,8 +116,8 @@ function DoctorCard({
             </AppText>
             {isVerified ? (
               <View style={styles.verifiedBadgeRow}>
-                <Ionicons name="checkmark-circle" size={13} color="#059669" />
-                <AppText variant="labelSm" color="#059669" weightOverride="600">
+                <Ionicons name="checkmark-circle" size={13} color={colors.success} />
+                <AppText variant="labelSm" color={colors.success} weightOverride="600">
                   {t('doctorsVerified')}
                 </AppText>
               </View>
@@ -134,7 +126,7 @@ function DoctorCard({
 
           <AppText
             variant="bodyMd"
-            color="#64748B"
+            color={colors.muted}
             numberOfLines={2}
             style={styles.docSubtitle}
           >
@@ -145,10 +137,10 @@ function DoctorCard({
 
           {Boolean(doctor.rankingSummary) && (
             <View style={styles.rankingSummaryBadge}>
-              <Ionicons name="shield-checkmark" size={13} color="#047857" />
+              <Ionicons name="shield-checkmark" size={13} color={colors.success} />
               <AppText
                 variant="labelSm"
-                color="#047857"
+                color={colors.success}
                 weightOverride="500"
                 numberOfLines={1}
                 style={styles.rankingSummaryText}
@@ -166,7 +158,7 @@ function DoctorCard({
             <Ionicons name="videocam-outline" size={14} color={colors.primary} />
             <AppText
               variant="labelSm"
-              color="#64748B"
+              color={colors.muted}
               numberOfLines={1}
               style={styles.feeModeLabel}
             >
@@ -175,11 +167,11 @@ function DoctorCard({
           </View>
           <AppText
             variant="labelLg"
-            color="#0F172A"
+            color={colors.ink}
             weightOverride="700"
             style={styles.feePrice}
           >
-            {doctor.consultFeeTele ? `₹${doctor.consultFeeTele}` : '—'}
+            {doctor.consultFeeTele != null ? `₹${doctor.consultFeeTele}` : '—'}
           </AppText>
         </View>
 
@@ -190,7 +182,7 @@ function DoctorCard({
             <Ionicons name="business-outline" size={14} color={colors.primary} />
             <AppText
               variant="labelSm"
-              color="#64748B"
+              color={colors.muted}
               numberOfLines={1}
               style={styles.feeModeLabel}
             >
@@ -199,14 +191,28 @@ function DoctorCard({
           </View>
           <AppText
             variant="labelLg"
-            color="#0F172A"
+            color={colors.ink}
             weightOverride="700"
             style={styles.feePrice}
           >
-            {doctor.consultFeeInClinic ? `₹${doctor.consultFeeInClinic}` : '—'}
+            {doctor.consultFeeInClinic != null
+              ? `₹${doctor.consultFeeInClinic}`
+              : '—'}
           </AppText>
         </View>
       </View>
+
+      {doctor.reviewCount > 0 && doctor.averageRating != null ? (
+        <View style={styles.docNameRow}>
+          <Ionicons name="star" size={14} color={colors.tertiaryContainer} />
+          <AppText variant="labelSm" color={colors.ink} weightOverride="600">
+            {doctor.averageRating.toFixed(1)}
+          </AppText>
+          <AppText variant="labelSm" color={colors.muted}>
+            ({doctor.reviewCount})
+          </AppText>
+        </View>
+      ) : null}
 
       <View style={styles.docActionsRow}>
         {isOnline ? (
@@ -218,8 +224,8 @@ function DoctorCard({
               pressed && styles.pressed,
             ]}
           >
-            <Ionicons name="flash" size={14} color="#B45309" />
-            <AppText variant="labelMd" color="#92400E" weightOverride="700">
+            <Ionicons name="flash" size={14} color={colors.warning} />
+            <AppText variant="labelMd" color={colors.warning} weightOverride="700">
               {t('homeInstantBadge')}
             </AppText>
           </Pressable>
@@ -232,7 +238,7 @@ function DoctorCard({
             pressed && styles.pressed,
           ]}
         >
-          <AppText variant="labelMd" color="#FFFFFF" weightOverride="700">
+          <AppText variant="labelMd" color={colors.card} weightOverride="700">
             {t('doctorsBookAppointment')}
           </AppText>
         </Pressable>
@@ -290,6 +296,9 @@ export function HomeView({
   refetchDoctors,
   onOpenDoctorProfile,
   onOpenBooking,
+  careCategories = [],
+  healthArticles = [],
+  onSelectCareCategory,
   account,
   notificationCount,
 }: HomeViewModel & { notificationCount: number }) {
@@ -320,7 +329,7 @@ export function HomeView({
               <View style={styles.headerCopy}>
                 <AppText
                   variant="titleMd"
-                  color="#000000"
+                  color={colors.ink}
                   style={styles.greeting}
                 >
                   {greeting}
@@ -415,7 +424,7 @@ export function HomeView({
                             <Ionicons
                               name="shield-checkmark"
                               size={14}
-                              color="#000000"
+                              color={colors.ink}
                             />
                           </View>
                         </View>
@@ -502,7 +511,7 @@ export function HomeView({
                     <Ionicons name="clipboard-outline" size={22} color={colors.primary} />
                   </View>
                   <View style={styles.flex}>
-                    <AppText variant="titleMd" color="#1F1F1F">
+                    <AppText variant="titleMd" color={colors.ink}>
                       {t('homeFollowUpCardTitle')}
                     </AppText>
                     <AppText variant="bodyMd" color={colors.onSurfaceVariant}>
@@ -530,11 +539,11 @@ export function HomeView({
                   </View>
                   <View style={styles.flex}>
                     <View style={styles.instantTitleRow}>
-                      <AppText variant="titleMd" color="#000000" style={styles.flex}>
+                      <AppText variant="titleMd" color={colors.ink} style={styles.flex}>
                         {t('homeInstantAdvice')}
                       </AppText>
                       <View style={styles.instantPill}>
-                        <AppText variant="labelSm" color="#8A5109" weightOverride="600">
+                        <AppText variant="labelSm" color={colors.warning} weightOverride="600">
                           {t('homeInstantBadge')}
                         </AppText>
                       </View>
@@ -558,12 +567,6 @@ export function HomeView({
                     </AppText>
                   </View>
                 </View>
-                <AppText variant="labelSm" color="#8A5109">
-                  {t('homeInstantCardPaid').replace(
-                    '{fee}',
-                    formatRupees(CONSULT_NOW_FEE_RUPEES.video, language),
-                  )}
-                </AppText>
               </Pressable>
 
               <AppText variant="headlineMd" color={colors.onSurface}>
@@ -608,91 +611,111 @@ export function HomeView({
                     >
                       {t(action.labelKey)}
                     </AppText>
-                    {action.labelKey === 'homeInstantAdvice' ? (
-                      <AppText
-                        variant="labelSm"
-                        color="#8A5109"
-                        style={styles.centerText}
-                      >
-                        {formatRupees(CONSULT_NOW_FEE_RUPEES.video, language)}
-                      </AppText>
-                    ) : null}
                   </Pressable>
                 ))}
               </View>
 
-              <AppText variant="headlineMd" color={colors.onSurface}>
-                {t('homeCareCategories')}
-              </AppText>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.categoryRow}
-              >
-                {CARE_CATEGORIES.map((category) => (
-                  <Pressable
-                    key={category.id}
-                    accessibilityRole="button"
-                    style={styles.categoryItem}
+              {careCategories.length > 0 ? (
+                <>
+                  <AppText variant="headlineMd" color={colors.onSurface}>
+                    {t('homeCareCategories')}
+                  </AppText>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.categoryRow}
                   >
-                    <View style={styles.categoryIcon}>
-                      <Image
-                        source={category.image}
-                        resizeMode="contain"
-                        style={styles.categoryImage}
-                      />
-                    </View>
-                    <AppText
-                      variant="labelSm"
-                      color={colors.onSurface}
-                      style={styles.centerText}
-                      numberOfLines={2}
-                    >
-                      {t(category.homeLabelKey)}
-                    </AppText>
-                  </Pressable>
-                ))}
-              </ScrollView>
+                    {careCategories.map((category) => (
+                      <Pressable
+                        key={category.id}
+                        accessibilityRole="button"
+                        onPress={() => onSelectCareCategory(category.name)}
+                        style={styles.categoryItem}
+                      >
+                        <View style={styles.categoryIcon}>
+                          <AppText
+                            variant="titleMd"
+                            color={colors.primary}
+                            languageOverride="en"
+                            raw
+                          >
+                            {category.name.slice(0, 1).toUpperCase()}
+                          </AppText>
+                        </View>
+                        <AppText
+                          variant="labelSm"
+                          color={colors.onSurface}
+                          style={styles.centerText}
+                          numberOfLines={2}
+                          raw
+                        >
+                          {category.name}
+                        </AppText>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                </>
+              ) : null}
 
-              <AppText variant="headlineMd" color={colors.onSurface}>
-                {t('homeHealthTips')}
-              </AppText>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.tipRow}
-              >
-                {getHomeHealthTips().map((tip) => (
-                  <Pressable
-                    key={tip.id}
-                    accessibilityRole="button"
-                    onPress={() => onOpenHealthTip(tip.id)}
-                    style={styles.tipCard}
+              {healthArticles.length > 0 ? (
+                <>
+                  <AppText variant="headlineMd" color={colors.onSurface}>
+                    {t('homeHealthTips')}
+                  </AppText>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.tipRow}
                   >
-                    <Image
-                      source={tip.hero}
-                      resizeMode="contain"
-                      style={styles.tipImage}
-                    />
-                    <View style={styles.tipChip}>
-                      <AppText variant="labelSm" color={colors.primary} weightOverride="600">
-                        {t(tip.categoryKey)}
-                      </AppText>
-                    </View>
-                    <AppText
-                      variant="titleMd"
-                      color={colors.onSurface}
-                      numberOfLines={3}
-                      style={styles.tipTitle}
-                    >
-                      {t(tip.titleKey)}
-                    </AppText>
-                    <AppText variant="labelSm" color={colors.onSurfaceVariant} numberOfLines={2}>
-                      {t('tipReviewedBy').replace('{name}', t(tip.reviewerKey))}
-                    </AppText>
-                  </Pressable>
-                ))}
-              </ScrollView>
+                    {healthArticles.map((article) => (
+                      <Pressable
+                        key={article.id}
+                        accessibilityRole="button"
+                        onPress={() => onOpenHealthTip(article.id)}
+                        style={styles.tipCard}
+                      >
+                        {article.imageUrl ? (
+                          <Image
+                            source={{ uri: article.imageUrl }}
+                            resizeMode="cover"
+                            style={styles.tipImage}
+                          />
+                        ) : (
+                          <View style={[styles.tipImage, styles.tipImagePlaceholder]}>
+                            <Ionicons
+                              name="newspaper-outline"
+                              size={28}
+                              color={colors.primary}
+                            />
+                          </View>
+                        )}
+                        {article.subtitle ? (
+                          <View style={styles.tipChip}>
+                            <AppText
+                              variant="labelSm"
+                              color={colors.primary}
+                              weightOverride="600"
+                              numberOfLines={1}
+                              raw
+                            >
+                              {article.subtitle}
+                            </AppText>
+                          </View>
+                        ) : null}
+                        <AppText
+                          variant="titleMd"
+                          color={colors.onSurface}
+                          numberOfLines={3}
+                          style={styles.tipTitle}
+                          raw
+                        >
+                          {article.title}
+                        </AppText>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                </>
+              ) : null}
             </View>
           </ScrollView>
         </View>
@@ -707,7 +730,7 @@ export function HomeView({
             <View style={styles.doctorsHeaderTop}>
               <AppText
                 variant="titleMd"
-                color="#1F1F1F"
+                color={colors.ink}
                 style={[styles.greeting, styles.flex]}
               >
                 {t('homeTabDoctors')}
@@ -775,11 +798,11 @@ export function HomeView({
           >
             <View style={styles.availableDoctorsSectionHead}>
               <View style={styles.availableDoctorsTitleRow}>
-                <AppText variant="headlineMd" color="#0F172A" weightOverride="700">
+                <AppText variant="headlineMd" color={colors.ink} weightOverride="700">
                   {t('doctorsAvailableTitle')}
                 </AppText>
                 {publicDoctors.length > 0 ? (
-                  <AppText variant="bodyMd" color="#64748B">
+                  <AppText variant="bodyMd" color={colors.muted}>
                     {`${publicDoctors.length} verified doctors`}
                   </AppText>
                 ) : null}
@@ -796,7 +819,7 @@ export function HomeView({
                 >
                   <AppText
                     variant="labelMd"
-                    color={doctorFilter === 'all' ? colors.primary : '#475569'}
+                    color={doctorFilter === 'all' ? colors.primary : colors.muted}
                     weightOverride={doctorFilter === 'all' ? '600' : '500'}
                   >
                     {`${t('doctorsFilterAll')} (${publicDoctors.length})`}
@@ -813,7 +836,7 @@ export function HomeView({
                   <View style={styles.onlineDot} />
                   <AppText
                     variant="labelMd"
-                    color={doctorFilter === 'online' ? colors.primary : '#475569'}
+                    color={doctorFilter === 'online' ? colors.primary : colors.muted}
                     weightOverride={doctorFilter === 'online' ? '600' : '500'}
                   >
                     {`${t('doctorsFilterOnline')} (${publicDoctors.filter((d) => d.isOnline).length})`}
@@ -831,8 +854,8 @@ export function HomeView({
               </View>
             ) : isDoctorsError && publicDoctors.length === 0 ? (
               <View style={styles.doctorErrorWrap}>
-                <Ionicons name="alert-circle-outline" size={40} color="#E53935" />
-                <AppText variant="bodyMd" color="#1F1F1F">
+                <Ionicons name="alert-circle-outline" size={40} color={colors.error} />
+                <AppText variant="bodyMd" color={colors.ink}>
                   {t('genericError')}
                 </AppText>
                 <AppButton
@@ -1075,9 +1098,9 @@ const styles = StyleSheet.create({
     borderRadius: radii.button,
   },
   instantCard: {
-    backgroundColor: '#FCF3E4',
+    backgroundColor: colors.warningContainer,
     borderWidth: 1,
-    borderColor: '#F2C14E',
+    borderColor: colors.tertiaryContainer,
     borderRadius: radii.sm,
     padding: spacing.md,
     gap: 8,
@@ -1103,7 +1126,7 @@ const styles = StyleSheet.create({
   instantPill: {
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: '#F2C14E',
+    borderColor: colors.tertiaryContainer,
     borderRadius: radii.full,
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -1196,6 +1219,10 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
     backgroundColor: colors.buttonFill,
   },
+  tipImagePlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   tipChip: {
     alignSelf: 'flex-start',
     backgroundColor: colors.buttonFill,
@@ -1233,13 +1260,13 @@ const styles = StyleSheet.create({
   bookingsEmpty: {
     borderRadius: radii.default,
     borderWidth: 1,
-    borderColor: '#DDDFE2',
+    borderColor: colors.outlineVariant,
     backgroundColor: colors.card,
     padding: spacing.md,
   },
   bookingCard: {
     borderWidth: 1,
-    borderColor: '#E6E6E6',
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     padding: spacing.md,
     gap: 10,
@@ -1260,17 +1287,17 @@ const styles = StyleSheet.create({
   },
   waitingBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: '#FCF3E4',
+    backgroundColor: colors.warningContainer,
     borderWidth: 1,
-    borderColor: '#F2C14E',
+    borderColor: colors.tertiaryContainer,
     borderRadius: radii.full,
     paddingHorizontal: 8,
     paddingVertical: 4,
     marginTop: 6,
   },
   confirmedBadge: {
-    backgroundColor: '#E9F5EF',
-    borderColor: '#CDE8DA',
+    backgroundColor: colors.successContainer,
+    borderColor: colors.successContainer,
   },
   pressed: {
     opacity: 0.88,
@@ -1313,19 +1340,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: radii.full,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: colors.page,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.outlineVariant,
   },
   filterPillActive: {
-    backgroundColor: '#E6F4EA',
+    backgroundColor: colors.successContainer,
     borderColor: colors.primary,
   },
   onlineDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#10B981',
+    backgroundColor: colors.success,
   },
   doctorLoadingWrap: {
     paddingVertical: spacing.xl,
@@ -1339,22 +1366,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.card,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#FCA5A5',
+    borderColor: colors.errorContainer,
   },
   docCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.card,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.outlineVariant,
     padding: spacing.md,
     gap: 12,
     overflow: 'hidden',
     ...Platform.select({
       ios: {
-        shadowColor: '#0F172A',
+        shadowColor: colors.ink,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
         shadowRadius: 6,
@@ -1382,15 +1409,15 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: 26,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.outlineVariant,
   },
   docAvatarInitials: {
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: '#EBF4F0',
+    backgroundColor: colors.successContainer,
     borderWidth: 1,
-    borderColor: '#D1E7DD',
+    borderColor: colors.successContainer,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1401,9 +1428,9 @@ const styles = StyleSheet.create({
     width: 13,
     height: 13,
     borderRadius: 7,
-    backgroundColor: '#10B981',
+    backgroundColor: colors.success,
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: colors.card,
   },
   docInfoCol: {
     flex: 1,
@@ -1426,12 +1453,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#ECFDF5',
+    backgroundColor: colors.successContainer,
     paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: radii.full,
     borderWidth: 1,
-    borderColor: '#A7F3D0',
+    borderColor: colors.successContainer,
     flexShrink: 0,
   },
   docSubtitle: {
@@ -1444,12 +1471,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: colors.successContainer,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#DCFCE7',
+    borderColor: colors.successContainer,
     marginTop: 3,
     maxWidth: '100%',
     alignSelf: 'flex-start',
@@ -1461,12 +1488,12 @@ const styles = StyleSheet.create({
   feesRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.page,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 9,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: colors.outlineVariant,
   },
   feeCol: {
     flex: 1,
@@ -1486,7 +1513,7 @@ const styles = StyleSheet.create({
   feeDivider: {
     width: 1,
     height: 32,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: colors.outlineVariant,
     marginHorizontal: 10,
   },
   docActionsRow: {
@@ -1500,12 +1527,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 5,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: colors.warningContainer,
     paddingHorizontal: 16,
     height: 42,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: colors.tertiaryContainer,
   },
   bookDocBtn: {
     flex: 1,

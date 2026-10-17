@@ -15,15 +15,11 @@ import { radii } from '../theme/radii';
 import { layout, spacing } from '../theme/spacing';
 import { fontFamilyFor } from '../utilities/fonts';
 
-const MUTED = '#595959';
-const HAIRLINE = '#E6E6E6';
-const FILL = '#F2F2F2';
-const CHIP_FILL = '#E6F5FE';
-const ACTION = '#2A7BA3';
-const ICON_BLUE = '#2A7BA3';
-const AMBER = '#8A5109';
-const AMBER_FILL = '#FCF3E4';
-const AMBER_BORDER = '#F2C14E';
+const FILL = colors.surfaceVariant;
+const ICON_BLUE = colors.primary;
+const AMBER = colors.warning;
+const AMBER_FILL = colors.warningContainer;
+const AMBER_BORDER = colors.tertiaryContainer;
 
 export function RescheduleAppointmentView(vm: AppointmentDetailViewModel) {
   const insets = useSafeAreaInsets();
@@ -43,9 +39,9 @@ export function RescheduleAppointmentView(vm: AppointmentDetailViewModel) {
           onPress={vm.onCloseReschedule}
           style={styles.iconButton}
         >
-          <Ionicons name="arrow-back" size={24} color="#000000" />
+          <Ionicons name="arrow-back" size={24} color={colors.ink} />
         </Pressable>
-        <AppText variant="headlineMd" color="#000000" style={styles.title}>
+        <AppText variant="headlineMd" color={colors.ink} style={styles.title}>
           {vm.t('rescheduleTitle')}
         </AppText>
         <View style={styles.iconButton} />
@@ -59,12 +55,12 @@ export function RescheduleAppointmentView(vm: AppointmentDetailViewModel) {
         ]}
       >
         <View style={styles.card}>
-          <AppText variant="labelSm" color={MUTED} style={styles.overline}>
+          <AppText variant="labelSm" color={colors.muted} style={styles.overline}>
             {vm.t('rescheduleCurrent')}
           </AppText>
           <View style={styles.currentRow}>
             <Ionicons name="calendar" size={18} color={ICON_BLUE} />
-            <AppText variant="bodyLg" color={MUTED} style={styles.strike}>
+            <AppText variant="bodyLg" color={colors.muted} style={styles.strike}>
               {vm.currentAppointmentLine}
             </AppText>
           </View>
@@ -72,13 +68,13 @@ export function RescheduleAppointmentView(vm: AppointmentDetailViewModel) {
 
         <View style={styles.policy}>
           <Ionicons name="information-circle" size={20} color={AMBER} />
-          <AppText variant="bodyMd" color="#000000" style={styles.flex}>
+          <AppText variant="bodyMd" color={colors.ink} style={styles.flex}>
             {vm.reschedulePolicy}
           </AppText>
         </View>
 
         <View style={styles.card}>
-          <AppText variant="titleMd" color="#000000">
+          <AppText variant="titleMd" color={colors.ink}>
             {vm.t('rescheduleSelectTime')}
           </AppText>
           <ScrollView
@@ -102,14 +98,14 @@ export function RescheduleAppointmentView(vm: AppointmentDetailViewModel) {
                 >
                   <AppText
                     variant="labelSm"
-                    color={disabled ? MUTED : selected ? '#000000' : MUTED}
+                    color={disabled ? colors.muted : selected ? colors.ink : colors.muted}
                     style={styles.dateWeek}
                   >
                     {vm.t(WEEKDAY_KEYS[day.weekdayIndex])}
                   </AppText>
                   <AppText
                     variant="titleMd"
-                    color={disabled ? MUTED : '#000000'}
+                    color={disabled ? colors.muted : colors.ink}
                   >
                     {day.dayLabel}
                   </AppText>
@@ -151,7 +147,7 @@ export function RescheduleAppointmentView(vm: AppointmentDetailViewModel) {
         </View>
 
         <View style={styles.reasonBlock}>
-          <AppText variant="titleMd" color="#000000">
+          <AppText variant="titleMd" color={colors.ink}>
             {vm.t('rescheduleWhy')}
             <AppText variant="titleMd" color={colors.error}>
               {' *'}
@@ -168,7 +164,7 @@ export function RescheduleAppointmentView(vm: AppointmentDetailViewModel) {
           >
             <AppText
               variant="bodyLg"
-              color={vm.rescheduleReasonLabel ? '#000000' : MUTED}
+              color={vm.rescheduleReasonLabel ? colors.ink : colors.muted}
               style={styles.flex}
             >
               {vm.rescheduleReasonLabel || vm.t('rescheduleReasonPlaceholder')}
@@ -176,7 +172,7 @@ export function RescheduleAppointmentView(vm: AppointmentDetailViewModel) {
             <Ionicons
               name={vm.rescheduleReasonOpen ? 'chevron-up' : 'chevron-down'}
               size={20}
-              color={MUTED}
+              color={colors.muted}
             />
           </Pressable>
           {vm.rescheduleReasonOpen ? (
@@ -189,7 +185,7 @@ export function RescheduleAppointmentView(vm: AppointmentDetailViewModel) {
                     onPress={() => vm.onSelectRescheduleReason(item.id)}
                     style={[styles.option, selected && styles.optionSelected]}
                   >
-                    <AppText variant="bodyMd" color="#000000">
+                    <AppText variant="bodyMd" color={colors.ink}>
                       {vm.t(item.labelKey)}
                     </AppText>
                   </Pressable>
@@ -202,7 +198,7 @@ export function RescheduleAppointmentView(vm: AppointmentDetailViewModel) {
               value={vm.rescheduleNote}
               onChangeText={vm.onChangeRescheduleNote}
               placeholder={vm.t('rescheduleSpecify')}
-              placeholderTextColor={MUTED}
+              placeholderTextColor={colors.muted}
               multiline
               style={[
                 styles.note,
@@ -215,14 +211,19 @@ export function RescheduleAppointmentView(vm: AppointmentDetailViewModel) {
 
       <View style={[styles.footer, { paddingBottom: sheetBottomPadding(insets, spacing.md) }]}>
         <View style={styles.summary}>
-          <AppText variant="bodyLg" color={MUTED} style={styles.strike}>
+          <AppText variant="bodyLg" color={colors.muted} style={styles.strike}>
             {vm.currentShortWhen}
           </AppText>
           <Ionicons name="arrow-forward" size={18} color={ICON_BLUE} />
-          <AppText variant="bodyLg" color="#000000" weightOverride="700">
+          <AppText variant="bodyLg" color={colors.ink} weightOverride="700">
             {vm.nextShortWhen || '—'}
           </AppText>
         </View>
+        {vm.rescheduleError ? (
+          <AppText variant="bodyMd" color={colors.error} raw>
+            {vm.rescheduleError}
+          </AppText>
+        ) : null}
         <Pressable
           accessibilityRole="button"
           disabled={!vm.canConfirmReschedule}
@@ -233,7 +234,7 @@ export function RescheduleAppointmentView(vm: AppointmentDetailViewModel) {
             pressed && vm.canConfirmReschedule && styles.pressed,
           ]}
         >
-          <AppText variant="titleMd" color="#FFFFFF">
+          <AppText variant="titleMd" color={colors.card}>
             {vm.t('rescheduleConfirm')}
           </AppText>
         </Pressable>
@@ -262,7 +263,7 @@ function SlotRow({
   }
   return (
     <View style={styles.slotBlock}>
-      <AppText variant="labelSm" color={MUTED} style={styles.overline}>
+      <AppText variant="labelSm" color={colors.muted} style={styles.overline}>
         {title}
       </AppText>
       <View style={styles.slotGrid}>
@@ -282,7 +283,7 @@ function SlotRow({
             >
               <AppText
                 variant="bodyMd"
-                color={taken ? MUTED : selected ? '#FFFFFF' : '#000000'}
+                color={taken ? colors.muted : selected ? colors.card : colors.ink}
                 weightOverride={selected ? '600' : '400'}
                 style={taken ? styles.strike : undefined}
               >
@@ -308,7 +309,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   iconButton: {
     width: 48,
@@ -327,7 +328,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     padding: spacing.md,
     gap: 12,
@@ -363,14 +364,14 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: radii.sm,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
   },
   dateChipSelected: {
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     borderColor: ICON_BLUE,
     borderWidth: 1.5,
   },
@@ -394,15 +395,15 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: radii.sm,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 8,
   },
   slotSelected: {
-    backgroundColor: ACTION,
-    borderColor: ACTION,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   slotTaken: {
     backgroundColor: FILL,
@@ -414,7 +415,7 @@ const styles = StyleSheet.create({
   reasonField: {
     minHeight: layout.buttonHeight,
     borderWidth: 1,
-    borderColor: '#8A8A8A',
+    borderColor: colors.outline,
     borderRadius: radii.sm,
     paddingHorizontal: spacing.md,
     flexDirection: 'row',
@@ -423,7 +424,7 @@ const styles = StyleSheet.create({
   },
   dropdown: {
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     overflow: 'hidden',
   },
@@ -433,16 +434,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   optionSelected: {
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
   },
   note: {
     minHeight: 88,
     borderWidth: 1,
-    borderColor: '#8A8A8A',
+    borderColor: colors.outline,
     borderRadius: radii.sm,
     paddingHorizontal: spacing.md,
     paddingTop: 12,
-    color: '#000000',
+    color: colors.ink,
     textAlignVertical: 'top',
   },
   footer: {
@@ -452,7 +453,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: colors.card,
     borderTopWidth: 1,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
     gap: 12,
@@ -466,7 +467,7 @@ const styles = StyleSheet.create({
   confirm: {
     minHeight: layout.buttonHeight,
     borderRadius: radii.button,
-    backgroundColor: ACTION,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },

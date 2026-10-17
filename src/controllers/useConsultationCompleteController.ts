@@ -31,6 +31,9 @@ export type ConsultationCompleteViewModel = {
   onReportProblem: () => void;
   onOpenSettings: () => void;
   onBackHome: () => void;
+  isLoading: boolean;
+  isError: boolean;
+  onRetry: () => void;
 };
 
 function localizeDigits(value: string, language: AppLanguage): string {
@@ -59,16 +62,16 @@ export function useConsultationCompleteController({
   const [rating, setRating] = useState(0);
   const [prescriptionOpen, setPrescriptionOpen] = useState(false);
 
-  const doctorName = appointment
+  const doctorName = appointment?.doctorNameKey
     ? t(appointment.doctorNameKey)
-    : t('searchResultAnjaliName');
-  const credentials = appointment
+    : '';
+  const credentials = appointment?.credentialsKey
     ? t(appointment.credentialsKey)
-    : t('searchResultAnjaliCredentials');
+    : '';
   const mins = localizeDigits(String(Math.max(1, durationMinutes)), language);
-  const modeLabel = appointment?.modeConsultLabel ?? t('reviewVideoConsult');
-  const whenBase = appointment?.whenLabel ?? 'Today, 11 Sep 2026 · 6:00 PM IST';
-  const whenLine = `${whenBase} · ${modeLabel}`;
+  const modeLabel = appointment?.modeConsultLabel ?? '';
+  const whenBase = appointment?.whenLabel ?? '';
+  const whenLine = [whenBase, modeLabel].filter(Boolean).join(' · ');
   const authUser = useAppSelector((state) => state.auth.user);
   const patientName =
     appointment?.patientLabel?.split('(')[0]?.trim() ||
@@ -79,10 +82,15 @@ export function useConsultationCompleteController({
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const patientAppId = (appointment as unknown as { patientAppId?: number; appointmentId?: number })?.patientAppId ??
     (appointment as unknown as { patientAppId?: number; appointmentId?: number })?.appointmentId;
-  const { data: summaryResponse } = useGetConsultationSummaryQuery(patientAppId ?? 0, {
+  const {
+    data: summaryResponse,
+    isLoading,
+    isError,
+    refetch,
+  } = useGetConsultationSummaryQuery(patientAppId ?? 0, {
     skip: !isAuthenticated || !patientAppId,
   });
-  const realSummaryText = summaryResponse?.data?.[0]?.text;
+  const realSummaryText = summaryResponse?.data?.[0]?.text?.trim() || '';
 
   const openPrescription = () => setPrescriptionOpen(true);
 
@@ -93,11 +101,13 @@ export function useConsultationCompleteController({
     doctorName,
     credentials,
     whenLine,
-    patientChip: t('completePatient').replace('{name}', patientName),
-    discussed: t('completeDiscussedBody'),
-    advice: t('completeAdviceBody'),
-    nextFollowUp: t('completeFollowUpBody'),
-    summaryNote: realSummaryText || t('completeSummaryNote').replace('{name}', doctorName),
+    patientChip: patientName
+      ? t('completePatient').replace('{name}', patientName)
+      : '',
+    discussed: '',
+    advice: '',
+    nextFollowUp: '',
+    summaryNote: realSummaryText,
     followUpPlanMeta: t('completeFollowUpMeta'),
     rating,
     prescriptionOpen,
@@ -111,5 +121,10 @@ export function useConsultationCompleteController({
     onReportProblem: () => undefined,
     onOpenSettings: () => undefined,
     onBackHome,
+    isLoading,
+    isError,
+    onRetry: () => {
+      void refetch();
+    },
   };
 }

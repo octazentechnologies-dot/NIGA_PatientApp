@@ -1,0 +1,4 @@
+yarn run v1.22.19
+$ eslint "src/**/*.{ts,tsx}"
+warning Cannot find a suitable global folder. Tried these: "/usr/local, /Users/pranavbandekar/.yarn"
+Done in 6.17s.

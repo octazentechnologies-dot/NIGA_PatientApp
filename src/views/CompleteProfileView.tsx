@@ -155,9 +155,9 @@ export function CompleteProfileView({
           <Ionicons
             name={toastVariant === 'error' ? 'alert-circle' : 'checkmark-circle'}
             size={18}
-            color="#FFFFFF"
+            color={colors.card}
           />
-          <AppText variant="bodyMd" color="#FFFFFF" style={styles.toastText}>
+          <AppText variant="bodyMd" color={colors.card} style={styles.toastText}>
             {toastMessage}
           </AppText>
         </View>
@@ -180,7 +180,7 @@ export function CompleteProfileView({
         contentContainerStyle={styles.content}
       >
         <View style={styles.stepBlock}>
-          <AppText variant="headlineMd" color="#1F1F1F">
+          <AppText variant="headlineMd" color={colors.ink}>
             {screenTitle}
           </AppText>
         </View>
@@ -877,7 +877,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   phoneWrapDisabled: {
-    backgroundColor: '#F5F6F7',
+    backgroundColor: colors.page,
     borderColor: colors.outlineVariant,
   },
   phoneInputDisabled: {
@@ -916,17 +916,17 @@ const styles = StyleSheet.create({
     borderRadius: radii.full,
     paddingVertical: 10,
     paddingHorizontal: spacing.md,
-    shadowColor: '#000',
+    shadowColor: colors.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 6,
     elevation: 4,
   },
   toastSuccess: {
-    backgroundColor: '#0F766E',
+    backgroundColor: colors.success,
   },
   toastError: {
-    backgroundColor: '#DC2626',
+    backgroundColor: colors.error,
   },
   toastText: {
     flexShrink: 1,

@@ -15,16 +15,12 @@ import { layout, spacing } from '../theme/spacing';
 import { sheetBottomPadding } from '../utilities/sheetInset';
 import { colors } from '../theme/colors';
 
-const MUTED = '#595959';
-const HAIRLINE = '#E6E6E6';
-const ACTION = '#2A7BA3';
-const AMBER = '#8A5109';
-const AMBER_FILL = '#FCF3E4';
-const AMBER_BORDER = '#F2C14E';
-const CHIP_FILL = '#E6F5FE';
-const FILL = '#F2F2F2';
-const GOLD = '#F2C14E';
-const FEE_ICON = '#F0F7FA';
+const AMBER = colors.warning;
+const AMBER_FILL = colors.warningContainer;
+const AMBER_BORDER = colors.tertiaryContainer;
+const FILL = colors.surfaceVariant;
+const GOLD = colors.tertiaryContainer;
+const FEE_ICON = colors.primaryContainer;
 
 export function ConsultNowOfferSheet(vm: ConsultNowViewModel) {
   const insets = useSafeAreaInsets();
@@ -58,20 +54,20 @@ export function ConsultNowOfferSheet(vm: ConsultNowViewModel) {
           <View style={styles.body}>
             <View style={styles.profileRow}>
               <View style={styles.avatar}>
-                <AppText variant="titleMd" color={ACTION} languageOverride="en">
+                <AppText variant="titleMd" color={colors.primary} languageOverride="en">
                   {offer.initials}
                 </AppText>
               </View>
               <View style={styles.flex}>
                 <View style={styles.nameRow}>
-                  <AppText variant="headlineMd" color="#000000" style={styles.flex}>
+                  <AppText variant="headlineMd" color={colors.ink} style={styles.flex}>
                     {offer.doctorName}
                   </AppText>
                   <View style={styles.verified}>
                     <Ionicons name="checkmark-circle" size={18} color={GOLD} />
                   </View>
                 </View>
-                <AppText variant="bodyMd" color={MUTED}>
+                <AppText variant="bodyMd" color={colors.muted}>
                   {offer.credentialsLine}
                 </AppText>
                 <View style={styles.chips}>
@@ -93,18 +89,18 @@ export function ConsultNowOfferSheet(vm: ConsultNowViewModel) {
 
             <View style={styles.feeCard}>
               <View style={styles.feeIcon}>
-                <Ionicons name="cash-outline" size={22} color={ACTION} />
+                <Ionicons name="cash-outline" size={22} color={colors.primary} />
               </View>
               <View style={styles.flex}>
-                <AppText variant="bodyMd" color={MUTED}>
+                <AppText variant="bodyMd" color={colors.muted}>
                   {vm.t('offerFee')}
                 </AppText>
-                <AppText variant="titleMd" color="#000000">
+                <AppText variant="titleMd" color={colors.ink}>
                   {offer.feeLabel}
                 </AppText>
               </View>
               <Pressable onPress={vm.onOpenFeeDetails} hitSlop={8}>
-                <AppText variant="labelSm" color={ACTION} style={styles.link}>
+                <AppText variant="labelSm" color={colors.primary} style={styles.link}>
                   {vm.t('offerSeeDetails')}
                 </AppText>
               </Pressable>
@@ -115,8 +111,8 @@ export function ConsultNowOfferSheet(vm: ConsultNowViewModel) {
               onPress={vm.onAcceptOffer}
               style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]}
             >
-              <Ionicons name="checkmark-circle" size={22} color="#FFFFFF" />
-              <AppText variant="titleMd" color="#FFFFFF">
+              <Ionicons name="checkmark-circle" size={22} color={colors.card} />
+              <AppText variant="titleMd" color={colors.card}>
                 {offer.acceptLabel}
               </AppText>
             </Pressable>
@@ -125,11 +121,11 @@ export function ConsultNowOfferSheet(vm: ConsultNowViewModel) {
               onPress={vm.onDeclineOffer}
               style={({ pressed }) => [styles.secondaryBtn, pressed && styles.pressed]}
             >
-              <AppText variant="titleMd" color={ACTION}>
+              <AppText variant="titleMd" color={colors.primary}>
                 {vm.t('offerAnother')}
               </AppText>
             </Pressable>
-            <AppText variant="labelSm" color={MUTED} style={styles.center}>
+            <AppText variant="labelSm" color={colors.muted} style={styles.center}>
               {vm.t('offerRejectHint')}
             </AppText>
           </View>
@@ -144,7 +140,7 @@ export function ConsultNowOfferSheet(vm: ConsultNowViewModel) {
       >
         <Pressable style={styles.detailsBackdrop} onPress={vm.onCloseFeeDetails}>
           <Pressable style={styles.detailsCard} onPress={() => undefined}>
-            <AppText variant="titleMd" color="#000000">
+            <AppText variant="titleMd" color={colors.ink}>
               {vm.t('offerFee')}
             </AppText>
             <FeeRow label={vm.t('reviewDoctorFee')} value={vm.doctorFeeLabel} />
@@ -157,7 +153,7 @@ export function ConsultNowOfferSheet(vm: ConsultNowViewModel) {
               onPress={vm.onCloseFeeDetails}
               style={({ pressed }) => [styles.detailsClose, pressed && styles.pressed]}
             >
-              <AppText variant="titleMd" color={ACTION}>
+              <AppText variant="titleMd" color={colors.primary}>
                 {vm.t('continue')}
               </AppText>
             </Pressable>
@@ -171,7 +167,7 @@ export function ConsultNowOfferSheet(vm: ConsultNowViewModel) {
 function MetaChip({
   icon,
   label,
-  iconColor = MUTED,
+  iconColor = colors.muted,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
@@ -180,7 +176,7 @@ function MetaChip({
   return (
     <View style={styles.chip}>
       <Ionicons name={icon} size={12} color={iconColor} />
-      <AppText variant="labelSm" color="#000000">
+      <AppText variant="labelSm" color={colors.ink}>
         {label}
       </AppText>
     </View>
@@ -198,10 +194,10 @@ function FeeRow({
 }) {
   return (
     <View style={styles.feeRow}>
-      <AppText variant="bodyMd" color={bold ? '#000000' : MUTED}>
+      <AppText variant="bodyMd" color={bold ? colors.ink : colors.muted}>
         {label}
       </AppText>
-      <AppText variant="bodyMd" color="#000000" weightOverride={bold ? '600' : '400'}>
+      <AppText variant="bodyMd" color={colors.ink} weightOverride={bold ? '600' : '400'}>
         {value}
       </AppText>
     </View>
@@ -245,9 +241,9 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: radii.sm,
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -263,7 +259,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: radii.full,
-    backgroundColor: '#FFF8E7',
+    backgroundColor: colors.warningContainer,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -279,14 +275,14 @@ const styles = StyleSheet.create({
     gap: 4,
     backgroundColor: FILL,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.full,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
   feeCard: {
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     padding: spacing.md,
     flexDirection: 'row',
@@ -307,7 +303,7 @@ const styles = StyleSheet.create({
   primaryBtn: {
     minHeight: 52,
     borderRadius: radii.button,
-    backgroundColor: ACTION,
+    backgroundColor: colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -318,7 +314,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.button,
     backgroundColor: colors.card,
     borderWidth: 1.5,
-    borderColor: ACTION,
+    borderColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -342,14 +338,14 @@ const styles = StyleSheet.create({
   },
   detailsTotal: {
     borderTopWidth: 1,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
     paddingTop: 10,
   },
   detailsClose: {
     minHeight: layout.buttonHeight,
     borderRadius: radii.button,
     borderWidth: 1,
-    borderColor: ACTION,
+    borderColor: colors.primary,
     backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',

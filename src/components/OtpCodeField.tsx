@@ -61,7 +61,7 @@ export function OtpCodeField({
               <AppText
                 variant="titleMd"
                 languageOverride="en"
-                color="#000000"
+                color={colors.ink}
               >
                 {digit}
               </AppText>

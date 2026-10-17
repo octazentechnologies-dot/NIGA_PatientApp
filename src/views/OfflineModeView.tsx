@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sheetBottomPadding } from '../utilities/sheetInset';
+import { colors } from '../theme/colors';
 
 import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
@@ -12,14 +13,6 @@ import type {
 import type { TranslationKey } from '../localization/types';
 import { radii } from '../theme/radii';
 import { spacing } from '../theme/spacing';
-
-const INK = '#1F1F1F';
-const MUTED = '#595959';
-const HAIRLINE = '#DDDFE2';
-const PAGE = '#F5F6F7';
-const CARD = '#FFFFFF';
-const ACTION = '#2A7BA3';
-const ACTION_OUTLINE = '#276F93';
 
 const AVAILABLE: {
   id: OfflineAvailableId;
@@ -56,26 +49,26 @@ export function OfflineModeView(vm: OfflineModeViewModel) {
       >
         <View style={styles.hero}>
           <View style={styles.wifiCircle}>
-            <Ionicons name="wifi" size={36} color={INK} />
+            <Ionicons name="wifi" size={36} color={colors.ink} />
             <View style={styles.slash} />
           </View>
-          <AppText variant="headlineLg" color={INK} style={styles.center}>
+          <AppText variant="headlineLg" color={colors.ink} style={styles.center}>
             {vm.t('offlineTitle')}
           </AppText>
-          <AppText variant="bodyMd" color={MUTED} style={styles.center}>
+          <AppText variant="bodyMd" color={colors.muted} style={styles.center}>
             {vm.t('offlineSubtitle')}
           </AppText>
-          <AppText variant="bodyMd" color={MUTED} style={styles.center}>
+          <AppText variant="bodyMd" color={colors.muted} style={styles.center}>
             {vm.t('offlineSubtitleMr')}
           </AppText>
         </View>
 
         <View style={styles.card}>
           <View style={styles.sectionHead}>
-            <Ionicons name="checkmark-circle" size={18} color={ACTION} />
+            <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
             <AppText
               variant="labelSm"
-              color={ACTION}
+              color={colors.primary}
               weightOverride="600"
               style={styles.sectionLabel}
             >
@@ -92,21 +85,21 @@ export function OfflineModeView(vm: OfflineModeViewModel) {
                 index < AVAILABLE.length - 1 && styles.rowBorder,
               ]}
             >
-              <Ionicons name="checkmark" size={18} color={ACTION} />
-              <AppText variant="bodyMd" color={INK} style={styles.flex}>
+              <Ionicons name="checkmark" size={18} color={colors.primary} />
+              <AppText variant="bodyMd" color={colors.ink} style={styles.flex}>
                 {vm.t(item.labelKey)}
               </AppText>
-              <Ionicons name="chevron-forward" size={18} color={MUTED} />
+              <Ionicons name="chevron-forward" size={18} color={colors.muted} />
             </Pressable>
           ))}
         </View>
 
         <View style={styles.card}>
           <View style={styles.sectionHead}>
-            <Ionicons name="cloud-offline-outline" size={18} color={MUTED} />
+            <Ionicons name="cloud-offline-outline" size={18} color={colors.muted} />
             <AppText
               variant="labelSm"
-              color={MUTED}
+              color={colors.muted}
               weightOverride="600"
               style={styles.sectionLabel}
             >
@@ -121,8 +114,8 @@ export function OfflineModeView(vm: OfflineModeViewModel) {
                 index < UNAVAILABLE.length - 1 && styles.rowBorder,
               ]}
             >
-              <Ionicons name="close-circle" size={18} color={MUTED} />
-              <AppText variant="bodyMd" color={MUTED} style={styles.flex}>
+              <Ionicons name="close-circle" size={18} color={colors.muted} />
+              <AppText variant="bodyMd" color={colors.muted} style={styles.flex}>
                 {vm.t(key)}
               </AppText>
             </View>
@@ -137,25 +130,29 @@ export function OfflineModeView(vm: OfflineModeViewModel) {
           disabled={vm.checking}
           icon={
             vm.checking ? (
-              <ActivityIndicator color="#FFFFFF" />
+              <ActivityIndicator color={colors.card} />
             ) : (
-              <Ionicons name="refresh" size={18} color="#FFFFFF" />
+              <Ionicons name="refresh" size={18} color={colors.card} />
             )
           }
         />
-        <Pressable
-          accessibilityRole="button"
-          onPress={vm.onCallHelpline}
-          style={styles.outlineBtn}
-        >
-          <Ionicons name="call-outline" size={18} color={ACTION_OUTLINE} />
-          <AppText variant="labelMd" color={ACTION_OUTLINE} weightOverride="600">
-            {vm.t('offlineCallHelpline')}
-          </AppText>
-        </Pressable>
-        <AppText variant="labelSm" color={MUTED} style={styles.center}>
-          {vm.t('offlineCallNote')}
-        </AppText>
+        {vm.showCallHelpline ? (
+          <>
+            <Pressable
+              accessibilityRole="button"
+              onPress={vm.onCallHelpline}
+              style={styles.outlineBtn}
+            >
+              <Ionicons name="call-outline" size={18} color={colors.primaryOutline} />
+              <AppText variant="labelMd" color={colors.primaryOutline} weightOverride="600">
+                {vm.t('offlineCallHelpline')}
+              </AppText>
+            </Pressable>
+            <AppText variant="labelSm" color={colors.muted} style={styles.center}>
+              {vm.t('offlineCallNote')}
+            </AppText>
+          </>
+        ) : null}
       </View>
     </View>
   );
@@ -164,7 +161,7 @@ export function OfflineModeView(vm: OfflineModeViewModel) {
 const styles = StyleSheet.create({
   root: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: PAGE,
+    backgroundColor: colors.page,
     zIndex: 9999,
     elevation: 9999,
   },
@@ -185,8 +182,8 @@ const styles = StyleSheet.create({
     borderRadius: 44,
     borderWidth: 2,
     borderStyle: 'dashed',
-    borderColor: HAIRLINE,
-    backgroundColor: CARD,
+    borderColor: colors.outlineVariant,
+    backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.sm,
@@ -195,7 +192,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 2,
     height: 52,
-    backgroundColor: INK,
+    backgroundColor: colors.ink,
     transform: [{ rotate: '40deg' }],
     borderRadius: 1,
   },
@@ -203,9 +200,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   card: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
@@ -230,7 +227,7 @@ const styles = StyleSheet.create({
   },
   rowBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   footer: {
     paddingHorizontal: spacing.md,
@@ -240,8 +237,8 @@ const styles = StyleSheet.create({
     minHeight: 48,
     borderRadius: radii.button,
     borderWidth: 1.5,
-    borderColor: ACTION,
-    backgroundColor: CARD,
+    borderColor: colors.primary,
+    backgroundColor: colors.card,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

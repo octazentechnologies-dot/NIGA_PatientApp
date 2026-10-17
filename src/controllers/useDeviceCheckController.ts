@@ -5,6 +5,7 @@ import type { BookedAppointment } from '../config/bookedAppointments';
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
 
+// TODO(VIDEO-SDK): B-P10 — DeviceCheck before tele join; keep compiling until SDK bind.
 export type ConsultModeChoice = 'video' | 'audio';
 export type NetworkQuality = 'good' | 'weak';
 

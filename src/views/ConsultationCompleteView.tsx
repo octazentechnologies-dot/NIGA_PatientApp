@@ -13,6 +13,8 @@ import { sheetBottomPadding } from '../utilities/sheetInset';
 
 import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
+import { ErrorState } from '../components/ErrorState';
+import { LoadingState } from '../components/LoadingState';
 import { images } from '../config/images';
 import type { ConsultationCompleteViewModel } from '../controllers/useConsultationCompleteController';
 import { usePrescriptionController } from '../controllers/usePrescriptionController';
@@ -21,17 +23,8 @@ import { radii } from '../theme/radii';
 import { layout, spacing } from '../theme/spacing';
 import { PrescriptionView } from './PrescriptionView';
 
-const INK = '#1F1F1F';
-const MUTED = '#595959';
-const HAIRLINE = '#DDDFE2';
-const ACTION = '#2A7BA3';
-const SUCCESS = '#0F7A4E';
-const SUCCESS_FILL = '#E9F5EF';
-const STAR_IDLE = '#BFBFBF';
-const STAR_FILL = '#F2C14E';
-const CHIP_FILL = '#F0F2F5';
-const ICON_CYAN = '#5CCEF7';
-
+const STAR_IDLE = colors.outline;
+const STAR_FILL = colors.tertiaryContainer;
 export function ConsultationCompleteView(vm: ConsultationCompleteViewModel) {
   const insets = useSafeAreaInsets();
   const prescription = usePrescriptionController({
@@ -56,7 +49,7 @@ export function ConsultationCompleteView(vm: ConsultationCompleteViewModel) {
       <View style={[styles.header, { paddingTop: Math.max(insets.top, spacing.sm) }]}>
         <View style={styles.headerRow}>
           <View style={styles.headerSide} />
-          <AppText variant="headlineMd" color={INK} style={styles.brand}>
+          <AppText variant="headlineMd" color={colors.ink} style={styles.brand}>
             {vm.t('brandName')}
           </AppText>
           <Pressable
@@ -66,7 +59,7 @@ export function ConsultationCompleteView(vm: ConsultationCompleteViewModel) {
             style={styles.settingsHit}
           >
             <View style={styles.settingsBtn}>
-              <Ionicons name="settings-outline" size={18} color="#FFFFFF" />
+              <Ionicons name="settings-outline" size={18} color={colors.card} />
             </View>
           </Pressable>
         </View>
@@ -83,8 +76,8 @@ export function ConsultationCompleteView(vm: ConsultationCompleteViewModel) {
         ]}
       >
         <View style={styles.successBanner}>
-          <Ionicons name="checkmark-circle" size={22} color={SUCCESS} />
-          <AppText variant="titleMd" color={SUCCESS} style={styles.flex}>
+          <Ionicons name="checkmark-circle" size={22} color={colors.success} />
+          <AppText variant="titleMd" color={colors.success} style={styles.flex}>
             {vm.completedBanner}
           </AppText>
         </View>
@@ -93,20 +86,20 @@ export function ConsultationCompleteView(vm: ConsultationCompleteViewModel) {
           <View style={styles.doctorRow}>
             <Image source={images.doctorPortrait} style={styles.avatar} />
             <View style={styles.doctorCopy}>
-              <AppText variant="titleMd" color={INK}>
+              <AppText variant="titleMd" color={colors.ink}>
                 {vm.doctorName}
               </AppText>
-              <AppText variant="bodyMd" color={MUTED}>
+              <AppText variant="bodyMd" color={colors.muted}>
                 {vm.credentials}
               </AppText>
               <View style={styles.whenRow}>
-                <Ionicons name="calendar-outline" size={16} color={MUTED} />
-                <AppText variant="labelSm" color={MUTED} style={styles.flex}>
+                <Ionicons name="calendar-outline" size={16} color={colors.muted} />
+                <AppText variant="labelSm" color={colors.muted} style={styles.flex}>
                   {vm.whenLine}
                 </AppText>
               </View>
               <View style={styles.patientChip}>
-                <AppText variant="labelSm" color={INK}>
+                <AppText variant="labelSm" color={colors.ink}>
                   {vm.patientChip}
                 </AppText>
               </View>
@@ -117,9 +110,9 @@ export function ConsultationCompleteView(vm: ConsultationCompleteViewModel) {
         <View style={styles.card}>
           <View style={styles.rxHeader}>
             <View style={styles.rxIcon}>
-              <Ionicons name="document-text" size={20} color={ICON_CYAN} />
+              <Ionicons name="document-text" size={20} color={colors.iconFill} />
             </View>
-            <AppText variant="titleMd" color={INK} style={styles.flex}>
+            <AppText variant="titleMd" color={colors.ink} style={styles.flex}>
               {vm.t('completeRxReady')}
             </AppText>
           </View>
@@ -129,7 +122,7 @@ export function ConsultationCompleteView(vm: ConsultationCompleteViewModel) {
           />
         </View>
 
-        <AppText variant="headlineMd" color={INK}>
+        <AppText variant="headlineMd" color={colors.ink}>
           {vm.t('completeWhatsNext')}
         </AppText>
 
@@ -157,22 +150,39 @@ export function ConsultationCompleteView(vm: ConsultationCompleteViewModel) {
         />
 
         <View style={styles.card}>
-          <AppText variant="headlineMd" color={INK} style={styles.summaryTitle}>
+          <AppText variant="headlineMd" color={colors.ink} style={styles.summaryTitle}>
             {vm.t('completeSummaryTitle')}
           </AppText>
-          <SummaryBlock label={vm.t('completeDiscussed')} body={vm.discussed} />
-          <SummaryBlock label={vm.t('completeAdvice')} body={vm.advice} />
-          <SummaryBlock label={vm.t('completeNextFollowUp')} body={vm.nextFollowUp} />
-          <View style={styles.noteBox}>
-            <Ionicons name="information-circle-outline" size={16} color={MUTED} />
-            <AppText variant="labelSm" color={MUTED} style={styles.flex}>
-              {vm.summaryNote}
+          {vm.isLoading ? <LoadingState /> : null}
+          {vm.isError ? (
+            <ErrorState message="Could not load the consultation summary." onRetry={vm.onRetry} />
+          ) : null}
+          {vm.discussed ? (
+            <SummaryBlock label={vm.t('completeDiscussed')} body={vm.discussed} />
+          ) : null}
+          {vm.advice ? (
+            <SummaryBlock label={vm.t('completeAdvice')} body={vm.advice} />
+          ) : null}
+          {vm.nextFollowUp ? (
+            <SummaryBlock label={vm.t('completeNextFollowUp')} body={vm.nextFollowUp} />
+          ) : null}
+          {vm.summaryNote ? (
+            <View style={styles.noteBox}>
+              <Ionicons name="information-circle-outline" size={16} color={colors.muted} />
+              <AppText variant="labelSm" color={colors.muted} style={styles.flex} raw>
+                {vm.summaryNote}
+              </AppText>
+            </View>
+          ) : null}
+          {!vm.isLoading && !vm.isError && !vm.summaryNote ? (
+            <AppText variant="bodyMd" color={colors.muted} raw>
+              No consultation summary yet.
             </AppText>
-          </View>
+          ) : null}
         </View>
 
         <View style={[styles.card, styles.rateCard]}>
-          <AppText variant="titleMd" color={INK} style={styles.center}>
+          <AppText variant="titleMd" color={colors.ink} style={styles.center}>
             {vm.t('completeRateTitle')}
           </AppText>
           <View style={styles.stars}>
@@ -193,7 +203,7 @@ export function ConsultationCompleteView(vm: ConsultationCompleteViewModel) {
             ))}
           </View>
           <Pressable onPress={vm.onWriteReview} accessibilityRole="link">
-            <AppText variant="labelMd" color={ACTION} style={styles.reviewLink}>
+            <AppText variant="labelMd" color={colors.primary} style={styles.reviewLink}>
               {vm.t('completeWriteReview')}
             </AppText>
           </Pressable>
@@ -204,8 +214,8 @@ export function ConsultationCompleteView(vm: ConsultationCompleteViewModel) {
           accessibilityRole="link"
           style={styles.reportRow}
         >
-          <Ionicons name="warning-outline" size={16} color={MUTED} />
-          <AppText variant="labelSm" color={MUTED}>
+          <Ionicons name="warning-outline" size={16} color={colors.muted} />
+          <AppText variant="labelSm" color={colors.muted}>
             {vm.t('completeReport')}
           </AppText>
         </Pressable>
@@ -234,16 +244,16 @@ function NextCard({
   return (
     <View style={styles.card}>
       <View style={styles.nextIcon}>
-        <Ionicons name={icon} size={22} color={ICON_CYAN} />
+        <Ionicons name={icon} size={22} color={colors.iconFill} />
       </View>
-      <AppText variant="titleMd" color={INK}>
+      <AppText variant="titleMd" color={colors.ink}>
         {title}
       </AppText>
-      <AppText variant="bodyMd" color={MUTED}>
+      <AppText variant="bodyMd" color={colors.muted}>
         {body}
       </AppText>
       {note ? (
-        <AppText variant="labelSm" color={MUTED} style={styles.noteItalic}>
+        <AppText variant="labelSm" color={colors.muted} style={styles.noteItalic}>
           {note}
         </AppText>
       ) : null}
@@ -252,10 +262,10 @@ function NextCard({
         accessibilityRole="button"
         style={styles.actionRow}
       >
-        <AppText variant="labelMd" color={ACTION} weightOverride="600">
+        <AppText variant="labelMd" color={colors.primary} weightOverride="600">
           {action}
         </AppText>
-        <Ionicons name="arrow-forward" size={16} color={ACTION} />
+        <Ionicons name="arrow-forward" size={16} color={colors.primary} />
       </Pressable>
     </View>
   );
@@ -264,10 +274,10 @@ function NextCard({
 function SummaryBlock({ label, body }: { label: string; body: string }) {
   return (
     <View style={styles.summaryBlock}>
-      <AppText variant="titleMd" color={INK}>
+      <AppText variant="titleMd" color={colors.ink}>
         {label}
       </AppText>
-      <AppText variant="bodyMd" color={MUTED}>
+      <AppText variant="bodyMd" color={colors.muted}>
         {body}
       </AppText>
     </View>
@@ -282,7 +292,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.sm,
   },
@@ -308,7 +318,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: ACTION,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -318,7 +328,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   successBanner: {
-    backgroundColor: SUCCESS_FILL,
+    backgroundColor: colors.successContainer,
     borderRadius: radii.default,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
@@ -332,7 +342,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
     gap: spacing.sm,
@@ -346,9 +356,9 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: radii.full,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
   },
   doctorCopy: {
     flex: 1,
@@ -362,7 +372,7 @@ const styles = StyleSheet.create({
   },
   patientChip: {
     alignSelf: 'flex-start',
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     borderRadius: radii.sm,
     paddingHorizontal: spacing.sm,
     paddingVertical: 6,
@@ -379,7 +389,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: colors.page,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -389,7 +399,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: colors.page,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -405,7 +415,7 @@ const styles = StyleSheet.create({
   summaryTitle: {
     paddingBottom: spacing.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
     marginBottom: spacing.xs,
   },
   summaryBlock: {
@@ -415,7 +425,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     borderRadius: radii.sm,
     padding: spacing.md,
     marginTop: spacing.xs,

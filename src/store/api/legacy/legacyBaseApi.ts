@@ -3,7 +3,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import { API_CONFIG } from '../../../config/apiConfig';
 import { prepareAuthHeaders } from '../prepareAuthHeaders';
 
-/** devapi1. Endpoints are added only when a contract is provided. */
+/** Same origin as newBaseApi (devapi.homeocentrum.com). Endpoints only when contracted. */
 export const legacyBaseApi = createApi({
   reducerPath: 'legacyApi',
   baseQuery: fetchBaseQuery({

@@ -32,8 +32,8 @@ export const toButtonLabel = toUiLabel;
 
 /**
  * Canonical patient-app action button.
- * Filled: `#2A7BA3` + white label. Outline: `#2A7BA3` border + label.
- * Pill corners, titleMd (18 SemiBold) label — same as Doctor app buttons.
+ * Filled: `#2A7BA3` + white label. Outline: `#276F93` border + label.
+ * Pill corners, 48dp height, labelLg — refined, not oversized.
  */
 export function AppButton({
   label,
@@ -49,7 +49,9 @@ export function AppButton({
   const isPrimary = variant === 'primary';
   const isGhost = variant === 'ghost';
   const isDisabled = disabled || loading;
-  const labelColor = isPrimary ? colors.onButton : colors.button;
+  const labelColor = isPrimary
+    ? colors.onButton
+    : colors.primaryOutline;
   const displayLabel = toUiLabel(label);
 
   return (
@@ -61,10 +63,9 @@ export function AppButton({
         isPrimary && styles.primary,
         variant === 'secondary' && styles.secondary,
         isGhost && styles.ghost,
-        isDisabled && styles.disabled,
-        state.pressed && !isDisabled && styles.pressed,
+        isDisabled && (isPrimary ? styles.disabledPrimary : styles.disabled),
+        state.pressed && !isDisabled && (isPrimary ? styles.pressedPrimary : styles.pressed),
         typeof style === 'function' ? style(state) : style,
-        // Keep shape uniform even if callers pass a conflicting radius.
         styles.pill,
       ]}
       {...props}
@@ -75,7 +76,7 @@ export function AppButton({
         <View style={styles.content}>
           {iconPosition === 'start' ? icon : null}
           <AppText
-            variant="titleMd"
+            variant="labelLg"
             color={labelColor}
             weightOverride="600"
             style={styles.label}
@@ -119,7 +120,7 @@ const styles = StyleSheet.create({
   secondary: {
     backgroundColor: colors.card,
     borderWidth: 1.5,
-    borderColor: colors.button,
+    borderColor: colors.primaryOutline,
   },
   ghost: {
     backgroundColor: 'transparent',
@@ -127,7 +128,15 @@ const styles = StyleSheet.create({
   disabled: {
     opacity: 0.5,
   },
+  disabledPrimary: {
+    backgroundColor: colors.buttonDisabled,
+    opacity: 1,
+  },
   pressed: {
-    opacity: 0.85,
+    opacity: 0.88,
+  },
+  pressedPrimary: {
+    backgroundColor: colors.primaryPressed,
+    opacity: 1,
   },
 });

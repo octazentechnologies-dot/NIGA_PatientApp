@@ -25,29 +25,25 @@ import { spacing } from '../theme/spacing';
 import { fontFamilyFor } from '../utilities/fonts';
 import { scaleFont } from '../utilities/scale';
 
-const CALL_SURFACE = '#101816';
-const CALL_BLACK = '#121212';
+const CALL_SURFACE = colors.darkSurface;
+const CALL_BLACK = colors.darkSurface;
 const CALL_OVERLAY = 'rgba(26, 26, 26, 0.92)';
-const CALL_BORDER = '#2E2E2E';
-const CALL_ICON = '#5CCEF7';
+const CALL_BORDER = colors.darkOutlineVariant;
+const CALL_ICON = colors.iconFill;
 const ACTIVE_FILL = colors.primary;
-const END_CALL = '#A3231A';
-const END_SOFT = '#E07070';
-const WHITE = '#FFFFFF';
-const MUTED = '#B0B0B0';
-const SHEET_MUTED = '#595959';
-const INK = '#1F1F1F';
+const END_CALL = colors.error;
+const END_SOFT = colors.error;
+const WHITE = colors.card;
+const SHEET_MUTED = colors.muted;
 const SCRIM = 'rgba(15, 15, 15, 0.45)';
-const AMBER = '#C9A227';
-const AMBER_BORDER = '#F2C14E';
-const NOTICE_FILL = '#FCF3E4';
-const NOTICE_BORDER = '#F2C14E';
-const SUCCESS_DOT = '#0F7A4E';
-const SUCCESS_FILL = '#E9F5EF';
-const DOT_GRID = '#2A2A2A';
-const REC_FILL = '#A3231A';
-const HAIRLINE = '#E6E6E6';
-const ERROR_FILL = '#FBEBE9';
+const AMBER = colors.tertiaryContainer;
+const AMBER_BORDER = colors.tertiaryContainer;
+const NOTICE_FILL = colors.warningContainer;
+const NOTICE_BORDER = colors.tertiaryContainer;
+const SUCCESS_DOT = colors.success;
+const DOT_GRID = colors.darkOutlineVariant;
+const REC_FILL = colors.error;
+const ERROR_FILL = colors.errorContainer;
 
 export function VideoCallView(vm: VideoCallViewModel) {
   const insets = useSafeAreaInsets();
@@ -230,7 +226,7 @@ function InCallChatSheet({ vm }: { vm: VideoCallViewModel }) {
         <View style={styles.chatHeader}>
           <Image source={images.doctorPortrait} style={styles.chatAvatar} />
           <View style={styles.flex}>
-            <AppText variant="titleMd" color={INK} numberOfLines={1}>
+            <AppText variant="titleMd" color={colors.ink} numberOfLines={1}>
               {vm.doctorName}
             </AppText>
             <AppText variant="labelSm" color={SHEET_MUTED} numberOfLines={1}>
@@ -243,7 +239,7 @@ function InCallChatSheet({ vm }: { vm: VideoCallViewModel }) {
             onPress={vm.onCloseChat}
             style={styles.chatClose}
           >
-            <Ionicons name="close" size={22} color={INK} />
+            <Ionicons name="close" size={22} color={colors.ink} />
           </Pressable>
         </View>
         <ScrollView
@@ -260,7 +256,7 @@ function InCallChatSheet({ vm }: { vm: VideoCallViewModel }) {
                 style={[styles.chatBubbleWrap, mine ? styles.chatMine : styles.chatTheirs]}
               >
                 <View style={[styles.chatBubble, mine ? styles.chatBubbleMine : styles.chatBubbleTheirs]}>
-                  <AppText variant="bodyMd" color={mine ? colors.onButton : INK}>
+                  <AppText variant="bodyMd" color={mine ? colors.onButton : colors.ink}>
                     {message.body}
                   </AppText>
                   <AppText
@@ -360,7 +356,7 @@ function AudioOnlyStage({
           <AppText variant="titleMd" color={WHITE} style={styles.centerText}>
             {vm.doctorName}
           </AppText>
-          <AppText variant="bodyMd" color={MUTED} style={styles.centerText}>
+          <AppText variant="bodyMd" color={colors.muted} style={styles.centerText}>
             {vm.speaking ? vm.t('videoCallSpeaking') : vm.t('videoCallAudioOnlyMode')}
           </AppText>
         </View>
@@ -534,7 +530,7 @@ function RecordingConsentSheet({
             <View style={styles.consentIconBox}>
               <Ionicons name="radio-button-on" size={26} color={REC_FILL} />
             </View>
-            <AppText variant="titleMd" color={INK} style={styles.flex}>
+            <AppText variant="titleMd" color={colors.ink} style={styles.flex}>
               {title}
             </AppText>
           </View>
@@ -547,7 +543,7 @@ function RecordingConsentSheet({
 
           <View style={styles.consentInfo}>
             <Ionicons name="information-circle" size={20} color={SUCCESS_DOT} />
-            <AppText variant="bodyMd" color={INK} style={styles.flex}>
+            <AppText variant="bodyMd" color={colors.ink} style={styles.flex}>
               {vm.t('recordConsentCanSayNo')}
             </AppText>
           </View>
@@ -557,8 +553,8 @@ function RecordingConsentSheet({
               {vm.t('recordConsentWhatTitle')}
             </AppText>
             <View style={styles.whatRow}>
-              <Ionicons name="videocam-outline" size={18} color={INK} />
-              <AppText variant="bodyMd" color={INK} style={styles.flex}>
+              <Ionicons name="videocam-outline" size={18} color={colors.ink} />
+              <AppText variant="bodyMd" color={colors.ink} style={styles.flex}>
                 {vm.t('recordConsentWhatYes')}
               </AppText>
             </View>
@@ -586,7 +582,7 @@ function RecordingConsentSheet({
                 <Ionicons name="checkmark" size={16} color={WHITE} />
               ) : null}
             </View>
-            <AppText variant="bodyMd" color={INK} style={styles.flex}>
+            <AppText variant="bodyMd" color={colors.ink} style={styles.flex}>
               {vm.t('recordConsentCheckbox')}
             </AppText>
           </Pressable>
@@ -652,7 +648,7 @@ function ReconnectingOverlay({
         <AppText variant="headlineMd" color={WHITE} style={styles.centerText}>
           {vm.t('reconnectTitle')}
         </AppText>
-        <AppText variant="bodyMd" color={MUTED} style={styles.centerText}>
+        <AppText variant="bodyMd" color={colors.muted} style={styles.centerText}>
           {attemptLabel}
         </AppText>
         <View style={styles.elapsedChip}>
@@ -726,12 +722,12 @@ function DoctorDisconnectedOverlay({
                 <Ionicons name="close-circle" size={22} color={END_CALL} />
               </View>
             </View>
-            <AppText variant="labelSm" color={MUTED} style={styles.centerText}>
+            <AppText variant="labelSm" color={colors.muted} style={styles.centerText}>
               HelloHomeo
             </AppText>
           </View>
 
-          <AppText variant="headlineMd" color={INK} style={styles.centerText}>
+          <AppText variant="headlineMd" color={colors.ink} style={styles.centerText}>
             {vm.t('doctorDiscTitle')}
           </AppText>
           <AppText variant="bodyMd" color={colors.onSurfaceVariant} style={styles.centerText}>
@@ -756,7 +752,7 @@ function DoctorDisconnectedOverlay({
           <View style={styles.noticeBox}>
             <Ionicons name="information-circle" size={20} color={colors.primary} />
             <View style={styles.noticeCopy}>
-              <AppText variant="bodyMd" color={INK}>
+              <AppText variant="bodyMd" color={colors.ink}>
                 {vm.t('doctorDiscNotice')}
               </AppText>
             </View>
@@ -1020,10 +1016,10 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#1C2523',
+    backgroundColor: colors.darkSurfaceContainer,
   },
   pipCameraOff: {
-    backgroundColor: '#151D1B',
+    backgroundColor: colors.darkSurface,
   },
   pipFlipHint: {
     position: 'absolute',
@@ -1171,7 +1167,7 @@ const styles = StyleSheet.create({
     width: 88,
     height: 88,
     borderRadius: radii.default,
-    backgroundColor: '#1E1E1E',
+    backgroundColor: colors.darkSurfaceContainer,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.md,
@@ -1197,7 +1193,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.full,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: colors.darkSurfaceContainer,
   },
   reconnectActions: {
     paddingHorizontal: spacing.lg,
@@ -1225,7 +1221,7 @@ const styles = StyleSheet.create({
   doctorDiscRoot: {
     ...StyleSheet.absoluteFill,
     zIndex: 50,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: colors.darkSurfaceContainer,
     justifyContent: 'flex-end',
     paddingHorizontal: spacing.md,
   },
@@ -1352,7 +1348,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: radii.full,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
     marginTop: spacing.sm,
     marginBottom: spacing.xs,
   },
@@ -1378,7 +1374,7 @@ const styles = StyleSheet.create({
   consentCard: {
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
     gap: spacing.sm,
@@ -1392,7 +1388,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
-    backgroundColor: SUCCESS_FILL,
+    backgroundColor: colors.successContainer,
     borderRadius: radii.default,
     padding: spacing.md,
   },
@@ -1417,7 +1413,7 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 6,
     borderWidth: 1.5,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1455,13 +1451,13 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
     backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   chatAvatar: {
     width: 40,
     height: 40,
     borderRadius: radii.full,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
   },
   chatClose: {
     width: 48,
@@ -1498,7 +1494,7 @@ const styles = StyleSheet.create({
   chatBubbleTheirs: {
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
   },
   chatComposer: {
     flexDirection: 'row',
@@ -1508,21 +1504,21 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     backgroundColor: colors.card,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
   },
   chatInputWrap: {
     flex: 1,
     minHeight: 48,
     maxHeight: 120,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     backgroundColor: colors.card,
     paddingHorizontal: spacing.md,
     justifyContent: 'center',
   },
   chatInput: {
-    color: INK,
+    color: colors.ink,
     fontSize: 16,
     lineHeight: 22,
     paddingVertical: spacing.sm,

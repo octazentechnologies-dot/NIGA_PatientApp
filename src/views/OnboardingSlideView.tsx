@@ -41,7 +41,7 @@ export function OnboardingSlideView({
           onPress={onSkip}
           style={styles.skipButton}
         >
-          <AppText variant="labelMd" color="#000000">
+          <AppText variant="labelMd" color={colors.ink}>
             {t('skip')}
           </AppText>
         </Pressable>
@@ -119,7 +119,7 @@ function OnboardingSlideBody({
       </View>
 
       <View style={styles.copy}>
-        <AppText variant="headlineMd" color="#000000" style={styles.title}>
+        <AppText variant="headlineMd" color={colors.ink} style={styles.title}>
           {title}
         </AppText>
         <AppText

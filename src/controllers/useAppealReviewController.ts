@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import { useAppealReviewMutation } from '../store/api/new/supportApi';
 
 export type AppealAction = 'edit' | 'appeal';
 
@@ -24,22 +25,27 @@ export type AppealReviewViewModel = {
 };
 
 export function useAppealReviewController({
+  reviewId,
   onBack,
   onSubmitted,
 }: {
+  reviewId?: string | null;
   onBack: () => void;
   onSubmitted?: () => void;
 }): AppealReviewViewModel {
   const { language, t } = useLocalization();
   const [action, setAction] = useState<AppealAction>('appeal');
   const [reason, setReason] = useState('');
+  const [appealReview, { isLoading }] = useAppealReviewMutation();
 
   const canSubmit = useMemo(() => {
+    if (isLoading) return false;
     if (action === 'edit') {
-      return true;
+      return Boolean(reviewId);
     }
-    return reason.trim().length >= 8;
-  }, [action, reason]);
+    // Contract: reason must be at least 3 characters.
+    return Boolean(reviewId) && reason.trim().length >= 3;
+  }, [action, isLoading, reason, reviewId]);
 
   return {
     language,
@@ -57,11 +63,16 @@ export function useAppealReviewController({
     onSelectAction: setAction,
     onChangeReason: setReason,
     onSubmit: () => {
-      if (!canSubmit) {
+      if (!canSubmit || !reviewId) {
         return;
       }
-      onSubmitted?.();
-      onBack();
+      void appealReview({ reviewId, reason: reason.trim() || 'Appeal' })
+        .unwrap()
+        .then(() => {
+          onSubmitted?.();
+          onBack();
+        })
+        .catch(() => undefined);
     },
   };
 }

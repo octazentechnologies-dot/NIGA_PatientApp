@@ -21,14 +21,12 @@ import { fontFamilyFor } from '../utilities/fonts';
 import { scaleFont } from '../utilities/scale';
 import { sheetBottomPadding } from '../utilities/sheetInset';
 
-const MUTED = '#595959';
-const HAIRLINE = '#E6E6E6';
-const ICON_BLUE = '#2A7BA3';
-const SELECT_FILL = '#F4FAFD';
-const AMBER_FILL = '#FCF3E4';
-const AMBER = '#8A5109';
-const AMBER_BORDER = '#F2C14E';
-const PLACEHOLDER = '#8A8A8A';
+const ICON_BLUE = colors.primary;
+const SELECT_FILL = colors.primaryContainer;
+const AMBER_FILL = colors.warningContainer;
+const AMBER = colors.warning;
+const AMBER_BORDER = colors.tertiaryContainer;
+const PLACEHOLDER = colors.outline;
 
 export function BookingPaymentView({
   language,
@@ -39,7 +37,9 @@ export function BookingPaymentView({
   taxesLabel,
   totalLabel,
   holdLabel,
+  holdExpired,
   breakdownOpen,
+  usesGatewayCheckout,
   method,
   upiId,
   banks,
@@ -50,6 +50,9 @@ export function BookingPaymentView({
   walletPickerOpen,
   selectedBankLabel,
   payLabel,
+  payBusy,
+  payError,
+  payAtClinicEnabled,
   onBack,
   onToggleBreakdown,
   onSelectMethod,
@@ -62,9 +65,11 @@ export function BookingPaymentView({
   onSelectWallet,
   onAddCard,
   onPay,
+  onPayAtClinic,
 }: BookingPaymentViewModel) {
   const insets = useSafeAreaInsets();
   const footerReserve = 88 + sheetBottomPadding(insets, spacing.md);
+  const payDisabled = payBusy || holdExpired;
 
   return (
     <View style={styles.root}>
@@ -81,13 +86,13 @@ export function BookingPaymentView({
             onPress={onBack}
             style={styles.iconButton}
           >
-            <Ionicons name="arrow-back" size={24} color="#000000" />
+            <Ionicons name="arrow-back" size={24} color={colors.ink} />
           </Pressable>
-          <AppText variant="headlineMd" color="#000000" style={styles.title}>
+          <AppText variant="headlineMd" color={colors.ink} style={styles.title}>
             {t('payTitle')}
           </AppText>
           <View style={styles.iconButton}>
-            <Ionicons name="lock-closed" size={18} color="#000000" />
+            <Ionicons name="lock-closed" size={18} color={colors.ink} />
           </View>
         </View>
         <View style={styles.holdBar}>
@@ -107,19 +112,27 @@ export function BookingPaymentView({
         contentContainerStyle={[styles.body, { paddingBottom: footerReserve }]}
       >
         <View style={styles.amountCard}>
-          <AppText variant="displayLg" color="#000000" style={styles.amount}>
+          <AppText variant="displayLg" color={colors.ink} style={styles.amount}>
             {totalLabel}
           </AppText>
-          <AppText variant="bodyMd" color={MUTED} style={styles.summary}>
+          <AppText variant="bodyMd" color={colors.muted} style={styles.summary}>
             {paymentSummaryLine}
           </AppText>
           {breakdownOpen ? (
             <View style={styles.breakdown}>
-              <BreakdownRow label={t('reviewDoctorFee')} value={doctorFeeLabel} />
-              <BreakdownRow label={t('reviewPlatformFee')} value={platformFeeLabel} />
-              <BreakdownRow label={t('reviewTaxes')} value={taxesLabel} />
+              {doctorFeeLabel ? (
+                <BreakdownRow label={t('reviewDoctorFee')} value={doctorFeeLabel} />
+              ) : null}
+              {platformFeeLabel ? (
+                <BreakdownRow label={t('reviewPlatformFee')} value={platformFeeLabel} />
+              ) : null}
+              {taxesLabel ? (
+                <BreakdownRow label={t('reviewTaxes')} value={taxesLabel} />
+              ) : null}
               <View style={styles.hairline} />
-              <BreakdownRow label={t('reviewTotalPayable')} value={totalLabel} bold />
+              {totalLabel ? (
+                <BreakdownRow label={t('reviewTotalPayable')} value={totalLabel} bold />
+              ) : null}
             </View>
           ) : null}
           <Pressable
@@ -138,135 +151,163 @@ export function BookingPaymentView({
           </Pressable>
         </View>
 
-        <AppText variant="titleMd" color="#000000" style={styles.sectionTitle}>
-          {t('payMethod')}
-        </AppText>
-
-        <View style={styles.group}>
-          <View style={styles.groupHead}>
-            <AppText variant="bodyLg" color="#000000">
-              {t('payUpi')}
-            </AppText>
-            <View style={styles.brandRow}>
-              <BrandChip label="GPay" tint="#4285F4" />
-              <BrandChip label="Pe" tint="#5F259F" />
+        {usesGatewayCheckout ? (
+          <View style={styles.group}>
+            <View style={styles.groupBody}>
+              <AppText variant="bodyMd" color={colors.muted}>
+                Card, UPI, and netbanking open in the secure Razorpay Checkout. Amounts come from the
+                server order — the app never sets the price.
+              </AppText>
+              {payError ? (
+                <AppText variant="bodyMd" color={colors.error} style={{ marginTop: spacing.sm }}>
+                  {payError}
+                </AppText>
+              ) : null}
+              {holdExpired ? (
+                <AppText variant="bodyMd" color={AMBER} style={{ marginTop: spacing.sm }}>
+                  Your slot hold has expired. Choose another time.
+                </AppText>
+              ) : null}
             </View>
           </View>
-          <View style={styles.groupBody}>
-            <MethodRow
-              selected={method === 'gpay'}
-              label={t('payGpay')}
-              onPress={() => onSelectMethod('gpay')}
-              mark={<BrandMark label="G" tint="#4285F4" />}
-            />
-            <MethodRow
-              selected={method === 'phonepe'}
-              label={t('payPhonePe')}
-              onPress={() => onSelectMethod('phonepe')}
-              mark={<BrandMark label="Pe" tint="#5F259F" />}
-            />
-            <MethodRow
-              selected={method === 'paytm'}
-              label={t('payPaytm')}
-              onPress={() => onSelectMethod('paytm')}
-              mark={<BrandMark label="Pay" tint="#00BAF2" />}
-            />
-            <MethodRow
-              selected={method === 'upi'}
-              label={t('payEnterUpi')}
-              onPress={() => onSelectMethod('upi')}
-              mark={
-                <View style={styles.dashedMark}>
-                  <Ionicons name="add" size={18} color={ICON_BLUE} />
-                </View>
-              }
-            />
-            {method === 'upi' ? (
-              <TextInput
-                value={upiId}
-                onChangeText={onChangeUpiId}
-                placeholder={t('payUpiPlaceholder')}
-                placeholderTextColor={PLACEHOLDER}
-                autoCapitalize="none"
-                autoCorrect={false}
-                style={[
-                  styles.upiInput,
-                  { fontFamily: fontFamilyFor('400', language, 'sans') },
-                ]}
-              />
-            ) : null}
-          </View>
-        </View>
-
-        <View style={styles.group}>
-          <View style={styles.groupHead}>
-            <AppText variant="bodyLg" color="#000000" style={styles.flex}>
-              {t('payCards')}
+        ) : (
+          <>
+            <AppText variant="titleMd" color={colors.ink} style={styles.sectionTitle}>
+              {t('payMethod')}
             </AppText>
-            <View style={styles.brandRow}>
-              <BrandChip label="VISA" tint="#1A1F71" />
-              <BrandChip label="MC" tint="#EB001B" />
-            </View>
-          </View>
-          <View style={styles.groupBody}>
-            <MethodRow
-              selected={method === 'hdfc'}
-              label={t('paySavedCard')}
-              meta={t('paySavedCardMeta')}
-              badge={t('paySavedBadge')}
-              onPress={() => onSelectMethod('hdfc')}
-              mark={
-                <View style={styles.cardMark}>
-                  <Ionicons name="card-outline" size={18} color={ICON_BLUE} />
+
+            <View style={styles.group}>
+              <View style={styles.groupHead}>
+                <AppText variant="bodyLg" color={colors.ink}>
+                  {t('payUpi')}
+                </AppText>
+                <View style={styles.brandRow}>
+                  <BrandChip label="GPay" tint={colors.link} />
+                  <BrandChip label="Pe" tint={colors.astro} />
                 </View>
-              }
-            />
+              </View>
+              <View style={styles.groupBody}>
+                <MethodRow
+                  selected={method === 'gpay'}
+                  label={t('payGpay')}
+                  onPress={() => onSelectMethod('gpay')}
+                  mark={<BrandMark label="G" tint={colors.link} />}
+                />
+                <MethodRow
+                  selected={method === 'phonepe'}
+                  label={t('payPhonePe')}
+                  onPress={() => onSelectMethod('phonepe')}
+                  mark={<BrandMark label="Pe" tint={colors.astro} />}
+                />
+                <MethodRow
+                  selected={method === 'paytm'}
+                  label={t('payPaytm')}
+                  onPress={() => onSelectMethod('paytm')}
+                  mark={<BrandMark label="Pay" tint="#00BAF2" />}
+                />
+                <MethodRow
+                  selected={method === 'upi'}
+                  label={t('payEnterUpi')}
+                  onPress={() => onSelectMethod('upi')}
+                  mark={
+                    <View style={styles.dashedMark}>
+                      <Ionicons name="add" size={18} color={ICON_BLUE} />
+                    </View>
+                  }
+                />
+                {method === 'upi' ? (
+                  <TextInput
+                    value={upiId}
+                    onChangeText={onChangeUpiId}
+                    placeholder={t('payUpiPlaceholder')}
+                    placeholderTextColor={PLACEHOLDER}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    style={[
+                      styles.upiInput,
+                      { fontFamily: fontFamilyFor('400', language, 'sans') },
+                    ]}
+                  />
+                ) : null}
+              </View>
+            </View>
+
+            <View style={styles.group}>
+              <View style={styles.groupHead}>
+                <AppText variant="bodyLg" color={colors.ink} style={styles.flex}>
+                  {t('payCards')}
+                </AppText>
+                <View style={styles.brandRow}>
+                  <BrandChip label="VISA" tint="#1A1F71" />
+                  <BrandChip label="MC" tint="#EB001B" />
+                </View>
+              </View>
+              <View style={styles.groupBody}>
+                <MethodRow
+                  selected={method === 'hdfc'}
+                  label={t('paySavedCard')}
+                  meta={t('paySavedCardMeta')}
+                  badge={t('paySavedBadge')}
+                  onPress={() => onSelectMethod('hdfc')}
+                  mark={
+                    <View style={styles.cardMark}>
+                      <Ionicons name="card-outline" size={18} color={ICON_BLUE} />
+                    </View>
+                  }
+                />
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={onAddCard}
+                  style={[styles.addCard, method === 'addCard' && styles.methodSelected]}
+                >
+                  <View style={styles.radioSlot} />
+                  <View style={styles.dashedMark}>
+                    <Ionicons name="add" size={18} color={ICON_BLUE} />
+                  </View>
+                  <AppText
+                    variant="bodyLg"
+                    color={ICON_BLUE}
+                    weightOverride="600"
+                    style={styles.flex}
+                  >
+                    {t('payAddCard')}
+                  </AppText>
+                </Pressable>
+              </View>
+            </View>
+
             <Pressable
               accessibilityRole="button"
-              onPress={onAddCard}
-              style={[styles.addCard, method === 'addCard' && styles.methodSelected]}
+              onPress={onOpenBankPicker}
+              style={[styles.rowCard, method === 'netbanking' && styles.methodSelected]}
             >
-              <View style={styles.radioSlot} />
-              <View style={styles.dashedMark}>
-                <Ionicons name="add" size={18} color={ICON_BLUE} />
+              <View style={styles.circleMark}>
+                <Ionicons name="business-outline" size={18} color={ICON_BLUE} />
               </View>
-              <AppText variant="bodyLg" color={ICON_BLUE} weightOverride="600" style={styles.flex}>
-                {t('payAddCard')}
+              <AppText variant="bodyLg" color={colors.ink} style={styles.flex}>
+                {t('payNetbanking')}
               </AppText>
+              <AppText variant="bodyMd" color={colors.muted}>
+                {selectedBankLabel}
+              </AppText>
+              <Ionicons name="chevron-down" size={18} color={colors.muted} />
             </Pressable>
-          </View>
-        </View>
 
-        <Pressable
-          accessibilityRole="button"
-          onPress={onOpenBankPicker}
-          style={[styles.rowCard, method === 'netbanking' && styles.methodSelected]}
-        >
-          <View style={styles.circleMark}>
-            <Ionicons name="business-outline" size={18} color={ICON_BLUE} />
-          </View>
-          <AppText variant="bodyLg" color="#000000" style={styles.flex}>
-            {t('payNetbanking')}
-          </AppText>
-          <AppText variant="bodyMd" color={MUTED}>
-            {selectedBankLabel}
-          </AppText>
-          <Ionicons name="chevron-down" size={18} color={MUTED} />
-        </Pressable>
-
-        <Pressable
-          accessibilityRole="button"
-          onPress={onOpenWalletPicker}
-          style={[styles.rowCard, method === 'wallet' && styles.methodSelected]}
-        >
-          <View style={styles.circleMark}>
-            <Ionicons name="wallet-outline" size={18} color={ICON_BLUE} />
-          </View>
-          <AppText variant="bodyLg" color="#000000" style={styles.flex}>
-            {t('payWallets')}
-          </AppText>
-          <Ionicons name="chevron-forward" size={18} color={MUTED} />
-        </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              onPress={onOpenWalletPicker}
+              style={[styles.rowCard, method === 'wallet' && styles.methodSelected]}
+            >
+              <View style={styles.circleMark}>
+                <Ionicons name="wallet-outline" size={18} color={ICON_BLUE} />
+              </View>
+              <AppText variant="bodyLg" color={colors.ink} style={styles.flex}>
+                {t('payWallets')}
+              </AppText>
+              <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+            </Pressable>
+          </>
+        )}
 
         <View style={styles.trust}>
           <TrustCell icon="shield-checkmark-outline" label={t('payPci')} />
@@ -281,8 +322,21 @@ export function BookingPaymentView({
         <AppButton
           label={payLabel}
           onPress={onPay}
-          icon={<Ionicons name="lock-closed" size={16} color="#FFFFFF" />}
+          disabled={payDisabled}
+          icon={<Ionicons name="lock-closed" size={16} color={colors.card} />}
         />
+        {payAtClinicEnabled ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={onPayAtClinic}
+            disabled={payBusy}
+            style={{ marginTop: spacing.sm, alignItems: 'center', minHeight: 48, justifyContent: 'center' }}
+          >
+            <AppText variant="labelSm" color={ICON_BLUE} weightOverride="600">
+              Pay at clinic instead
+            </AppText>
+          </Pressable>
+        ) : null}
       </View>
 
       <PickerSheet
@@ -322,10 +376,10 @@ function BreakdownRow({
 }) {
   return (
     <View style={styles.breakRow}>
-      <AppText variant="bodyMd" color="#000000" weightOverride={bold ? '600' : '400'}>
+      <AppText variant="bodyMd" color={colors.ink} weightOverride={bold ? '600' : '400'}>
         {label}
       </AppText>
-      <AppText variant="bodyMd" color="#000000" weightOverride={bold ? '600' : '400'}>
+      <AppText variant="bodyMd" color={colors.ink} weightOverride={bold ? '600' : '400'}>
         {value}
       </AppText>
     </View>
@@ -361,17 +415,17 @@ function MethodRow({
       />
       {mark}
       <View style={styles.flex}>
-        <AppText variant="bodyLg" color="#000000">
+        <AppText variant="bodyLg" color={colors.ink}>
           {label}
         </AppText>
         {meta ? (
           <View style={styles.metaRow}>
-            <AppText variant="bodyMd" color={MUTED}>
+            <AppText variant="bodyMd" color={colors.muted}>
               {meta}
             </AppText>
             {badge ? (
               <View style={styles.badge}>
-                <AppText variant="labelSm" color={MUTED} style={styles.badgeText}>
+                <AppText variant="labelSm" color={colors.muted} style={styles.badgeText}>
                   {badge}
                 </AppText>
               </View>
@@ -411,7 +465,7 @@ function TrustCell({
   return (
     <View style={styles.trustCell}>
       <Ionicons name={icon} size={18} color={ICON_BLUE} />
-      <AppText variant="labelSm" color={MUTED} style={styles.trustLabel}>
+      <AppText variant="labelSm" color={colors.muted} style={styles.trustLabel}>
         {label}
       </AppText>
     </View>
@@ -444,11 +498,11 @@ function PickerSheet({
         >
           <View style={styles.handle} />
           <View style={styles.sheetHead}>
-            <AppText variant="headlineMd" color="#000000">
+            <AppText variant="headlineMd" color={colors.ink}>
               {title}
             </AppText>
             <Pressable onPress={onClose} style={styles.iconButton}>
-              <Ionicons name="close" size={22} color="#000000" />
+              <Ionicons name="close" size={22} color={colors.ink} />
             </Pressable>
           </View>
           {options.map((item) => (
@@ -457,7 +511,7 @@ function PickerSheet({
               onPress={() => onSelect(item.id)}
               style={[styles.sheetRow, item.selected && styles.methodSelected]}
             >
-              <AppText variant="bodyLg" color="#000000" style={styles.flex}>
+              <AppText variant="bodyLg" color={colors.ink} style={styles.flex}>
                 {item.label}
               </AppText>
               {item.selected ? (
@@ -483,7 +537,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   title: {
     flex: 1,
@@ -516,7 +570,7 @@ const styles = StyleSheet.create({
   },
   amountCard: {
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     padding: spacing.lg,
     alignItems: 'center',
@@ -543,7 +597,7 @@ const styles = StyleSheet.create({
   },
   hairline: {
     height: 1,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
   },
   breakdownLink: {
     flexDirection: 'row',
@@ -558,7 +612,7 @@ const styles = StyleSheet.create({
   },
   group: {
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     overflow: 'hidden',
     backgroundColor: colors.card,
@@ -570,7 +624,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   groupBody: {
     padding: 8,
@@ -605,7 +659,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   badge: {
-    backgroundColor: '#F0F0F0',
+    backgroundColor: colors.surfaceContainerHigh,
     borderRadius: radii.full,
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -621,7 +675,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
   },
   dashedMark: {
     width: 40,
@@ -639,7 +693,7 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: radii.sm,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.card,
@@ -649,7 +703,7 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: radii.full,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.card,
@@ -671,7 +725,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: scaleFont(14),
-    color: '#000000',
+    color: colors.ink,
     marginHorizontal: 4,
     marginBottom: 4,
   },
@@ -681,7 +735,7 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     backgroundColor: colors.card,
   },
@@ -689,7 +743,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     paddingVertical: 14,
     paddingHorizontal: 8,
@@ -709,7 +763,7 @@ const styles = StyleSheet.create({
   trustRule: {
     width: 1,
     height: 40,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
     marginTop: 4,
   },
   footer: {
@@ -718,7 +772,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     borderTopWidth: 1,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
     backgroundColor: colors.card,
     paddingHorizontal: spacing.gutter,
     paddingTop: spacing.sm,
@@ -741,7 +795,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 5,
     borderRadius: radii.full,
-    backgroundColor: '#D6D6D6',
+    backgroundColor: colors.outlineVariant,
     marginBottom: 4,
   },
   sheetHead: {
@@ -755,7 +809,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
   },
   pressed: {

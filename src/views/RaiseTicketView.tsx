@@ -7,6 +7,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaModal } from '../components/SafeAreaModal';
+import { colors } from '../theme/colors';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -17,16 +18,7 @@ import { radii } from '../theme/radii';
 import { spacing } from '../theme/spacing';
 import { sheetBottomPadding } from '../utilities/sheetInset';
 
-const INK = '#1F1F1F';
-const MUTED = '#595959';
-const HAIRLINE = '#DDDFE2';
-const PAGE = '#F5F6F7';
-const CARD = '#FFFFFF';
-const ACTION = '#2A7BA3';
-const ICON_CYAN = '#5CCEF7';
-const OUTLINE = '#8A8A8A';
-const CHIP_FILL = '#E6F5FE';
-
+const OUTLINE = colors.outline;
 export function RaiseTicketView(vm: RaiseTicketViewModel) {
   const insets = useSafeAreaInsets();
   const topicLabel = vm.t(
@@ -44,9 +36,9 @@ export function RaiseTicketView(vm: RaiseTicketViewModel) {
             onPress={vm.onBack}
             style={styles.iconHit}
           >
-            <Ionicons name="close" size={24} color={INK} />
+            <Ionicons name="close" size={24} color={colors.ink} />
           </Pressable>
-          <AppText variant="headlineMd" color={INK} style={styles.headerTitle}>
+          <AppText variant="headlineMd" color={colors.ink} style={styles.headerTitle}>
             {vm.t('ticketTitle')}
           </AppText>
           <View style={styles.iconHit} />
@@ -61,7 +53,7 @@ export function RaiseTicketView(vm: RaiseTicketViewModel) {
           { paddingBottom: 100 + sheetBottomPadding(insets, spacing.md) },
         ]}
       >
-        <AppText variant="labelMd" color={MUTED} weightOverride="600">
+        <AppText variant="labelMd" color={colors.muted} weightOverride="600">
           {vm.t('ticketAboutLabel')}
         </AppText>
         <Pressable
@@ -69,26 +61,26 @@ export function RaiseTicketView(vm: RaiseTicketViewModel) {
           onPress={vm.onOpenTopicPicker}
           style={styles.selectField}
         >
-          <AppText variant="bodyMd" color={INK} style={styles.flex}>
+          <AppText variant="bodyMd" color={colors.ink} style={styles.flex}>
             {topicLabel}
           </AppText>
-          <Ionicons name="chevron-down" size={20} color={MUTED} />
+          <Ionicons name="chevron-down" size={20} color={colors.muted} />
         </Pressable>
 
         {vm.relatedVisible ? (
           <View style={styles.block}>
-            <AppText variant="labelMd" color={MUTED} weightOverride="600">
+            <AppText variant="labelMd" color={colors.muted} weightOverride="600">
               {vm.t('ticketRelatedLabel')}
             </AppText>
             <View style={styles.relatedCard}>
               <View style={styles.relatedThumb}>
-                <MaterialCommunityIcons name="pill" size={22} color={ACTION} />
+                <MaterialCommunityIcons name="pill" size={22} color={colors.primary} />
               </View>
               <View style={styles.flex}>
-                <AppText variant="labelMd" color={INK} weightOverride="600">
+                <AppText variant="labelMd" color={colors.ink} weightOverride="600">
                   {vm.t('ticketRelatedOrder').replace('{id}', vm.relatedOrderId)}
                 </AppText>
-                <AppText variant="labelSm" color={MUTED}>
+                <AppText variant="labelSm" color={colors.muted}>
                   {vm.relatedOrderMeta}
                 </AppText>
               </View>
@@ -98,13 +90,13 @@ export function RaiseTicketView(vm: RaiseTicketViewModel) {
                 onPress={vm.onClearRelated}
                 style={styles.clearHit}
               >
-                <Ionicons name="close" size={20} color={MUTED} />
+                <Ionicons name="close" size={20} color={colors.muted} />
               </Pressable>
             </View>
           </View>
         ) : null}
 
-        <AppText variant="labelMd" color={MUTED} weightOverride="600">
+        <AppText variant="labelMd" color={colors.muted} weightOverride="600">
           {vm.t('ticketIssueLabel')}
         </AppText>
         <View style={styles.issueList}>
@@ -121,7 +113,7 @@ export function RaiseTicketView(vm: RaiseTicketViewModel) {
                   index < vm.issues.length - 1 && styles.issueBorder,
                 ]}
               >
-                <AppText variant="bodyMd" color={INK} style={styles.flex}>
+                <AppText variant="bodyMd" color={colors.ink} style={styles.flex}>
                   {vm.t(issue.labelKey)}
                 </AppText>
                 <View style={[styles.radio, on && styles.radioOn]}>
@@ -133,11 +125,11 @@ export function RaiseTicketView(vm: RaiseTicketViewModel) {
         </View>
 
         <View style={styles.descHeader}>
-          <AppText variant="labelMd" color={MUTED} weightOverride="600">
+          <AppText variant="labelMd" color={colors.muted} weightOverride="600">
             {vm.t('ticketDescriptionLabel')}
           </AppText>
           <View style={styles.langChip}>
-            <AppText variant="labelSm" color={INK} weightOverride="600">
+            <AppText variant="labelSm" color={colors.ink} weightOverride="600">
               {vm.descriptionLangLabel}
             </AppText>
           </View>
@@ -147,13 +139,13 @@ export function RaiseTicketView(vm: RaiseTicketViewModel) {
             value={vm.description}
             onChangeText={vm.onChangeDescription}
             placeholder={vm.t('ticketDescriptionPlaceholder')}
-            placeholderTextColor={MUTED}
+            placeholderTextColor={colors.muted}
             multiline
             textAlignVertical="top"
             style={styles.textarea}
           />
           <Pressable accessibilityRole="button" style={styles.micBtn}>
-            <Ionicons name="mic-outline" size={20} color={ACTION} />
+            <Ionicons name="mic-outline" size={20} color={colors.primary} />
           </Pressable>
         </View>
 
@@ -163,14 +155,14 @@ export function RaiseTicketView(vm: RaiseTicketViewModel) {
           style={styles.photoTile}
         >
           <View style={styles.photoCircle}>
-            <Ionicons name="image-outline" size={20} color={ACTION} />
+            <Ionicons name="image-outline" size={20} color={colors.primary} />
           </View>
-          <AppText variant="labelMd" color={ACTION} weightOverride="600">
+          <AppText variant="labelMd" color={colors.primary} weightOverride="600">
             {vm.t('ticketAddPhoto')}
           </AppText>
         </Pressable>
 
-        <AppText variant="labelMd" color={MUTED} weightOverride="600">
+        <AppText variant="labelMd" color={colors.muted} weightOverride="600">
           {vm.t('ticketContactLabel')}
         </AppText>
         <View style={styles.contactRow}>
@@ -187,8 +179,8 @@ export function RaiseTicketView(vm: RaiseTicketViewModel) {
         </View>
 
         <View style={styles.privacyCard}>
-          <Ionicons name="shield-checkmark-outline" size={18} color={MUTED} />
-          <AppText variant="labelSm" color={MUTED} style={styles.flex}>
+          <Ionicons name="shield-checkmark-outline" size={18} color={colors.muted} />
+          <AppText variant="labelSm" color={colors.muted} style={styles.flex}>
             {vm.t('ticketPrivacyNote')}
           </AppText>
         </View>
@@ -220,7 +212,7 @@ export function RaiseTicketView(vm: RaiseTicketViewModel) {
               { paddingBottom: sheetBottomPadding(insets, spacing.lg) },
             ]}
           >
-            <AppText variant="headlineMd" color={INK}>
+            <AppText variant="headlineMd" color={colors.ink}>
               {vm.t('ticketAboutLabel')}
             </AppText>
             {vm.topicOptions.map((option) => (
@@ -230,11 +222,11 @@ export function RaiseTicketView(vm: RaiseTicketViewModel) {
                 onPress={() => vm.onSelectTopic(option.id)}
                 style={styles.sheetRow}
               >
-                <AppText variant="bodyMd" color={INK} style={styles.flex}>
+                <AppText variant="bodyMd" color={colors.ink} style={styles.flex}>
                   {vm.t(option.labelKey)}
                 </AppText>
                 {option.id === vm.topicId ? (
-                  <Ionicons name="checkmark" size={20} color={ACTION} />
+                  <Ionicons name="checkmark" size={20} color={colors.primary} />
                 ) : null}
               </Pressable>
             ))}
@@ -264,7 +256,7 @@ function ContactOption({
       <View style={[styles.radio, selected && styles.radioOn]}>
         {selected ? <View style={styles.radioDot} /> : null}
       </View>
-      <AppText variant="labelMd" color={INK} weightOverride="600">
+      <AppText variant="labelMd" color={colors.ink} weightOverride="600">
         {label}
       </AppText>
     </Pressable>
@@ -274,12 +266,12 @@ function ContactOption({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: PAGE,
+    backgroundColor: colors.page,
   },
   header: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
     paddingHorizontal: spacing.sm,
     paddingBottom: spacing.sm,
   },
@@ -307,7 +299,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     minHeight: 48,
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderBottomWidth: 1,
     borderBottomColor: OUTLINE,
     borderTopLeftRadius: radii.default,
@@ -323,9 +315,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
   },
@@ -333,7 +325,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: radii.default,
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -344,9 +336,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   issueList: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     overflow: 'hidden',
     marginBottom: spacing.md,
@@ -360,7 +352,7 @@ const styles = StyleSheet.create({
   },
   issueBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   radio: {
     width: 22,
@@ -372,13 +364,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   radioOn: {
-    borderColor: ACTION,
+    borderColor: colors.primary,
   },
   radioDot: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: ACTION,
+    backgroundColor: colors.primary,
   },
   descHeader: {
     flexDirection: 'row',
@@ -387,8 +379,8 @@ const styles = StyleSheet.create({
   },
   langChip: {
     borderWidth: 1,
-    borderColor: ICON_CYAN,
-    backgroundColor: CHIP_FILL,
+    borderColor: colors.iconFill,
+    backgroundColor: colors.primaryContainer,
     borderRadius: 4,
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -399,14 +391,14 @@ const styles = StyleSheet.create({
   },
   textarea: {
     minHeight: 120,
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderBottomWidth: 1,
     borderBottomColor: OUTLINE,
     borderTopLeftRadius: radii.default,
     borderTopRightRadius: radii.default,
     padding: spacing.md,
     paddingRight: 48,
-    color: INK,
+    color: colors.ink,
     fontSize: 16,
     lineHeight: 24,
   },
@@ -418,8 +410,8 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: HAIRLINE,
-    backgroundColor: CARD,
+    borderColor: colors.outlineVariant,
+    backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -431,7 +423,7 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     borderColor: OUTLINE,
     borderRadius: radii.default,
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     paddingVertical: spacing.xl,
     marginBottom: spacing.md,
   },
@@ -439,7 +431,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -455,30 +447,30 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     minHeight: 56,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     paddingHorizontal: spacing.md,
   },
   contactOptionOn: {
     borderWidth: 2,
-    borderColor: ACTION,
-    backgroundColor: CHIP_FILL,
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryContainer,
   },
   privacyCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
-    backgroundColor: '#F2F2F2',
+    backgroundColor: colors.surfaceVariant,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
   },
   footer: {
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: HAIRLINE,
-    backgroundColor: CARD,
+    borderTopColor: colors.outlineVariant,
+    backgroundColor: colors.card,
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
   },
@@ -488,7 +480,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderTopLeftRadius: radii.lg,
     borderTopRightRadius: radii.lg,
     padding: spacing.md,

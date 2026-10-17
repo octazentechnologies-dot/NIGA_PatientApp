@@ -19,23 +19,21 @@ import { radii } from '../theme/radii';
 import { layout, spacing } from '../theme/spacing';
 import { scaleFont } from '../utilities/scale';
 
-const MUTED = '#595959';
-const HAIRLINE = '#E6E6E6';
-const CHIP_FILL = '#E6F5FE';
-const GREY_FILL = '#F2F2F2';
-const ICON_BLUE = '#2A7BA3';
+const GREY_FILL = colors.surfaceVariant;
+const ICON_BLUE = colors.primary;
 
 export function HealthTipArticleView({
   t,
   tip,
   related,
-  saved,
+  fromApi,
+  saved: _saved,
   notesOpen,
   textScale,
   helpful,
   onBack,
   onCycleTextSize,
-  onToggleSave,
+  onToggleSave: _onToggleSave,
   onShare,
   onToggleNotes,
   onOpenRelated,
@@ -67,7 +65,7 @@ export function HealthTipArticleView({
           hitSlop={8}
           style={styles.iconButton}
         >
-          <Ionicons name="arrow-back" size={24} color="#000000" />
+          <Ionicons name="arrow-back" size={24} color={colors.ink} />
         </Pressable>
         <View style={styles.topActions}>
           <Pressable
@@ -77,23 +75,12 @@ export function HealthTipArticleView({
             hitSlop={8}
             style={styles.iconButton}
           >
-            <AppText variant="labelMd" color="#000000" style={styles.ttIcon}>
+            <AppText variant="labelMd" color={colors.ink} style={styles.ttIcon}>
               Tt
             </AppText>
           </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={saved ? t('tipSaved') : t('tipSave')}
-            onPress={onToggleSave}
-            hitSlop={8}
-            style={styles.iconButton}
-          >
-            <Ionicons
-              name={saved ? 'bookmark' : 'bookmark-outline'}
-              size={22}
-              color={saved ? colors.primary : '#000000'}
-            />
-          </Pressable>
+          {/* BE-031 — bookmarks not planned */}
+          <View style={styles.iconButton} />
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={t('tipShare')}
@@ -101,7 +88,7 @@ export function HealthTipArticleView({
             hitSlop={8}
             style={styles.iconButton}
           >
-            <Ionicons name="share-outline" size={22} color="#000000" />
+            <Ionicons name="share-outline" size={22} color={colors.ink} />
           </Pressable>
         </View>
       </View>
@@ -115,77 +102,117 @@ export function HealthTipArticleView({
       >
         <Image source={tip.hero} resizeMode="contain" style={styles.hero} />
 
-        <View style={styles.metaRow}>
-          <View style={styles.categoryChip}>
-            <AppText variant="labelSm" color={ICON_BLUE} weightOverride="600">
-              {t(tip.categoryKey)}
-            </AppText>
+        {tip.categoryKey || tip.readMins > 0 ? (
+          <View style={styles.metaRow}>
+            {tip.categoryKey ? (
+              <View style={styles.categoryChip}>
+                <AppText
+                  variant="labelSm"
+                  color={ICON_BLUE}
+                  weightOverride="600"
+                  raw={fromApi}
+                >
+                  {t(tip.categoryKey)}
+                </AppText>
+              </View>
+            ) : null}
+            {tip.readMins > 0 ? (
+              <View style={styles.readRow}>
+                <Ionicons name="time-outline" size={14} color={colors.muted} />
+                <AppText variant="labelSm" color={colors.muted}>
+                  {t('tipMinRead').replace('{count}', String(tip.readMins))}
+                </AppText>
+              </View>
+            ) : null}
           </View>
-          <View style={styles.readRow}>
-            <Ionicons name="time-outline" size={14} color={MUTED} />
-            <AppText variant="labelSm" color={MUTED}>
-              {t('tipMinRead').replace('{count}', String(tip.readMins))}
-            </AppText>
-          </View>
-        </View>
+        ) : null}
 
-        <AppText variant="headlineMd" color="#000000" style={titleSize}>
+        <AppText
+          variant="headlineMd"
+          color={colors.ink}
+          style={titleSize}
+          raw={fromApi}
+        >
           {t(tip.titleKey)}
         </AppText>
 
-        <View style={styles.authorCard}>
-          <View style={styles.authorRow}>
-            <Image
-              source={images.doctorPortrait}
-              resizeMode="cover"
-              style={styles.avatar}
-            />
-            <View style={styles.flex}>
-              <AppText variant="titleMd" color="#000000" style={styles.authorName}>
-                {t(tip.authorNameKey)}
+        {tip.authorNameKey || tip.publishedKey || tip.reviewerKey ? (
+          <View style={styles.authorCard}>
+            {tip.authorNameKey ? (
+              <View style={styles.authorRow}>
+                <Image
+                  source={images.doctorPortrait}
+                  resizeMode="cover"
+                  style={styles.avatar}
+                />
+                <View style={styles.flex}>
+                  <AppText
+                    variant="titleMd"
+                    color={colors.ink}
+                    style={styles.authorName}
+                    raw={fromApi}
+                  >
+                    {t(tip.authorNameKey)}
+                  </AppText>
+                  {tip.authorCredsKey ? (
+                    <AppText variant="labelSm" color={colors.muted} raw={fromApi}>
+                      {t(tip.authorCredsKey)}
+                    </AppText>
+                  ) : null}
+                </View>
+              </View>
+            ) : null}
+            {tip.reviewerKey ? (
+              <View style={styles.reviewRow}>
+                <Ionicons name="checkmark-circle" size={16} color={ICON_BLUE} />
+                <AppText variant="labelSm" color={colors.ink} style={styles.flex}>
+                  {t('tipReviewedBy').replace('{name}', t(tip.reviewerKey))}
+                </AppText>
+              </View>
+            ) : null}
+            {tip.publishedKey ? (
+              <AppText variant="labelSm" color={colors.muted} raw={fromApi}>
+                {t(tip.publishedKey)}
               </AppText>
-              <AppText variant="labelSm" color={MUTED}>
-                {t(tip.authorCredsKey)}
-              </AppText>
-            </View>
+            ) : null}
+            {tip.reviewNotesKey ? (
+              <>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={onToggleNotes}
+                  style={({ pressed }) => [
+                    styles.notesButton,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Ionicons
+                    name="document-text-outline"
+                    size={16}
+                    color={ICON_BLUE}
+                  />
+                  <AppText variant="labelSm" color={ICON_BLUE} weightOverride="600">
+                    {t(notesOpen ? 'tipHideReviewNotes' : 'tipReadReviewNotes')}
+                  </AppText>
+                </Pressable>
+                {notesOpen ? (
+                  <AppText variant="bodyMd" color={colors.muted} style={bodySize}>
+                    {t(tip.reviewNotesKey)}
+                  </AppText>
+                ) : null}
+              </>
+            ) : null}
           </View>
-          <View style={styles.reviewRow}>
-            <Ionicons name="checkmark-circle" size={16} color={ICON_BLUE} />
-            <AppText variant="labelSm" color="#000000" style={styles.flex}>
-              {t('tipReviewedBy').replace('{name}', t(tip.reviewerKey))}
-            </AppText>
-          </View>
-          <AppText variant="labelSm" color={MUTED}>
-            {t(tip.publishedKey)}
-          </AppText>
-          <Pressable
-            accessibilityRole="button"
-            onPress={onToggleNotes}
-            style={({ pressed }) => [
-              styles.notesButton,
-              pressed && styles.pressed,
-            ]}
-          >
-            <Ionicons name="document-text-outline" size={16} color={ICON_BLUE} />
-            <AppText variant="labelSm" color={ICON_BLUE} weightOverride="600">
-              {t(notesOpen ? 'tipHideReviewNotes' : 'tipReadReviewNotes')}
-            </AppText>
-          </Pressable>
-          {notesOpen ? (
-            <AppText variant="bodyMd" color={MUTED} style={bodySize}>
-              {t(tip.reviewNotesKey)}
-            </AppText>
-          ) : null}
-        </View>
+        ) : null}
 
         {tip.body.map((block, index) => {
           if (block.type === 'heading') {
             return (
               <AppText
-                key={`${block.key}-${index}`}
+                key={`${String(block.key)}-${index}`}
                 variant="headlineMd"
-                color="#000000"
+                color={colors.ink}
                 style={headingSize}
+                raw={fromApi}
               >
                 {t(block.key)}
               </AppText>
@@ -194,10 +221,11 @@ export function HealthTipArticleView({
           if (block.type === 'paragraph') {
             return (
               <AppText
-                key={`${block.key}-${index}`}
+                key={`${String(block.key)}-${index}`}
                 variant="bodyMd"
-                color={MUTED}
+                color={colors.muted}
                 style={bodySize}
+                raw={fromApi}
               >
                 {t(block.key)}
               </AppText>
@@ -205,11 +233,12 @@ export function HealthTipArticleView({
           }
           if (block.type === 'quote') {
             return (
-              <View key={`${block.key}-${index}`} style={styles.quote}>
+              <View key={`${String(block.key)}-${index}`} style={styles.quote}>
                 <AppText
                   variant="headlineMd"
-                  color="#000000"
+                  color={colors.ink}
                   style={[styles.quoteText, headingSize]}
+                  raw={fromApi}
                 >
                   {`“${t(block.key)}”`}
                 </AppText>
@@ -221,7 +250,12 @@ export function HealthTipArticleView({
               {block.keys.map((key) => (
                 <View key={key} style={styles.checkRow}>
                   <Ionicons name="checkmark-circle" size={20} color={ICON_BLUE} />
-                  <AppText variant="bodyMd" color="#000000" style={[styles.flex, bodySize]}>
+                  <AppText
+                    variant="bodyMd"
+                    color={colors.ink}
+                    style={[styles.flex, bodySize]}
+                    raw={fromApi}
+                  >
                     {t(key)}
                   </AppText>
                 </View>
@@ -230,71 +264,88 @@ export function HealthTipArticleView({
           );
         })}
 
-        <View style={styles.careBox}>
-          <View style={styles.careHead}>
-            <Ionicons name="leaf-outline" size={18} color={ICON_BLUE} />
-            <AppText variant="titleMd" color={ICON_BLUE} style={styles.careTitle}>
-              {t('tipDailyCare')}
-            </AppText>
-          </View>
-          {tip.careTipKeys.map((key) => (
-            <View key={key} style={styles.careItem}>
-              <View style={styles.careDot} />
-              <AppText variant="bodyMd" color="#000000" style={[styles.flex, bodySize]}>
-                {t(key)}
+        {tip.careTipKeys.length > 0 ? (
+          <View style={styles.careBox}>
+            <View style={styles.careHead}>
+              <Ionicons name="leaf-outline" size={18} color={ICON_BLUE} />
+              <AppText variant="titleMd" color={ICON_BLUE} style={styles.careTitle}>
+                {t('tipDailyCare')}
               </AppText>
             </View>
-          ))}
-        </View>
+            {tip.careTipKeys.map((key) => (
+              <View key={key} style={styles.careItem}>
+                <View style={styles.careDot} />
+                <AppText
+                  variant="bodyMd"
+                  color={colors.ink}
+                  style={[styles.flex, bodySize]}
+                >
+                  {t(key)}
+                </AppText>
+              </View>
+            ))}
+          </View>
+        ) : null}
 
         <View style={styles.disclaimer}>
           <View style={styles.careHead}>
-            <Ionicons name="information-circle-outline" size={18} color={MUTED} />
-            <AppText variant="titleMd" color="#000000" style={styles.disclaimerTitle}>
+            <Ionicons name="information-circle-outline" size={18} color={colors.muted} />
+            <AppText variant="titleMd" color={colors.ink} style={styles.disclaimerTitle}>
               {t('tipDisclaimerTitle')}
             </AppText>
           </View>
-          <AppText variant="bodyMd" color={MUTED} style={bodySize}>
+          <AppText variant="bodyMd" color={colors.muted} style={bodySize}>
             {t('tipDisclaimerBody')}
           </AppText>
         </View>
 
         <View style={styles.cta}>
-          <AppText variant="headlineMd" color="#000000" style={headingSize}>
+          <AppText variant="headlineMd" color={colors.ink} style={headingSize}>
             {t('tipTalkToDoctor')}
           </AppText>
-          <AppText variant="bodyMd" color={MUTED} style={bodySize}>
+          <AppText variant="bodyMd" color={colors.muted} style={bodySize}>
             {t('tipTalkToDoctorBody')}
           </AppText>
           <AppButton
-            label={t(tip.findDoctorKey)}
+            label={
+              tip.findDoctorKey ? t(tip.findDoctorKey) : t('tipTalkToDoctor')
+            }
             onPress={onFindDoctor}
             iconPosition="end"
-            icon={<Ionicons name="arrow-forward" size={18} color="#FFFFFF" />}
+            icon={<Ionicons name="arrow-forward" size={18} color={colors.card} />}
           />
         </View>
 
-        <AppText variant="headlineMd" color="#000000" style={styles.relatedTitle}>
-          {t('tipRelatedReading')}
-        </AppText>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.relatedRow}
-        >
-          {related.map((item) => (
-            <RelatedCard
-              key={item.id}
-              tip={item}
-              category={t(item.categoryKey)}
-              title={t(item.titleKey)}
-              onPress={() => onOpenRelated(item.id)}
-            />
-          ))}
-        </ScrollView>
+        {related.length > 0 ? (
+          <>
+            <AppText
+              variant="headlineMd"
+              color={colors.ink}
+              style={styles.relatedTitle}
+            >
+              {t('tipRelatedReading')}
+            </AppText>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.relatedRow}
+            >
+              {related.map((item) => (
+                <RelatedCard
+                  key={item.id}
+                  tip={item}
+                  category={item.categoryKey ? t(item.categoryKey) : ''}
+                  title={t(item.titleKey)}
+                  fromApi={fromApi}
+                  onPress={() => onOpenRelated(item.id)}
+                />
+              ))}
+            </ScrollView>
+          </>
+        ) : null}
 
         <View style={styles.feedback}>
-          <AppText variant="titleMd" color="#000000">
+          <AppText variant="titleMd" color={colors.ink}>
             {t('tipHelpful')}
           </AppText>
           <View style={styles.thumbRow}>
@@ -309,7 +360,7 @@ export function HealthTipArticleView({
               <Ionicons
                 name="thumbs-up-outline"
                 size={22}
-                color={helpful === 'up' ? '#FFFFFF' : ICON_BLUE}
+                color={helpful === 'up' ? colors.card : ICON_BLUE}
               />
             </Pressable>
             <Pressable
@@ -323,7 +374,7 @@ export function HealthTipArticleView({
               <Ionicons
                 name="thumbs-down-outline"
                 size={22}
-                color={helpful === 'down' ? '#FFFFFF' : ICON_BLUE}
+                color={helpful === 'down' ? colors.card : ICON_BLUE}
               />
             </Pressable>
           </View>
@@ -342,20 +393,35 @@ function RelatedCard({
   tip,
   category,
   title,
+  fromApi,
   onPress,
 }: {
   tip: HealthTipSeed;
   category: string;
   title: string;
+  fromApi: boolean;
   onPress: () => void;
 }) {
   return (
     <Pressable accessibilityRole="button" onPress={onPress} style={styles.relatedCard}>
       <Image source={tip.hero} resizeMode="cover" style={styles.relatedImage} />
-      <AppText variant="labelSm" color={ICON_BLUE} weightOverride="600">
-        {category}
-      </AppText>
-      <AppText variant="bodyMd" color="#000000" numberOfLines={3} weightOverride="600">
+      {category ? (
+        <AppText
+          variant="labelSm"
+          color={ICON_BLUE}
+          weightOverride="600"
+          raw={fromApi}
+        >
+          {category}
+        </AppText>
+      ) : null}
+      <AppText
+        variant="bodyMd"
+        color={colors.ink}
+        numberOfLines={3}
+        weightOverride="600"
+        raw={fromApi}
+      >
         {title}
       </AppText>
     </Pressable>
@@ -374,7 +440,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
     backgroundColor: colors.card,
   },
   topActions: {
@@ -408,7 +474,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   categoryChip: {
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     borderRadius: radii.full,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -420,7 +486,7 @@ const styles = StyleSheet.create({
   },
   authorCard: {
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     padding: spacing.md,
     gap: spacing.sm,
@@ -434,7 +500,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: radii.full,
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
   },
   authorName: {
     fontSize: scaleFont(16),
@@ -475,7 +541,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   careBox: {
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     borderLeftWidth: 4,
     borderLeftColor: ICON_BLUE,
     borderRadius: radii.sm,
@@ -514,7 +580,7 @@ const styles = StyleSheet.create({
     lineHeight: scaleFont(22),
   },
   cta: {
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     borderRadius: radii.sm,
     padding: spacing.lg,
     gap: 12,
@@ -541,7 +607,7 @@ const styles = StyleSheet.create({
   relatedCard: {
     width: 200,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     padding: spacing.sm,
     gap: 8,
@@ -551,7 +617,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 96,
     borderRadius: radii.sm,
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
   },
   feedback: {
     alignItems: 'center',

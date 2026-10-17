@@ -17,11 +17,6 @@ import { radii } from '../theme/radii';
 import { spacing } from '../theme/spacing';
 import { sheetBottomPadding } from '../utilities/sheetInset';
 
-const INK = '#1F1F1F';
-const MUTED = '#595959';
-const HAIRLINE = '#E6E6E6';
-const ACTION = '#2A7BA3';
-
 type Props = {
   open: boolean;
   documents: PatientDocument[];
@@ -55,7 +50,7 @@ export function SelectExistingDocumentSheet({
         >
           <View style={styles.handle} />
           <View style={styles.header}>
-            <AppText variant="headlineMd" color={INK} style={styles.flex}>
+            <AppText variant="headlineMd" color={colors.ink} style={styles.flex}>
               {t('uploadDocSelectTitle')}
             </AppText>
             <Pressable
@@ -63,10 +58,10 @@ export function SelectExistingDocumentSheet({
               onPress={onClose}
               style={styles.iconHit}
             >
-              <Ionicons name="close" size={22} color={MUTED} />
+              <Ionicons name="close" size={22} color={colors.muted} />
             </Pressable>
           </View>
-          <AppText variant="bodyMd" color={MUTED} style={styles.hint}>
+          <AppText variant="bodyMd" color={colors.muted} style={styles.hint}>
             {t('uploadDocSelectHint')}
           </AppText>
 
@@ -88,21 +83,21 @@ export function SelectExistingDocumentSheet({
                         : 'image-outline'
                     }
                     size={22}
-                    color={MUTED}
+                    color={colors.muted}
                   />
                 </View>
                 <View style={styles.flex}>
-                  <AppText variant="bodyMd" color={INK} weightOverride="600" numberOfLines={1}>
+                  <AppText variant="bodyMd" color={colors.ink} weightOverride="600" numberOfLines={1}>
                     {doc.name}
                   </AppText>
-                  <AppText variant="labelSm" color={MUTED}>
+                  <AppText variant="labelSm" color={colors.muted}>
                     {doc.sizeLabel}
                   </AppText>
                 </View>
                 {selected ? (
-                  <Ionicons name="checkmark-circle" size={22} color={ACTION} />
+                  <Ionicons name="checkmark-circle" size={22} color={colors.primary} />
                 ) : (
-                  <Ionicons name="ellipse-outline" size={22} color={HAIRLINE} />
+                  <Ionicons name="ellipse-outline" size={22} color={colors.outlineVariant} />
                 )}
               </Pressable>
             );
@@ -112,7 +107,7 @@ export function SelectExistingDocumentSheet({
             label={t('uploadDocUploadNew')}
             variant="secondary"
             onPress={onUploadNew}
-            icon={<Ionicons name="cloud-upload-outline" size={20} color={ACTION} />}
+            icon={<Ionicons name="cloud-upload-outline" size={20} color={colors.primary} />}
             style={styles.uploadNew}
           />
         </View>
@@ -141,7 +136,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: radii.full,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
     marginTop: spacing.sm,
     marginBottom: spacing.md,
   },
@@ -164,14 +159,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
     marginBottom: spacing.sm,
     backgroundColor: colors.card,
   },
   rowSelected: {
-    borderColor: ACTION,
+    borderColor: colors.primary,
     backgroundColor: colors.chipBackground,
   },
   thumb: {

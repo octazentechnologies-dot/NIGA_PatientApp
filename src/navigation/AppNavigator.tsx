@@ -86,6 +86,9 @@ import { CliniSightProgressView } from '../views/CliniSightProgressView';
 import { HealthInsightsView } from '../views/HealthInsightsView';
 import { HealthRecordsView } from '../views/HealthRecordsView';
 import { MyAppointmentsView } from '../views/MyAppointmentsView';
+import { AppointmentRequestsView } from '../views/AppointmentRequestsView';
+import { useAppointmentRequestsController } from '../controllers/useAppointmentRequestsController';
+import { useMyAppointmentsController } from '../controllers/useMyAppointmentsController';
 import { RemindersCentreView } from '../views/RemindersCentreView';
 import { OrderMedicinesView } from '../views/OrderMedicinesView';
 import { OrderTrackingView } from '../views/OrderTrackingView';
@@ -325,14 +328,18 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
     onOpenSearch: home.onReopenSearch,
     onOpenDoctor: home.onOpenDoctorProfile,
   });
+  const profileDoctorId =
+    home.profileDoctorId && /^\d+$/.test(home.profileDoctorId)
+      ? home.profileDoctorId
+      : '';
   const profile = useDoctorProfileController({
-    doctorId: home.profileDoctorId ?? 'anjali',
+    doctorId: profileDoctorId,
     onBack: home.onCloseDoctorProfile,
     onBook: home.onOpenBooking,
   });
   const booking = useBookAppointmentController({
-    doctorId: home.profileDoctorId ?? 'anjali',
-    active: home.bookingOpen,
+    doctorId: profileDoctorId,
+    active: home.bookingOpen && Boolean(profileDoctorId),
     onBack: home.onCloseBooking,
     onAddMember: home.onAddMember,
   });
@@ -355,13 +362,13 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
   const payment = useBookingPaymentController({
     active: home.bookingOpen && booking.paymentOpen,
     onBack: booking.onClosePayment,
-    onPay: (method, upiId) => {
-      if (method === 'addCard' || (method === 'upi' && !upiId.trim())) {
-        booking.onOpenPaymentStatus('failed');
-        return;
-      }
-      booking.onOpenPaymentStatus('pending');
-    },
+    holdExpiresAt: booking.holdExpiresAt,
+    patientAppId: booking.patientAppId,
+    bookingToken: booking.bookingToken,
+    payAtClinicEnabled: booking.payAtClinicEnabled,
+    onPaymentConfirmed: booking.onPaymentConfirmed,
+    onPaymentPending: () => booking.onOpenPaymentStatus('pending'),
+    onPaymentFailed: () => booking.onOpenPaymentStatus('failed'),
     draft: {
       paymentSummaryLine: booking.paymentSummaryLine,
       doctorFeeLabel: booking.doctorFeeLabel,
@@ -374,10 +381,13 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
     active: Boolean(home.bookingOpen && booking.paymentStatus),
     onConfirmBooking: home.onConfirmBooking,
     onCloseSuccess: home.onFinishBookingFlow,
-    onRetry: booking.onClosePaymentStatus,
+    onRetry: () => {
+      booking.onClosePaymentStatus();
+    },
     onChooseMethod: booking.onClosePaymentStatus,
     onChooseSlot: booking.onChooseOtherSlot,
-    onConfirmPending: () => booking.onOpenPaymentStatus('success'),
+    // Never invent success — pending stays pending until Verify/poll confirms.
+    onConfirmPending: () => undefined,
     draft: {
       status: booking.paymentStatus ?? 'pending',
       doctorId: booking.profile.id,
@@ -395,6 +405,7 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
       patientLabel: booking.patientLabel,
       totalLabel: booking.feeLabel,
       holdSeconds: payment.holdSeconds,
+      paymentOrderId: booking.lastPaymentOrderId,
     },
   });
   const selectedAppointment =
@@ -510,6 +521,27 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
       home.onOpenSearch();
     },
   });
+  const appointmentRequests = useAppointmentRequestsController({
+    onBack: home.onCloseAppointmentRequests,
+    onOpenVisit: (patientAppId) => {
+      home.onCloseAppointmentRequests();
+      home.onCloseMyAppointments();
+      home.onOpenAppointment(String(patientAppId));
+    },
+  });
+  const myAppointments = useMyAppointmentsController({
+    onBack: home.onCloseMyAppointments,
+    onOpenAppointment: home.onOpenAppointment,
+    onOpenRequests: () => {
+      home.onCloseMyAppointments();
+      home.onOpenAppointmentRequests();
+    },
+    onBookNew: () => {
+      home.onCloseMyAppointments();
+      home.onSelectTab('doctors');
+      home.onOpenSearch();
+    },
+  });
   const editProfile = useCompleteProfileController({
     mode: 'edit',
     onBack: home.onCloseEditProfile,
@@ -540,6 +572,7 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
     onAppeal: () => home.onOpenAppealReview(),
   });
   const appealReview = useAppealReviewController({
+    reviewId: home.appealReviewId,
     onBack: home.onCloseAppealReview,
   });
   const helpCentre = useHelpCentreController({
@@ -576,10 +609,11 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
     onPlaceOrder: home.onPlaceMedicineOrder,
   });
   const orderTracking = useOrderTrackingController({
+    orderId: home.orderDetailsId ?? '',
     onBack: home.onCloseOrderTracking,
   });
   const orderDetails = useOrderDetailsController({
-    orderId: home.orderDetailsId ?? 'hm-3922',
+    orderId: home.orderDetailsId ?? '',
     onBack: home.onCloseOrderDetails,
     onReorder: () => {
       home.onCloseOrderDetails();
@@ -592,16 +626,17 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
     onBookEarliest: home.onOpenResults,
     onAddMember: home.onAddMember,
   });
+  // Instant consult payment waits on B-011 (fee fields on Tele/Instant). No fake Checkout.
   const consultPayment = useBookingPaymentController({
     active: home.consultNowOpen && consultNow.paymentOpen,
     onBack: consultNow.onClosePayment,
-    onPay: (method, upiId) => {
-      if (method === 'addCard' || (method === 'upi' && !upiId.trim())) {
-        consultNow.onOpenPaymentStatus('failed');
-        return;
-      }
-      consultNow.onOpenPaymentStatus('pending');
-    },
+    holdExpiresAt: null,
+    patientAppId: null,
+    bookingToken: null,
+    payAtClinicEnabled: false,
+    onPaymentConfirmed: () => consultNow.onOpenPaymentStatus('success'),
+    onPaymentPending: () => consultNow.onOpenPaymentStatus('pending'),
+    onPaymentFailed: () => consultNow.onOpenPaymentStatus('failed'),
     draft: {
       paymentSummaryLine: consultNow.paymentSummaryLine,
       doctorFeeLabel: consultNow.doctorFeeLabel,
@@ -618,7 +653,7 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
     onRetry: consultNow.onClosePaymentStatus,
     onChooseMethod: consultNow.onClosePaymentStatus,
     onChooseSlot: consultNow.onClosePayment,
-    onConfirmPending: () => consultNow.onOpenPaymentStatus('success'),
+    onConfirmPending: () => undefined,
     draft: {
       status: consultNow.paymentStatus ?? 'pending',
       doctorId: consultNow.offeredDoctorId,
@@ -636,6 +671,7 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
       patientLabel: consultNow.instantPatientLabel,
       totalLabel: consultNow.totalLabel,
       holdSeconds: consultPayment.holdSeconds,
+      paymentOrderId: null,
     },
   });
   const healthTip = useHealthTipController({
@@ -686,11 +722,12 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
             checkedInAtLabel={appointmentDetail.checkedInAtLabel}
             queuePosition={appointmentDetail.queuePosition}
             waitMinutes={appointmentDetail.waitMinutes}
+            readyAtLabel={appointmentDetail.readyAtLabel}
             doctorName={appointmentDetail.doctorName}
+            checkInBusy={appointmentDetail.checkInBusy}
             onBack={appointmentDetail.onCloseCheckIn}
             onConfirmCheckIn={appointmentDetail.onConfirmCheckIn}
             onTellClinic={appointmentDetail.onTellClinicLate}
-            onSelectDemoState={appointmentDetail.onSelectCheckInDemoState}
           />
         );
       }
@@ -725,19 +762,12 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
     return <FamilyMembersView {...accountFamily} />;
   }
 
+  if (home.appointmentRequestsOpen) {
+    return <AppointmentRequestsView {...appointmentRequests} />;
+  }
+
   if (home.myAppointmentsOpen) {
-    return (
-      <MyAppointmentsView
-        appointments={home.appointments}
-        onBack={home.onCloseMyAppointments}
-        onOpenAppointment={home.onOpenAppointment}
-        onBookNew={() => {
-          home.onCloseMyAppointments();
-          home.onSelectTab('doctors');
-          home.onOpenSearch();
-        }}
-      />
-    );
+    return <MyAppointmentsView {...myAppointments} />;
   }
 
   if (home.accountRecordsOpen) {

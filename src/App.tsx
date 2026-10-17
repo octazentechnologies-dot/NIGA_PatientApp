@@ -32,6 +32,7 @@ import { KeyboardStableInsets } from './components/KeyboardStableInsets';
 import { OfflineModeGate } from './components/OfflineModeGate';
 import { LocalizationProvider } from './localization/i18n';
 import { AppNavigator } from './navigation/AppNavigator';
+import { AppConfigProvider } from './providers/AppConfigProvider';
 import { configureForegroundNotificationHandler } from './services/notifications';
 import {
   CrashErrorBoundary,
@@ -80,11 +81,13 @@ export default function App() {
         {Platform.OS === 'android' ? <NavigationBar style="dark" /> : null}
         <KeyboardStableInsets>
           <LocalizationProvider>
-            <OfflineModeGate>
-              <CrashErrorBoundary>
-                {fontsLoaded || fontError ? <AppNavigator /> : null}
-              </CrashErrorBoundary>
-            </OfflineModeGate>
+            <AppConfigProvider>
+              <OfflineModeGate>
+                <CrashErrorBoundary>
+                  {fontsLoaded || fontError ? <AppNavigator /> : null}
+                </CrashErrorBoundary>
+              </OfflineModeGate>
+            </AppConfigProvider>
           </LocalizationProvider>
         </KeyboardStableInsets>
       </View>

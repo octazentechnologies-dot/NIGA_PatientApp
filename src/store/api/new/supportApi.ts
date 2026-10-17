@@ -78,11 +78,15 @@ export type SendTicketMessageResponse = {
 };
 
 export type HelpArticleItem = {
-  helpArticleId: number;
+  helpArticleId?: number;
   title: string;
   slug: string;
-  body: string;
-  isPublished: boolean;
+  body?: string | null;
+  isPublished?: boolean;
+  /** BE-020 */
+  category?: string | null;
+  sortOrder?: number | null;
+  bodyAvailable?: boolean;
 };
 
 export type GetHelpArticlesResponse = {
@@ -133,7 +137,43 @@ export const supportApi = newBaseApi.injectEndpoints({
         method: 'POST',
         body,
       }),
-      invalidatesTags: ['Visits'],
+      invalidatesTags: ['Visits', 'Reviews'],
+    }),
+    getMyReviews: build.query<
+      {
+        success: boolean;
+        data: Array<{
+          reviewId: number;
+          patientAppId: number;
+          doctorId: number;
+          doctorName: string;
+          patientId: number;
+          rating: number;
+          text: string | null;
+          status: string;
+          at: string;
+          createdAt: string;
+          /** BE-017 */
+          appealStatus?: 'OPEN' | 'UPHELD' | 'REJECTED' | null;
+          appealReason?: string | null;
+          appealedAt?: string | null;
+        }>;
+      },
+      void
+    >({
+      query: () => 'api/Reviews/Mine',
+      providesTags: ['Reviews'],
+    }),
+    appealReview: build.mutation<
+      { success: boolean; message?: string },
+      { reviewId: number | string; reason: string }
+    >({
+      query: ({ reviewId, reason }) => ({
+        url: `api/Reviews/${reviewId}/Appeal`,
+        method: 'POST',
+        body: { reason },
+      }),
+      invalidatesTags: ['Reviews'],
     }),
     createTicket: build.mutation<CreateTicketResponse, CreateTicketRequest>({
       query: (body) => ({
@@ -185,6 +225,8 @@ export const supportApi = newBaseApi.injectEndpoints({
 
 export const {
   useCreateReviewMutation,
+  useGetMyReviewsQuery,
+  useAppealReviewMutation,
   useCreateTicketMutation,
   useGetMyTicketsQuery,
   useGetTicketMessagesQuery,

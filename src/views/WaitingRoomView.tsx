@@ -10,20 +10,14 @@ import { radii } from '../theme/radii';
 import { layout, spacing } from '../theme/spacing';
 import { scaleFont } from '../utilities/scale';
 
-const INK = '#1F1F1F';
-const MUTED = '#595959';
-const HAIRLINE = '#E6E6E6';
-const ACTION = '#2A7BA3';
-const ICON_SOLID = '#2E9AD1';
-const CHIP_FILL = '#E6F5FE';
-const FILL = '#FAFAFA';
-const PREVIEW_BG = '#F2F2F2';
-const SUCCESS = '#0F7A4E';
-const WARN = '#8A5109';
-const WARN_FILL = '#FCF3E4';
-const WARN_BORDER = '#F2C14E';
-const DESTRUCTIVE = '#A3231A';
-const CONTROL_BORDER = '#8A8A8A';
+const ICON_SOLID = colors.iconFill;
+const FILL = colors.surfaceContainerLow;
+const PREVIEW_BG = colors.surfaceVariant;
+const WARN = colors.warning;
+const WARN_FILL = colors.warningContainer;
+const WARN_BORDER = colors.tertiaryContainer;
+const DESTRUCTIVE = colors.error;
+const CONTROL_BORDER = colors.outline;
 
 export function WaitingRoomView(vm: WaitingRoomViewModel) {
   if (vm.variant === 'doctorLate') {
@@ -46,15 +40,15 @@ function StandardWaitingRoom({ vm }: { vm: WaitingRoomViewModel }) {
       >
         <View style={styles.statusCard}>
           <View style={styles.heroIcon}>
-            <Ionicons name="person-outline" size={36} color={INK} />
+            <Ionicons name="person-outline" size={36} color={colors.ink} />
           </View>
 
           <Pressable onLongPress={vm.onToggleDemoLate} delayLongPress={600}>
-            <AppText variant="headlineMd" color={INK} style={styles.center}>
+            <AppText variant="headlineMd" color={colors.ink} style={styles.center}>
               {vm.t('waitingRoomTitle')}
             </AppText>
           </Pressable>
-          <AppText variant="titleMd" color={INK} style={styles.center}>
+          <AppText variant="titleMd" color={colors.ink} style={styles.center}>
             {vm.t('waitingRoomDoctorSoon').replace('{name}', vm.doctorName)}
           </AppText>
 
@@ -63,13 +57,13 @@ function StandardWaitingRoom({ vm }: { vm: WaitingRoomViewModel }) {
               <View style={styles.iconBubble}>
                 <Ionicons name="people" size={18} color={ICON_SOLID} />
               </View>
-              <AppText variant="bodyLg" color={INK} style={styles.flex}>
+              <AppText variant="bodyLg" color={colors.ink} style={styles.flex}>
                 {vm.queuePositionLabel}
               </AppText>
             </View>
             <View style={styles.etaRow}>
-              <Ionicons name="time-outline" size={16} color={MUTED} />
-              <AppText variant="bodyMd" color={MUTED}>
+              <Ionicons name="time-outline" size={16} color={colors.muted} />
+              <AppText variant="bodyMd" color={colors.muted}>
                 {vm.etaLabel}
               </AppText>
             </View>
@@ -91,7 +85,7 @@ function StandardWaitingRoom({ vm }: { vm: WaitingRoomViewModel }) {
           />
         </View>
 
-        <AppText variant="titleMd" color={INK}>
+        <AppText variant="titleMd" color={colors.ink}>
           {vm.t('waitingRoomWhileWait')}
         </AppText>
         <View style={styles.listCard}>
@@ -122,7 +116,7 @@ function StandardWaitingRoom({ vm }: { vm: WaitingRoomViewModel }) {
           onPress={vm.onGetHelp}
           style={({ pressed }) => [styles.helpLink, pressed && styles.pressed]}
         >
-          <AppText variant="bodyMd" color={ACTION} style={styles.helpText}>
+          <AppText variant="bodyMd" color={colors.primary} style={styles.helpText}>
             {vm.t('waitingRoomHelp')}
           </AppText>
         </Pressable>
@@ -154,7 +148,7 @@ function DoctorLateWaitingRoom({ vm }: { vm: WaitingRoomViewModel }) {
           onPress={vm.onBack}
           style={styles.iconButton}
         >
-          <Ionicons name="arrow-back" size={24} color={INK} />
+          <Ionicons name="arrow-back" size={24} color={colors.ink} />
         </Pressable>
         <Pressable
           onLongPress={vm.onToggleDemoLate}
@@ -163,7 +157,7 @@ function DoctorLateWaitingRoom({ vm }: { vm: WaitingRoomViewModel }) {
         >
           <AppText
             variant="headlineMd"
-            color={INK}
+            color={colors.ink}
             style={styles.lateTitle}
             numberOfLines={1}
           >
@@ -175,7 +169,7 @@ function DoctorLateWaitingRoom({ vm }: { vm: WaitingRoomViewModel }) {
           onPress={vm.onOpenSettings}
           style={styles.iconButton}
         >
-          <Ionicons name="settings-outline" size={22} color={INK} />
+          <Ionicons name="settings-outline" size={22} color={colors.ink} />
         </Pressable>
       </View>
 
@@ -202,7 +196,7 @@ function DoctorLateWaitingRoom({ vm }: { vm: WaitingRoomViewModel }) {
               onPress={vm.onSwitchToAudio}
               style={({ pressed }) => [styles.switchAudioBtn, pressed && styles.pressed]}
             >
-              <AppText variant="labelSm" color="#FFFFFF" weightOverride="600">
+              <AppText variant="labelSm" color={colors.card} weightOverride="600">
                 {vm.t('waitingRoomSwitchAudio')}
               </AppText>
             </Pressable>
@@ -211,14 +205,14 @@ function DoctorLateWaitingRoom({ vm }: { vm: WaitingRoomViewModel }) {
 
         <View style={styles.doctorCard}>
           <View style={styles.avatar}>
-            <AppText variant="titleMd" color={ACTION} languageOverride="en">
+            <AppText variant="titleMd" color={colors.primary} languageOverride="en">
               {vm.doctorInitials}
             </AppText>
           </View>
-          <AppText variant="titleMd" color={INK}>
+          <AppText variant="titleMd" color={colors.ink}>
             {vm.doctorShortName}
           </AppText>
-          <AppText variant="bodyMd" color={MUTED} style={styles.center}>
+          <AppText variant="bodyMd" color={colors.muted} style={styles.center}>
             {vm.credentialsLine}
             {' · '}
             {vm.experienceLine}
@@ -236,11 +230,11 @@ function DoctorLateWaitingRoom({ vm }: { vm: WaitingRoomViewModel }) {
             <Ionicons name="time" size={32} color={WARN} />
           </View>
           <View style={styles.lateBanner}>
-            <AppText variant="bodyMd" color={INK} weightOverride="600" style={styles.center}>
+            <AppText variant="bodyMd" color={colors.ink} weightOverride="600" style={styles.center}>
               {vm.lateMinutesLabel}
             </AppText>
           </View>
-          <AppText variant="bodyMd" color={MUTED} style={styles.center}>
+          <AppText variant="bodyMd" color={colors.muted} style={styles.center}>
             {vm.t('waitingRoomLatePleaseWait')}
           </AppText>
         </View>
@@ -250,7 +244,7 @@ function DoctorLateWaitingRoom({ vm }: { vm: WaitingRoomViewModel }) {
           onPress={vm.onReschedule}
           style={({ pressed }) => [styles.rescheduleBtn, pressed && styles.pressed]}
         >
-          <AppText variant="bodyLg" color={ACTION} weightOverride="600">
+          <AppText variant="bodyLg" color={colors.primary} weightOverride="600">
             {vm.t('waitingRoomChangeTime')}
           </AppText>
         </Pressable>
@@ -284,7 +278,7 @@ function DoctorLateWaitingRoom({ vm }: { vm: WaitingRoomViewModel }) {
           onPress={vm.onEndCall}
           style={({ pressed }) => [styles.endCall, pressed && styles.pressed]}
         >
-          <Ionicons name="call" size={22} color="#FFFFFF" style={styles.endCallIcon} />
+          <Ionicons name="call" size={22} color={colors.card} style={styles.endCallIcon} />
         </Pressable>
       </View>
     </View>
@@ -311,14 +305,14 @@ function ProgressStepper({
           <View key={label} style={styles.stepItem}>
             <View style={[styles.stepDot, done ? styles.stepDotDone : styles.stepDotPending]}>
               {done ? (
-                <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+                <Ionicons name="checkmark" size={12} color={colors.card} />
               ) : (
                 <View style={styles.stepDotInner} />
               )}
             </View>
             <AppText
               variant="labelSm"
-              color={done ? INK : MUTED}
+              color={done ? colors.ink : colors.muted}
               style={styles.stepLabel}
             >
               {label}
@@ -354,10 +348,10 @@ function WaitAction({
       <View style={styles.iconBubble}>
         <Ionicons name={icon} size={20} color={ICON_SOLID} />
       </View>
-      <AppText variant="bodyLg" color={INK} style={styles.flex}>
+      <AppText variant="bodyLg" color={colors.ink} style={styles.flex}>
         {label}
       </AppText>
-      <Ionicons name="chevron-forward" size={18} color={MUTED} />
+      <Ionicons name="chevron-forward" size={18} color={colors.muted} />
     </Pressable>
   );
 }
@@ -385,7 +379,7 @@ function CallControl({
         pressed && !disabled && styles.pressed,
       ]}
     >
-      <Ionicons name={icon} size={22} color={disabled ? MUTED : INK} />
+      <Ionicons name={icon} size={22} color={disabled ? colors.muted : colors.ink} />
     </Pressable>
   );
 }
@@ -402,7 +396,7 @@ const styles = StyleSheet.create({
   statusCard: {
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.md,
     padding: spacing.lg,
     alignItems: 'center',
@@ -414,7 +408,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.full,
     backgroundColor: PREVIEW_BG,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -422,7 +416,7 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     backgroundColor: FILL,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     padding: spacing.md,
     alignItems: 'center',
@@ -462,7 +456,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingTop: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
     position: 'relative',
     gap: spacing.xs,
   },
@@ -472,11 +466,11 @@ const styles = StyleSheet.create({
     right: '16%',
     top: spacing.md + 11,
     height: 2,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
   },
   stepTrackFill: {
     height: 2,
-    backgroundColor: ACTION,
+    backgroundColor: colors.primary,
   },
   stepItem: {
     flex: 1,
@@ -493,7 +487,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
   },
   stepDotDone: {
-    backgroundColor: SUCCESS,
+    backgroundColor: colors.success,
   },
   stepDotPending: {
     backgroundColor: PREVIEW_BG,
@@ -513,7 +507,7 @@ const styles = StyleSheet.create({
   listCard: {
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.md,
     overflow: 'hidden',
   },
@@ -527,14 +521,14 @@ const styles = StyleSheet.create({
   waitActionLast: {},
   listDivider: {
     height: 1,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
     marginLeft: 68,
   },
   iconBubble: {
     width: 40,
     height: 40,
     borderRadius: radii.full,
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -564,7 +558,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.card,
     borderBottomWidth: 1,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
     paddingHorizontal: spacing.sm,
     minHeight: 56,
   },
@@ -610,7 +604,7 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.md,
     padding: spacing.lg,
     alignItems: 'center',
@@ -620,9 +614,9 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: radii.full,
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.sm,
@@ -667,7 +661,7 @@ const styles = StyleSheet.create({
     minHeight: layout.buttonHeight,
     borderRadius: radii.button,
     borderWidth: 1.5,
-    borderColor: ACTION,
+    borderColor: colors.primary,
     backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
@@ -682,7 +676,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     backgroundColor: colors.card,
     borderTopWidth: 1,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
     paddingTop: spacing.md,
     paddingHorizontal: spacing.lg,
     borderTopLeftRadius: radii.xl,
@@ -693,7 +687,7 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: radii.full,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',

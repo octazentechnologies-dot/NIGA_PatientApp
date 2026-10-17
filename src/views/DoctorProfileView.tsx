@@ -14,14 +14,8 @@ import { layout, spacing } from '../theme/spacing';
 import { scaleFont } from '../utilities/scale';
 import { DoctorCredentialsTab } from './DoctorCredentialsTab';
 
-const SUCCESS = '#0F7A4E';
-const SUCCESS_FILL = '#E9F5EF';
-const MUTED = '#595959';
-const HAIRLINE = '#E6E6E6';
-const CHIP_FILL = '#E6F5FE';
-const STAR = '#fca144';
-const STAR_FILL = '#FCF3E4';
-const ICON_BLUE = '#2A7BA3';
+const STAR_FILL = colors.warningContainer;
+const ICON_BLUE = colors.primary;
 
 const TABS: { id: ProfileTab; labelKey: TranslationKey }[] = [
   { id: 'about', labelKey: 'profileTabAbout' },
@@ -35,11 +29,11 @@ export function DoctorProfileView({
   profile,
   reviews,
   tab,
-  saved,
+  saved: _saved,
   aboutExpanded,
   onBack,
   onShare,
-  onToggleSave,
+  onToggleSave: _onToggleSave,
   onSelectTab,
   onToggleAbout,
   onOpenDetails,
@@ -64,7 +58,7 @@ export function DoctorProfileView({
             hitSlop={8}
             style={styles.iconButton}
           >
-            <Ionicons name="arrow-back" size={24} color="#000000" />
+            <Ionicons name="arrow-back" size={24} color={colors.ink} />
           </Pressable>
           <View style={styles.topActions}>
             <Pressable
@@ -74,21 +68,10 @@ export function DoctorProfileView({
               hitSlop={8}
               style={styles.iconButton}
             >
-              <Ionicons name="share-outline" size={22} color="#000000" />
+              <Ionicons name="share-outline" size={22} color={colors.ink} />
             </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={saved ? t('profileSaved') : t('profileSave')}
-              onPress={onToggleSave}
-              hitSlop={8}
-              style={styles.iconButton}
-            >
-              <Ionicons
-                name={saved ? 'bookmark' : 'bookmark-outline'}
-                size={22}
-                color={saved ? colors.primary : '#000000'}
-              />
-            </Pressable>
+            {/* BE-031 — bookmarks not planned */}
+            <View style={styles.iconButton} />
           </View>
         </View>
 
@@ -107,37 +90,25 @@ export function DoctorProfileView({
             {profile.verified ? (
               <View style={styles.verifiedBadge}>
                 <View style={styles.verifiedBadgeInner}>
-                  <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+                  <Ionicons name="checkmark" size={12} color={colors.card} />
                 </View>
               </View>
             ) : null}
           </View>
-          <AppText variant="headlineMd" color="#000000" style={styles.name}>
+          <AppText variant="headlineMd" color={colors.ink} style={styles.name} raw>
             {t(profile.nameKey)}
           </AppText>
-          <AppText variant="bodyMd" color={MUTED} style={styles.credentials}>
-            {t(profile.credentialsKey)}
-          </AppText>
+          {profile.credentialsKey ? (
+            <AppText variant="bodyMd" color={colors.muted} style={styles.credentials} raw>
+              {t(profile.credentialsKey)}
+            </AppText>
+          ) : null}
           <View style={styles.statRow}>
-            {profile.experienceKey ? (
-              <View style={[styles.statChip, styles.statChipBlue]}>
-                <Ionicons name="briefcase-outline" size={14} color={ICON_BLUE} />
-                <AppText variant="labelSm" color={MUTED} style={styles.statLabel}>
-                  {t(profile.experienceKey)}
-                </AppText>
-              </View>
-            ) : null}
-            <View style={[styles.statChip, styles.statChipOrange]}>
-              <Ionicons name="star" size={14} color={STAR} />
-              <AppText variant="labelSm" color={MUTED} style={styles.statLabel}>
-                {`${profile.rating} ${t(profile.reviewsKey)}`}
-              </AppText>
-            </View>
-            {profile.consultsKey ? (
-              <View style={[styles.statChip, styles.statChipBlue]}>
-                <Ionicons name="people-outline" size={14} color={ICON_BLUE} />
-                <AppText variant="labelSm" color={MUTED} style={styles.statLabel}>
-                  {t(profile.consultsKey)}
+            {profile.rating != null && profile.reviewCount > 0 ? (
+              <View style={[styles.statChip, styles.statChipOrange]}>
+                <Ionicons name="star" size={14} color={colors.tertiaryContainer} />
+                <AppText variant="labelSm" color={colors.muted} style={styles.statLabel} raw>
+                  {`${profile.rating} (${profile.reviewCount})`}
                 </AppText>
               </View>
             ) : null}
@@ -164,7 +135,7 @@ export function DoctorProfileView({
               >
                 <AppText
                   variant="labelSm"
-                  color={active ? '#000000' : MUTED}
+                  color={active ? colors.ink : colors.muted}
                   weightOverride={active ? '600' : '500'}
                   style={styles.tabLabel}
                 >
@@ -197,7 +168,12 @@ export function DoctorProfileView({
           <ReviewsTab t={t} profile={profile} reviews={reviews} />
         ) : null}
         {tab === 'availability' ? (
-          <AvailabilityTab t={t} nextAvailable={t(profile.nextAvailableKey)} />
+          <AvailabilityTab
+            t={t}
+            nextAvailable={
+              profile.nextAvailableKey ? t(profile.nextAvailableKey) : ''
+            }
+          />
         ) : null}
       </ScrollView>
 
@@ -207,20 +183,36 @@ export function DoctorProfileView({
           { paddingBottom: sheetBottomPadding(insets, spacing.md) },
         ]}
       >
-        <View style={styles.nextBanner}>
-          <Ionicons name="calendar-outline" size={16} color={ICON_BLUE} />
-          <AppText variant="labelSm" color="#000000" style={styles.bannerLabel}>
-            {t(profile.nextAvailableKey)}
-          </AppText>
-        </View>
+        {profile.nextAvailableKey ? (
+          <View style={styles.nextBanner}>
+            <Ionicons name="calendar-outline" size={16} color={ICON_BLUE} />
+            <AppText variant="labelSm" color={colors.ink} style={styles.bannerLabel}>
+              {t(profile.nextAvailableKey)}
+            </AppText>
+          </View>
+        ) : null}
         <View style={styles.footerRow}>
           <View>
-            <AppText variant="labelSm" color={MUTED} style={styles.feeCaption}>
-              {t('profileConsultationFee')}
-            </AppText>
-            <AppText variant="titleMd" color="#000000" style={styles.feeValue}>
-              {t(profile.feeKey)}
-            </AppText>
+            {profile.teleFeeLabel ? (
+              <>
+                <AppText variant="labelSm" color={colors.muted} style={styles.feeCaption} raw>
+                  Tele
+                </AppText>
+                <AppText variant="titleMd" color={colors.ink} style={styles.feeValue} raw>
+                  {profile.teleFeeLabel}
+                </AppText>
+              </>
+            ) : null}
+            {profile.clinicFeeLabel ? (
+              <>
+                <AppText variant="labelSm" color={colors.muted} style={styles.feeCaption} raw>
+                  In-clinic
+                </AppText>
+                <AppText variant="bodyMd" color={colors.ink} raw>
+                  {profile.clinicFeeLabel}
+                </AppText>
+              </>
+            ) : null}
           </View>
           <AppButton
             label={t('profileBookConsultation')}
@@ -248,44 +240,47 @@ function AboutTab({
 }) {
   return (
     <View style={styles.stack}>
-      <View style={styles.verifyCard}>
-        <View style={styles.verifyHead}>
-          <View style={styles.shield}>
-            <Ionicons name="shield-checkmark" size={16} color={SUCCESS} />
-          </View>
-          <AppText variant="titleMd" color="#000000" style={styles.verifyTitle}>
-            {t('profileVerifiedBy')}
-          </AppText>
-        </View>
-        <View style={styles.verifyList}>
-          <CheckLine text={t(profile.regVerifiedKey)} />
-          <CheckLine text={t('profileQualVerified')} />
-          <CheckLine text={t('profileLicensed')} />
-        </View>
-        <View style={styles.verifyFooter}>
-          <AppText variant="labelSm" color={MUTED} style={styles.statLabel}>
-            {t(profile.lastVerifiedKey)}
-          </AppText>
-          <Pressable accessibilityRole="button" onPress={onOpenDetails} hitSlop={8}>
-            <AppText
-              variant="labelSm"
-              color={ICON_BLUE}
-              weightOverride="500"
-              style={styles.link}
-            >
-              {t('profileViewDetails')}
+      {profile.verified || profile.registrationNumber ? (
+        <View style={styles.verifyCard}>
+          <View style={styles.verifyHead}>
+            <View style={styles.shield}>
+              <Ionicons name="shield-checkmark" size={16} color={colors.success} />
+            </View>
+            <AppText variant="titleMd" color={colors.ink} style={styles.verifyTitle}>
+              {t('profileVerifiedBy')}
             </AppText>
-          </Pressable>
+          </View>
+          <View style={styles.verifyList}>
+            {profile.registrationNumber ? (
+              <CheckLine text={profile.registrationNumber} />
+            ) : null}
+            {profile.verified && profile.regVerifiedKey ? (
+              <CheckLine text={t(profile.regVerifiedKey)} />
+            ) : null}
+          </View>
+          <View style={styles.verifyFooter}>
+            <Pressable accessibilityRole="button" onPress={onOpenDetails} hitSlop={8}>
+              <AppText
+                variant="labelSm"
+                color={ICON_BLUE}
+                weightOverride="500"
+                style={styles.link}
+              >
+                {t('profileViewDetails')}
+              </AppText>
+            </Pressable>
+          </View>
         </View>
-      </View>
+      ) : null}
 
       {profile.aboutKey ? (
         <View style={styles.bioBlock}>
           <AppText
             variant="bodyMd"
-            color={MUTED}
+            color={colors.muted}
             numberOfLines={aboutExpanded ? undefined : 4}
             style={styles.bio}
+            raw
           >
             {t(profile.aboutKey)}
           </AppText>
@@ -299,53 +294,48 @@ function AboutTab({
 
       {profile.careNeedKeys && profile.careNeedKeys.length > 0 ? (
         <View style={styles.stackSm}>
-          <AppText variant="headlineMd" color="#000000" style={styles.sectionTitle}>
+          <AppText variant="headlineMd" color={colors.ink} style={styles.sectionTitle}>
             {t('profileCareFocus')}
           </AppText>
           <View style={styles.wrap}>
             {profile.careNeedKeys.map((key) => (
               <View key={key} style={styles.careChip}>
-                <AppText variant="bodyMd" color="#000000" style={styles.careChipLabel}>
+                <AppText variant="bodyMd" color={colors.ink} style={styles.careChipLabel}>
                   {t(key)}
                 </AppText>
               </View>
             ))}
           </View>
-          <AppText variant="labelSm" color={MUTED}>
+          <AppText variant="labelSm" color={colors.muted}>
             {t('profileCareFocusNote')}
           </AppText>
         </View>
       ) : null}
 
-      <View style={styles.consultBlock}>
-        <AppText variant="headlineMd" color="#000000" style={styles.sectionTitle}>
-          {t('profileConsultations')}
-        </AppText>
-        <View style={styles.consultCard}>
-          <ConsultRow
-            icon="videocam-outline"
-            label={t('profileVideoConsult')}
-            value={t(profile.feeKey)}
-          />
-          <ConsultRow
-            icon="call-outline"
-            label={t('profileAudioConsult')}
-            value={t(profile.feeKey)}
-          />
-          <ConsultRow
-            icon="chatbubble-outline"
-            label={t('profileFollowUpChat')}
-            hint={t('profileFollowUpChatHint')}
-            badge={t('profileIncluded')}
-          />
-          <ConsultRow
-            icon="medkit-outline"
-            label={t('profileClinicVisit')}
-            value={t(profile.clinicFeeKey)}
-            last
-          />
+      {profile.teleFeeLabel || profile.clinicFeeLabel ? (
+        <View style={styles.consultBlock}>
+          <AppText variant="headlineMd" color={colors.ink} style={styles.sectionTitle}>
+            {t('profileConsultations')}
+          </AppText>
+          <View style={styles.consultCard}>
+            {profile.teleFeeLabel ? (
+              <ConsultRow
+                icon="videocam-outline"
+                label={t('profileVideoConsult')}
+                value={profile.teleFeeLabel}
+              />
+            ) : null}
+            {profile.clinicFeeLabel ? (
+              <ConsultRow
+                icon="medkit-outline"
+                label={t('profileClinicVisit')}
+                value={profile.clinicFeeLabel}
+                last
+              />
+            ) : null}
+          </View>
         </View>
-      </View>
+      ) : null}
     </View>
   );
 }
@@ -361,17 +351,19 @@ function ReviewsTab({
 }) {
   return (
     <View style={styles.stack}>
-      <View style={[styles.statChip, styles.statChipOrange]}>
-        <Ionicons name="star" size={16} color={STAR} />
-        <AppText variant="titleMd" color="#000000">
-          {`${profile.rating} ${t(profile.reviewsKey)}`}
-        </AppText>
-      </View>
+      {profile.rating != null && profile.reviewCount > 0 ? (
+        <View style={[styles.statChip, styles.statChipOrange]}>
+          <Ionicons name="star" size={16} color={colors.tertiaryContainer} />
+          <AppText variant="titleMd" color={colors.ink} raw>
+            {`${profile.rating} (${profile.reviewCount})`}
+          </AppText>
+        </View>
+      ) : null}
       {!reviews || reviews.length === 0 ? (
         <View style={styles.verifyCard}>
           <AppText
             variant="bodyMd"
-            color={MUTED}
+            color={colors.muted}
             style={{ textAlign: 'center', paddingVertical: spacing.md }}
           >
             {t('profileNoReviews')}
@@ -380,7 +372,7 @@ function ReviewsTab({
       ) : (
         reviews.map((rev) => (
           <View key={rev.id} style={styles.reviewCard}>
-            <AppText variant="titleMd" color="#000000">
+            <AppText variant="titleMd" color={colors.ink}>
               {rev.reviewerName}
             </AppText>
             <View style={styles.ratingDots}>
@@ -389,17 +381,17 @@ function ReviewsTab({
                   key={index}
                   name="star"
                   size={12}
-                  color={index < rev.rating ? STAR : HAIRLINE}
+                  color={index < rev.rating ? colors.tertiaryContainer : colors.outlineVariant}
                 />
               ))}
             </View>
             {rev.body ? (
-              <AppText variant="bodyMd" color={MUTED}>
+              <AppText variant="bodyMd" color={colors.muted}>
                 {rev.body}
               </AppText>
             ) : null}
             {rev.dateLabel ? (
-              <AppText variant="labelSm" color={MUTED}>
+              <AppText variant="labelSm" color={colors.muted}>
                 {rev.dateLabel}
               </AppText>
             ) : null}
@@ -420,13 +412,15 @@ function AvailabilityTab({
   return (
     <View style={styles.stack}>
       <View style={styles.verifyCard}>
-        <View style={styles.verifyHead}>
-          <Ionicons name="calendar-outline" size={18} color={ICON_BLUE} />
-          <AppText variant="titleMd" color="#000000" style={styles.flex}>
-            {nextAvailable}
-          </AppText>
-        </View>
-        <AppText variant="bodyMd" color={MUTED}>
+        {nextAvailable ? (
+          <View style={styles.verifyHead}>
+            <Ionicons name="calendar-outline" size={18} color={ICON_BLUE} />
+            <AppText variant="titleMd" color={colors.ink} style={styles.flex} raw>
+              {nextAvailable}
+            </AppText>
+          </View>
+        ) : null}
+        <AppText variant="bodyMd" color={colors.muted}>
           {t('profileNoSlots')}
         </AppText>
       </View>
@@ -456,11 +450,11 @@ function ConsultRow({
           <Ionicons name={icon} size={18} color={ICON_BLUE} />
         </View>
         <View style={styles.flex}>
-          <AppText variant="bodyLg" color="#000000">
+          <AppText variant="bodyLg" color={colors.ink}>
             {label}
           </AppText>
           {hint ? (
-            <AppText variant="labelSm" color={MUTED}>
+            <AppText variant="labelSm" color={colors.muted}>
               {hint}
             </AppText>
           ) : null}
@@ -468,15 +462,15 @@ function ConsultRow({
       </View>
       {badge ? (
         <View style={styles.included}>
-          <AppText variant="labelSm" color={MUTED}>
+          <AppText variant="labelSm" color={colors.muted}>
             {badge}
           </AppText>
         </View>
-      ) : (
-        <AppText variant="titleMd" color="#000000">
+      ) : value ? (
+        <AppText variant="titleMd" color={colors.ink} raw>
           {value}
         </AppText>
-      )}
+      ) : null}
     </View>
   );
 }
@@ -484,8 +478,8 @@ function ConsultRow({
 function CheckLine({ text }: { text: string }) {
   return (
     <View style={styles.checkLine}>
-      <Ionicons name="checkmark-circle" size={18} color={SUCCESS} />
-      <AppText variant="bodyMd" color="#000000" style={styles.checkText}>
+      <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+      <AppText variant="bodyMd" color={colors.ink} style={styles.checkText} raw>
         {text}
       </AppText>
     </View>
@@ -529,12 +523,12 @@ const styles = StyleSheet.create({
     width: 88,
     height: 88,
     borderRadius: radii.full,
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     borderWidth: 4,
-    borderColor: '#FFFFFF',
+    borderColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000000',
+    shadowColor: colors.ink,
     shadowOpacity: 0.08,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 1 },
@@ -559,7 +553,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: radii.full,
-    backgroundColor: SUCCESS,
+    backgroundColor: colors.success,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -590,13 +584,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.full,
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
   statChipBlue: {
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
   },
   statChipOrange: {
     backgroundColor: STAR_FILL,
@@ -607,7 +601,7 @@ const styles = StyleSheet.create({
   },
   tabs: {
     borderBottomWidth: 1,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
     backgroundColor: colors.card,
   },
   tabsRow: {
@@ -641,7 +635,7 @@ const styles = StyleSheet.create({
   },
   verifyCard: {
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     padding: spacing.md,
     gap: 12,
@@ -661,7 +655,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: radii.full,
-    backgroundColor: SUCCESS_FILL,
+    backgroundColor: colors.successContainer,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -675,7 +669,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
   },
   link: {
     textDecorationLine: 'underline',
@@ -702,9 +696,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   careChip: {
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.full,
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -717,11 +711,11 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingTop: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
   },
   consultCard: {
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     padding: spacing.md,
     backgroundColor: colors.card,
@@ -735,7 +729,7 @@ const styles = StyleSheet.create({
   },
   consultDivider: {
     borderBottomWidth: 1,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   consultLeft: {
     flex: 1,
@@ -747,19 +741,19 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: radii.full,
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
   },
   included: {
-    backgroundColor: '#F2F2F2',
+    backgroundColor: colors.surfaceVariant,
     borderRadius: 4,
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
   },
   reviewCard: {
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     padding: spacing.md,
     gap: spacing.sm,
@@ -785,7 +779,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     borderTopWidth: 1,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
     backgroundColor: colors.card,
   },
   nextBanner: {
@@ -793,7 +787,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     borderBottomWidth: 1,
     borderBottomColor: colors.primary,
     paddingVertical: 6,

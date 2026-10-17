@@ -43,13 +43,28 @@ export type DataRequestResponse = {
   };
 };
 
+export type DataRequestHistoryItem = {
+  dataRequestId?: number;
+  type?: string;
+  requestType?: string;
+  status: string;
+  createdAt?: string | null;
+  completedAt?: string | null;
+};
+
+export type DataRequestsListResponse = {
+  success: boolean;
+  data: DataRequestHistoryItem[];
+};
+
 /**
  * Consent Screen APIs:
  * - D3: GET api/Patient/Consents
  * - D4: POST api/Patient/Consents/Types/{consentTypeId}/Grant
  * - D5: POST api/Patient/Consents/{consentRecordId}/Withdraw
  * - D6: POST api/Patient/DataRequests
- * Base: newBaseApi (devapi2). Auth required (Bearer Token via prepareAuthHeaders).
+ * - BE-018: GET api/Patient/DataRequests
+ * Caregiver: use Caregiver/Grant — never Grant consent when Code == "Caregiver".
  */
 export const consentApi = newBaseApi.injectEndpoints({
   overrideExisting: true,
@@ -87,12 +102,25 @@ export const consentApi = newBaseApi.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'Consents', id: 'LIST' }],
     }),
+    getDataRequests: build.query<DataRequestHistoryItem[], void>({
+      query: () => 'api/Patient/DataRequests',
+      transformResponse: (
+        response: DataRequestsListResponse | DataRequestHistoryItem[],
+      ) => {
+        if (Array.isArray(response)) {
+          return response;
+        }
+        return Array.isArray(response?.data) ? response.data : [];
+      },
+      providesTags: ['DataRequests'],
+    }),
     createDataRequest: build.mutation<DataRequestResponse, DataRequestPayload>({
       query: (body) => ({
         url: 'api/Patient/DataRequests',
         method: 'POST',
         body,
       }),
+      invalidatesTags: ['DataRequests'],
     }),
   }),
 });
@@ -101,5 +129,6 @@ export const {
   useGetConsentsQuery,
   useGrantConsentMutation,
   useWithdrawConsentMutation,
+  useGetDataRequestsQuery,
   useCreateDataRequestMutation,
 } = consentApi;

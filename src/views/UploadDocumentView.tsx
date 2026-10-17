@@ -24,13 +24,7 @@ import { layout, spacing } from '../theme/spacing';
 import { fontFamilyFor } from '../utilities/fonts';
 import { sheetBottomPadding } from '../utilities/sheetInset';
 
-const INK = '#1F1F1F';
-const MUTED = '#595959';
-const HAIRLINE = '#E6E6E6';
-const ACTION = '#2A7BA3';
-const SUCCESS = '#0F7A4E';
-const SUCCESS_FILL = '#E9F5EF';
-const PLACEHOLDER = '#8A8A8A';
+const PLACEHOLDER = colors.outline;
 
 export function UploadDocumentView(vm: UploadDocumentViewModel) {
   const insets = useSafeAreaInsets();
@@ -49,9 +43,9 @@ export function UploadDocumentView(vm: UploadDocumentViewModel) {
             onPress={vm.onClose}
             style={styles.iconHit}
           >
-            <Ionicons name="close" size={24} color={INK} />
+            <Ionicons name="close" size={24} color={colors.ink} />
           </Pressable>
-          <AppText variant="titleMd" color={INK} style={styles.headerTitle} numberOfLines={1}>
+          <AppText variant="titleMd" color={colors.ink} style={styles.headerTitle} numberOfLines={1}>
             {vm.t('uploadDocTitle')}
           </AppText>
           <Pressable
@@ -59,7 +53,7 @@ export function UploadDocumentView(vm: UploadDocumentViewModel) {
             onPress={vm.onHelp}
             style={styles.helpHit}
           >
-            <AppText variant="labelMd" color={ACTION} weightOverride="600">
+            <AppText variant="labelMd" color={colors.primary} weightOverride="600">
               {vm.t('uploadDocHelp')}
             </AppText>
           </Pressable>
@@ -84,11 +78,11 @@ export function UploadDocumentView(vm: UploadDocumentViewModel) {
           onPress={vm.onOpenMemberPicker}
           style={styles.memberChip}
         >
-          <Ionicons name="person-outline" size={18} color={MUTED} />
-          <AppText variant="labelSm" color={INK} style={styles.flex}>
+          <Ionicons name="person-outline" size={18} color={colors.muted} />
+          <AppText variant="labelSm" color={colors.ink} style={styles.flex}>
             {vm.t('uploadDocAddingTo').replace('{name}', vm.memberLabel)}
           </AppText>
-          <Ionicons name="chevron-down" size={18} color={MUTED} />
+          <Ionicons name="chevron-down" size={18} color={colors.muted} />
         </Pressable>
 
         <View style={styles.sourceRow}>
@@ -108,7 +102,7 @@ export function UploadDocumentView(vm: UploadDocumentViewModel) {
             onPress={vm.onPickFile}
           />
         </View>
-        <AppText variant="labelSm" color={MUTED} style={styles.limits}>
+        <AppText variant="labelSm" color={colors.muted} style={styles.limits}>
           {vm.t('uploadDocLimits')}
         </AppText>
 
@@ -118,27 +112,27 @@ export function UploadDocumentView(vm: UploadDocumentViewModel) {
               <View key={file.id} style={styles.fileCard}>
                 <View style={styles.fileThumb}>
                   {file.kind === 'pdf' ? (
-                    <Ionicons name="document-text-outline" size={22} color={MUTED} />
+                    <Ionicons name="document-text-outline" size={22} color={colors.muted} />
                   ) : (
-                    <Ionicons name="image-outline" size={22} color={MUTED} />
+                    <Ionicons name="image-outline" size={22} color={colors.muted} />
                   )}
                 </View>
                 <View style={styles.flex}>
-                  <AppText variant="bodyMd" color={INK} numberOfLines={1}>
+                  <AppText variant="bodyMd" color={colors.ink} numberOfLines={1}>
                     {file.name}
                   </AppText>
                   {file.status === 'uploading' ? (
-                    <AppText variant="labelSm" color={MUTED}>
+                    <AppText variant="labelSm" color={colors.muted}>
                       {file.sizeLabel} · {vm.t('uploadDocUploading')}
                     </AppText>
                   ) : (
                     <>
-                      <AppText variant="labelSm" color={MUTED}>
+                      <AppText variant="labelSm" color={colors.muted}>
                         {file.sizeLabel}
                       </AppText>
                       <View style={styles.savedPill}>
-                        <Ionicons name="checkmark-circle" size={14} color={SUCCESS} />
-                        <AppText variant="labelSm" color={SUCCESS} weightOverride="600">
+                        <Ionicons name="checkmark-circle" size={14} color={colors.success} />
+                        <AppText variant="labelSm" color={colors.success} weightOverride="600">
                           {vm.t('uploadDocScanned')}
                         </AppText>
                       </View>
@@ -155,17 +149,17 @@ export function UploadDocumentView(vm: UploadDocumentViewModel) {
                       style={[
                         styles.progressRing,
                         {
-                          borderTopColor: ACTION,
+                          borderTopColor: colors.primary,
                           borderRightColor:
-                            (file.progress ?? 0) > 0.35 ? ACTION : HAIRLINE,
+                            (file.progress ?? 0) > 0.35 ? colors.primary : colors.outlineVariant,
                           borderBottomColor:
-                            (file.progress ?? 0) > 0.65 ? ACTION : HAIRLINE,
+                            (file.progress ?? 0) > 0.65 ? colors.primary : colors.outlineVariant,
                           borderLeftColor:
-                            (file.progress ?? 0) > 0.85 ? ACTION : HAIRLINE,
+                            (file.progress ?? 0) > 0.85 ? colors.primary : colors.outlineVariant,
                         },
                       ]}
                     />
-                    <Ionicons name="close" size={14} color={INK} />
+                    <Ionicons name="close" size={14} color={colors.ink} />
                   </Pressable>
                 ) : (
                   <Pressable
@@ -173,7 +167,7 @@ export function UploadDocumentView(vm: UploadDocumentViewModel) {
                     onPress={() => vm.onOpenFileMenu(file.id)}
                     style={styles.iconHit}
                   >
-                    <Ionicons name="ellipsis-vertical" size={18} color={MUTED} />
+                    <Ionicons name="ellipsis-vertical" size={18} color={colors.muted} />
                   </Pressable>
                 )}
               </View>
@@ -183,7 +177,7 @@ export function UploadDocumentView(vm: UploadDocumentViewModel) {
 
         <View style={styles.divider} />
 
-        <AppText variant="headlineMd" color={INK}>
+        <AppText variant="headlineMd" color={colors.ink}>
           {vm.t('uploadDocDetails')}
         </AppText>
 
@@ -194,12 +188,12 @@ export function UploadDocumentView(vm: UploadDocumentViewModel) {
         >
           <AppText
             variant="bodyLg"
-            color={vm.docTypeLabel ? INK : PLACEHOLDER}
+            color={vm.docTypeLabel ? colors.ink : PLACEHOLDER}
             style={styles.flex}
           >
             {vm.docTypeLabel || vm.t('uploadDocTypeLabel')}
           </AppText>
-          <Ionicons name="chevron-down" size={20} color={MUTED} />
+          <Ionicons name="chevron-down" size={20} color={colors.muted} />
         </Pressable>
 
         <View style={styles.field}>
@@ -213,7 +207,7 @@ export function UploadDocumentView(vm: UploadDocumentViewModel) {
               { fontFamily: fontFamilyFor('400', vm.language, 'sans') },
             ]}
           />
-          <Ionicons name="calendar-outline" size={20} color={MUTED} />
+          <Ionicons name="calendar-outline" size={20} color={colors.muted} />
         </View>
 
         <View style={[styles.field, styles.notesField]}>
@@ -233,8 +227,8 @@ export function UploadDocumentView(vm: UploadDocumentViewModel) {
 
         <View style={styles.visibilityCard}>
           <View style={styles.visibilityHead}>
-            <Ionicons name="eye-outline" size={20} color={ACTION} />
-            <AppText variant="titleMd" color={INK}>
+            <Ionicons name="eye-outline" size={20} color={colors.primary} />
+            <AppText variant="titleMd" color={colors.ink}>
               {vm.t('uploadDocWhoCanSee')}
             </AppText>
           </View>
@@ -246,10 +240,10 @@ export function UploadDocumentView(vm: UploadDocumentViewModel) {
           >
             <Radio selected={vm.visibility === 'doctors'} />
             <View style={styles.flex}>
-              <AppText variant="bodyLg" color={INK}>
+              <AppText variant="bodyLg" color={colors.ink}>
                 {vm.t('uploadDocShareDoctors')}
               </AppText>
-              <AppText variant="bodyMd" color={MUTED}>
+              <AppText variant="bodyMd" color={colors.muted}>
                 {vm.t('uploadDocShareDoctorsHint')}
               </AppText>
             </View>
@@ -261,15 +255,15 @@ export function UploadDocumentView(vm: UploadDocumentViewModel) {
             style={styles.radioRow}
           >
             <Radio selected={vm.visibility === 'private'} />
-            <AppText variant="bodyLg" color={INK} style={styles.flex}>
+            <AppText variant="bodyLg" color={colors.ink} style={styles.flex}>
               {vm.t('uploadDocSharePrivate')}
             </AppText>
           </Pressable>
         </View>
 
         <View style={styles.infoBox}>
-          <Ionicons name="information-circle-outline" size={20} color={MUTED} />
-          <AppText variant="bodyMd" color={MUTED} style={styles.flex}>
+          <Ionicons name="information-circle-outline" size={20} color={colors.muted} />
+          <AppText variant="bodyMd" color={colors.muted} style={styles.flex}>
             {vm.t('uploadDocSecureNote')}
           </AppText>
         </View>
@@ -333,8 +327,8 @@ function SourceTile({
 }) {
   return (
     <Pressable accessibilityRole="button" onPress={onPress} style={styles.sourceTile}>
-      <Ionicons name={icon} size={28} color={ACTION} />
-      <AppText variant="labelSm" color={INK} style={styles.center}>
+      <Ionicons name={icon} size={28} color={colors.primary} />
+      <AppText variant="labelSm" color={colors.ink} style={styles.center}>
         {label}
       </AppText>
     </Pressable>
@@ -376,7 +370,7 @@ function PickerSheet({
           ]}
         >
           <View style={styles.sheetHandle} />
-          <AppText variant="titleMd" color={INK} style={styles.sheetTitle}>
+          <AppText variant="titleMd" color={colors.ink} style={styles.sheetTitle}>
             {title}
           </AppText>
           {options.map((option) => {
@@ -390,14 +384,14 @@ function PickerSheet({
               >
                 <AppText
                   variant="bodyLg"
-                  color={INK}
+                  color={colors.ink}
                   weightOverride={selected ? '600' : undefined}
                   style={styles.flex}
                 >
                   {option.label}
                 </AppText>
                 {selected ? (
-                  <Ionicons name="checkmark" size={20} color={ACTION} />
+                  <Ionicons name="checkmark" size={20} color={colors.primary} />
                 ) : null}
               </Pressable>
             );
@@ -416,7 +410,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   headerRow: {
     minHeight: 48,
@@ -452,7 +446,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     backgroundColor: colors.surfaceContainerLow,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.full,
     paddingHorizontal: spacing.md,
     minHeight: 40,
@@ -466,7 +460,7 @@ const styles = StyleSheet.create({
     minHeight: 100,
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     alignItems: 'center',
     justifyContent: 'center',
@@ -485,7 +479,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
   },
@@ -503,7 +497,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     marginTop: 4,
-    backgroundColor: SUCCESS_FILL,
+    backgroundColor: colors.successContainer,
     borderRadius: radii.full,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
@@ -518,11 +512,11 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     borderRadius: radii.full,
     borderWidth: 3,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
   },
   divider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
     marginVertical: spacing.xs,
   },
   field: {
@@ -532,14 +526,14 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     paddingHorizontal: spacing.md,
   },
   fieldInput: {
     flex: 1,
     fontSize: 16,
-    color: INK,
+    color: colors.ink,
     paddingVertical: spacing.md,
   },
   notesField: {
@@ -552,12 +546,12 @@ const styles = StyleSheet.create({
     width: '100%',
     minHeight: 80,
     fontSize: 16,
-    color: INK,
+    color: colors.ink,
   },
   visibilityCard: {
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
     gap: spacing.sm,
@@ -579,19 +573,19 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: radii.full,
     borderWidth: 2,
-    borderColor: MUTED,
+    borderColor: colors.muted,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 2,
   },
   radioOuterOn: {
-    borderColor: SUCCESS,
+    borderColor: colors.success,
   },
   radioInner: {
     width: 12,
     height: 12,
     borderRadius: radii.full,
-    backgroundColor: SUCCESS,
+    backgroundColor: colors.success,
   },
   infoBox: {
     flexDirection: 'row',
@@ -608,7 +602,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     backgroundColor: colors.card,
     borderTopWidth: 1,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
   },
   footerCancel: {
     flex: 1,
@@ -635,7 +629,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: radii.full,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
     marginTop: spacing.sm,
     marginBottom: spacing.md,
   },
@@ -647,7 +641,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
   },
   flex: {
     flex: 1,

@@ -133,12 +133,12 @@ export function SplashView({
           style={styles.mark}
         />
         <FadeInUp delayMs={100} style={styles.brandWrap}>
-          <AppText variant="displayLg" color="#000000" style={styles.brand}>
+          <AppText variant="displayLg" color={colors.ink} style={styles.brand}>
             {brandName}
           </AppText>
         </FadeInUp>
         <FadeInUp delayMs={200}>
-          <AppText variant="titleMd" color="#000000" style={styles.tagline}>
+          <AppText variant="bodyLg" color={colors.muted} style={styles.tagline}>
             {tagline}
           </AppText>
         </FadeInUp>
@@ -151,7 +151,7 @@ export function SplashView({
         <Pulsing>
           <AppText
             variant="labelSm"
-            color="#000000"
+            color={colors.muted}
             languageOverride="en"
             style={styles.loadingEn}
           >
@@ -159,7 +159,7 @@ export function SplashView({
           </AppText>
           <AppText
             variant="labelSm"
-            color="#000000"
+            color={colors.muted}
             languageOverride="mr"
             style={styles.loadingMr}
           >
@@ -190,9 +190,9 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   mark: {
-    width: moderateScale(120),
-    height: moderateScale(120),
-    tintColor: '#000000',
+    width: moderateScale(96),
+    height: moderateScale(96),
+    tintColor: colors.primary,
   },
   brandWrap: {
     marginTop: spacing.lg + spacing.sm,

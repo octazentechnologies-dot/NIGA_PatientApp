@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Linking } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import { useAppConfig } from '../providers/AppConfigProvider';
 
 export type OfflineAvailableId = 'prescriptions' | 'appointments' | 'emergency';
 
@@ -12,6 +12,7 @@ export type OfflineModeViewModel = {
   t: (key: TranslationKey) => string;
   isOffline: boolean;
   checking: boolean;
+  showCallHelpline: boolean;
   onTryAgain: () => void;
   onCallHelpline: () => void;
   onOpenAvailable: (id: OfflineAvailableId) => void;
@@ -40,6 +41,7 @@ export function useOfflineModeController({
   onOpenEmergencyInfo?: () => void;
 } = {}): OfflineModeViewModel {
   const { language, t } = useLocalization();
+  const appConfig = useAppConfig();
   const [isOffline, setIsOffline] = useState(false);
   const [checking, setChecking] = useState(false);
 
@@ -71,10 +73,9 @@ export function useOfflineModeController({
     t,
     isOffline,
     checking,
+    showCallHelpline: Boolean(appConfig.supportPhone),
     onTryAgain,
-    onCallHelpline: () => {
-      void Linking.openURL('tel:18001234567');
-    },
+    onCallHelpline: appConfig.openSupportPhone,
     onOpenAvailable: (id) => {
       if (id === 'prescriptions') {
         onOpenPrescriptions?.();

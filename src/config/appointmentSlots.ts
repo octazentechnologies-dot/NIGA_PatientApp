@@ -181,7 +181,9 @@ const fullAfternoon: TimeSlot[] = [
 export const DEFAULT_SLOT_ID = '18:30';
 export const DEFAULT_MEMBER_ID = 'aarav';
 
-export const PLATFORM_FEE_RUPEES = 90;
+/** @deprecated BE-011 / not planned — never invent a platform fee. Kept only so old imports compile out. */
+/** @deprecated BE-011 — never invent platform fee; use Instant/Visit API fields only. */
+export const PLATFORM_FEE_RUPEES: number | null = null;
 export const TAX_RUPEES = 0;
 
 const CONSULT_FEE_RUPEES: Record<string, Record<ConsultMode, number>> = {

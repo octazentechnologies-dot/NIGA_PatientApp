@@ -2,19 +2,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sheetBottomPadding } from '../utilities/sheetInset';
+import { colors } from '../theme/colors';
 
 import { AppText } from '../components/AppText';
+import { ErrorState } from '../components/ErrorState';
+import { LoadingState } from '../components/LoadingState';
 import type { LegalDocumentViewModel } from '../controllers/useLegalDocumentController';
 import { radii } from '../theme/radii';
 import { spacing } from '../theme/spacing';
-
-const INK = '#1F1F1F';
-const MUTED = '#595959';
-const HAIRLINE = '#DDDFE2';
-const PAGE = '#F5F6F7';
-const CARD = '#FFFFFF';
-const ACTION = '#2A7BA3';
-const CHIP_FILL = '#E6F5FE';
 
 export function LegalDocumentView(vm: LegalDocumentViewModel) {
   const insets = useSafeAreaInsets();
@@ -29,9 +24,9 @@ export function LegalDocumentView(vm: LegalDocumentViewModel) {
             onPress={vm.onBack}
             style={styles.iconHit}
           >
-            <Ionicons name="arrow-back" size={24} color={INK} />
+            <Ionicons name="arrow-back" size={24} color={colors.ink} />
           </Pressable>
-          <AppText variant="headlineMd" color={INK} style={styles.headerTitle}>
+          <AppText variant="headlineMd" color={colors.ink} style={styles.headerTitle}>
             {vm.t(vm.titleKey)}
           </AppText>
           <View style={styles.iconHit} />
@@ -56,28 +51,46 @@ export function LegalDocumentView(vm: LegalDocumentViewModel) {
                     : 'document-text-outline'
               }
               size={24}
-              color={ACTION}
+              color={colors.primary}
             />
           </View>
-          <AppText variant="headlineMd" color={INK}>
-            {vm.t(vm.titleKey)}
+          <AppText variant="headlineMd" color={colors.ink} raw={Boolean(vm.apiTitle)}>
+            {vm.apiTitle || vm.t(vm.titleKey)}
           </AppText>
-          {vm.versionKey ? (
-            <AppText variant="labelSm" color={MUTED}>
+          {vm.apiVersion ? (
+            <AppText variant="labelSm" color={colors.muted} raw>
+              {vm.apiVersion}
+            </AppText>
+          ) : vm.versionKey ? (
+            <AppText variant="labelSm" color={colors.muted}>
               {vm.t(vm.versionKey)}
             </AppText>
           ) : null}
-          <AppText variant="bodyMd" color={MUTED}>
-            {vm.t(vm.introKey)}
-          </AppText>
+          {vm.apiBody ? null : (
+            <AppText variant="bodyMd" color={colors.muted}>
+              {vm.t(vm.introKey)}
+            </AppText>
+          )}
         </View>
+
+        {vm.isLoading ? <LoadingState /> : null}
+        {vm.isError ? (
+          <ErrorState message="Could not load the terms." onRetry={vm.onRetry} />
+        ) : null}
+        {vm.apiBody ? (
+          <View style={styles.sectionCard}>
+            <AppText variant="bodyMd" color={colors.muted} raw>
+              {vm.apiBody}
+            </AppText>
+          </View>
+        ) : null}
 
         {vm.sections.map((section) => (
           <View key={section.headingKey} style={styles.sectionCard}>
-            <AppText variant="labelMd" color={INK} weightOverride="600">
+            <AppText variant="labelMd" color={colors.ink} weightOverride="600">
               {vm.t(section.headingKey)}
             </AppText>
-            <AppText variant="bodyMd" color={MUTED}>
+            <AppText variant="bodyMd" color={colors.muted}>
               {vm.t(section.bodyKey)}
             </AppText>
           </View>
@@ -88,11 +101,11 @@ export function LegalDocumentView(vm: LegalDocumentViewModel) {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: PAGE },
+  root: { flex: 1, backgroundColor: colors.page },
   header: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
     paddingHorizontal: spacing.sm,
     paddingBottom: spacing.sm,
   },
@@ -117,9 +130,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   heroCard: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
     gap: spacing.sm,
@@ -129,15 +142,15 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.xs,
   },
   sectionCard: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
     gap: spacing.sm,

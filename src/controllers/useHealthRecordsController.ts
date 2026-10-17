@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
 import {
+  useDeleteDocumentMutation,
   useGetDocumentsQuery,
   useGetTimelineQuery,
 } from '../store/api/new/recordsApi';
@@ -47,6 +48,10 @@ export type RecordsTimelineItem = {
   metaKey: TranslationKey;
   badgeKey?: TranslationKey;
   noteKey?: TranslationKey;
+  /** Visit id for Erx / consultation note APIs. */
+  patientAppId?: number | null;
+  /** Present for document rows from GET /api/Patient/Documents. */
+  documentId?: number | null;
   rxStatus?: PrescriptionLifecycleStatus;
   rxStripKey?: TranslationKey;
   rxField1LabelKey?: TranslationKey;
@@ -71,6 +76,8 @@ export type HealthRecordsViewModel = {
   fabOpen: boolean;
   consultationRecordOpen: boolean;
   prescriptionOpen: boolean;
+  /** Visit id for open prescription / note — null when unknown. */
+  activePatientAppId: number | null;
   uploadDocumentOpen: boolean;
   onSelectMember: (id: RecordsMemberId) => void;
   onSelectFilter: (id: RecordsFilterId) => void;
@@ -90,6 +97,7 @@ export type HealthRecordsViewModel = {
   onOpenConsultationRecord: (itemId: string) => void;
   onCloseConsultationRecord: () => void;
   onViewLatestPrescription: (itemId: string) => void;
+  onDeleteDocument: (itemId: string) => void;
 };
 
 const MEMBERS: RecordsMember[] = [
@@ -245,6 +253,9 @@ export function useHealthRecordsController({
   const [fabOpen, setFabOpen] = useState(false);
   const [consultationRecordOpen, setConsultationRecordOpen] = useState(false);
   const [prescriptionOpen, setPrescriptionOpen] = useState(false);
+  const [activePatientAppId, setActivePatientAppId] = useState<number | null>(
+    null,
+  );
   const [uploadDocumentOpen, setUploadDocumentOpen] = useState(false);
 
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
@@ -255,6 +266,7 @@ export function useHealthRecordsController({
   const { data: documentsResponse } = useGetDocumentsQuery(undefined, {
     skip: !isAuthenticated,
   });
+  const [deleteDocument] = useDeleteDocumentMutation();
   const { data: familyResponse } = useGetFamilyQuery(undefined, {
     skip: !isAuthenticated,
   });
@@ -330,6 +342,7 @@ export function useHealthRecordsController({
           titleKey: 'recordsConsultTitle',
           metaKey: 'recordsConsultMeta',
           badgeKey: app.title === 'COMPLETED' ? 'recordsNoteSigned' : undefined,
+          patientAppId: app.refId,
         });
       }
     }
@@ -345,6 +358,7 @@ export function useHealthRecordsController({
           metaKey: 'recordsRxMeta',
           badgeKey: isSigned ? 'recordsRxActive' : undefined,
           rxStatus: isSigned ? 'active' : 'expired',
+          patientAppId: rx.patientAppId,
         });
       }
     }
@@ -352,12 +366,13 @@ export function useHealthRecordsController({
     const docs = documentsResponse?.data;
     if (Array.isArray(docs)) {
       for (const doc of docs) {
+        const title = (doc.fileName || '').trim();
         serverItems.push({
           id: `doc-${doc.documentId}`,
           kind: 'document',
-          titleKey: 'recordsDocTitle',
-          metaKey: 'recordsDocMeta',
-          noteKey: 'recordsDocNote',
+          titleKey: (title || 'recordsDocTitle') as TranslationKey,
+          metaKey: (doc.mime || doc.createdAt || 'recordsDocMeta') as TranslationKey,
+          documentId: doc.documentId,
         });
       }
     }
@@ -389,6 +404,7 @@ export function useHealthRecordsController({
     fabOpen,
     consultationRecordOpen,
     prescriptionOpen,
+    activePatientAppId,
     uploadDocumentOpen,
     onSelectMember: (id) => {
       setSelectedMemberId(id);
@@ -408,9 +424,14 @@ export function useHealthRecordsController({
     onAddDiary: () => setFabOpen(false),
     onViewPrescription: () => {
       setFabOpen(false);
+      const firstRx = items.find((i) => i.kind === 'prescription' && i.patientAppId);
+      setActivePatientAppId(firstRx?.patientAppId ?? null);
       setPrescriptionOpen(true);
     },
-    onClosePrescription: () => setPrescriptionOpen(false),
+    onClosePrescription: () => {
+      setPrescriptionOpen(false);
+      setActivePatientAppId(null);
+    },
     onOrderPrescription: () => undefined,
     onOpenCalendar: () => undefined,
     onOpenNotifications: () => onOpenNotifications?.(),
@@ -420,14 +441,27 @@ export function useHealthRecordsController({
       setFabOpen(false);
       onOpenFollowUpPlan?.();
     },
-    onOpenConsultationRecord: () => {
+    onOpenConsultationRecord: (itemId) => {
       setFabOpen(false);
+      const row = items.find((i) => i.id === itemId);
+      setActivePatientAppId(row?.patientAppId ?? null);
       setConsultationRecordOpen(true);
     },
-    onCloseConsultationRecord: () => setConsultationRecordOpen(false),
-    onViewLatestPrescription: () => {
+    onCloseConsultationRecord: () => {
+      setConsultationRecordOpen(false);
+      setActivePatientAppId(null);
+    },
+    onViewLatestPrescription: (itemId) => {
       setFabOpen(false);
+      const row = items.find((i) => i.id === itemId);
+      setActivePatientAppId(row?.patientAppId ?? null);
       setPrescriptionOpen(true);
+    },
+    onDeleteDocument: (itemId) => {
+      const row = items.find((i) => i.id === itemId);
+      const id = row?.documentId;
+      if (id == null || !Number.isFinite(Number(id))) return;
+      void deleteDocument(id).unwrap().catch(() => undefined);
     },
   };
 }

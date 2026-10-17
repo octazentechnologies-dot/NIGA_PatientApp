@@ -59,7 +59,7 @@ export function ConsentView({
         contentContainerStyle={styles.content}
       >
         <View style={styles.stepBlock}>
-          <AppText variant="headlineMd" color="#000000">
+          <AppText variant="headlineMd" color={colors.ink}>
             {t('consentTitle')}
           </AppText>
           <View style={styles.titleRule} />
@@ -171,7 +171,7 @@ export function ConsentView({
           >
             <AppText
               variant="titleMd"
-              color="#000000"
+              color={colors.ink}
               style={styles.modalTitle}
             >
               {noticeTitle || t('privacyNoticeTitle')}
@@ -240,7 +240,7 @@ function ConsentCard({
       <Ionicons name={icon} size={22} color={colors.primary} style={styles.cardIcon} />
       <View style={styles.consentCopy}>
         <View style={styles.titleRow}>
-          <AppText variant="titleMd" color="#000000" style={styles.consentTitle}>
+          <AppText variant="titleMd" color={colors.ink} style={styles.consentTitle}>
             {title}
           </AppText>
           {isToggling ? (

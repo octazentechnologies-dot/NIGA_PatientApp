@@ -1,18 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Share } from 'react-native';
 
-import {
-  getDoctorProfile,
-  type DoctorProfileSeed,
-  type ProfileTab,
-} from '../config/doctorProfiles';
+import type { DoctorProfileSeed, ProfileTab } from '../config/doctorProfiles';
 import {
   useGetDoctorByIdQuery,
   useGetDoctorFeesQuery,
   useGetDoctorReviewsQuery,
+  useGetDoctorTeleAvailabilityQuery,
 } from '../store/api/new/doctorsApi';
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import { formatMoney, resolveApiUrl } from '../utilities/formatters';
 
 export type DynamicDoctorReview = {
   id: string;
@@ -28,8 +26,10 @@ export type DoctorProfileViewModel = {
   profile: DoctorProfileSeed;
   reviews: DynamicDoctorReview[];
   tab: ProfileTab;
+  /** BE-031 — article/doctor bookmarks not planned; always false. */
   saved: boolean;
   aboutExpanded: boolean;
+  isLoading: boolean;
   onBack: () => void;
   onShare: () => void;
   onToggleSave: () => void;
@@ -38,6 +38,38 @@ export type DoctorProfileViewModel = {
   onOpenDetails: () => void;
   onBook: () => void;
 };
+
+function emptyProfile(id: string): DoctorProfileSeed {
+  return {
+    id,
+    initials: 'DR',
+    verified: false,
+    nameKey: '' as TranslationKey,
+    credentialsKey: '' as TranslationKey,
+    experienceKey: '',
+    rating: null,
+    reviewCount: 0,
+    reviewsKey: '' as TranslationKey,
+    consultsKey: '',
+    aboutKey: '',
+    regVerifiedKey: '' as TranslationKey,
+    lastVerifiedKey: '',
+    nextAvailableKey: '',
+    feeKey: '',
+    clinicFeeKey: '',
+    teleFeeLabel: null,
+    clinicFeeLabel: null,
+    registrationNumber: null,
+    passingUniversity: null,
+    photoUrl: null,
+    careNeedKeys: [],
+    languageKeys: [],
+    reviewIds: [],
+    credentialsDetail: {
+      qualifications: [],
+    },
+  };
+}
 
 export function useDoctorProfileController({
   doctorId,
@@ -49,8 +81,11 @@ export function useDoctorProfileController({
   onBook?: () => void;
 }): DoctorProfileViewModel {
   const { language, t } = useLocalization();
-  const isNumeric = !isNaN(Number(doctorId));
-  const { data: doctorDetailResponse } = useGetDoctorByIdQuery(doctorId, {
+  const isNumeric = Boolean(doctorId) && /^\d+$/.test(doctorId);
+  const {
+    data: doctorDetailResponse,
+    isLoading: detailLoading,
+  } = useGetDoctorByIdQuery(doctorId, {
     skip: !isNumeric,
   });
   const { data: feesResponse } = useGetDoctorFeesQuery(doctorId, {
@@ -59,129 +94,149 @@ export function useDoctorProfileController({
   const { data: reviewsResponse } = useGetDoctorReviewsQuery(doctorId, {
     skip: !isNumeric,
   });
+  const { data: teleAvailability } = useGetDoctorTeleAvailabilityQuery(
+    doctorId,
+    { skip: !isNumeric },
+  );
 
-  const baseProfile = useMemo(() => getDoctorProfile(doctorId), [doctorId]);
-  const profile = useMemo(() => {
-    if (!doctorDetailResponse?.data) return baseProfile;
-    const doc = doctorDetailResponse.data;
-    const rating =
-      reviewsResponse?.averageRating != null
-        ? reviewsResponse.averageRating.toFixed(1)
-        : doc.averageRating != null
-          ? doc.averageRating.toFixed(1)
-          : baseProfile.rating;
+  useEffect(() => {
+    if (!isNumeric) {
+      onBack();
+    }
+  }, [isNumeric, onBack]);
 
-    const docName = doc.displayName || 'Doctor';
-    const initials = docName
-      .split(' ')
-      .filter(Boolean)
-      .map((w) => w[0])
-      .join('')
-      .slice(0, 2)
-      .toUpperCase() || baseProfile.initials;
+  const profile = useMemo((): DoctorProfileSeed => {
+    if (!isNumeric) {
+      return emptyProfile(doctorId || '0');
+    }
 
-    const teleFee = feesResponse?.data?.teleFee ?? doc.consultFeeTele;
-    const clinicFee = feesResponse?.data?.inClinicFee ?? doc.consultFeeInClinic;
-
-    const dynamicAbout =
-      (doc as any).about ||
-      (doc as any).bio ||
-      (doc as any).aboutDoctor ||
-      doc.rankingSummary?.trim() ||
+    const doc = doctorDetailResponse?.data;
+    if (!doc) {
+      return emptyProfile(doctorId);
+    }
+    const tele = teleAvailability?.data;
+    const nextAt =
+      tele?.nextAvailableAt?.trim() ||
+      (doc as { nextAvailableAt?: string | null }).nextAvailableAt?.trim() ||
       '';
+    const teleOnline =
+      tele?.isOnline === true || tele?.available === true;
 
-    const aboutKey = dynamicAbout
-      ? (dynamicAbout as TranslationKey)
-      : ('' as TranslationKey);
+    const docName = (doc.displayName || '').trim() || 'Doctor';
+    const initials =
+      docName
+        .split(' ')
+        .filter(Boolean)
+        .map((w) => w[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase() || 'DR';
 
-    const dynamicExp =
-      (doc as any).experienceYears != null
-        ? `${(doc as any).experienceYears} yrs exp`
-        : (doc as any).experience != null
-          ? `${(doc as any).experience} yrs exp`
-          : '';
-    const experienceKey = dynamicExp
-      ? (dynamicExp as TranslationKey)
-      : ('' as TranslationKey);
+    const reviewCount =
+      reviewsResponse?.reviewCount ?? doc.reviewCount ?? 0;
+    const averageRating =
+      reviewsResponse?.averageRating ?? doc.averageRating ?? null;
+    const rating =
+      reviewCount > 0 && averageRating != null
+        ? averageRating.toFixed(1)
+        : null;
 
-    const qualifications = doc.qualification
-      ? [
-          {
-            titleKey: doc.qualification as TranslationKey,
-            detailKey: (doc.clinicName || doc.city || 'Verified Doctor') as TranslationKey,
-            badgeKey: (doc.isVerified ? 'verifiedByCouncil' : '') as TranslationKey,
-          },
-        ]
-      : [];
+    const teleFee =
+      feesResponse?.data?.teleFee ?? doc.consultFeeTele ?? null;
+    const clinicFee =
+      feesResponse?.data?.inClinicFee ?? doc.consultFeeInClinic ?? null;
+    const currency = feesResponse?.data?.currency ?? 'INR';
+    const teleFeeLabel = formatMoney(teleFee, currency);
+    const clinicFeeLabel = formatMoney(clinicFee, currency);
+    const verified = Boolean(doc.verified ?? doc.isVerified);
+
+    const registrationNumber = doc.registrationNumber?.trim() || null;
+    const passingUniversity = doc.passingUniversity?.trim() || null;
+
+    const qualifications =
+      doc.qualification || passingUniversity
+        ? [
+            {
+              titleKey: (doc.qualification || '') as TranslationKey,
+              detailKey: (passingUniversity || doc.city || '') as TranslationKey,
+              badgeKey: (verified ? 'verifiedByCouncil' : '') as TranslationKey,
+            },
+          ]
+        : [];
 
     return {
-      ...baseProfile,
       id: String(doc.doctorId),
-      nameKey: docName as TranslationKey,
-      credentialsKey: (doc.qualification || t(baseProfile.credentialsKey)) as TranslationKey,
       initials,
-      verified: doc.isVerified ?? baseProfile.verified,
+      verified,
+      nameKey: docName as TranslationKey,
+      credentialsKey: (doc.qualification || '') as TranslationKey,
+      experienceKey: '', // yearsExperience always null — do not invent
       rating,
-      aboutKey,
-      experienceKey,
-      consultsKey: '' as TranslationKey,
-      feeKey: teleFee ? (`₹${teleFee}` as TranslationKey) : baseProfile.feeKey,
-      clinicFeeKey: clinicFee ? (`₹${clinicFee}` as TranslationKey) : baseProfile.clinicFeeKey,
-      reviewsKey: (reviewsResponse?.reviewCount != null
-        ? `${reviewsResponse.reviewCount} reviews`
-        : doc.reviewCount
-          ? `${doc.reviewCount} reviews`
-          : 'reviewsCount') as TranslationKey,
+      reviewCount,
+      reviewsKey: `${reviewCount}` as TranslationKey,
+      consultsKey: '',
+      aboutKey: (doc.rankingSummary?.trim() || '') as TranslationKey,
+      regVerifiedKey: (verified ? 'verifiedByCouncil' : '') as TranslationKey,
+      lastVerifiedKey: '',
+      nextAvailableKey: nextAt
+        ? (`Next available ${nextAt}` as TranslationKey)
+        : teleOnline
+          ? ('Online now' as TranslationKey)
+          : ('' as TranslationKey),
+      feeKey: (teleFeeLabel || '') as TranslationKey,
+      clinicFeeKey: (clinicFeeLabel || '') as TranslationKey,
+      teleFeeLabel,
+      clinicFeeLabel,
+      registrationNumber,
+      passingUniversity,
+      photoUrl: resolveApiUrl(doc.photoUrl ?? null),
+      careNeedKeys: [],
+      languageKeys: [], // not returned by API
       reviewIds: [],
-      regVerifiedKey: (doc.isVerified ? 'verifiedByCouncil' : 'notVerified') as TranslationKey,
       credentialsDetail: {
-        ...baseProfile.credentialsDetail,
+        // blocked: B-016 — only qualification / registrationNumber / passingUniversity. Do not invent degrees.
         qualifications,
-        registration: {
-          titleKey: (doc.isVerified ? 'Verified Registration' : 'Registration') as TranslationKey,
-          councilKey: (doc.city ? `City: ${doc.city}` : '') as TranslationKey,
-          statusKey: (doc.isVerified ? 'Active' : '') as TranslationKey,
-          validKey: '' as TranslationKey,
-        },
-        focus: undefined,
-        careLink: undefined,
+        registration: registrationNumber
+          ? {
+              titleKey: registrationNumber as TranslationKey,
+              councilKey: '' as TranslationKey,
+              statusKey: '' as TranslationKey,
+              validKey: '' as TranslationKey,
+            }
+          : undefined,
+        // Focus / CareLink not in Public Doctors — omit (compliance: do not invent)
       },
     };
-  }, [baseProfile, doctorDetailResponse?.data, feesResponse?.data, reviewsResponse, t]);
+  }, [
+    doctorDetailResponse?.data,
+    doctorId,
+    feesResponse?.data,
+    isNumeric,
+    reviewsResponse?.averageRating,
+    reviewsResponse?.reviewCount,
+    teleAvailability?.data,
+  ]);
 
   const reviews = useMemo<DynamicDoctorReview[]>(() => {
-    if (
-      !reviewsResponse?.data ||
-      !Array.isArray(reviewsResponse.data) ||
-      reviewsResponse.data.length === 0
-    ) {
+    if (!reviewsResponse?.data || !Array.isArray(reviewsResponse.data)) {
       return [];
     }
     return reviewsResponse.data.map((r, index) => {
-      const name =
-        (r as any).patientName ||
-        (r as any).reviewerName ||
-        (r as any).author ||
-        (r as any).userName ||
-        (r as any).name ||
-        `Patient ${index + 1}`;
-
       let dateLabel = '';
       if (r.at) {
         try {
           const d = new Date(r.at);
-          if (!isNaN(d.getTime())) {
+          if (!Number.isNaN(d.getTime())) {
             dateLabel = d.toLocaleDateString();
           }
         } catch {
           dateLabel = r.at;
         }
       }
-
       return {
         id: String(r.reviewId || index),
-        reviewerName: name,
-        rating: typeof r.rating === 'number' ? r.rating : 5,
+        reviewerName: 'Patient',
+        rating: typeof r.rating === 'number' ? r.rating : 0,
         body: r.text || '',
         dateLabel,
       };
@@ -189,7 +244,7 @@ export function useDoctorProfileController({
   }, [reviewsResponse?.data]);
 
   const [tab, setTab] = useState<ProfileTab>('about');
-  const [saved, setSaved] = useState(false);
+  const saved = false;
   const [aboutExpanded, setAboutExpanded] = useState(true);
 
   useEffect(() => {
@@ -205,13 +260,16 @@ export function useDoctorProfileController({
     tab,
     saved,
     aboutExpanded,
+    isLoading: isNumeric && detailLoading,
     onBack,
     onShare: () => {
+      const name = String(profile.nameKey);
+      const creds = String(profile.credentialsKey);
       Share.share({
-        message: `${t(profile.nameKey)}\n${t(profile.credentialsKey)}`,
+        message: creds ? `${name}\n${creds}` : name,
       }).catch(() => undefined);
     },
-    onToggleSave: () => setSaved((current) => !current),
+    onToggleSave: () => undefined,
     onSelectTab: setTab,
     onToggleAbout: () => setAboutExpanded((current) => !current),
     onOpenDetails: () => setTab('credentials'),

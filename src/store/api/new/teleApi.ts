@@ -17,7 +17,7 @@ export type InstantConsultInitialResponse = {
 
 export type InstantConsultPollData = {
   instantConsultRequestId: number;
-  status: 'OPEN' | 'NO_DOCTOR' | 'OFFERED' | 'ACCEPTED' | 'CANCELLED';
+  status: 'OPEN' | 'NO_DOCTOR' | 'OFFERED' | 'ACCEPTED' | 'CANCELLED' | 'SEARCHING' | 'UNAVAILABLE' | string;
   queuePosition: number;
   contactName: string;
   createdAt: string;
@@ -27,6 +27,11 @@ export type InstantConsultPollData = {
   offeredAt?: string;
   canCancel: boolean;
   message?: string;
+  /** BE-011 — rupees from server; hide null; never invent platform fee. */
+  consultFee?: number | null;
+  currency?: string | null;
+  platformFee?: number | null;
+  totalPayable?: number | null;
 };
 
 export type GetInstantConsultStatusResponse = {
@@ -202,6 +207,7 @@ export const teleApi = newBaseApi.injectEndpoints({
       query: (teleSessionId) => `api/Tele/Sessions/${teleSessionId}`,
       providesTags: ['Tele'],
     }),
+    // TODO(VIDEO-SDK): BE-P07/B-P12 — join only after vendor SDK wired; token may be stub.
     getTeleToken: build.mutation<TeleTokenResponse, number | string>({
       query: (teleSessionId) => ({
         url: `api/Tele/Sessions/${teleSessionId}/Token`,
@@ -255,6 +261,23 @@ export const teleApi = newBaseApi.injectEndpoints({
     >({
       query: (patientAppId) => `api/Tele/Summary/${patientAppId}`,
     }),
+    /** Contract §6b — optional minutes; detail may be null. */
+    reportRunningLate: build.mutation<
+      {
+        success: boolean;
+        data?: { detail?: string | null };
+        message?: string;
+        detail?: string | null;
+      },
+      { teleSessionId: number | string; minutes?: number }
+    >({
+      query: ({ teleSessionId, minutes }) => ({
+        url: `api/Tele/Sessions/${teleSessionId}/RunningLate`,
+        method: 'POST',
+        body: minutes != null ? { minutes } : {},
+      }),
+      invalidatesTags: ['Tele', 'VisitDetail'],
+    }),
   }),
 });
 
@@ -271,4 +294,5 @@ export const {
   useSendChatMessageMutation,
   useGetChatMessagesQuery,
   useGetConsultationSummaryQuery,
+  useReportRunningLateMutation,
 } = teleApi;

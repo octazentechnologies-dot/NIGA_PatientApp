@@ -23,11 +23,9 @@ import { fontFamilyFor } from '../utilities/fonts';
 import { scaleFont } from '../utilities/scale';
 import { UploadDocumentView } from './UploadDocumentView';
 
-const MUTED = '#595959';
-const HAIRLINE = '#E6E6E6';
-const ICON_BLUE = '#2A7BA3';
-const GREY_FILL = '#F2F2F2';
-const PLACEHOLDER = '#8A8A8A';
+const ICON_BLUE = colors.primary;
+const GREY_FILL = colors.surfaceVariant;
+const PLACEHOLDER = colors.outline;
 
 export function BookingReviewView({
   language,
@@ -108,9 +106,9 @@ export function BookingReviewView({
           onPress={onBack}
           style={styles.iconButton}
         >
-          <Ionicons name="arrow-back" size={24} color="#000000" />
+          <Ionicons name="arrow-back" size={24} color={colors.ink} />
         </Pressable>
-        <AppText variant="headlineMd" color="#000000" style={styles.title}>
+        <AppText variant="headlineMd" color={colors.ink} style={styles.title}>
           {t('reviewTitle')}
         </AppText>
         <View style={styles.iconButton} />
@@ -132,10 +130,10 @@ export function BookingReviewView({
               </AppText>
             </View>
             <View style={styles.flex}>
-              <AppText variant="titleMd" color="#000000" style={styles.doctorName}>
+              <AppText variant="titleMd" color={colors.ink} style={styles.doctorName}>
                 {t(profile.nameKey)}
               </AppText>
-              <AppText variant="bodyMd" color={MUTED}>
+              <AppText variant="bodyMd" color={colors.muted}>
                 {t(shortCredsKey)}
               </AppText>
             </View>
@@ -162,7 +160,7 @@ export function BookingReviewView({
         </View>
 
         <View style={styles.section}>
-          <AppText variant="labelSm" color={MUTED} style={styles.sectionLabel}>
+          <AppText variant="labelSm" color={colors.muted} style={styles.sectionLabel}>
             {t('reviewReason')}
           </AppText>
           <TextInput
@@ -191,34 +189,44 @@ export function BookingReviewView({
               {attached ? attachedLabel : t('reviewAttach')}
             </AppText>
             {attached ? (
-              <AppText variant="labelSm" color={MUTED}>
+              <AppText variant="labelSm" color={colors.muted}>
                 {t('reviewRemoveAttach')}
               </AppText>
             ) : null}
           </Pressable>
-          <AppText variant="labelSm" color={MUTED} style={styles.attachHint}>
+          <AppText variant="labelSm" color={colors.muted} style={styles.attachHint}>
             {t('reviewAttachHint')}
           </AppText>
         </View>
 
         <View style={styles.card}>
-          <AppText variant="labelSm" color={MUTED} style={styles.sectionLabel}>
+          <AppText variant="labelSm" color={colors.muted} style={styles.sectionLabel}>
             {t('reviewPayment')}
           </AppText>
-          <PayRow label={t('reviewDoctorFee')} value={doctorFeeLabel} />
-          <PayRow label={t('reviewPlatformFee')} value={platformFeeLabel} />
-          <PayRow label={t('reviewTaxes')} value={taxesLabel} />
-          <View style={styles.payDivider} />
-          <View style={styles.payRow}>
-            <AppText variant="titleMd" color="#000000" style={styles.totalPay}>
-              {t('reviewTotalPayable')}
-            </AppText>
-            <AppText variant="titleMd" color="#000000" style={styles.totalPay}>
-              {totalLabel}
-            </AppText>
-          </View>
+          {doctorFeeLabel ? (
+            <PayRow label={t('reviewDoctorFee')} value={doctorFeeLabel} />
+          ) : null}
+          {platformFeeLabel ? (
+            <PayRow label={t('reviewPlatformFee')} value={platformFeeLabel} />
+          ) : null}
+          {taxesLabel ? (
+            <PayRow label={t('reviewTaxes')} value={taxesLabel} />
+          ) : null}
+          {totalLabel ? (
+            <>
+              <View style={styles.payDivider} />
+              <View style={styles.payRow}>
+                <AppText variant="titleMd" color={colors.ink} style={styles.totalPay}>
+                  {t('reviewTotalPayable')}
+                </AppText>
+                <AppText variant="titleMd" color={colors.ink} style={styles.totalPay}>
+                  {totalLabel}
+                </AppText>
+              </View>
+            </>
+          ) : null}
           <View style={styles.lockNote}>
-            <AppText variant="labelSm" color={MUTED}>
+            <AppText variant="labelSm" color={colors.muted}>
               {t('reviewPriceLocked')}
             </AppText>
           </View>
@@ -227,7 +235,7 @@ export function BookingReviewView({
         <View style={styles.card}>
           <View style={styles.consentHead}>
             <Ionicons name="shield-outline" size={20} color={ICON_BLUE} />
-            <AppText variant="titleMd" color="#000000" style={styles.consentTitle}>
+            <AppText variant="titleMd" color={colors.ink} style={styles.consentTitle}>
               {t('reviewConsents')}
             </AppText>
           </View>
@@ -249,7 +257,7 @@ export function BookingReviewView({
             onPress={onToggleReminders}
           />
           <View style={styles.recordingNote}>
-            <AppText variant="labelSm" color={MUTED} style={styles.recordingCopy}>
+            <AppText variant="labelSm" color={colors.muted} style={styles.recordingCopy}>
               {t('reviewRecordingNote')}
             </AppText>
           </View>
@@ -273,7 +281,7 @@ export function BookingReviewView({
               ).map((key) => (
                 <View key={key} style={styles.bulletRow}>
                   <View style={styles.bullet} />
-                  <AppText variant="bodyMd" color={MUTED} style={styles.flex}>
+                  <AppText variant="bodyMd" color={colors.muted} style={styles.flex}>
                     {t(key)}
                   </AppText>
                 </View>
@@ -287,7 +295,7 @@ export function BookingReviewView({
             open={emergencyOpen}
             onToggle={onToggleEmergency}
           >
-            <AppText variant="bodyMd" color={MUTED} style={styles.policyCopy}>
+            <AppText variant="bodyMd" color={colors.muted} style={styles.policyCopy}>
               {t('reviewNotEmergencyBody')}
             </AppText>
           </Accordion>
@@ -296,10 +304,10 @@ export function BookingReviewView({
 
       <View style={[styles.footer, { paddingBottom: sheetBottomPadding(insets, spacing.md) }]}>
         <View>
-          <AppText variant="labelSm" color={MUTED} style={styles.totalCap}>
+          <AppText variant="labelSm" color={colors.muted} style={styles.totalCap}>
             {t('reviewTotalAmount')}
           </AppText>
-          <AppText variant="titleMd" color="#000000" style={styles.footerTotal}>
+          <AppText variant="titleMd" color={colors.ink} style={styles.footerTotal}>
             {totalLabel}
           </AppText>
         </View>
@@ -308,7 +316,7 @@ export function BookingReviewView({
           onPress={onProceedPay}
           style={({ pressed }) => [styles.payButton, pressed && styles.pressed]}
         >
-          <AppText variant="bodyLg" color="#FFFFFF" weightOverride="600">
+          <AppText variant="bodyLg" color={colors.card} weightOverride="600">
             {t('reviewProceedPay')}
           </AppText>
         </Pressable>
@@ -332,8 +340,8 @@ function DetailRow({
 }) {
   return (
     <View style={[styles.detailRow, last && styles.detailRowLast]}>
-      <AppText variant="bodyMd" color="#000000" style={styles.flex}>
-        <AppText variant="bodyMd" color={MUTED} weightOverride="500">
+      <AppText variant="bodyMd" color={colors.ink} style={styles.flex}>
+        <AppText variant="bodyMd" color={colors.muted} weightOverride="500">
           {`${label} — `}
         </AppText>
         {value}
@@ -350,10 +358,10 @@ function DetailRow({
 function PayRow({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.payRow}>
-      <AppText variant="bodyMd" color="#000000">
+      <AppText variant="bodyMd" color={colors.ink}>
         {label}
       </AppText>
-      <AppText variant="bodyMd" color="#000000">
+      <AppText variant="bodyMd" color={colors.ink}>
         {value}
       </AppText>
     </View>
@@ -389,18 +397,18 @@ function ConsentRow({
         ]}
       >
         {checked ? (
-          <Ionicons name="checkmark" size={14} color={locked ? MUTED : '#FFFFFF'} />
+          <Ionicons name="checkmark" size={14} color={locked ? colors.muted : colors.card} />
         ) : null}
       </View>
       <View style={styles.flex}>
         <View style={styles.consentTitleRow}>
-          <AppText variant="bodyMd" color="#000000" weightOverride="600" style={styles.flex}>
+          <AppText variant="bodyMd" color={colors.ink} weightOverride="600" style={styles.flex}>
             {title}
           </AppText>
-          {locked ? <Ionicons name="lock-closed" size={14} color={MUTED} /> : null}
+          {locked ? <Ionicons name="lock-closed" size={14} color={colors.muted} /> : null}
         </View>
         {body ? (
-          <AppText variant="labelSm" color={MUTED} style={styles.consentBody}>
+          <AppText variant="labelSm" color={colors.muted} style={styles.consentBody}>
             {body}
           </AppText>
         ) : null}
@@ -430,14 +438,14 @@ function Accordion({
         onPress={onToggle}
         style={styles.accordionHead}
       >
-        <Ionicons name={icon} size={20} color="#000000" />
-        <AppText variant="bodyMd" color="#000000" weightOverride="600" style={styles.flex}>
+        <Ionicons name={icon} size={20} color={colors.ink} />
+        <AppText variant="bodyMd" color={colors.ink} weightOverride="600" style={styles.flex}>
           {title}
         </AppText>
         <Ionicons
           name={open ? 'chevron-up' : 'chevron-down'}
           size={18}
-          color={MUTED}
+          color={colors.muted}
         />
       </Pressable>
       {open ? <View style={styles.accordionBody}>{children}</View> : null}
@@ -457,7 +465,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   title: {
     flex: 1,
@@ -480,7 +488,7 @@ const styles = StyleSheet.create({
   },
   card: {
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     padding: spacing.md,
     gap: 12,
@@ -488,7 +496,7 @@ const styles = StyleSheet.create({
   },
   cardFlush: {
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     backgroundColor: colors.card,
     overflow: 'hidden',
@@ -499,13 +507,13 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   avatar: {
     width: 40,
     height: 40,
     borderRadius: radii.full,
-    backgroundColor: '#E6F5FE',
+    backgroundColor: colors.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -520,7 +528,7 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   detailRowLast: {
     borderBottomWidth: 0,
@@ -542,7 +550,7 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: scaleFont(14),
     lineHeight: scaleFont(20),
-    color: '#000000',
+    color: colors.ink,
     backgroundColor: colors.card,
   },
   attach: {
@@ -569,7 +577,7 @@ const styles = StyleSheet.create({
   },
   payDivider: {
     height: 1,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
   },
   totalPay: {
     fontSize: scaleFont(18),
@@ -578,7 +586,7 @@ const styles = StyleSheet.create({
   lockNote: {
     backgroundColor: GREY_FILL,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     padding: 8,
   },
@@ -630,13 +638,13 @@ const styles = StyleSheet.create({
     marginTop: 4,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
   },
   recordingCopy: {
     fontStyle: 'italic',
     backgroundColor: GREY_FILL,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     padding: 8,
     overflow: 'hidden',
@@ -669,7 +677,7 @@ const styles = StyleSheet.create({
     width: 5,
     height: 5,
     borderRadius: radii.full,
-    backgroundColor: MUTED,
+    backgroundColor: colors.muted,
     marginTop: 8,
   },
   policyCopy: {
@@ -681,7 +689,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     borderTopWidth: 1,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
     backgroundColor: colors.card,
     paddingHorizontal: spacing.gutter,
     paddingTop: spacing.sm,

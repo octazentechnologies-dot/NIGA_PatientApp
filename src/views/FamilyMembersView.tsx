@@ -108,7 +108,7 @@ export function FamilyMembersView({
         </Pressable>
         <AppText
           variant="headlineMd"
-          color="#000000"
+          color={colors.ink}
           style={styles.headerTitle}
           numberOfLines={1}
         >
@@ -231,7 +231,7 @@ export function FamilyMembersView({
               <Ionicons name="alert-circle-outline" size={32} color={colors.error} />
               <AppText
                 variant="bodyMd"
-                color="#1F1F1F"
+                color={colors.ink}
                 style={styles.emptyMembersText}
               >
                 {t('genericError')}
@@ -729,11 +729,11 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: radii.full,
-    backgroundColor: '#FDECEA',
+    backgroundColor: colors.errorContainer,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#F8D7DA',
+    borderColor: colors.errorContainer,
   },
 
   /* Empty State */

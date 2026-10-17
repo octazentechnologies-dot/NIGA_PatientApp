@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sheetBottomPadding } from '../utilities/sheetInset';
+import { colors } from '../theme/colors';
 
 import { AppSwitch } from '../components/AppSwitch';
 import { AppText } from '../components/AppText';
@@ -15,17 +16,9 @@ import type { TranslationKey } from '../localization/types';
 import { radii } from '../theme/radii';
 import { spacing } from '../theme/spacing';
 
-const INK = '#1F1F1F';
-const MUTED = '#595959';
-const HAIRLINE = '#DDDFE2';
-const PAGE = '#F5F6F7';
-const CARD = '#FFFFFF';
-const ACTION = '#2A7BA3';
-const SUCCESS = '#0F7A4E';
-const SUCCESS_FILL = '#E9F5EF';
-const ASTRO = '#6B3FA0';
-const ASTRO_FILL = '#F3EEFA';
-const NEUTRAL_FILL = '#F2F2F2';
+const ASTRO = colors.astro;
+const ASTRO_FILL = colors.astroContainer;
+const NEUTRAL_FILL = colors.surfaceVariant;
 
 const CHANNELS: { id: NotifChannel; icon: keyof typeof Ionicons.glyphMap }[] = [
   { id: 'push', icon: 'phone-portrait-outline' },
@@ -60,9 +53,9 @@ export function NotificationSettingsView(vm: NotificationSettingsViewModel) {
             onPress={vm.onBack}
             style={styles.iconHit}
           >
-            <Ionicons name="arrow-back" size={24} color={INK} />
+            <Ionicons name="arrow-back" size={24} color={colors.ink} />
           </Pressable>
-          <AppText variant="headlineMd" color={INK} style={styles.headerTitle}>
+          <AppText variant="headlineMd" color={colors.ink} style={styles.headerTitle}>
             {vm.t('brandName')}
           </AppText>
           <Pressable
@@ -71,7 +64,7 @@ export function NotificationSettingsView(vm: NotificationSettingsViewModel) {
             onPress={vm.onOpenNotifications}
             style={styles.iconHit}
           >
-            <Ionicons name="notifications-outline" size={22} color={INK} />
+            <Ionicons name="notifications-outline" size={22} color={colors.ink} />
           </Pressable>
         </View>
       </View>
@@ -83,20 +76,20 @@ export function NotificationSettingsView(vm: NotificationSettingsViewModel) {
           { paddingBottom: 24 + sheetBottomPadding(insets, spacing.md) },
         ]}
       >
-        <AppText variant="headlineLg" color={INK}>
+        <AppText variant="headlineLg" color={colors.ink}>
           {vm.t('notifSettingsTitle')}
         </AppText>
-        <AppText variant="bodyMd" color={MUTED}>
+        <AppText variant="bodyMd" color={colors.muted}>
           {vm.t('notifSettingsSubtitle')}
         </AppText>
 
         <View style={styles.privacyCard}>
-          <Ionicons name="lock-closed-outline" size={20} color={ACTION} />
+          <Ionicons name="lock-closed-outline" size={20} color={colors.primary} />
           <View style={styles.flex}>
-            <AppText variant="labelMd" color={INK} weightOverride="600">
+            <AppText variant="labelMd" color={colors.ink} weightOverride="600">
               {vm.t('notifSettingsPrivacyTitle')}
             </AppText>
-            <AppText variant="bodyMd" color={MUTED}>
+            <AppText variant="bodyMd" color={colors.muted}>
               {vm.t('notifSettingsPrivacyBody')}
             </AppText>
           </View>
@@ -106,7 +99,7 @@ export function NotificationSettingsView(vm: NotificationSettingsViewModel) {
           <View style={styles.tableHead}>
             <AppText
               variant="labelSm"
-              color={MUTED}
+              color={colors.muted}
               weightOverride="600"
               style={[styles.flex, styles.uppercase]}
             >
@@ -114,13 +107,13 @@ export function NotificationSettingsView(vm: NotificationSettingsViewModel) {
             </AppText>
             {CHANNELS.map((channel) => (
               <View key={channel.id} style={styles.channelHead}>
-                <Ionicons name={channel.icon} size={16} color={MUTED} />
+                <Ionicons name={channel.icon} size={16} color={colors.muted} />
               </View>
             ))}
           </View>
 
           <View style={styles.catPill}>
-            <AppText variant="labelSm" color={MUTED} weightOverride="600">
+            <AppText variant="labelSm" color={colors.muted} weightOverride="600">
               {vm.t('notifSettingsClinical')}
             </AppText>
           </View>
@@ -134,7 +127,7 @@ export function NotificationSettingsView(vm: NotificationSettingsViewModel) {
           ))}
 
           <View style={[styles.catPill, styles.catWellness]}>
-            <AppText variant="labelSm" color={SUCCESS} weightOverride="600">
+            <AppText variant="labelSm" color={colors.success} weightOverride="600">
               {vm.t('notifSettingsWellness')}
             </AppText>
           </View>
@@ -148,7 +141,7 @@ export function NotificationSettingsView(vm: NotificationSettingsViewModel) {
           />
 
           <View style={styles.catPill}>
-            <AppText variant="labelSm" color={MUTED} weightOverride="600">
+            <AppText variant="labelSm" color={colors.muted} weightOverride="600">
               {vm.t('notifSettingsMarketing')}
             </AppText>
           </View>
@@ -160,7 +153,7 @@ export function NotificationSettingsView(vm: NotificationSettingsViewModel) {
         </View>
 
         <View style={styles.card}>
-          <AppText variant="headlineMd" color={INK}>
+          <AppText variant="headlineMd" color={colors.ink}>
             {vm.t('notifSettingsRemindersTitle')}
           </AppText>
           <View style={styles.reminderWrap}>
@@ -175,11 +168,11 @@ export function NotificationSettingsView(vm: NotificationSettingsViewModel) {
                   style={[styles.reminderChip, on && styles.reminderChipOn]}
                 >
                   {on ? (
-                    <Ionicons name="checkmark" size={14} color={SUCCESS} />
+                    <Ionicons name="checkmark" size={14} color={colors.success} />
                   ) : null}
                   <AppText
                     variant="labelMd"
-                    color={on ? SUCCESS : MUTED}
+                    color={on ? colors.success : colors.muted}
                     weightOverride="600"
                   >
                     {vm.t(item.labelKey)}
@@ -192,12 +185,12 @@ export function NotificationSettingsView(vm: NotificationSettingsViewModel) {
 
         <View style={styles.card}>
           <View style={styles.quietRow}>
-            <Ionicons name="remove-circle-outline" size={22} color={MUTED} />
+            <Ionicons name="remove-circle-outline" size={22} color={colors.muted} />
             <View style={styles.flex}>
-              <AppText variant="labelMd" color={INK} weightOverride="600">
+              <AppText variant="labelMd" color={colors.ink} weightOverride="600">
                 {vm.t('notifSettingsQuietTitle')}
               </AppText>
-              <AppText variant="bodyMd" color={MUTED}>
+              <AppText variant="bodyMd" color={colors.muted}>
                 {vm.quietHoursLabel}
               </AppText>
             </View>
@@ -232,7 +225,7 @@ function PrefRow({
       <View style={styles.prefLabel}>
         <View style={styles.prefTitleRow}>
           {nonClinical ? <View style={styles.astroDot} /> : null}
-          <AppText variant="bodyMd" color={INK} style={styles.flex}>
+          <AppText variant="bodyMd" color={colors.ink} style={styles.flex}>
             {label}
           </AppText>
         </View>
@@ -244,7 +237,7 @@ function PrefRow({
           </View>
         ) : null}
         {helper ? (
-          <AppText variant="labelSm" color={MUTED} raw>
+          <AppText variant="labelSm" color={colors.muted} raw>
             {helper}
           </AppText>
         ) : null}
@@ -264,7 +257,7 @@ function PrefRow({
             ]}
           >
             {values[channel.id] ? (
-              <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+              <Ionicons name="checkmark" size={14} color={colors.card} />
             ) : null}
           </View>
         </Pressable>
@@ -276,12 +269,12 @@ function PrefRow({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: PAGE,
+    backgroundColor: colors.page,
   },
   header: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
     paddingHorizontal: spacing.sm,
     paddingBottom: spacing.sm,
   },
@@ -309,9 +302,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
   },
@@ -319,9 +312,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   card: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
     gap: spacing.sm,
@@ -348,7 +341,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   catWellness: {
-    backgroundColor: SUCCESS_FILL,
+    backgroundColor: colors.successContainer,
   },
   prefRow: {
     flexDirection: 'row',
@@ -371,7 +364,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: SUCCESS,
+    backgroundColor: colors.success,
   },
   nonClinicalPill: {
     alignSelf: 'flex-start',
@@ -391,14 +384,14 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 11,
     borderWidth: 1.5,
-    borderColor: HAIRLINE,
-    backgroundColor: CARD,
+    borderColor: colors.outlineVariant,
+    backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkOn: {
-    backgroundColor: ACTION,
-    borderColor: ACTION,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   reminderWrap: {
     flexDirection: 'row',
@@ -413,12 +406,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: radii.full,
     borderWidth: 1,
-    borderColor: HAIRLINE,
-    backgroundColor: CARD,
+    borderColor: colors.outlineVariant,
+    backgroundColor: colors.card,
   },
   reminderChipOn: {
-    backgroundColor: SUCCESS_FILL,
-    borderColor: SUCCESS,
+    backgroundColor: colors.successContainer,
+    borderColor: colors.success,
   },
   quietRow: {
     flexDirection: 'row',

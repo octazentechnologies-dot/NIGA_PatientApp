@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sheetBottomPadding } from '../utilities/sheetInset';
+import { colors } from '../theme/colors';
 
 import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
@@ -15,15 +16,7 @@ import type { AppealReviewViewModel } from '../controllers/useAppealReviewContro
 import { radii } from '../theme/radii';
 import { spacing } from '../theme/spacing';
 
-const INK = '#1F1F1F';
-const MUTED = '#595959';
-const HAIRLINE = '#DDDFE2';
-const PAGE = '#F5F6F7';
-const CARD = '#FFFFFF';
-const ACTION = '#2A7BA3';
-const DANGER = '#A3231A';
-const DANGER_FILL = '#FBEBE9';
-const OUTLINE = '#8A8A8A';
+const OUTLINE = colors.outline;
 
 export function AppealReviewView(vm: AppealReviewViewModel) {
   const insets = useSafeAreaInsets();
@@ -38,9 +31,9 @@ export function AppealReviewView(vm: AppealReviewViewModel) {
             onPress={vm.onBack}
             style={styles.iconHit}
           >
-            <Ionicons name="close" size={24} color={INK} />
+            <Ionicons name="close" size={24} color={colors.ink} />
           </Pressable>
-          <AppText variant="headlineMd" color={INK} style={styles.headerTitle}>
+          <AppText variant="headlineMd" color={colors.ink} style={styles.headerTitle}>
             {vm.t('appealTitle')}
           </AppText>
           <View style={styles.iconHit} />
@@ -58,19 +51,19 @@ export function AppealReviewView(vm: AppealReviewViewModel) {
         <View style={styles.card}>
           <View style={styles.summaryRow}>
             <View style={styles.gavelCircle}>
-              <MaterialCommunityIcons name="gavel" size={22} color={DANGER} />
+              <MaterialCommunityIcons name="gavel" size={22} color={colors.error} />
             </View>
             <View style={styles.flex}>
-              <AppText variant="headlineMd" color={INK}>
+              <AppText variant="headlineMd" color={colors.ink}>
                 {vm.removedOnLabel}
               </AppText>
-              <AppText variant="bodyMd" color={MUTED}>
-                <AppText variant="labelMd" color={INK} weightOverride="600">
+              <AppText variant="bodyMd" color={colors.muted}>
+                <AppText variant="labelMd" color={colors.ink} weightOverride="600">
                   {vm.t('appealReasonLabel')}{' '}
                 </AppText>
                 {vm.reasonLabel}
               </AppText>
-              <AppText variant="labelSm" color={MUTED}>
+              <AppText variant="labelSm" color={colors.muted}>
                 {vm.decisionId}
               </AppText>
             </View>
@@ -79,7 +72,7 @@ export function AppealReviewView(vm: AppealReviewViewModel) {
 
         <AppText
           variant="labelSm"
-          color={MUTED}
+          color={colors.muted}
           weightOverride="600"
           style={styles.sectionLabel}
         >
@@ -89,14 +82,14 @@ export function AppealReviewView(vm: AppealReviewViewModel) {
           <Ionicons
             name="chatbox-ellipses-outline"
             size={18}
-            color={MUTED}
+            color={colors.muted}
             style={styles.quoteIcon}
           />
-          <AppText variant="bodyLg" color={INK}>
+          <AppText variant="bodyLg" color={colors.ink}>
             {vm.extractBefore}{' '}
             <AppText
               variant="bodyLg"
-              color={DANGER}
+              color={colors.error}
               weightOverride="600"
               style={styles.highlight}
             >
@@ -106,15 +99,15 @@ export function AppealReviewView(vm: AppealReviewViewModel) {
           </AppText>
         </View>
         <View style={styles.hintRow}>
-          <Ionicons name="information-circle-outline" size={16} color={MUTED} />
-          <AppText variant="labelSm" color={MUTED} style={styles.flex}>
+          <Ionicons name="information-circle-outline" size={16} color={colors.muted} />
+          <AppText variant="labelSm" color={colors.muted} style={styles.flex}>
             {vm.t('appealHighlightNote')}
           </AppText>
         </View>
 
         <View style={styles.divider} />
 
-        <AppText variant="headlineMd" color={INK}>
+        <AppText variant="headlineMd" color={colors.ink}>
           {vm.t('appealChooseAction')}
         </AppText>
 
@@ -133,14 +126,14 @@ export function AppealReviewView(vm: AppealReviewViewModel) {
 
         {vm.action === 'appeal' ? (
           <View style={styles.reasonBlock}>
-            <AppText variant="labelMd" color={INK} weightOverride="600">
+            <AppText variant="labelMd" color={colors.ink} weightOverride="600">
               {vm.t('appealReasonPrompt')}
             </AppText>
             <TextInput
               value={vm.reason}
               onChangeText={vm.onChangeReason}
               placeholder={vm.t('appealReasonPlaceholder')}
-              placeholderTextColor={MUTED}
+              placeholderTextColor={colors.muted}
               multiline
               textAlignVertical="top"
               style={styles.textarea}
@@ -149,8 +142,8 @@ export function AppealReviewView(vm: AppealReviewViewModel) {
         ) : null}
 
         <View style={styles.disclaimer}>
-          <Ionicons name="shield-checkmark-outline" size={20} color={MUTED} />
-          <AppText variant="labelSm" color={MUTED} style={styles.flex}>
+          <Ionicons name="shield-checkmark-outline" size={20} color={colors.muted} />
+          <AppText variant="labelSm" color={colors.muted} style={styles.flex}>
             {vm.t('appealDisclaimer')}
           </AppText>
         </View>
@@ -198,10 +191,10 @@ function ActionOption({
         {selected ? <View style={styles.radioDot} /> : null}
       </View>
       <View style={styles.flex}>
-        <AppText variant="labelMd" color={INK} weightOverride="600">
+        <AppText variant="labelMd" color={colors.ink} weightOverride="600">
           {title}
         </AppText>
-        <AppText variant="bodyMd" color={MUTED}>
+        <AppText variant="bodyMd" color={colors.muted}>
           {body}
         </AppText>
       </View>
@@ -212,12 +205,12 @@ function ActionOption({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: PAGE,
+    backgroundColor: colors.page,
   },
   header: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
     paddingHorizontal: spacing.sm,
     paddingBottom: spacing.sm,
   },
@@ -242,9 +235,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   card: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
   },
@@ -257,7 +250,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: DANGER_FILL,
+    backgroundColor: colors.errorContainer,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -266,12 +259,12 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
   },
   extractCard: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderRadius: radii.default,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderLeftWidth: 4,
-    borderLeftColor: DANGER,
+    borderLeftColor: colors.error,
     padding: spacing.md,
   },
   quoteIcon: {
@@ -281,7 +274,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   highlight: {
-    backgroundColor: DANGER_FILL,
+    backgroundColor: colors.errorContainer,
   },
   hintRow: {
     flexDirection: 'row',
@@ -290,21 +283,21 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
   },
   option: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.md,
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
     minHeight: 72,
   },
   optionOn: {
-    borderColor: ACTION,
+    borderColor: colors.primary,
   },
   radio: {
     width: 22,
@@ -317,13 +310,13 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   radioOn: {
-    borderColor: ACTION,
+    borderColor: colors.primary,
   },
   radioDot: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: ACTION,
+    backgroundColor: colors.primary,
   },
   reasonBlock: {
     gap: spacing.sm,
@@ -333,9 +326,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: OUTLINE,
     borderRadius: radii.default,
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     padding: spacing.md,
-    color: INK,
+    color: colors.ink,
     fontSize: 16,
     lineHeight: 24,
   },
@@ -343,14 +336,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
-    backgroundColor: '#F2F2F2',
+    backgroundColor: colors.surfaceVariant,
     borderRadius: radii.default,
     padding: spacing.md,
   },
   footer: {
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: HAIRLINE,
-    backgroundColor: CARD,
+    borderTopColor: colors.outlineVariant,
+    backgroundColor: colors.card,
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
   },

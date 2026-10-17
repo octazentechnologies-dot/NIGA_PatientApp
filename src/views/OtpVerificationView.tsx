@@ -69,20 +69,23 @@ export function OtpVerificationView({
           { paddingBottom: sheetBottomPadding(insets, spacing.xl) },
         ]}
       >
+        <View style={styles.heroBadge}>
+          <Ionicons name="key-outline" size={22} color={colors.primary} />
+        </View>
         <View style={styles.copy}>
-          <AppText variant="headlineMd" color="#000000" style={styles.center}>
+          <AppText variant="headlineMd" color={colors.ink} style={styles.center}>
             {t('otpTitle')}
           </AppText>
           <AppText
             variant="bodyMd"
-            color={colors.onSurfaceVariant}
+            color={colors.muted}
             style={styles.center}
           >
             {t('otpSubtitle')}
           </AppText>
           <AppText
             variant="titleMd"
-            color="#000000"
+            color={colors.ink}
             languageOverride="en"
             style={styles.center}
           >
@@ -152,7 +155,7 @@ export function OtpVerificationView({
             <AppText variant="bodyMd" color={colors.onSurfaceVariant}>
               {t('otpResendIn')}
             </AppText>
-            <AppText variant="bodyMd" color="#000000" weightOverride="600">
+            <AppText variant="bodyMd" color={colors.ink} weightOverride="600">
               {resendCountdown}
             </AppText>
           </View>
@@ -201,7 +204,7 @@ export function OtpVerificationView({
           >
             <AppText
               variant="titleMd"
-              color="#000000"
+              color={colors.ink}
               languageOverride="en"
               style={styles.center}
             >
@@ -227,6 +230,16 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
     gap: spacing.lg,
+  },
+  heroBadge: {
+    alignSelf: 'center',
+    width: 56,
+    height: 56,
+    borderRadius: radii.full,
+    backgroundColor: colors.primaryContainer,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xs,
   },
   copy: {
     alignItems: 'center',

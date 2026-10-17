@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import { useGetConsultationNoteQuery } from '../store/api/new/recordsApi';
 
 export type ClinicalNoteId =
   | 'complaint'
@@ -29,6 +30,10 @@ export type ConsultationRecordViewModel = {
   consultLine: string;
   recordId: string;
   versionStripLabel: string;
+  noteText: string | null;
+  loading: boolean;
+  isError: boolean;
+  isEmpty: boolean;
   notes: {
     id: ClinicalNoteId;
     titleKey: TranslationKey;
@@ -47,112 +52,80 @@ export type ConsultationRecordViewModel = {
   onSelectVersion: (id: 1 | 2) => void;
   onOpenPrescription: () => void;
   onOpenFollowUp: () => void;
+  onRetry: () => void;
 };
 
-const DEFAULT_OPEN: ClinicalNoteId[] = ['complaint', 'history', 'generalities'];
-
 export function useConsultationRecordController({
+  patientAppId,
   onBack,
   onOpenPrescription,
   onOpenFollowUp,
 }: {
+  patientAppId?: number | string | null;
   onBack: () => void;
   onOpenPrescription?: () => void;
   onOpenFollowUp?: () => void;
 }): ConsultationRecordViewModel {
   const { language, t } = useLocalization();
-  const [openNotes, setOpenNotes] = useState<ClinicalNoteId[]>(DEFAULT_OPEN);
   const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
   const [selectedVersionId, setSelectedVersionId] = useState<1 | 2>(1);
+  const id =
+    patientAppId != null && String(patientAppId).length > 0
+      ? patientAppId
+      : null;
+  const { data, isLoading, isError, isFetching, refetch } =
+    useGetConsultationNoteQuery(id as number | string, {
+      skip: id == null,
+    });
 
-  const notes = useMemo(
-    () =>
-      (
-        [
-          {
-            id: 'complaint' as const,
-            titleKey: 'consultRecordNoteComplaint' as const,
-            bodyKey: 'consultRecordNoteComplaintBody' as const,
-          },
-          {
-            id: 'history' as const,
-            titleKey: 'consultRecordNoteHistory' as const,
-            bodyKey: 'consultRecordNoteHistoryBody' as const,
-          },
-          {
-            id: 'generalities' as const,
-            titleKey: 'consultRecordNoteGeneralities' as const,
-            bodyKey: 'consultRecordNoteGeneralitiesBody' as const,
-          },
-          {
-            id: 'particulars' as const,
-            titleKey: 'consultRecordNoteParticulars' as const,
-            bodyKey: 'consultRecordNoteParticularsBody' as const,
-          },
-          {
-            id: 'assessment' as const,
-            titleKey: 'consultRecordNoteAssessment' as const,
-            bodyKey: 'consultRecordNoteAssessmentBody' as const,
-          },
-        ] as const
-      ).map((note) => ({
-        ...note,
-        open: openNotes.includes(note.id),
-      })),
-    [openNotes],
-  );
+  const noteText = data?.data?.text?.trim() || null;
+  const noteAt = data?.data?.at?.trim() || null;
 
-  const versions: RecordVersion[] = [
-    {
-      id: 2,
-      label: 'v2',
-      dateKey: 'consultRecordVersion2Date',
-      noteKey: 'consultRecordVersion2Note',
-      current: true,
-    },
-    {
-      id: 1,
-      label: 'v1',
-      dateKey: 'consultRecordVersion1Date',
-      current: false,
-    },
-  ];
-
-  const versionStripLabel =
-    selectedVersionId === 1
-      ? t('consultRecordVersionStripV1')
-      : t('consultRecordVersionStripV2');
+  const notes = useMemo(() => {
+    if (!noteText) return [];
+    return [
+      {
+        id: 'complaint' as const,
+        titleKey: 'consultRecordNoteComplaint' as TranslationKey,
+        bodyKey: noteText as TranslationKey,
+        open: true,
+      },
+    ];
+  }, [noteText]);
 
   return {
     language,
     t,
-    signedBanner: t('consultRecordSigned'),
-    doctorName: t('searchResultAnjaliName'),
-    credentials: t('consultRecordCredentials'),
-    regNo: t('consultRecordReg'),
-    patientLine: t('consultRecordPatient'),
-    consultLine: t('consultRecordConsultMeta'),
-    recordId: t('consultRecordId'),
-    versionStripLabel,
+    signedBanner: noteAt ? noteAt : '',
+    doctorName: '',
+    credentials: '',
+    regNo: '',
+    patientLine: '',
+    consultLine: '',
+    recordId: id != null ? String(id) : '',
+    versionStripLabel: '',
+    noteText,
+    loading: id != null && (isLoading || isFetching),
+    isError: id != null && isError,
+    isEmpty: id == null || (!isLoading && !isError && !noteText),
     notes,
-    versions,
+    versions: [],
     versionHistoryOpen,
     selectedVersionId,
     onBack,
     onShare: () => undefined,
     onDownload: () => undefined,
-    onToggleNote: (id) => {
-      setOpenNotes((prev) =>
-        prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
-      );
-    },
+    onToggleNote: () => undefined,
     onOpenVersionHistory: () => setVersionHistoryOpen(true),
     onCloseVersionHistory: () => setVersionHistoryOpen(false),
-    onSelectVersion: (id) => {
-      setSelectedVersionId(id);
+    onSelectVersion: (next) => {
+      setSelectedVersionId(next);
       setVersionHistoryOpen(false);
     },
     onOpenPrescription: () => onOpenPrescription?.(),
     onOpenFollowUp: () => onOpenFollowUp?.(),
+    onRetry: () => {
+      void refetch();
+    },
   };
 }

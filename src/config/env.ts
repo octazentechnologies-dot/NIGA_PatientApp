@@ -1,5 +1,5 @@
 export const AppConfig = {
-  apiBaseUrl: 'https://devmaigrationapi.homeocentrum.com/api',
+  apiBaseUrl: 'https://devapi.homeocentrum.com/',
   requestTimeoutMs: 20000,
 } as const;
 

@@ -2,8 +2,10 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sheetBottomPadding } from '../utilities/sheetInset';
+import { colors } from '../theme/colors';
 
 import { AppButton } from '../components/AppButton';
+import { AppScreenHeader } from '../components/AppScreenHeader';
 import { AppText } from '../components/AppText';
 import type {
   NotificationItem,
@@ -12,52 +14,34 @@ import type {
 import { radii } from '../theme/radii';
 import { spacing } from '../theme/spacing';
 
-const INK = '#1F1F1F';
-const MUTED = '#595959';
-const HAIRLINE = '#DDDFE2';
-const PAGE = '#F5F6F7';
-const CARD = '#FFFFFF';
-const ACTION = '#2A7BA3';
-const CHIP_FILL = '#E6F5FE';
-const CHIP_BORDER = '#3AA9E0';
-const ICON_CYAN = '#5CCEF7';
-const WARN_FILL = '#FCF3E4';
-const WARN = '#8A5109';
-const ASTRO = '#6B3FA0';
-const ASTRO_FILL = '#F3EEFA';
-const DANGER = '#A3231A';
-const DANGER_FILL = '#FBEBE9';
-const NEUTRAL_FILL = '#F2F2F2';
+const CHIP_BORDER = colors.secondary;
+const WARN_FILL = colors.warningContainer;
+const WARN = colors.warning;
+const ASTRO = colors.astro;
+const ASTRO_FILL = colors.astroContainer;
+const NEUTRAL_FILL = colors.surfaceVariant;
 
 export function NotificationsView(vm: NotificationsViewModel) {
   const insets = useSafeAreaInsets();
 
   return (
     <View style={styles.root}>
-      <View style={[styles.header, { paddingTop: Math.max(insets.top, spacing.sm) }]}>
-        <View style={styles.headerRow}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={vm.t('back')}
-            onPress={vm.onBack}
-            style={styles.iconHit}
-          >
-            <Ionicons name="arrow-back" size={24} color={INK} />
-          </Pressable>
-          <AppText variant="headlineMd" color={INK} style={styles.headerTitle}>
-            {vm.t('notifTitle')}
-          </AppText>
+      <AppScreenHeader
+        title={vm.t('notifTitle')}
+        onBack={vm.onBack}
+        backLabel={vm.t('back')}
+        right={
           <Pressable
             accessibilityRole="button"
             onPress={vm.onMarkAllRead}
             style={styles.markAllHit}
           >
-            <AppText variant="labelMd" color={MUTED} weightOverride="600">
+            <AppText variant="labelMd" color={colors.muted} weightOverride="600">
               {vm.t('notifMarkAllRead')}
             </AppText>
           </Pressable>
-        </View>
-      </View>
+        }
+      />
 
       <View style={styles.filtersBar}>
         <ScrollView
@@ -78,7 +62,7 @@ export function NotificationsView(vm: NotificationsViewModel) {
               >
                 <AppText
                   variant="labelSm"
-                  color={on ? INK : MUTED}
+                  color={on ? colors.ink : colors.muted}
                   weightOverride="600"
                   numberOfLines={1}
                 >
@@ -102,7 +86,7 @@ export function NotificationsView(vm: NotificationsViewModel) {
           <View key={group.id} style={styles.group}>
             <AppText
               variant="labelSm"
-              color={MUTED}
+              color={colors.muted}
               weightOverride="600"
               style={styles.groupLabel}
             >
@@ -141,8 +125,8 @@ function NotificationRow({
             onPress={() => vm.onMarkRead(item.id)}
             style={styles.actionRead}
           >
-            <Ionicons name="mail-open-outline" size={20} color={INK} />
-            <AppText variant="labelSm" color={INK} weightOverride="600">
+            <Ionicons name="mail-open-outline" size={20} color={colors.ink} />
+            <AppText variant="labelSm" color={colors.ink} weightOverride="600">
               {vm.t('notifActionRead')}
             </AppText>
           </Pressable>
@@ -151,8 +135,8 @@ function NotificationRow({
             onPress={() => vm.onDelete(item.id)}
             style={styles.actionDelete}
           >
-            <Ionicons name="trash-outline" size={20} color="#FFFFFF" />
-            <AppText variant="labelSm" color="#FFFFFF" weightOverride="600">
+            <Ionicons name="trash-outline" size={20} color={colors.card} />
+            <AppText variant="labelSm" color={colors.card} weightOverride="600">
               {vm.t('notifActionDelete')}
             </AppText>
           </Pressable>
@@ -179,25 +163,25 @@ function NotificationRow({
           <View style={styles.titleRow}>
             <AppText
               variant="labelMd"
-              color={INK}
+              color={colors.ink}
               weightOverride="600"
               style={styles.flex}
               numberOfLines={1}
             >
               {vm.t(item.titleKey)}
             </AppText>
-            <AppText variant="labelSm" color={MUTED}>
+            <AppText variant="labelSm" color={colors.muted}>
               {vm.t(item.timeKey)}
             </AppText>
           </View>
-          <AppText variant="bodyMd" color={MUTED}>
+          <AppText variant="bodyMd" color={colors.muted}>
             {vm.t(item.bodyKey)}
           </AppText>
           {item.joinAction ? (
             <AppButton
               label={vm.t('notifJoinCta')}
               onPress={() => vm.onJoin(item.id)}
-              icon={<Ionicons name="videocam-outline" size={18} color="#FFFFFF" />}
+              icon={<Ionicons name="videocam-outline" size={18} color={colors.card} />}
               style={styles.joinBtn}
             />
           ) : null}
@@ -209,13 +193,13 @@ function NotificationRow({
 
 function NotifIcon({ item }: { item: NotificationItem }) {
   if (item.id === 'rx') {
-    return <Ionicons name="document-text-outline" size={20} color={INK} />;
+    return <Ionicons name="document-text-outline" size={20} color={colors.ink} />;
   }
   if (item.id === 'delivery') {
-    return <MaterialCommunityIcons name="truck-delivery-outline" size={20} color={INK} />;
+    return <MaterialCommunityIcons name="truck-delivery-outline" size={20} color={colors.ink} />;
   }
   if (item.id === 'followup') {
-    return <Ionicons name="create-outline" size={20} color={INK} />;
+    return <Ionicons name="create-outline" size={20} color={colors.ink} />;
   }
   if (item.id === 'refund') {
     return <Ionicons name="wallet-outline" size={20} color={WARN} />;
@@ -223,7 +207,7 @@ function NotifIcon({ item }: { item: NotificationItem }) {
   if (item.id === 'carelink') {
     return <Ionicons name="shield-checkmark-outline" size={20} color={ASTRO} />;
   }
-  return <MaterialCommunityIcons name="medical-bag" size={20} color={INK} />;
+  return <MaterialCommunityIcons name="medical-bag" size={20} color={colors.ink} />;
 }
 
 function toneStyle(tone: NotificationItem['tone']) {
@@ -233,18 +217,18 @@ function toneStyle(tone: NotificationItem['tone']) {
   if (tone === 'carelink') {
     return { backgroundColor: ASTRO_FILL };
   }
-  return { backgroundColor: CHIP_FILL };
+  return { backgroundColor: colors.primaryContainer };
 }
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: PAGE,
+    backgroundColor: colors.page,
   },
   header: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
     paddingHorizontal: spacing.sm,
     paddingBottom: spacing.sm,
   },
@@ -276,7 +260,7 @@ const styles = StyleSheet.create({
   filtersBar: {
     height: 52,
     justifyContent: 'center',
-    backgroundColor: PAGE,
+    backgroundColor: colors.page,
   },
   chipRow: {
     paddingHorizontal: spacing.md,
@@ -288,14 +272,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderRadius: radii.full,
     borderWidth: 1,
-    borderColor: HAIRLINE,
-    backgroundColor: CARD,
+    borderColor: colors.outlineVariant,
+    backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
   },
   chipOn: {
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     borderColor: CHIP_BORDER,
   },
   listScroll: {
@@ -331,7 +315,7 @@ const styles = StyleSheet.create({
   },
   actionDelete: {
     width: 72,
-    backgroundColor: DANGER,
+    backgroundColor: colors.error,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
@@ -340,9 +324,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     paddingVertical: spacing.md,
     paddingRight: spacing.md,
@@ -354,7 +338,7 @@ const styles = StyleSheet.create({
   unreadBar: {
     width: 4,
     alignSelf: 'stretch',
-    backgroundColor: ACTION,
+    backgroundColor: colors.primary,
     borderTopLeftRadius: radii.default,
     borderBottomLeftRadius: radii.default,
     marginRight: 4,

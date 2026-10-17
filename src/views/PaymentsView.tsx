@@ -2,6 +2,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sheetBottomPadding } from '../utilities/sheetInset';
+import { colors } from '../theme/colors';
 
 import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
@@ -12,19 +13,8 @@ import type {
 import { radii } from '../theme/radii';
 import { spacing } from '../theme/spacing';
 
-const INK = '#1F1F1F';
-const MUTED = '#595959';
-const HAIRLINE = '#DDDFE2';
-const PAGE = '#F5F6F7';
-const CARD = '#FFFFFF';
-const ACTION = '#2A7BA3';
-const ACTION_OUTLINE = '#276F93';
-const CHIP_FILL = '#E6F5FE';
-const CHIP_BORDER = '#3AA9E0';
-const ICON_CYAN = '#5CCEF7';
-const SUCCESS = '#0F7A4E';
-const SUCCESS_FILL = '#E9F5EF';
-const NEUTRAL_FILL = '#F2F2F2';
+const CHIP_BORDER = colors.secondary;
+const NEUTRAL_FILL = colors.surfaceVariant;
 
 export function PaymentsView(vm: PaymentsViewModel) {
   const insets = useSafeAreaInsets();
@@ -47,14 +37,14 @@ export function PaymentsView(vm: PaymentsViewModel) {
             onPress={vm.onBack}
             style={styles.iconHit}
           >
-            <Ionicons name="arrow-back" size={24} color={INK} />
+            <Ionicons name="arrow-back" size={24} color={colors.ink} />
           </Pressable>
           <Pressable
             accessibilityRole="button"
             onLongPress={vm.onToggleEmptyDemo}
             style={styles.headerTitleHit}
           >
-            <AppText variant="headlineMd" color={INK} style={styles.headerTitle}>
+            <AppText variant="headlineMd" color={colors.ink} style={styles.headerTitle}>
               {vm.t('payHistTitle')}
             </AppText>
           </Pressable>
@@ -64,7 +54,7 @@ export function PaymentsView(vm: PaymentsViewModel) {
             onPress={vm.onDownload}
             style={styles.iconHit}
           >
-            <Ionicons name="download-outline" size={22} color={INK} />
+            <Ionicons name="download-outline" size={22} color={colors.ink} />
           </Pressable>
         </View>
       </View>
@@ -83,10 +73,10 @@ export function PaymentsView(vm: PaymentsViewModel) {
         >
           {vm.summaryCards.map((card) => (
             <View key={card.labelKey} style={styles.summaryCard}>
-              <AppText variant="labelSm" color={MUTED}>
+              <AppText variant="labelSm" color={colors.muted}>
                 {vm.t(card.labelKey)}
               </AppText>
-              <AppText variant="headlineMd" color={INK} weightOverride="600">
+              <AppText variant="headlineMd" color={colors.ink} weightOverride="600">
                 {card.value}
               </AppText>
             </View>
@@ -110,7 +100,7 @@ export function PaymentsView(vm: PaymentsViewModel) {
               >
                 <AppText
                   variant="labelMd"
-                  color={on ? INK : MUTED}
+                  color={on ? colors.ink : colors.muted}
                   weightOverride={on ? '600' : undefined}
                 >
                   {vm.t(item.labelKey)}
@@ -121,19 +111,19 @@ export function PaymentsView(vm: PaymentsViewModel) {
         </ScrollView>
 
         <View style={styles.infoBanner}>
-          <Ionicons name="information-circle-outline" size={18} color={ACTION} />
-          <AppText variant="bodyMd" color={MUTED} style={styles.flex}>
+          <Ionicons name="information-circle-outline" size={18} color={colors.primary} />
+          <AppText variant="bodyMd" color={colors.muted} style={styles.flex}>
             {vm.t('payHistLedgerNote')}
           </AppText>
         </View>
 
-        <AppText variant="labelMd" color={INK} weightOverride="600">
+        <AppText variant="labelMd" color={colors.ink} weightOverride="600">
           {vm.monthLabel}
         </AppText>
 
         {vm.payments.length === 0 ? (
           <View style={styles.filterEmpty}>
-            <AppText variant="bodyMd" color={MUTED} style={styles.center}>
+            <AppText variant="bodyMd" color={colors.muted} style={styles.center}>
               {vm.t('payHistFilterEmpty')}
             </AppText>
           </View>
@@ -164,14 +154,14 @@ function PaymentsEmptyView({ vm }: { vm: PaymentsViewModel }) {
             onPress={vm.onBack}
             style={styles.iconHit}
           >
-            <Ionicons name="arrow-back" size={24} color={INK} />
+            <Ionicons name="arrow-back" size={24} color={colors.ink} />
           </Pressable>
           <Pressable
             accessibilityRole="button"
             onLongPress={vm.onToggleEmptyDemo}
             style={styles.headerTitleHit}
           >
-            <AppText variant="headlineMd" color={INK} style={styles.headerTitle}>
+            <AppText variant="headlineMd" color={colors.ink} style={styles.headerTitle}>
               {vm.t('payHistEmptyTitle')}
             </AppText>
           </Pressable>
@@ -181,22 +171,22 @@ function PaymentsEmptyView({ vm }: { vm: PaymentsViewModel }) {
             onPress={vm.onHelp}
             style={styles.iconHit}
           >
-            <Ionicons name="help-circle-outline" size={22} color={INK} />
+            <Ionicons name="help-circle-outline" size={22} color={colors.ink} />
           </Pressable>
         </View>
       </View>
 
       <View style={styles.emptyBody}>
         <View style={styles.emptyArt}>
-          <Ionicons name="receipt-outline" size={56} color={INK} />
+          <Ionicons name="receipt-outline" size={56} color={colors.ink} />
           <View style={styles.emptyCheck}>
-            <Ionicons name="checkmark" size={18} color={ICON_CYAN} />
+            <Ionicons name="checkmark" size={18} color={colors.iconFill} />
           </View>
         </View>
-        <AppText variant="headlineMd" color={INK} style={styles.center}>
+        <AppText variant="headlineMd" color={colors.ink} style={styles.center}>
           {vm.t('payHistEmptyHeading')}
         </AppText>
-        <AppText variant="bodyMd" color={MUTED} style={styles.center}>
+        <AppText variant="bodyMd" color={colors.muted} style={styles.center}>
           {vm.t('payHistEmptyBody')}
         </AppText>
         <AppButton
@@ -221,9 +211,9 @@ function RefundStatusView({ vm }: { vm: PaymentsViewModel }) {
             onPress={vm.onCloseRefund}
             style={styles.iconHit}
           >
-            <Ionicons name="arrow-back" size={24} color={INK} />
+            <Ionicons name="arrow-back" size={24} color={colors.ink} />
           </Pressable>
-          <AppText variant="headlineMd" color={INK} style={styles.headerTitle}>
+          <AppText variant="headlineMd" color={colors.ink} style={styles.headerTitle}>
             {vm.t('payRefundTitle')}
           </AppText>
           <Pressable
@@ -232,7 +222,7 @@ function RefundStatusView({ vm }: { vm: PaymentsViewModel }) {
             onPress={vm.onHelp}
             style={styles.iconHit}
           >
-            <Ionicons name="help-circle-outline" size={22} color={INK} />
+            <Ionicons name="help-circle-outline" size={22} color={colors.ink} />
           </Pressable>
         </View>
       </View>
@@ -247,17 +237,17 @@ function RefundStatusView({ vm }: { vm: PaymentsViewModel }) {
         <View style={styles.card}>
           <View style={styles.refundHead}>
             <View style={styles.iconCircle}>
-              <MaterialCommunityIcons name="stethoscope" size={22} color={ICON_CYAN} />
+              <MaterialCommunityIcons name="stethoscope" size={22} color={colors.iconFill} />
             </View>
             <View style={styles.flex}>
-              <AppText variant="labelMd" color={INK} weightOverride="600">
+              <AppText variant="labelMd" color={colors.ink} weightOverride="600">
                 {vm.refundTitle}
               </AppText>
-              <AppText variant="bodyMd" color={MUTED}>
+              <AppText variant="bodyMd" color={colors.muted}>
                 {vm.refundDate}
               </AppText>
             </View>
-            <AppText variant="headlineMd" color={INK} weightOverride="600">
+            <AppText variant="headlineMd" color={colors.ink} weightOverride="600">
               {vm.refundAmount}
             </AppText>
           </View>
@@ -266,7 +256,7 @@ function RefundStatusView({ vm }: { vm: PaymentsViewModel }) {
         <View style={styles.card}>
           <AppText
             variant="labelSm"
-            color={MUTED}
+            color={colors.muted}
             weightOverride="600"
             style={styles.uppercase}
           >
@@ -277,7 +267,7 @@ function RefundStatusView({ vm }: { vm: PaymentsViewModel }) {
               <View style={styles.journeyRail}>
                 <View style={[styles.journeyDot, step.done && styles.journeyDotOn]}>
                   {step.done ? (
-                    <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+                    <Ionicons name="checkmark" size={12} color={colors.card} />
                   ) : null}
                 </View>
                 {index < vm.refundSteps.length - 1 ? (
@@ -288,18 +278,18 @@ function RefundStatusView({ vm }: { vm: PaymentsViewModel }) {
                 <View style={styles.journeyTitleRow}>
                   <AppText
                     variant="labelMd"
-                    color={INK}
+                    color={colors.ink}
                     weightOverride="600"
                     style={styles.flex}
                   >
                     {vm.t(step.labelKey)}
                   </AppText>
-                  <AppText variant="labelSm" color={MUTED}>
+                  <AppText variant="labelSm" color={colors.muted}>
                     {vm.t(step.dateKey)}
                   </AppText>
                 </View>
                 {step.detailKey ? (
-                  <AppText variant="bodyMd" color={MUTED}>
+                  <AppText variant="bodyMd" color={colors.muted}>
                     {vm.t(step.detailKey)}
                   </AppText>
                 ) : null}
@@ -311,25 +301,25 @@ function RefundStatusView({ vm }: { vm: PaymentsViewModel }) {
         <View style={styles.card}>
           <AppText
             variant="labelSm"
-            color={MUTED}
+            color={colors.muted}
             weightOverride="600"
             style={styles.uppercase}
           >
             {vm.t('payRefundBreakdown')}
           </AppText>
           <View style={styles.priceRow}>
-            <AppText variant="bodyMd" color={INK}>
+            <AppText variant="bodyMd" color={colors.ink}>
               {vm.t('payRefundTotal')}
             </AppText>
-            <AppText variant="bodyMd" color={INK} weightOverride="600">
+            <AppText variant="bodyMd" color={colors.ink} weightOverride="600">
               {vm.refundTotal}
             </AppText>
           </View>
           <View style={styles.priceRow}>
-            <AppText variant="bodyMd" color={INK}>
+            <AppText variant="bodyMd" color={colors.ink}>
               {vm.t('payRefundMethodLabel')}
             </AppText>
-            <AppText variant="bodyMd" color={INK}>
+            <AppText variant="bodyMd" color={colors.ink}>
               {vm.refundMethod}
             </AppText>
           </View>
@@ -338,7 +328,7 @@ function RefundStatusView({ vm }: { vm: PaymentsViewModel }) {
         <View style={styles.card}>
           <AppText
             variant="labelSm"
-            color={MUTED}
+            color={colors.muted}
             weightOverride="600"
             style={styles.uppercase}
           >
@@ -346,10 +336,10 @@ function RefundStatusView({ vm }: { vm: PaymentsViewModel }) {
           </AppText>
           <View style={styles.refBox}>
             <View style={styles.flex}>
-              <AppText variant="labelSm" color={MUTED}>
+              <AppText variant="labelSm" color={colors.muted}>
                 {vm.t('payRefundBankRef')}
               </AppText>
-              <AppText variant="bodyMd" color={INK} weightOverride="600">
+              <AppText variant="bodyMd" color={colors.ink} weightOverride="600">
                 {vm.bankReference}
               </AppText>
             </View>
@@ -359,7 +349,7 @@ function RefundStatusView({ vm }: { vm: PaymentsViewModel }) {
               onPress={vm.onCopyReference}
               style={styles.copyHit}
             >
-              <Ionicons name="copy-outline" size={20} color={ACTION_OUTLINE} />
+              <Ionicons name="copy-outline" size={20} color={colors.primaryOutline} />
             </Pressable>
           </View>
         </View>
@@ -369,7 +359,7 @@ function RefundStatusView({ vm }: { vm: PaymentsViewModel }) {
           onPress={vm.onContactSupport}
           style={styles.supportLink}
         >
-          <AppText variant="labelMd" color={ACTION_OUTLINE} weightOverride="600">
+          <AppText variant="labelMd" color={colors.primaryOutline} weightOverride="600">
             {vm.t('payRefundContactSupport')}
           </AppText>
         </Pressable>
@@ -402,7 +392,7 @@ function PaymentRow({
           <View style={styles.paymentTop}>
             <AppText
               variant="labelMd"
-              color={refunded ? MUTED : INK}
+              color={refunded ? colors.muted : colors.ink}
               weightOverride="600"
               style={[styles.flex, refunded && styles.strike]}
               numberOfLines={1}
@@ -411,7 +401,7 @@ function PaymentRow({
             </AppText>
             <AppText
               variant="labelMd"
-              color={refunded ? MUTED : INK}
+              color={refunded ? colors.muted : colors.ink}
               weightOverride="600"
               style={refunded ? styles.strike : undefined}
             >
@@ -419,13 +409,13 @@ function PaymentRow({
             </AppText>
           </View>
           <View style={styles.paymentMeta}>
-            <AppText variant="labelSm" color={MUTED} style={styles.flex} numberOfLines={1}>
+            <AppText variant="labelSm" color={colors.muted} style={styles.flex} numberOfLines={1}>
               {t(item.metaKey)}
             </AppText>
             <View style={[styles.statusPill, refunded && styles.statusPillMuted]}>
               <AppText
                 variant="labelSm"
-                color={refunded ? MUTED : SUCCESS}
+                color={refunded ? colors.muted : colors.success}
                 weightOverride="600"
               >
                 {t(refunded ? 'payHistStatusRefunded' : 'payHistStatusPaid')}
@@ -433,7 +423,7 @@ function PaymentRow({
             </View>
           </View>
           {item.noteKey ? (
-            <AppText variant="labelSm" color={MUTED} style={styles.note}>
+            <AppText variant="labelSm" color={colors.muted} style={styles.note}>
               {t(item.noteKey)}
             </AppText>
           ) : null}
@@ -450,7 +440,7 @@ function PaymentIcon({
   kind: PaymentItem['kind'];
   muted?: boolean;
 }) {
-  const color = muted ? MUTED : ICON_CYAN;
+  const color = muted ? colors.muted : colors.iconFill;
   if (kind === 'medicines') {
     return <MaterialCommunityIcons name="pill" size={22} color={color} />;
   }
@@ -463,12 +453,12 @@ function PaymentIcon({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: PAGE,
+    backgroundColor: colors.page,
   },
   header: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
     paddingHorizontal: spacing.sm,
     paddingBottom: spacing.sm,
   },
@@ -502,9 +492,9 @@ const styles = StyleSheet.create({
   },
   summaryCard: {
     width: 160,
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
     gap: spacing.xs,
@@ -518,22 +508,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: radii.full,
     borderWidth: 1,
-    borderColor: HAIRLINE,
-    backgroundColor: CARD,
+    borderColor: colors.outlineVariant,
+    backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
   chipOn: {
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     borderColor: CHIP_BORDER,
   },
   infoBanner: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
   },
@@ -541,9 +531,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   card: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
     gap: spacing.sm,
@@ -560,15 +550,15 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     borderWidth: 1.5,
-    borderColor: INK,
+    borderColor: colors.ink,
     alignItems: 'center',
     justifyContent: 'center',
   },
   iconCircleMuted: {
     backgroundColor: NEUTRAL_FILL,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
   },
   paymentTop: {
     flexDirection: 'row',
@@ -582,7 +572,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   statusPill: {
-    backgroundColor: SUCCESS_FILL,
+    backgroundColor: colors.successContainer,
     borderRadius: radii.full,
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -614,9 +604,9 @@ const styles = StyleSheet.create({
     width: 160,
     height: 160,
     borderRadius: radii.default,
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.sm,
@@ -628,9 +618,9 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderWidth: 1.5,
-    borderColor: INK,
+    borderColor: colors.ink,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -659,18 +649,18 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
   },
   journeyDotOn: {
-    backgroundColor: SUCCESS,
+    backgroundColor: colors.success,
   },
   journeyLine: {
     width: 2,
     flex: 1,
     minHeight: 28,
-    backgroundColor: SUCCESS,
+    backgroundColor: colors.success,
     marginVertical: 2,
   },
   journeyCopy: {
@@ -692,9 +682,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: PAGE,
+    backgroundColor: colors.page,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.button,
     padding: spacing.md,
   },

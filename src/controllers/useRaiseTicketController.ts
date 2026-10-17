@@ -1,3 +1,4 @@
+import { Alert } from 'react-native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useLocalization } from '../localization/i18n';
@@ -126,17 +127,21 @@ export function useRaiseTicketController({
     const bodyText = `${description.trim() || subject}${orderContext} (Contact preference: ${contactPref})`;
 
     try {
-      await createTicketMutation({
+      const result = await createTicketMutation({
         category,
         subject,
         body: bodyText,
       }).unwrap();
+      const ticketId = result.supportTicketId;
+      if (ticketId != null) {
+        Alert.alert(t('ticketSubmit'), `#${ticketId}`);
+      }
+      onSubmitted?.();
+      onBack();
     } catch (err) {
       console.warn('[POST api/Support/Tickets] Failed to create support ticket:', err);
+      Alert.alert(t('ticketSubmit'), t('ticketIssueOther'));
     }
-
-    onSubmitted?.();
-    onBack();
   }, [
     canSubmit,
     topicId,

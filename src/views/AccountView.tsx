@@ -22,10 +22,8 @@ import { radii } from '../theme/radii';
 import { layout, spacing } from '../theme/spacing';
 import { sheetBottomPadding } from '../utilities/sheetInset';
 
-const SUCCESS_FILL = '#E8F5E9';
-const SUCCESS_TEXT = '#1B5E20';
-const WARNING_FILL = '#ffdcc0';
-const WARNING_TEXT = '#8d4f00';
+const WARNING_FILL = colors.warningContainer;
+const WARNING_TEXT = colors.warning;
 
 type BadgeTone = 'neutral' | 'success' | 'warning' | 'muted';
 
@@ -141,9 +139,82 @@ export function AccountView({
   onSelectLanguage,
   onLogOut,
   onDeleteAccount,
+  dataRequestMessage,
+  dataRequestBusy,
+  dataRequestHistory = [],
+  dataRequestsOpen = false,
+  onCloseDataRequests,
 }: AccountViewModel) {
   const insets = useSafeAreaInsets();
   const tabScrollInset = usePatientTabScrollInset();
+
+  if (dataRequestsOpen) {
+    return (
+      <View style={styles.root}>
+        <View
+          style={[
+            styles.profileCard,
+            { paddingTop: Math.max(insets.top, spacing.sm) + spacing.sm },
+          ]}
+        >
+          <View style={styles.profileRow}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('back')}
+              onPress={onCloseDataRequests}
+              style={styles.avatar}
+            >
+              <Ionicons name="arrow-back" size={22} color={colors.primary} />
+            </Pressable>
+            <View style={styles.profileCopy}>
+              <AppText variant="titleMd" color={colors.ink}>
+                {t('accountDataRequests')}
+              </AppText>
+            </View>
+          </View>
+        </View>
+        <ScrollView
+          contentContainerStyle={{
+            padding: spacing.md,
+            paddingBottom: tabScrollInset + spacing.xl,
+          }}
+        >
+          {dataRequestHistory.length === 0 ? (
+            <AppText variant="bodyMd" color={colors.onSurfaceVariant} raw>
+              No data requests yet.
+            </AppText>
+          ) : (
+            dataRequestHistory.map((row) => (
+              <View key={row.id} style={styles.dataRequestRow}>
+                <AppText variant="labelMd" color={colors.ink} weightOverride="600" raw>
+                  {row.typeLabel}
+                </AppText>
+                <AppText variant="bodyMd" color={colors.onSurfaceVariant} raw>
+                  {row.statusLabel}
+                  {row.createdAt ? ` · ${row.createdAt}` : ''}
+                </AppText>
+              </View>
+            ))
+          )}
+          <Pressable
+            accessibilityRole="button"
+            disabled={dataRequestBusy}
+            onPress={() => onOpenRow('download')}
+            style={styles.footerAction}
+          >
+            <AppText variant="titleMd" color={colors.primary}>
+              Request data export
+            </AppText>
+          </Pressable>
+          {dataRequestMessage ? (
+            <AppText variant="bodyMd" color={colors.onSurface} raw>
+              {dataRequestBusy ? 'Sending request…' : dataRequestMessage}
+            </AppText>
+          ) : null}
+        </ScrollView>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.root}>
@@ -169,14 +240,12 @@ export function AccountView({
                 {profileInitials}
               </AppText>
             </View>
-            <View style={styles.avatarEdit}>
-              <Ionicons name="pencil" size={12} color={colors.onPrimary} />
-            </View>
+            {/* BE-032 — no patient photo upload; initials only */}
           </View>
           <View style={styles.profileCopy}>
             <AppText
               variant="titleMd"
-              color="#1F1F1F"
+              color={colors.ink}
               languageOverride="en"
             >
               {profileName}
@@ -284,8 +353,19 @@ export function AccountView({
             {t('accountLogOut')}
           </AppText>
         </Pressable>
+        {dataRequestMessage ? (
+          <AppText
+            variant="bodyMd"
+            color={colors.onSurface}
+            style={styles.deleteNote}
+            raw
+          >
+            {dataRequestBusy ? 'Sending request…' : dataRequestMessage}
+          </AppText>
+        ) : null}
         <Pressable
           accessibilityRole="button"
+          disabled={dataRequestBusy}
           onPress={onDeleteAccount}
           style={styles.footerAction}
         >
@@ -460,13 +540,13 @@ function AccountRow({
 function Badge({ label, tone }: { label: string; tone: BadgeTone }) {
   const fill =
     tone === 'success'
-      ? SUCCESS_FILL
+      ? colors.successContainer
       : tone === 'warning'
         ? WARNING_FILL
         : colors.surfaceContainerLow;
   const text =
     tone === 'success'
-      ? SUCCESS_TEXT
+      ? colors.success
       : tone === 'warning'
         ? WARNING_TEXT
         : colors.onSurfaceVariant;
@@ -582,6 +662,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  dataRequestRow: {
+    backgroundColor: colors.card,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    gap: 4,
+  },
   deleteNote: {
     textAlign: 'center',
     paddingHorizontal: spacing.md,
@@ -599,7 +688,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     alignSelf: 'center',
-    tintColor: '#000000',
+    tintColor: colors.ink,
     opacity: 0.7,
   },
   flex: {

@@ -5,6 +5,7 @@ import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
 import { useCreateReviewMutation } from '../store/api/new/supportApi';
 import { useAppSelector } from '../store/hooks';
+import { messageFromUnknownError } from '../utilities/apiResponse';
 
 export type RateAspectId = 'listened' | 'onTime' | 'avQuality';
 
@@ -35,6 +36,9 @@ export type RateConsultationViewModel = {
   postAsName: string;
   postPublicly: boolean;
   reviewId: string;
+  submitting: boolean;
+  submitError: string | null;
+  canSubmit: boolean;
   onClose: () => void;
   onSelectOverall: (value: number) => void;
   onSelectAspect: (id: RateAspectId, value: number) => void;
@@ -106,6 +110,8 @@ export function useRateConsultationController({
   ]);
   const [reviewText, setReviewText] = useState('');
   const [postPublicly, setPostPublicly] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!active) {
@@ -117,17 +123,19 @@ export function useRateConsultationController({
     setSelectedTags(['explainedWell', 'onTime']);
     setReviewText('');
     setPostPublicly(true);
+    setSubmitting(false);
+    setSubmitError(null);
   }, [active]);
 
   const authUser = useAppSelector((state) => state.auth.user);
   const [createReviewMutation] = useCreateReviewMutation();
 
-  const doctorName = appointment
+  const doctorName = appointment?.doctorNameKey
     ? t(appointment.doctorNameKey)
-    : t('searchResultAnjaliName');
+    : '';
   const mins = localizeDigits(String(Math.max(1, durationMinutes)), language);
-  const modeLabel = appointment?.modeConsultLabel ?? t('reviewVideoConsult');
-  const datePart = appointment?.whenLabel?.split(',')[0] ?? '26 Aug 2026';
+  const modeLabel = appointment?.modeConsultLabel ?? '';
+  const datePart = appointment?.whenLabel?.split(',')[0] ?? '';
 
   const patientDisplayName =
     authUser?.patientName ||
@@ -146,23 +154,35 @@ export function useRateConsultationController({
   }, [overallRating, t]);
 
   const handleSubmit = useCallback(async () => {
-    if (overallRating < 1) {
+    if (submitting || overallRating < 1) {
       return;
     }
-    const appIdNum = appointment?.id ? Number(appointment.id) : null;
-    if (appIdNum && !isNaN(appIdNum)) {
-      try {
-        await createReviewMutation({
-          patientAppId: appIdNum,
-          rating: overallRating,
-          text: reviewText.trim() || undefined,
-        }).unwrap();
-      } catch (err) {
-        console.warn('[POST api/Reviews] Failed to submit review:', err);
-      }
+    const appIdNum = appointment?.id ? Number(appointment.id) : NaN;
+    if (!Number.isFinite(appIdNum) || appIdNum <= 0) {
+      setSubmitError('This visit cannot be reviewed yet.');
+      return;
     }
-    setSubmitted(true);
-  }, [overallRating, appointment?.id, createReviewMutation, reviewText]);
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      await createReviewMutation({
+        patientAppId: appIdNum,
+        rating: overallRating,
+        text: reviewText.trim() || undefined,
+      }).unwrap();
+      setSubmitted(true);
+    } catch (err) {
+      setSubmitError(messageFromUnknownError(err));
+    } finally {
+      setSubmitting(false);
+    }
+  }, [
+    submitting,
+    overallRating,
+    appointment?.id,
+    createReviewMutation,
+    reviewText,
+  ]);
 
   return {
     language,
@@ -183,7 +203,10 @@ export function useRateConsultationController({
     reviewMax: 500,
     postAsName,
     postPublicly,
-    reviewId: 'RV-99271',
+    reviewId: '',
+    submitting,
+    submitError,
+    canSubmit: overallRating >= 1 && !submitting,
     onClose: () => {
       if (submitted) {
         onFinished();

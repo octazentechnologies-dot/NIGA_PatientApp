@@ -10,14 +10,9 @@ import { radii } from '../theme/radii';
 import { spacing } from '../theme/spacing';
 import { colors } from '../theme/colors';
 
-const MUTED = '#595959';
-const HAIRLINE = '#E6E6E6';
-const SUCCESS = '#0F7A4E';
-const SUCCESS_FILL = '#E9F5EF';
-const SUCCESS_BORDER = '#CDE8DA';
-const ICON_FILL = '#2E9AD1';
-const CHIP_FILL = '#E6F5FE';
-const BUSY = '#084C41';
+const SUCCESS_BORDER = colors.successContainer;
+const ICON_FILL = colors.iconFill;
+const BUSY = colors.success;
 
 export function ConsultNowUnavailableView(vm: ConsultNowViewModel) {
   const insets = useSafeAreaInsets();
@@ -36,9 +31,9 @@ export function ConsultNowUnavailableView(vm: ConsultNowViewModel) {
           onPress={vm.onCancelSearch}
           style={styles.iconButton}
         >
-          <Ionicons name="arrow-back" size={24} color="#000000" />
+          <Ionicons name="arrow-back" size={24} color={colors.ink} />
         </Pressable>
-        <AppText variant="headlineMd" color="#000000" style={styles.title}>
+        <AppText variant="headlineMd" color={colors.ink} style={styles.title}>
           {vm.t('brandName')}
         </AppText>
         <View style={styles.iconButton} />
@@ -58,22 +53,22 @@ export function ConsultNowUnavailableView(vm: ConsultNowViewModel) {
             resizeMode="contain"
           />
           <View style={styles.busyBadge}>
-            <AppText variant="labelSm" color="#FFFFFF" style={styles.center}>
+            <AppText variant="labelSm" color={colors.card} style={styles.center}>
               {vm.t('noDoctorBusy')}
             </AppText>
           </View>
         </View>
 
-        <AppText variant="headlineMd" color="#000000" style={styles.center}>
+        <AppText variant="headlineMd" color={colors.ink} style={styles.center}>
           {vm.t('noDoctorTitle')}
         </AppText>
-        <AppText variant="bodyLg" color={MUTED} style={styles.center}>
+        <AppText variant="bodyLg" color={colors.muted} style={styles.center}>
           {vm.t('noDoctorBodyLead')}
-          <AppText variant="bodyLg" color="#000000" weightOverride="600">
+          <AppText variant="bodyLg" color={colors.ink} weightOverride="600">
             {vm.noDoctorLanguageLabel}
           </AppText>
           {' + '}
-          <AppText variant="bodyLg" color="#000000" weightOverride="600">
+          <AppText variant="bodyLg" color={colors.ink} weightOverride="600">
             {vm.noDoctorNeedLabel}
           </AppText>
           {vm.t('noDoctorBodyTail')}
@@ -107,8 +102,8 @@ export function ConsultNowUnavailableView(vm: ConsultNowViewModel) {
         </View>
 
         <View style={styles.notCharged}>
-          <Ionicons name="shield-checkmark" size={16} color={SUCCESS} />
-          <AppText variant="labelSm" color={SUCCESS}>
+          <Ionicons name="shield-checkmark" size={16} color={colors.success} />
+          <AppText variant="labelSm" color={colors.success}>
             {vm.t('noDoctorNotCharged')}
           </AppText>
         </View>
@@ -138,14 +133,14 @@ function ActionCard({
         <Ionicons name={icon} size={22} color={ICON_FILL} />
       </View>
       <View style={styles.flex}>
-        <AppText variant="titleMd" color="#000000" style={styles.cardTitle}>
+        <AppText variant="titleMd" color={colors.ink} style={styles.cardTitle}>
           {title}
         </AppText>
-        <AppText variant="labelSm" color={MUTED}>
+        <AppText variant="labelSm" color={colors.muted}>
           {subtitle}
         </AppText>
       </View>
-      <Ionicons name="chevron-forward" size={20} color={MUTED} />
+      <Ionicons name="chevron-forward" size={20} color={colors.muted} />
     </Pressable>
   );
 }
@@ -162,7 +157,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   iconButton: {
     width: 48,
@@ -208,7 +203,7 @@ const styles = StyleSheet.create({
     width: '100%',
     minHeight: 72,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     padding: spacing.md,
     flexDirection: 'row',
@@ -220,7 +215,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: radii.sm,
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -237,7 +232,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: SUCCESS_FILL,
+    backgroundColor: colors.successContainer,
     borderWidth: 1,
     borderColor: SUCCESS_BORDER,
     borderRadius: radii.full,

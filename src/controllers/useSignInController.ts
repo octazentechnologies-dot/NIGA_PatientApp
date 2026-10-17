@@ -7,7 +7,10 @@ import {
   type Country,
   useGetCountriesQuery,
 } from '../store/api/new/completeProfileApi';
-import { useRequestOtpMutation } from '../store/api/new/signInApi';
+import {
+  extractDevOtp,
+  useRequestOtpMutation,
+} from '../store/api/new/signInApi';
 import { extractErrorMessage } from '../store/api/new/newBaseApi';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
@@ -290,7 +293,9 @@ export function useSignInController({
         );
         const response = await requestOtp({ mobile: mobileNumber }).unwrap();
         if (response.success) {
-          const safeDevCode = __DEV__ ? response.devCode : undefined;
+          // Show API-returned OTP until SMS is integrated (also on EAS APKs;
+          // gating on __DEV__ hid it in preview/release builds).
+          const safeDevCode = extractDevOtp(response);
           if (safeDevCode) {
             setDevOtp(safeDevCode);
           }

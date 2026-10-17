@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 
 import type { BookedAppointment } from '../config/bookedAppointments';
-import { images } from '../config/images';
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
 import {
@@ -58,7 +57,7 @@ function localizeDigits(value: string, language: AppLanguage): string {
 
 function formatCloseLabel(iso: string | undefined, language: AppLanguage): string {
   if (!iso) {
-    return language === 'en' ? '02 Sep' : '०२ सप्टें';
+    return '';
   }
   const date = new Date(iso);
   const monthEn = [
@@ -77,83 +76,6 @@ function formatCloseLabel(iso: string | undefined, language: AppLanguage): strin
   ];
   const raw = `${date.getDate()} ${monthEn[date.getMonth()]}`;
   return localizeDigits(raw, language);
-}
-
-function seedMessages(language: AppLanguage, closed: boolean): ChatMessage[] {
-  if (closed) {
-    return [
-      {
-        id: 'c1',
-        kind: 'text',
-        from: 'doctor',
-        body:
-          language === 'en'
-            ? 'How is the rash after two days of the new potency?'
-            : 'नवीन पोटेन्सीनंतर दोन दिवसांनी पुरळ कशी आहे?',
-        timeLabel: localizeDigits('10:00 AM', language),
-        dateGroup: language === 'en' ? '28 Aug 2024' : '२८ ऑगस्ट २०२४',
-      },
-      {
-        id: 'c2',
-        kind: 'text',
-        from: 'patient',
-        body:
-          language === 'en'
-            ? 'Much better, itching is almost gone. Thank you doctor.'
-            : 'खूप चांगले, खाज जवळजवळ गेली आहे. धन्यवाद डॉक्टर.',
-        timeLabel: localizeDigits('10:22 AM', language),
-        read: true,
-        dateGroup: language === 'en' ? '28 Aug 2024' : '२८ ऑगस्ट २०२४',
-      },
-    ];
-  }
-
-  return [
-    {
-      id: '1',
-      kind: 'text',
-      from: 'doctor',
-      body:
-        language === 'en'
-          ? 'Hello! Please share a clear photo of the rash today.'
-          : 'नमस्कार! कृपया आज पुरळाचा स्पष्ट फोटो शेअर करा.',
-      timeLabel: localizeDigits('10:02 AM', language),
-      dateGroup: 'today',
-    },
-    {
-      id: '2',
-      kind: 'image',
-      from: 'patient',
-      imageSource: images.categorySkin,
-      fileName: 'rash_left_arm.jpg',
-      fileSize: '1.2 MB',
-      timeLabel: localizeDigits('10:12 AM', language),
-      dateGroup: 'today',
-    },
-    {
-      id: '3',
-      kind: 'text',
-      from: 'patient',
-      body:
-        language === 'en'
-          ? "I've uploaded the photo. It's still itching."
-          : 'मी फोटो अपलोड केला आहे. अजून खाज येत आहे.',
-      timeLabel: localizeDigits('10:15 AM', language),
-      read: true,
-      dateGroup: 'today',
-    },
-    {
-      id: '4',
-      kind: 'prescription',
-      from: 'system',
-      body:
-        language === 'en'
-          ? 'Dr. Deshmukh signed a prescription'
-          : 'डॉ. देशमुख यांनी प्रिस्क्रिप्शन साइन केले',
-      timeLabel: '',
-      dateGroup: 'today',
-    },
-  ];
 }
 
 export function useConsultationChatController({
@@ -211,15 +133,13 @@ export function useConsultationChatController({
           };
         });
       }
-      return seedMessages(language, closed);
+      return [];
     },
     [language, closed, serverChatResponse],
   );
   const messages = closed ? baseMessages : [...baseMessages, ...extraMessages];
 
-  const doctorName = appointment
-    ? t(appointment.doctorNameKey)
-    : t('searchResultAnjaliName');
+  const doctorName = appointment ? t(appointment.doctorNameKey) : '';
   const shortName = doctorName.replace(/^Dr\.\s*/i, '').split(' ')[0] || doctorName;
 
   const statusLabel = closed
@@ -228,9 +148,7 @@ export function useConsultationChatController({
 
   const linkedLabel = t('chatLinkedTo').replace(
     '{date}',
-    appointment?.linkedConsultationLabel ??
-      appointment?.bookedOnLabel ??
-      (language === 'en' ? '26 Aug 2024' : '२६ ऑगस्ट २०२४'),
+    appointment?.linkedConsultationLabel ?? appointment?.bookedOnLabel ?? '',
   );
 
   return {

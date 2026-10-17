@@ -7,6 +7,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaModal } from '../components/SafeAreaModal';
+import { colors } from '../theme/colors';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -17,19 +18,8 @@ import { radii } from '../theme/radii';
 import { spacing } from '../theme/spacing';
 import { sheetBottomPadding } from '../utilities/sheetInset';
 
-const INK = '#1F1F1F';
-const MUTED = '#595959';
-const HAIRLINE = '#DDDFE2';
-const PAGE = '#F5F6F7';
-const CARD = '#FFFFFF';
-const ACTION = '#2A7BA3';
-const ACTION_OUTLINE = '#276F93';
-const ICON_CYAN = '#5CCEF7';
-const SUCCESS = '#0F7A4E';
-const SUCCESS_FILL = '#E9F5EF';
-const CHIP_FILL = '#E6F5FE';
-const WARN_FILL = '#FCF3E4';
-const WARN = '#8A5109';
+const WARN_FILL = colors.warningContainer;
+const WARN = colors.warning;
 
 export function OrderDetailsView(vm: OrderDetailsViewModel) {
   const insets = useSafeAreaInsets();
@@ -44,11 +34,11 @@ export function OrderDetailsView(vm: OrderDetailsViewModel) {
             onPress={vm.onBack}
             style={styles.iconHit}
           >
-            <Ionicons name="arrow-back" size={24} color={INK} />
+            <Ionicons name="arrow-back" size={24} color={colors.ink} />
           </Pressable>
           <AppText
             variant="headlineMd"
-            color={INK}
+            color={colors.ink}
             style={styles.headerTitle}
             numberOfLines={1}
           >
@@ -60,7 +50,7 @@ export function OrderDetailsView(vm: OrderDetailsViewModel) {
             onPress={vm.onHelp}
             style={styles.iconHit}
           >
-            <Ionicons name="help-circle-outline" size={24} color={INK} />
+            <Ionicons name="help-circle-outline" size={24} color={colors.ink} />
           </Pressable>
         </View>
       </View>
@@ -73,57 +63,57 @@ export function OrderDetailsView(vm: OrderDetailsViewModel) {
         ]}
       >
         <View style={styles.deliveredBanner}>
-          <Ionicons name="checkmark-circle" size={20} color={SUCCESS} />
-          <AppText variant="labelMd" color={SUCCESS} weightOverride="600" style={styles.flex}>
+          <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+          <AppText variant="labelMd" color={colors.success} weightOverride="600" style={styles.flex}>
             {vm.deliveredLine}
           </AppText>
         </View>
 
         <View style={styles.card}>
-          <AppText variant="labelSm" color={MUTED} weightOverride="600" style={styles.uppercase}>
+          <AppText variant="labelSm" color={colors.muted} weightOverride="600" style={styles.uppercase}>
             {vm.t('orderDetailItems')}
           </AppText>
           {vm.items.map((item) => (
             <View key={item.id} style={styles.itemRow}>
               <View style={styles.flex}>
-                <AppText variant="labelMd" color={INK} weightOverride="600">
+                <AppText variant="labelMd" color={colors.ink} weightOverride="600">
                   {vm.t(item.nameKey)}
                 </AppText>
-                <AppText variant="bodyMd" color={MUTED}>
+                <AppText variant="bodyMd" color={colors.muted}>
                   {vm.t(item.detailKey)}
                 </AppText>
               </View>
-              <AppText variant="labelMd" color={INK} weightOverride="600">
+              <AppText variant="labelMd" color={colors.ink} weightOverride="600">
                 {item.priceLabel}
               </AppText>
             </View>
           ))}
           <View style={styles.divider} />
           <View style={styles.priceRow}>
-            <AppText variant="bodyMd" color={MUTED}>
+            <AppText variant="bodyMd" color={colors.muted}>
               {vm.t('orderDetailSubtotal')}
             </AppText>
-            <AppText variant="bodyMd" color={MUTED}>
+            <AppText variant="bodyMd" color={colors.muted}>
               {vm.subtotalLabel}
             </AppText>
           </View>
           <View style={styles.priceRow}>
-            <AppText variant="bodyMd" color={MUTED}>
+            <AppText variant="bodyMd" color={colors.muted}>
               {vm.t('orderDetailDelivery')}
             </AppText>
-            <AppText variant="bodyMd" color={MUTED}>
+            <AppText variant="bodyMd" color={colors.muted}>
               {vm.deliveryLabel}
             </AppText>
           </View>
           <View style={styles.priceRow}>
-            <AppText variant="labelMd" color={INK} weightOverride="600">
+            <AppText variant="labelMd" color={colors.ink} weightOverride="600">
               {vm.t('orderDetailTotalPaid')}
             </AppText>
-            <AppText variant="labelMd" color={INK} weightOverride="600">
+            <AppText variant="labelMd" color={colors.ink} weightOverride="600">
               {vm.totalPaidLabel}
             </AppText>
           </View>
-          <AppText variant="labelSm" color={MUTED} style={styles.payNote}>
+          <AppText variant="labelSm" color={colors.muted} style={styles.payNote}>
             {vm.paymentMethodLine}
           </AppText>
         </View>
@@ -134,34 +124,34 @@ export function OrderDetailsView(vm: OrderDetailsViewModel) {
           style={styles.rxCard}
         >
           <View style={styles.rxIcon}>
-            <MaterialCommunityIcons name="clipboard-text-outline" size={22} color={ICON_CYAN} />
+            <MaterialCommunityIcons name="clipboard-text-outline" size={22} color={colors.iconFill} />
           </View>
-          <AppText variant="bodyMd" color={INK} style={styles.flex}>
+          <AppText variant="bodyMd" color={colors.ink} style={styles.flex}>
             {vm
               .t('orderDetailFulfilledAgainst')
               .replace('{rx}', vm.rxId)
               .replace('{doctor}', vm.doctorName)}
           </AppText>
-          <Ionicons name="chevron-forward" size={20} color={MUTED} />
+          <Ionicons name="chevron-forward" size={20} color={colors.muted} />
         </Pressable>
 
         <View style={styles.card}>
           <View style={styles.pharmacyHead}>
             <View style={styles.rxIcon}>
-              <MaterialCommunityIcons name="storefront-outline" size={22} color={ICON_CYAN} />
+              <MaterialCommunityIcons name="storefront-outline" size={22} color={colors.iconFill} />
             </View>
             <View style={styles.flex}>
               <View style={styles.pharmacyTitleRow}>
-                <AppText variant="labelMd" color={INK} weightOverride="600" style={styles.flex}>
+                <AppText variant="labelMd" color={colors.ink} weightOverride="600" style={styles.flex}>
                   {vm.pharmacyName}
                 </AppText>
                 <View style={styles.licensedPill}>
-                  <AppText variant="labelSm" color={SUCCESS} weightOverride="600">
+                  <AppText variant="labelSm" color={colors.success} weightOverride="600">
                     {vm.t('orderDetailLicensed')}
                   </AppText>
                 </View>
               </View>
-              <AppText variant="bodyMd" color={MUTED}>
+              <AppText variant="bodyMd" color={colors.muted}>
                 {vm.pharmacyLicense}
               </AppText>
             </View>
@@ -171,7 +161,7 @@ export function OrderDetailsView(vm: OrderDetailsViewModel) {
             variant="secondary"
             onPress={vm.onContactPharmacy}
           />
-          <AppText variant="labelSm" color={MUTED}>
+          <AppText variant="labelSm" color={colors.muted}>
             {vm.t('orderDetailMaskedNumber')}
           </AppText>
         </View>
@@ -179,13 +169,13 @@ export function OrderDetailsView(vm: OrderDetailsViewModel) {
         <View style={styles.card}>
           <View style={styles.rowGap}>
             <View style={styles.rxIcon}>
-              <Ionicons name="document-text-outline" size={22} color={ICON_CYAN} />
+              <Ionicons name="document-text-outline" size={22} color={colors.iconFill} />
             </View>
             <View style={styles.flex}>
-              <AppText variant="labelMd" color={INK} weightOverride="600">
+              <AppText variant="labelMd" color={colors.ink} weightOverride="600">
                 {vm.t('orderDetailTaxInvoice').replace('{pharmacy}', vm.pharmacyName)}
               </AppText>
-              <AppText variant="bodyMd" color={MUTED}>
+              <AppText variant="bodyMd" color={colors.muted}>
                 {vm.invoiceId}
               </AppText>
             </View>
@@ -195,7 +185,7 @@ export function OrderDetailsView(vm: OrderDetailsViewModel) {
             variant="secondary"
             onPress={vm.onDownloadInvoice}
           />
-          <AppText variant="labelSm" color={MUTED}>
+          <AppText variant="labelSm" color={colors.muted}>
             {vm.t('orderDetailInvoiceNote')}
           </AppText>
         </View>
@@ -204,13 +194,13 @@ export function OrderDetailsView(vm: OrderDetailsViewModel) {
           <View style={styles.card}>
             <View style={styles.rowGap}>
               <View style={styles.rxIcon}>
-                <Ionicons name="refresh-outline" size={22} color={ICON_CYAN} />
+                <Ionicons name="refresh-outline" size={22} color={colors.iconFill} />
               </View>
               <View style={styles.flex}>
-                <AppText variant="headlineMd" color={INK}>
+                <AppText variant="headlineMd" color={colors.ink}>
                   {vm.t('orderDetailNeedRefill')}
                 </AppText>
-                <AppText variant="bodyMd" color={MUTED} style={styles.mtXs}>
+                <AppText variant="bodyMd" color={colors.muted} style={styles.mtXs}>
                   {vm.t('orderDetailRefillBody')}
                 </AppText>
               </View>
@@ -219,14 +209,14 @@ export function OrderDetailsView(vm: OrderDetailsViewModel) {
               label={vm.t('orderDetailRequestRefill')}
               onPress={vm.onOpenRefill}
             />
-            <AppText variant="labelSm" color={MUTED}>
+            <AppText variant="labelSm" color={colors.muted}>
               {vm.t('orderDetailRefillNote')}
             </AppText>
           </View>
         ) : null}
 
         <View style={styles.card}>
-          <AppText variant="headlineMd" color={INK}>
+          <AppText variant="headlineMd" color={colors.ink}>
             {vm.t('orderDetailNeedHelp')}
           </AppText>
           <HelpRow
@@ -256,7 +246,7 @@ export function OrderDetailsView(vm: OrderDetailsViewModel) {
           variant="secondary"
           onPress={vm.onReorder}
         />
-        <AppText variant="labelSm" color={MUTED} style={styles.footerNote}>
+        <AppText variant="labelSm" color={colors.muted} style={styles.footerNote}>
           {vm.rxValidTill}
         </AppText>
       </View>
@@ -281,10 +271,10 @@ function HelpRow({
       onPress={onPress}
       style={[styles.helpRow, !last && styles.helpRowBorder]}
     >
-      <AppText variant="bodyLg" color={INK} style={styles.flex}>
+      <AppText variant="bodyLg" color={colors.ink} style={styles.flex}>
         {label}
       </AppText>
-      <Ionicons name="chevron-forward" size={18} color={MUTED} />
+      <Ionicons name="chevron-forward" size={18} color={colors.muted} />
     </Pressable>
   );
 }
@@ -322,7 +312,7 @@ function RefillRequestSheet({ vm }: { vm: OrderDetailsViewModel }) {
 
             <AppText
               variant="labelSm"
-              color={MUTED}
+              color={colors.muted}
               weightOverride="600"
               style={styles.uppercase}
             >
@@ -343,7 +333,7 @@ function RefillRequestSheet({ vm }: { vm: OrderDetailsViewModel }) {
                 >
                   <AppText
                     variant="labelMd"
-                    color={INK}
+                    color={colors.ink}
                     weightOverride="600"
                     style={styles.flex}
                   >
@@ -356,27 +346,27 @@ function RefillRequestSheet({ vm }: { vm: OrderDetailsViewModel }) {
                     ]}
                   >
                     {med.selected ? (
-                      <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+                      <Ionicons name="checkmark" size={14} color={colors.card} />
                     ) : null}
                   </View>
                 </Pressable>
               ))}
             </View>
 
-            <AppText variant="labelMd" color={INK} weightOverride="600">
+            <AppText variant="labelMd" color={colors.ink} weightOverride="600">
               {vm.t('refillReasonLabel')}
             </AppText>
             <TextInput
               value={vm.refillReason}
               onChangeText={vm.onChangeRefillReason}
               placeholder={vm.t('refillReasonPlaceholder')}
-              placeholderTextColor={MUTED}
+              placeholderTextColor={colors.muted}
               multiline
               textAlignVertical="top"
               style={styles.reasonInput}
             />
 
-            <AppText variant="labelMd" color={INK} weightOverride="600">
+            <AppText variant="labelMd" color={colors.ink} weightOverride="600">
               {vm.t('refillFeelingLabel')}
             </AppText>
             <View style={styles.chipWrap}>
@@ -392,7 +382,7 @@ function RefillRequestSheet({ vm }: { vm: OrderDetailsViewModel }) {
                   >
                     <AppText
                       variant="labelMd"
-                      color={selected ? ACTION_OUTLINE : INK}
+                      color={selected ? colors.primaryOutline : colors.ink}
                       weightOverride="600"
                     >
                       {vm.t(feeling.labelKey)}
@@ -403,8 +393,8 @@ function RefillRequestSheet({ vm }: { vm: OrderDetailsViewModel }) {
             </View>
 
             <View style={styles.infoBox}>
-              <Ionicons name="information-circle-outline" size={18} color={MUTED} />
-              <AppText variant="bodyMd" color={MUTED} style={styles.flex}>
+              <Ionicons name="information-circle-outline" size={18} color={colors.muted} />
+              <AppText variant="bodyMd" color={colors.muted} style={styles.flex}>
                 {vm.t('refillConsentNote')}
               </AppText>
             </View>
@@ -424,12 +414,12 @@ function RefillRequestSheet({ vm }: { vm: OrderDetailsViewModel }) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: PAGE,
+    backgroundColor: colors.page,
   },
   header: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
     paddingHorizontal: spacing.sm,
     paddingBottom: spacing.sm,
   },
@@ -457,16 +447,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: SUCCESS_FILL,
+    backgroundColor: colors.successContainer,
     borderRadius: radii.button,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     minHeight: 48,
   },
   card: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
     gap: spacing.sm,
@@ -486,7 +476,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
     marginVertical: 4,
   },
   priceRow: {
@@ -498,9 +488,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   rxCard: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.default,
     padding: spacing.md,
     flexDirection: 'row',
@@ -512,9 +502,9 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: PAGE,
+    backgroundColor: colors.page,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -529,7 +519,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   licensedPill: {
-    backgroundColor: SUCCESS_FILL,
+    backgroundColor: colors.successContainer,
     borderRadius: radii.full,
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -550,16 +540,16 @@ const styles = StyleSheet.create({
   },
   helpRowBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   footer: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderTopWidth: 1,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
     gap: spacing.sm,
@@ -576,7 +566,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(31, 31, 31, 0.45)',
   },
   sheet: {
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     borderTopLeftRadius: radii.lg,
     borderTopRightRadius: radii.lg,
     maxHeight: '92%',
@@ -587,7 +577,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: radii.full,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
     marginTop: spacing.sm,
     marginBottom: spacing.md,
   },
@@ -607,7 +597,7 @@ const styles = StyleSheet.create({
   },
   medList: {
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.button,
     overflow: 'hidden',
   },
@@ -616,38 +606,38 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
     gap: spacing.sm,
   },
   medRowSelected: {
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
   },
   medRowBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   checkbox: {
     width: 22,
     height: 22,
     borderRadius: 4,
     borderWidth: 1.5,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: CARD,
+    backgroundColor: colors.card,
   },
   checkboxOn: {
-    backgroundColor: ACTION,
-    borderColor: ACTION,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   reasonInput: {
     minHeight: 96,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.button,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    color: INK,
+    color: colors.ink,
     fontSize: 16,
     lineHeight: 24,
   },
@@ -662,22 +652,22 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: radii.full,
     borderWidth: 1.5,
-    borderColor: HAIRLINE,
-    backgroundColor: CARD,
+    borderColor: colors.outlineVariant,
+    backgroundColor: colors.card,
     justifyContent: 'center',
   },
   chipOn: {
-    borderColor: ACTION_OUTLINE,
-    backgroundColor: CHIP_FILL,
+    borderColor: colors.primaryOutline,
+    backgroundColor: colors.primaryContainer,
   },
   infoBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
-    backgroundColor: PAGE,
+    backgroundColor: colors.page,
     borderRadius: radii.button,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     padding: spacing.md,
   },
 });

@@ -28,7 +28,8 @@ export type CareLinkRole = {
 
 export type DoctorCredentialsSeed = {
   qualifications: QualificationCard[];
-  registration: RegistrationCard;
+  /** Omit when registrationNumber is null. */
+  registration?: RegistrationCard;
   focus?: FocusCredential;
   careLink?: CareLinkRole;
 };
@@ -39,17 +40,28 @@ export type DoctorProfileSeed = {
   verified: boolean;
   nameKey: TranslationKey;
   credentialsKey: TranslationKey;
-  experienceKey: TranslationKey;
-  rating: string;
+  /** Always null from API (yearsExperience) — hide when empty. */
+  experienceKey: TranslationKey | '';
+  /** Null when reviewCount is 0. */
+  rating: string | null;
+  reviewCount: number;
   reviewsKey: TranslationKey;
-  consultsKey: TranslationKey;
-  aboutKey: TranslationKey;
+  consultsKey: TranslationKey | '';
+  aboutKey: TranslationKey | '';
   regVerifiedKey: TranslationKey;
-  lastVerifiedKey: TranslationKey;
-  nextAvailableKey: TranslationKey;
-  feeKey: TranslationKey;
-  clinicFeeKey: TranslationKey;
+  lastVerifiedKey: TranslationKey | '';
+  nextAvailableKey: TranslationKey | '';
+  /** Tele fee label; empty → hide. */
+  feeKey: TranslationKey | '';
+  /** In-clinic fee label; empty → hide. */
+  clinicFeeKey: TranslationKey | '';
+  teleFeeLabel: string | null;
+  clinicFeeLabel: string | null;
+  registrationNumber: string | null;
+  passingUniversity: string | null;
+  photoUrl: string | null;
   careNeedKeys: TranslationKey[];
+  /** Not returned by API — keep empty. */
   languageKeys: TranslationKey[];
   reviewIds: Array<1 | 2>;
   credentialsDetail: DoctorCredentialsSeed;
@@ -62,19 +74,25 @@ export const DOCTOR_PROFILES: DoctorProfileSeed[] = [
     verified: true,
     nameKey: 'searchResultAnjaliName',
     credentialsKey: 'searchResultAnjaliCredentials',
-    experienceKey: 'profileAnjaliExp',
-    rating: '4.6',
+    experienceKey: '',
+    rating: null,
+    reviewCount: 0,
     reviewsKey: 'searchResultAnjaliReviews',
-    consultsKey: 'profileAnjaliConsults',
-    aboutKey: 'profileAnjaliAbout',
+    consultsKey: '',
+    aboutKey: '',
     regVerifiedKey: 'profileAnjaliRegVerified',
-    lastVerifiedKey: 'profileAnjaliLastVerified',
-    nextAvailableKey: 'profileAnjaliNext',
-    feeKey: 'searchResultAnjaliFee',
-    clinicFeeKey: 'profileAnjaliClinicFee',
-    careNeedKeys: ['searchCareSkin', 'searchCareChild', 'searchCareAllergy'],
-    languageKeys: ['searchLangMarathi', 'searchLangEnglish'],
-    reviewIds: [1, 2],
+    lastVerifiedKey: '',
+    nextAvailableKey: '',
+    feeKey: '',
+    clinicFeeKey: '',
+    teleFeeLabel: null,
+    clinicFeeLabel: null,
+    registrationNumber: null,
+    passingUniversity: null,
+    photoUrl: null,
+    careNeedKeys: [],
+    languageKeys: [],
+    reviewIds: [],
     credentialsDetail: {
       qualifications: [
         {
@@ -111,19 +129,25 @@ export const DOCTOR_PROFILES: DoctorProfileSeed[] = [
     verified: true,
     nameKey: 'searchResultRajeshName',
     credentialsKey: 'searchResultRajeshCredentials',
-    experienceKey: 'profileRajeshExp',
-    rating: '4.2',
+    experienceKey: '',
+    rating: null,
+    reviewCount: 0,
     reviewsKey: 'searchResultRajeshReviews',
-    consultsKey: 'profileRajeshConsults',
-    aboutKey: 'profileRajeshAbout',
+    consultsKey: '',
+    aboutKey: '',
     regVerifiedKey: 'profileRajeshRegVerified',
-    lastVerifiedKey: 'profileRajeshLastVerified',
-    nextAvailableKey: 'profileRajeshNext',
-    feeKey: 'searchResultRajeshFee',
-    clinicFeeKey: 'searchResultRajeshFee',
-    careNeedKeys: ['searchCarePain', 'searchCareLifestyle'],
-    languageKeys: ['searchLangMarathi', 'searchLangHindi'],
-    reviewIds: [2],
+    lastVerifiedKey: '',
+    nextAvailableKey: '',
+    feeKey: '',
+    clinicFeeKey: '',
+    teleFeeLabel: null,
+    clinicFeeLabel: null,
+    registrationNumber: null,
+    passingUniversity: null,
+    photoUrl: null,
+    careNeedKeys: [],
+    languageKeys: [],
+    reviewIds: [],
     credentialsDetail: {
       qualifications: [
         {
@@ -155,19 +179,25 @@ export const DOCTOR_PROFILES: DoctorProfileSeed[] = [
     verified: false,
     nameKey: 'searchResultSunitaName',
     credentialsKey: 'searchResultSunitaCredentials',
-    experienceKey: 'profileSunitaExp',
-    rating: '4.8',
+    experienceKey: '',
+    rating: null,
+    reviewCount: 0,
     reviewsKey: 'searchResultSunitaReviews',
-    consultsKey: 'profileSunitaConsults',
-    aboutKey: 'profileSunitaAbout',
+    consultsKey: '',
+    aboutKey: '',
     regVerifiedKey: 'profileSunitaRegVerified',
-    lastVerifiedKey: 'profileSunitaLastVerified',
-    nextAvailableKey: 'profileSunitaNext',
-    feeKey: 'searchResultSunitaFee',
-    clinicFeeKey: 'profileSunitaClinicFee',
-    careNeedKeys: ['searchCareSkin', 'searchCareAllergy'],
-    languageKeys: ['searchLangEnglish', 'searchLangHindi'],
-    reviewIds: [1],
+    lastVerifiedKey: '',
+    nextAvailableKey: '',
+    feeKey: '',
+    clinicFeeKey: '',
+    teleFeeLabel: null,
+    clinicFeeLabel: null,
+    registrationNumber: null,
+    passingUniversity: null,
+    photoUrl: null,
+    careNeedKeys: [],
+    languageKeys: [],
+    reviewIds: [],
     credentialsDetail: {
       qualifications: [
         {

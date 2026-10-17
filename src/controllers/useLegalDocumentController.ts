@@ -1,5 +1,6 @@
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import { useGetTermsPolicyQuery } from '../store/api/new/bookingApi';
 
 export type LegalDocId = 'terms' | 'privacy' | 'about';
 
@@ -16,8 +17,22 @@ export type LegalDocumentViewModel = {
   versionKey?: TranslationKey;
   introKey: TranslationKey;
   sections: LegalSection[];
+  apiTitle: string | null;
+  apiVersion: string | null;
+  apiBody: string | null;
+  isLoading: boolean;
+  isError: boolean;
+  onRetry: () => void;
   onBack: () => void;
 };
+
+function stripHtml(value: string): string {
+  return value
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
 const DOCS: Record<
   LegalDocId,
@@ -71,6 +86,14 @@ export function useLegalDocumentController({
 }): LegalDocumentViewModel {
   const { language, t } = useLocalization();
   const doc = DOCS[docId];
+  const {
+    data: termsResponse,
+    isLoading,
+    isError,
+    refetch,
+  } = useGetTermsPolicyQuery(undefined, { skip: docId !== 'terms' });
+  const terms = docId === 'terms' ? termsResponse?.data : undefined;
+  const apiBody = terms?.bodyHtml ? stripHtml(terms.bodyHtml) : null;
 
   return {
     language,
@@ -79,7 +102,15 @@ export function useLegalDocumentController({
     titleKey: doc.titleKey,
     versionKey: doc.versionKey,
     introKey: doc.introKey,
-    sections: doc.sections,
+    sections: apiBody ? [] : doc.sections,
+    apiTitle: terms?.title?.trim() || null,
+    apiVersion: terms?.version?.trim() || null,
+    apiBody,
+    isLoading: docId === 'terms' && isLoading,
+    isError: docId === 'terms' && isError && !apiBody,
+    onRetry: () => {
+      void refetch();
+    },
     onBack,
   };
 }

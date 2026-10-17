@@ -22,8 +22,25 @@ import {
   type PublicDoctor,
 } from '../store/api/new/doctorsApi';
 import { useGetFamilyQuery } from '../store/api/new/familyApi';
-import { useGetHomeDashboardQuery } from '../store/api/new/homeApi';
+import {
+  useGetArticlesQuery,
+  useGetCareCategoriesQuery,
+  useGetHomeDashboardQuery,
+} from '../store/api/new/homeApi';
 import { useGetPatientVisitsQuery } from '../store/api/new/visitsApi';
+import { resolveApiUrl } from '../utilities/formatters';
+
+export type HomeCareCategoryItem = {
+  id: string;
+  name: string;
+};
+
+export type HomeArticleItem = {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  imageUrl: string | null;
+};
 
 export type HomeTab =
   | 'home'
@@ -31,6 +48,10 @@ export type HomeTab =
   | 'records'
   | 'medicines'
   | 'account';
+
+/** Stable empty fallback — inline `[]` in render deps causes max update depth. */
+const EMPTY_VISITS: unknown[] = [];
+const EMPTY_PUBLIC_DOCTORS: PublicDoctor[] = [];
 
 export type HomeMemberOption = BookingMember;
 
@@ -116,6 +137,9 @@ export type HomeViewModel = {
   myAppointmentsOpen: boolean;
   onOpenMyAppointments: () => void;
   onCloseMyAppointments: () => void;
+  appointmentRequestsOpen: boolean;
+  onOpenAppointmentRequests: () => void;
+  onCloseAppointmentRequests: () => void;
   accountRecordsOpen: boolean;
   accountRecordsFilter: 'all' | 'prescriptions';
   onOpenAccountRecords: (filter?: 'all' | 'prescriptions') => void;
@@ -130,6 +154,7 @@ export type HomeViewModel = {
   onOpenMyReviews: () => void;
   onCloseMyReviews: () => void;
   appealReviewOpen: boolean;
+  appealReviewId: string | null;
   onOpenAppealReview: (reviewId?: string) => void;
   onCloseAppealReview: () => void;
   helpCentreOpen: boolean;
@@ -162,6 +187,9 @@ export type HomeViewModel = {
   isDoctorsLoading: boolean;
   isDoctorsError: boolean;
   refetchDoctors: () => void;
+  careCategories: HomeCareCategoryItem[];
+  healthArticles: HomeArticleItem[];
+  onSelectCareCategory: (name: string) => void;
   account: AccountViewModel;
 };
 
@@ -196,6 +224,7 @@ export function useHomeController({
   const [editProfileOpen, setEditProfileOpen] = useState(false);
   const [accountFamilyOpen, setAccountFamilyOpen] = useState(false);
   const [myAppointmentsOpen, setMyAppointmentsOpen] = useState(false);
+  const [appointmentRequestsOpen, setAppointmentRequestsOpen] = useState(false);
   const [accountRecordsOpen, setAccountRecordsOpen] = useState(false);
   const [accountRecordsFilter, setAccountRecordsFilter] = useState<
     'all' | 'prescriptions'
@@ -204,10 +233,11 @@ export function useHomeController({
   const [consentCentreOpen, setConsentCentreOpen] = useState(false);
   const [myReviewsOpen, setMyReviewsOpen] = useState(false);
   const [appealReviewOpen, setAppealReviewOpen] = useState(false);
+  const [appealReviewId, setAppealReviewId] = useState<string | null>(null);
   const [helpCentreOpen, setHelpCentreOpen] = useState(false);
   const [raiseTicketOpen, setRaiseTicketOpen] = useState(false);
   const [raiseTicketTopicId, setRaiseTicketTopicId] =
-    useState<HelpTopicId>('medicines');
+    useState<HelpTopicId>('medicines' as HelpTopicId);
   const [bookWithHelpOpen, setBookWithHelpOpen] = useState(false);
   const [legalDocId, setLegalDocId] = useState<LegalDocId | null>(null);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -218,11 +248,39 @@ export function useHomeController({
   const [orderDetailsId, setOrderDetailsId] = useState<string | null>(null);
 
   const {
-    data: publicDoctors = [],
+    data: publicDoctors = EMPTY_PUBLIC_DOCTORS,
     isLoading: isDoctorsLoading,
     isError: isDoctorsError,
     refetch: refetchDoctors,
   } = useGetDoctorsQuery(undefined);
+
+  const { data: careCategoriesResponse } = useGetCareCategoriesQuery();
+  const { data: articlesResponse } = useGetArticlesQuery({
+    pageNumber: 1,
+    pageSize: 10,
+  });
+
+  const careCategories = useMemo<HomeCareCategoryItem[]>(() => {
+    const rows = careCategoriesResponse?.data;
+    if (!Array.isArray(rows)) return [];
+    return rows
+      .map((row) => ({
+        id: String(row.id),
+        name: (row.name || '').trim(),
+      }))
+      .filter((row) => row.name.length > 0);
+  }, [careCategoriesResponse?.data]);
+
+  const healthArticles = useMemo<HomeArticleItem[]>(() => {
+    const rows = articlesResponse?.data;
+    if (!Array.isArray(rows)) return [];
+    return rows.map((row) => ({
+      id: String(row.blogId),
+      title: (row.blogHead || '').trim(),
+      subtitle: row.blogSubHead?.trim() || null,
+      imageUrl: resolveApiUrl(row.blogImage1 ?? null),
+    })).filter((row) => row.title.length > 0);
+  }, [articlesResponse?.data]);
 
   useEffect(() => {
     if (isDoctorsError) {
@@ -430,7 +488,14 @@ export function useHomeController({
   const { data: visitsResponse } = useGetPatientVisitsQuery(undefined, {
     skip: !isAuthenticated,
   });
-  const apiVisits = visitsResponse?.data;
+  const apiVisitsRaw = visitsResponse?.data;
+  const apiVisitsList = Array.isArray(apiVisitsRaw)
+    ? apiVisitsRaw
+    : apiVisitsRaw &&
+        typeof apiVisitsRaw === 'object' &&
+        Array.isArray((apiVisitsRaw as { data?: unknown }).data)
+      ? (apiVisitsRaw as { data: unknown[] }).data
+      : EMPTY_VISITS;
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -447,10 +512,12 @@ export function useHomeController({
       visitType?: string;
       bookingToken?: string;
       patientName?: string;
+      teleSessionId?: number | null;
     };
 
-    const dashboardApps = (homeDashboardData?.nextAppointments || []) as RawVisit[];
-    const serverVisits = (apiVisits || []) as RawVisit[];
+    const dashboardApps = (homeDashboardData?.nextAppointments ??
+      EMPTY_VISITS) as RawVisit[];
+    const serverVisits = apiVisitsList as RawVisit[];
 
     // Combine visits from dashboard and visits endpoint, deduplicating by patientAppId
     const combinedMap = new Map<number, RawVisit>();
@@ -487,8 +554,8 @@ export function useHomeController({
         doctorId: String(a.doctorId),
         doctorNameKey: docName as TranslationKey,
         doctorInitials: initials || 'DR',
-        credentialsKey: 'doctorCredentials' as TranslationKey,
-        experienceKey: 'doctorExperienceYears' as TranslationKey,
+        credentialsKey: '' as TranslationKey,
+        experienceKey: '' as TranslationKey,
         whenLabel: `${a.appointmentDate ? a.appointmentDate.slice(0, 10) : ''} · ${a.appointmentTime || ''}`,
         dateLine: a.appointmentDate ? a.appointmentDate.slice(0, 10) : '',
         timeLine: a.appointmentTime || '',
@@ -497,9 +564,9 @@ export function useHomeController({
         mode,
         modeConsultLabel: mode === 'video' ? 'Video Consultation' : 'In Clinic',
         patientLabel: a.patientName || patientFullName,
-        feeLabel: '₹500',
-        paymentId: a.bookingToken || 'ONLINE',
-        reasonKey: 'aptReasonCough' as TranslationKey,
+        feeLabel: '', // fee from visit detail; list payload has no consultFee yet — hide blank
+        paymentId: a.bookingToken || '',
+        reasonKey: '' as TranslationKey,
         status:
           a.status === 'NOT ARRIVED' || a.status === 'WAITING' || a.status === 'E-CONSULT'
             ? ('confirmed' as AppointmentRequestStatus)
@@ -512,9 +579,22 @@ export function useHomeController({
       const clientOnly = current.filter(
         (c) => c.id !== 'seed-followup-chat' && !mapped.some((m) => m.id === c.id),
       );
-      return [...mapped, ...clientOnly];
+      const next = [...mapped, ...clientOnly];
+      if (
+        next.length === current.length &&
+        next.every(
+          (item, index) =>
+            item.id === current[index]?.id &&
+            item.status === current[index]?.status &&
+            item.whenLabel === current[index]?.whenLabel &&
+            item.patientLabel === current[index]?.patientLabel,
+        )
+      ) {
+        return current;
+      }
+      return next;
     });
-  }, [homeDashboardData?.nextAppointments, apiVisits, isAuthenticated, patientFullName]);
+  }, [homeDashboardData?.nextAppointments, apiVisitsList, isAuthenticated, patientFullName]);
 
   const memberOptions: HomeMemberOption[] = useMemo(
     () => resolveBookingMembers(patientFullName, undefined, apiFamily),
@@ -666,7 +746,19 @@ export function useHomeController({
       setSelectedTab('medicines');
       setSelectedMemberId('self');
     },
-    onViewAllCategories: () => undefined,
+    onViewAllCategories: () => {
+      setSearchOrigin('home');
+      setSearchOpen(true);
+    },
+    careCategories,
+    healthArticles,
+    onSelectCareCategory: (name) => {
+      setSearchOrigin('home');
+      setResultsQuery(name);
+      setResultsOpen(true);
+      setSearchOpen(false);
+      setSearchNonce((n) => n + 1);
+    },
     profileDoctorId,
     onOpenDoctorProfile: (doctorId) => {
       setHealthTipId(null);
@@ -773,6 +865,9 @@ export function useHomeController({
     myAppointmentsOpen,
     onOpenMyAppointments: () => setMyAppointmentsOpen(true),
     onCloseMyAppointments: () => setMyAppointmentsOpen(false),
+    appointmentRequestsOpen,
+    onOpenAppointmentRequests: () => setAppointmentRequestsOpen(true),
+    onCloseAppointmentRequests: () => setAppointmentRequestsOpen(false),
     accountRecordsOpen,
     accountRecordsFilter,
     onOpenAccountRecords: (filter = 'all') => {
@@ -796,8 +891,15 @@ export function useHomeController({
       setAppealReviewOpen(false);
     },
     appealReviewOpen,
-    onOpenAppealReview: () => setAppealReviewOpen(true),
-    onCloseAppealReview: () => setAppealReviewOpen(false),
+    appealReviewId,
+    onOpenAppealReview: (reviewId) => {
+      setAppealReviewId(reviewId ?? null);
+      setAppealReviewOpen(true);
+    },
+    onCloseAppealReview: () => {
+      setAppealReviewOpen(false);
+      setAppealReviewId(null);
+    },
     helpCentreOpen,
     onOpenHelpCentre: () => {
       setHelpCentreOpen(true);

@@ -177,6 +177,22 @@ export const recordsApi = newBaseApi.injectEndpoints({
       }),
       invalidatesTags: ['FollowUps', 'Timeline'],
     }),
+    /** BE-012 — prefer JSON mode for in-app view/share. */
+    getErxPdfMeta: build.query<
+      {
+        success: boolean;
+        data: {
+          erxSnapshotId: number;
+          pdfUrl: string | null;
+          expiresAt: string | null;
+        };
+      },
+      number | string
+    >({
+      query: (erxSnapshotId) =>
+        `api/Erx/${erxSnapshotId}/Pdf?format=json`,
+      providesTags: ['Prescriptions'],
+    }),
   }),
 });
 
@@ -189,4 +205,6 @@ export const {
   useDeleteDocumentMutation,
   useGetFollowUpsQuery,
   useCompleteFollowUpMutation,
+  useGetErxPdfMetaQuery,
+  useLazyGetErxPdfMetaQuery,
 } = recordsApi;

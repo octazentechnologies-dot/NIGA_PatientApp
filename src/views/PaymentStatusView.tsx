@@ -11,18 +11,13 @@ import { radii } from '../theme/radii';
 import { layout, spacing } from '../theme/spacing';
 import { scaleFont } from '../utilities/scale';
 
-const MUTED = '#595959';
-const HAIRLINE = '#E6E6E6';
-const ICON_BLUE = '#2A7BA3';
-const SUCCESS = '#0F7A4E';
-const SUCCESS_FILL = '#E9F5EF';
-const ERROR = '#A3231A';
-const ERROR_FILL = '#FBEBE9';
-const AMBER = '#8A5109';
-const AMBER_FILL = '#FCF3E4';
-const AMBER_BORDER = '#F2C14E';
-const CHIP_FILL = '#E6F5FE';
-const PLACEHOLDER = '#8A8A8A';
+const ICON_BLUE = colors.primary;
+const ERROR = colors.error;
+const ERROR_FILL = colors.errorContainer;
+const AMBER = colors.warning;
+const AMBER_FILL = colors.warningContainer;
+const AMBER_BORDER = colors.tertiaryContainer;
+const PLACEHOLDER = colors.outline;
 
 export function PaymentStatusView(vm: PaymentStatusViewModel) {
   if (vm.status === 'failed') {
@@ -64,19 +59,19 @@ function SuccessStatus({
             onPress={onClose}
             style={styles.iconButton}
           >
-            <Ionicons name="close" size={24} color="#000000" />
+            <Ionicons name="close" size={24} color={colors.ink} />
           </Pressable>
         </View>
         <View style={styles.hero}>
           <View style={styles.successRing}>
             <View style={styles.successCore}>
-              <Ionicons name="checkmark" size={28} color="#FFFFFF" />
+              <Ionicons name="checkmark" size={28} color={colors.card} />
             </View>
           </View>
-          <AppText variant="headlineMd" color="#000000" style={styles.heroTitle}>
+          <AppText variant="headlineMd" color={colors.ink} style={styles.heroTitle}>
             {t('payStatusSuccessTitle')}
           </AppText>
-          <AppText variant="bodyMd" color={MUTED}>
+          <AppText variant="bodyMd" color={colors.muted}>
             {successMeta}
           </AppText>
         </View>
@@ -96,10 +91,10 @@ function SuccessStatus({
               </AppText>
             </View>
             <View style={styles.flex}>
-              <AppText variant="titleMd" color="#000000" style={styles.doctorName}>
+              <AppText variant="titleMd" color={colors.ink} style={styles.doctorName}>
                 {doctorName}
               </AppText>
-              <AppText variant="bodyMd" color={MUTED}>
+              <AppText variant="bodyMd" color={colors.muted}>
                 {specialtyLine}
               </AppText>
             </View>
@@ -111,7 +106,7 @@ function SuccessStatus({
 
         <View style={styles.reminder}>
           <Ionicons name="notifications-outline" size={20} color={ICON_BLUE} />
-          <AppText variant="bodyMd" color="#000000" style={styles.flex}>
+          <AppText variant="bodyMd" color={colors.ink} style={styles.flex}>
             {t('payStatusReminder')}
           </AppText>
         </View>
@@ -121,7 +116,7 @@ function SuccessStatus({
         <AppButton
           label={t('payStatusAddCalendar')}
           onPress={onAddCalendar}
-          icon={<Ionicons name="calendar-outline" size={18} color="#FFFFFF" />}
+          icon={<Ionicons name="calendar-outline" size={18} color={colors.card} />}
         />
         <AppButton
           variant="secondary"
@@ -162,13 +157,13 @@ function FailedStatus({
           onPress={onRetry}
           style={styles.iconButton}
         >
-          <Ionicons name="arrow-back" size={24} color="#000000" />
+          <Ionicons name="arrow-back" size={24} color={colors.ink} />
         </Pressable>
-        <AppText variant="headlineMd" color="#000000" style={styles.title}>
+        <AppText variant="headlineMd" color={colors.ink} style={styles.title}>
           {t('payStatusSecure')}
         </AppText>
         <View style={styles.iconButton}>
-          <Ionicons name="lock-closed" size={18} color="#000000" />
+          <Ionicons name="lock-closed" size={18} color={colors.ink} />
         </View>
       </View>
       <ScrollView
@@ -181,24 +176,24 @@ function FailedStatus({
         <AppText variant="displayLg" color={ERROR} style={styles.failTitle}>
           {t('payStatusFailedTitle')}
         </AppText>
-        <AppText variant="bodyMd" color={MUTED} style={styles.centerCopy}>
+        <AppText variant="bodyMd" color={colors.muted} style={styles.centerCopy}>
           {t('payStatusFailedBody')}
         </AppText>
         <View style={styles.card}>
           <View style={styles.kvRow}>
-            <AppText variant="labelSm" color={MUTED}>
+            <AppText variant="labelSm" color={colors.muted}>
               {t('payStatusReason')}
             </AppText>
-            <AppText variant="bodyMd" color="#000000" weightOverride="600" style={styles.kvValue}>
+            <AppText variant="bodyMd" color={colors.ink} weightOverride="600" style={styles.kvValue}>
               {t('payStatusFailReason')}
             </AppText>
           </View>
           <View style={styles.hairline} />
           <View style={styles.kvRow}>
-            <AppText variant="labelSm" color={MUTED}>
+            <AppText variant="labelSm" color={colors.muted}>
               {t('payStatusAttempt')}
             </AppText>
-            <AppText variant="bodyMd" color="#000000" languageOverride="en">
+            <AppText variant="bodyMd" color={colors.ink} languageOverride="en">
               {attemptId}
             </AppText>
           </View>
@@ -212,7 +207,7 @@ function FailedStatus({
         <AppButton
           label={t('payStatusRetry')}
           onPress={onRetry}
-          icon={<Ionicons name="refresh" size={18} color="#FFFFFF" />}
+          icon={<Ionicons name="refresh" size={18} color={colors.card} />}
         />
         <AppButton
           variant="secondary"
@@ -220,7 +215,7 @@ function FailedStatus({
           onPress={onChooseMethod}
         />
         <Pressable accessibilityRole="button" onPress={onChooseSlot} style={styles.linkBtn}>
-          <AppText variant="labelSm" color={MUTED} weightOverride="600">
+          <AppText variant="labelSm" color={colors.muted} weightOverride="600">
             {t('payStatusOtherSlot')}
           </AppText>
         </Pressable>
@@ -250,17 +245,17 @@ function PendingStatus({
           onPress={onClose}
           style={styles.iconButton}
         >
-          <Ionicons name="close" size={24} color="#000000" />
+          <Ionicons name="close" size={24} color={colors.ink} />
         </Pressable>
       </View>
       <View style={styles.pendingBody}>
         <View style={styles.pendingIcon}>
           <Ionicons name="time" size={48} color={AMBER} />
         </View>
-        <AppText variant="headlineMd" color="#000000" style={styles.heroTitle}>
+        <AppText variant="headlineMd" color={colors.ink} style={styles.heroTitle}>
           {t('payStatusPendingTitle')}
         </AppText>
-        <AppText variant="bodyLg" color={MUTED} style={styles.centerCopy}>
+        <AppText variant="bodyLg" color={colors.muted} style={styles.centerCopy}>
           {t('payStatusPendingBody')}
         </AppText>
         <View style={styles.stepCard}>
@@ -277,8 +272,8 @@ function PendingStatus({
           onPress={onContactSupport}
         />
         <View style={styles.notifyRow}>
-          <Ionicons name="warning-outline" size={14} color={MUTED} />
-          <AppText variant="labelSm" color={MUTED} style={styles.flex}>
+          <Ionicons name="warning-outline" size={14} color={colors.muted} />
+          <AppText variant="labelSm" color={colors.muted} style={styles.flex}>
             {t('payStatusNotify')}
           </AppText>
         </View>
@@ -300,10 +295,10 @@ function Detail({
     <View style={styles.detail}>
       <Ionicons name={icon} size={20} color={ICON_BLUE} />
       <View style={styles.flex}>
-        <AppText variant="labelSm" color={MUTED} style={styles.detailLabel}>
+        <AppText variant="labelSm" color={colors.muted} style={styles.detailLabel}>
           {label}
         </AppText>
-        <AppText variant="bodyMd" color="#000000" weightOverride="600">
+        <AppText variant="bodyMd" color={colors.ink} weightOverride="600">
           {value}
         </AppText>
       </View>
@@ -329,12 +324,12 @@ function Step({
           active && styles.stepActive,
         ]}
       >
-        {done ? <Ionicons name="checkmark" size={14} color="#FFFFFF" /> : null}
+        {done ? <Ionicons name="checkmark" size={14} color={colors.card} /> : null}
         {active ? <View style={styles.stepPulse} /> : null}
       </View>
       <AppText
         variant="labelSm"
-        color={active || done ? '#000000' : MUTED}
+        color={active || done ? colors.ink : colors.muted}
         weightOverride={active ? '600' : '400'}
         style={styles.stepLabel}
       >
@@ -355,7 +350,7 @@ const styles = StyleSheet.create({
   successHeader: {
     backgroundColor: colors.card,
     borderBottomWidth: 1,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
     paddingBottom: spacing.md,
   },
   topBar: {
@@ -365,7 +360,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   topBarPlain: {
     backgroundColor: colors.card,
@@ -418,9 +413,9 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: radii.full,
-    backgroundColor: SUCCESS_FILL,
+    backgroundColor: colors.successContainer,
     borderWidth: 1,
-    borderColor: SUCCESS,
+    borderColor: colors.success,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
@@ -429,14 +424,14 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: radii.full,
-    backgroundColor: SUCCESS,
+    backgroundColor: colors.success,
     alignItems: 'center',
     justifyContent: 'center',
   },
   card: {
     alignSelf: 'stretch',
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     padding: spacing.md,
     gap: 14,
@@ -448,13 +443,13 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingBottom: 14,
     borderBottomWidth: 1,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   avatar: {
     width: 48,
     height: 48,
     borderRadius: radii.full,
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -476,7 +471,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 10,
-    backgroundColor: CHIP_FILL,
+    backgroundColor: colors.primaryContainer,
     borderWidth: 1,
     borderColor: ICON_BLUE,
     borderRadius: radii.sm,
@@ -484,7 +479,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     borderTopWidth: 1,
-    borderTopColor: HAIRLINE,
+    borderTopColor: colors.outlineVariant,
     paddingHorizontal: spacing.gutter,
     paddingTop: spacing.sm,
     gap: 10,
@@ -549,7 +544,7 @@ const styles = StyleSheet.create({
   },
   hairline: {
     height: 1,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
   },
   holdStrip: {
     alignSelf: 'stretch',
@@ -575,7 +570,7 @@ const styles = StyleSheet.create({
   stepCard: {
     alignSelf: 'stretch',
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     paddingVertical: 20,
     paddingHorizontal: 12,
@@ -589,7 +584,7 @@ const styles = StyleSheet.create({
     right: 36,
     top: 35,
     height: 2,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
   },
   stepProgress: {
     position: 'absolute',
@@ -609,15 +604,15 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: radii.full,
-    backgroundColor: '#F2F2F2',
+    backgroundColor: colors.surfaceVariant,
     borderWidth: 1,
     borderColor: PLACEHOLDER,
     alignItems: 'center',
     justifyContent: 'center',
   },
   stepDone: {
-    backgroundColor: SUCCESS,
-    borderColor: SUCCESS,
+    backgroundColor: colors.success,
+    borderColor: colors.success,
   },
   stepActive: {
     backgroundColor: AMBER_FILL,

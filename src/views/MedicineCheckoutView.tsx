@@ -1,5 +1,12 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sheetBottomPadding } from '../utilities/sheetInset';
 
@@ -12,15 +19,8 @@ import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
 import { layout, spacing } from '../theme/spacing';
 
-const INK = '#1F1F1F';
-const MUTED = '#595959';
-const HAIRLINE = '#DDDFE2';
-const ACTION = '#2A7BA3';
-const ACTION_OUTLINE = '#276F93';
-const WARN = '#8A5109';
-const WARN_FILL = '#FCF3E4';
-const ICON_CYAN = '#5CCEF7';
-
+const WARN = colors.warning;
+const WARN_FILL = colors.warningContainer;
 export function MedicineCheckoutView(vm: MedicineCheckoutViewModel) {
   const insets = useSafeAreaInsets();
 
@@ -34,11 +34,11 @@ export function MedicineCheckoutView(vm: MedicineCheckoutViewModel) {
             onPress={vm.onBack}
             style={styles.iconHit}
           >
-            <Ionicons name="arrow-back" size={24} color={INK} />
+            <Ionicons name="arrow-back" size={24} color={colors.ink} />
           </Pressable>
           <AppText
             variant="headlineMd"
-            color={INK}
+            color={colors.ink}
             style={styles.headerTitle}
             numberOfLines={1}
           >
@@ -57,41 +57,137 @@ export function MedicineCheckoutView(vm: MedicineCheckoutViewModel) {
       >
         <View style={styles.card}>
           <View style={styles.cardHead}>
-            <AppText variant="headlineMd" color={INK}>
+            <AppText variant="headlineMd" color={colors.ink}>
               {vm.t('checkoutDeliveryAddress')}
             </AppText>
             <Pressable accessibilityRole="button" onPress={vm.onEditAddress}>
-              <AppText variant="labelMd" color={ACTION_OUTLINE} weightOverride="600">
+              <AppText variant="labelMd" color={colors.primaryOutline} weightOverride="600">
                 {vm.t('checkoutEdit')}
               </AppText>
             </Pressable>
           </View>
-          <AppText variant="bodyLg" color={INK} weightOverride="600">
+          <AppText variant="bodyLg" color={colors.ink} weightOverride="600">
             {vm.recipientName}
           </AppText>
-          {vm.addressLines.map((line) => (
-            <AppText key={line} variant="bodyMd" color={MUTED}>
-              {line}
+          {vm.addressesLoading ? (
+            <ActivityIndicator color={colors.primary} />
+          ) : vm.addressLines.length === 0 ? (
+            <AppText variant="bodyMd" color={colors.muted} raw>
+              Add an address for delivery.
             </AppText>
-          ))}
-          <AppText variant="bodyMd" color={MUTED}>
-            {vm.phoneLabel}
-          </AppText>
-          <View style={styles.delayBox}>
-            <Ionicons name="car-outline" size={20} color={WARN} />
-            <View style={styles.flex}>
-              <AppText variant="labelMd" color={WARN} weightOverride="600">
-                {vm.t('checkoutDelayTitle')}
+          ) : (
+            vm.addressLines.map((line) => (
+              <AppText key={line} variant="bodyMd" color={colors.muted} raw>
+                {line}
               </AppText>
-              <AppText variant="bodyMd" color={WARN}>
-                {vm.t('checkoutDelayBody')}
-              </AppText>
+            ))
+          )}
+          {vm.phoneLabel ? (
+            <AppText variant="bodyMd" color={colors.muted} raw>
+              {vm.phoneLabel}
+            </AppText>
+          ) : null}
+          {vm.addressPickerOpen ? (
+            <View style={styles.picker}>
+              {vm.addresses.length === 0 ? (
+                <AppText variant="bodyMd" color={colors.muted} raw>
+                  No saved addresses yet.
+                </AppText>
+              ) : (
+                vm.addresses.map((addr) => {
+                  const selected = addr.addressId === vm.addressId;
+                  return (
+                    <Pressable
+                      key={addr.addressId}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected }}
+                      onPress={() => vm.onSelectAddress(addr.addressId)}
+                      style={[styles.addrRow, selected && styles.addrRowOn]}
+                    >
+                      <AppText variant="bodyMd" color={colors.ink} raw>
+                        {addr.line1}
+                        {addr.city ? `, ${addr.city}` : ''}
+                      </AppText>
+                      {addr.isDefault ? (
+                        <AppText variant="labelSm" color={colors.primaryOutline} weightOverride="600">
+                          Default
+                        </AppText>
+                      ) : null}
+                    </Pressable>
+                  );
+                })
+              )}
+              <AppButton
+                variant="secondary"
+                label="Add an address"
+                onPress={vm.onOpenAddressForm}
+              />
             </View>
-          </View>
+          ) : null}
+          {vm.addressFormOpen ? (
+            <View style={styles.form}>
+              <AddressField
+                label="Line 1"
+                value={vm.addressForm.line1}
+                onChangeText={(line1) => vm.onAddressFormChange({ line1 })}
+              />
+              <AddressField
+                label="Line 2"
+                value={vm.addressForm.line2}
+                onChangeText={(line2) => vm.onAddressFormChange({ line2 })}
+              />
+              <AddressField
+                label="City"
+                value={vm.addressForm.city}
+                onChangeText={(city) => vm.onAddressFormChange({ city })}
+              />
+              <AddressField
+                label="State"
+                value={vm.addressForm.state}
+                onChangeText={(state) => vm.onAddressFormChange({ state })}
+              />
+              <AddressField
+                label="Pincode"
+                value={vm.addressForm.pincode}
+                onChangeText={(pincode) => vm.onAddressFormChange({ pincode })}
+                keyboardType="number-pad"
+              />
+              {vm.addressFormError ? (
+                <AppText variant="bodyMd" color={colors.error} raw>
+                  {vm.addressFormError}
+                </AppText>
+              ) : null}
+              <View style={styles.formActions}>
+                <AppButton
+                  variant="secondary"
+                  label="Cancel"
+                  onPress={vm.onCloseAddressForm}
+                />
+                <AppButton
+                  label={vm.addressSaveBusy ? 'Saving…' : 'Save address'}
+                  onPress={vm.onSaveAddress}
+                  disabled={vm.addressSaveBusy}
+                />
+              </View>
+            </View>
+          ) : null}
+          {vm.shippingLabel ? (
+            <View style={styles.delayBox}>
+              <Ionicons name="car-outline" size={20} color={WARN} />
+              <View style={styles.flex}>
+                <AppText variant="labelMd" color={WARN} weightOverride="600">
+                  {vm.t('checkoutDelayTitle')}
+                </AppText>
+                <AppText variant="bodyMd" color={WARN}>
+                  {vm.t('checkoutDelayBody')}
+                </AppText>
+              </View>
+            </View>
+          ) : null}
         </View>
 
         <View style={styles.card}>
-          <AppText variant="headlineMd" color={INK}>
+          <AppText variant="headlineMd" color={colors.ink}>
             {vm.t('checkoutOrderItems')}
           </AppText>
           {vm.items.map((item, index) => (
@@ -110,18 +206,18 @@ export function MedicineCheckoutView(vm: MedicineCheckoutViewModel) {
                       : 'bottle-tonic-plus-outline'
                   }
                   size={28}
-                  color={ICON_CYAN}
+                  color={colors.iconFill}
                 />
               </View>
               <View style={styles.flex}>
-                <AppText variant="bodyLg" color={INK} weightOverride="600">
+                <AppText variant="bodyLg" color={colors.ink} weightOverride="600">
                   {vm.t(item.nameKey)}
                 </AppText>
-                <AppText variant="bodyMd" color={MUTED}>
+                <AppText variant="bodyMd" color={colors.muted}>
                   {vm.t(item.metaKey)}
                 </AppText>
               </View>
-              <AppText variant="bodyLg" color={INK} weightOverride="600">
+              <AppText variant="bodyLg" color={colors.ink} weightOverride="600">
                 {item.priceLabel}
               </AppText>
             </View>
@@ -129,7 +225,7 @@ export function MedicineCheckoutView(vm: MedicineCheckoutViewModel) {
         </View>
 
         <View style={styles.card}>
-          <AppText variant="headlineMd" color={INK}>
+          <AppText variant="headlineMd" color={colors.ink}>
             {vm.t('checkoutPaymentDetails')}
           </AppText>
           <PayRow label={vm.t('checkoutSubtotal')} value={vm.subtotalLabel} muted />
@@ -138,7 +234,7 @@ export function MedicineCheckoutView(vm: MedicineCheckoutViewModel) {
             label={vm.t('checkoutShipping')}
             value={vm.shippingLabel}
             muted
-            valueColor={vm.shippingFree ? ACTION_OUTLINE : MUTED}
+            valueColor={vm.shippingFree ? colors.primaryOutline : colors.muted}
             valueWeight={vm.shippingFree ? '600' : '400'}
           />
           <View style={styles.totalDivider} />
@@ -150,38 +246,69 @@ export function MedicineCheckoutView(vm: MedicineCheckoutViewModel) {
 
           <AppText
             variant="labelSm"
-            color={MUTED}
+            color={colors.muted}
             style={styles.payWithLabel}
             weightOverride="500"
           >
             {vm.t('checkoutPayWith')}
           </AppText>
           <MethodRow
-            selected={vm.method === 'card'}
+            selected={vm.method === 'online' || vm.method === 'card'}
             icon="card-outline"
-            label={vm.t('checkoutPayCard')}
-            onPress={() => vm.onSelectMethod('card')}
-          />
-          <MethodRow
-            selected={vm.method === 'wallet'}
-            icon="wallet-outline"
-            label={vm.t('checkoutPayWallet')}
-            onPress={() => vm.onSelectMethod('wallet')}
+            label="Pay online (Razorpay Checkout)"
+            onPress={() => vm.onSelectMethod('online')}
           />
 
+          {vm.placeOrderNote ? (
+            <AppText variant="bodyMd" color={colors.error} raw>
+              {vm.placeOrderNote}
+            </AppText>
+          ) : null}
           <AppButton
-            label={vm
-              .t('checkoutPlaceOrder')
-              .replace('{total}', vm.totalLabel)}
+            label={
+              vm.payBusy
+                ? 'Confirming…'
+                : vm.totalLabel
+                  ? vm.t('checkoutPlaceOrder').replace('{total}', vm.totalLabel)
+                  : vm.t('checkoutPlaceOrder').replace('{total}', '').trim()
+            }
             onPress={vm.onPlaceOrder}
+            disabled={vm.payBusy || !vm.medicineOrderId}
             icon={<Ionicons name="lock-closed" size={18} color={colors.onButton} />}
             style={styles.placeBtn}
           />
-          <AppText variant="labelSm" color={MUTED} style={styles.terms}>
+          <AppText variant="labelSm" color={colors.muted} style={styles.terms}>
             {vm.t('checkoutTerms')}
           </AppText>
         </View>
       </ScrollView>
+    </View>
+  );
+}
+
+function AddressField({
+  label,
+  value,
+  onChangeText,
+  keyboardType,
+}: {
+  label: string;
+  value: string;
+  onChangeText: (text: string) => void;
+  keyboardType?: 'default' | 'number-pad';
+}) {
+  return (
+    <View style={styles.field}>
+      <AppText variant="labelSm" color={colors.muted} weightOverride="600">
+        {label}
+      </AppText>
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        style={styles.fieldInput}
+        placeholderTextColor={colors.muted}
+        keyboardType={keyboardType}
+      />
     </View>
   );
 }
@@ -201,18 +328,21 @@ function PayRow({
   valueColor?: string;
   valueWeight?: '400' | '500' | '600';
 }) {
+  if (!value) {
+    return null;
+  }
   return (
     <View style={styles.payRow}>
       <AppText
         variant={large ? 'bodyLg' : 'bodyMd'}
-        color={muted && !large ? MUTED : INK}
+        color={muted && !large ? colors.muted : colors.ink}
         weightOverride={large ? '600' : '400'}
       >
         {label}
       </AppText>
       <AppText
         variant={large ? 'bodyLg' : 'bodyMd'}
-        color={valueColor ?? (muted && !large ? MUTED : INK)}
+        color={valueColor ?? (muted && !large ? colors.muted : colors.ink)}
         weightOverride={valueWeight ?? (large ? '600' : '400')}
       >
         {value}
@@ -242,8 +372,8 @@ function MethodRow({
       <View style={[styles.radio, selected && styles.radioOn]}>
         {selected ? <View style={styles.radioDot} /> : null}
       </View>
-      <Ionicons name={icon} size={22} color={INK} />
-      <AppText variant="bodyMd" color={INK} style={styles.flex}>
+      <Ionicons name={icon} size={22} color={colors.ink} />
+      <AppText variant="bodyMd" color={colors.ink} style={styles.flex}>
         {label}
       </AppText>
     </Pressable>
@@ -258,7 +388,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   headerRow: {
     minHeight: 56,
@@ -284,7 +414,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderRadius: radii.default,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     padding: spacing.lg,
     gap: spacing.sm,
   },
@@ -302,7 +432,7 @@ const styles = StyleSheet.create({
     backgroundColor: WARN_FILL,
     borderRadius: radii.sm,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     padding: spacing.md,
     marginTop: spacing.sm,
   },
@@ -314,7 +444,7 @@ const styles = StyleSheet.create({
   },
   itemBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: HAIRLINE,
+    borderBottomColor: colors.outlineVariant,
   },
   itemIcon: {
     width: 64,
@@ -322,7 +452,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
     backgroundColor: colors.page,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -333,7 +463,7 @@ const styles = StyleSheet.create({
   },
   totalDivider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: HAIRLINE,
+    backgroundColor: colors.outlineVariant,
     marginVertical: spacing.sm,
   },
   payWithLabel: {
@@ -348,31 +478,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     borderWidth: 1,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     paddingHorizontal: spacing.md,
     backgroundColor: colors.card,
   },
   methodRowOn: {
-    borderColor: ACTION,
+    borderColor: colors.primary,
   },
   radio: {
     width: 20,
     height: 20,
     borderRadius: radii.full,
     borderWidth: 1.5,
-    borderColor: HAIRLINE,
+    borderColor: colors.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
   },
   radioOn: {
-    borderColor: ACTION,
+    borderColor: colors.primary,
   },
   radioDot: {
     width: 10,
     height: 10,
     borderRadius: radii.full,
-    backgroundColor: ACTION,
+    backgroundColor: colors.primary,
   },
   placeBtn: {
     marginTop: spacing.md,
@@ -384,5 +514,42 @@ const styles = StyleSheet.create({
   },
   flex: {
     flex: 1,
+  },
+  picker: {
+    marginTop: spacing.sm,
+    gap: spacing.sm,
+  },
+  addrRow: {
+    minHeight: layout.buttonHeight,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.page,
+    gap: spacing.xs,
+  },
+  addrRowOn: {
+    borderColor: colors.primary,
+  },
+  form: {
+    marginTop: spacing.sm,
+    gap: spacing.sm,
+  },
+  field: {
+    gap: spacing.xs,
+  },
+  fieldInput: {
+    minHeight: layout.buttonHeight,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.sm,
+    color: colors.ink,
+    backgroundColor: colors.page,
+  },
+  formActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
   },
 });

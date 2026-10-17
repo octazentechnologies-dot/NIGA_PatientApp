@@ -13,88 +13,13 @@ import {
   DEFAULT_DOCTOR_FILTERS,
   EMPTY_DOCTOR_FILTERS,
 } from '../models/search';
-import { useGetDoctorsQuery } from '../store/api/new/doctorsApi';
+import {
+  useGetDoctorFilterOptionsQuery,
+  useGetDoctorsQuery,
+} from '../store/api/new/doctorsApi';
+import { formatMoney, resolveApiUrl } from '../utilities/formatters';
 
 const STOP_WORDS = new Set(['in', 'or', 'the', 'a', 'an', 'dr', 'dr.', 'of']);
-const CURRENT_CITY_ID = 'solapur';
-
-const RESULTS: DoctorSearchResult[] = [
-  {
-    id: 'anjali',
-    initials: 'AD',
-    nameKey: 'searchResultAnjaliName',
-    credentialsKey: 'searchResultAnjaliCredentials',
-    registrationKey: 'searchResultAnjaliReg',
-    experienceKey: 'searchResultAnjaliExperience',
-    rating: '4.6',
-    reviewsKey: 'searchResultAnjaliReviews',
-    feeKey: 'searchResultAnjaliFee',
-    fee: 600,
-    availabilityKey: 'searchResultAnjaliWhen',
-    availabilitySoon: true,
-    availabilitySlots: ['now', 'today'],
-    languageKeys: ['searchLangMarathi', 'searchLangEnglish'],
-    consultLanguages: ['mr', 'en'],
-    modes: ['video', 'clinic'],
-    careNeedIds: ['skin'],
-    gender: 'female',
-    cityId: 'solapur',
-    recognizedQualification: true,
-    focusCertified: true,
-    keywords: 'anjali deshmukh skin solapur eczema acne homeopathy doctor',
-    verified: true,
-    certifiedKey: 'searchCertifiedBanner',
-  },
-  {
-    id: 'rajesh',
-    initials: 'RP',
-    nameKey: 'searchResultRajeshName',
-    credentialsKey: 'searchResultRajeshCredentials',
-    experienceKey: 'searchResultRajeshExperience',
-    rating: '4.2',
-    reviewsKey: 'searchResultRajeshReviews',
-    feeKey: 'searchResultRajeshFee',
-    fee: 400,
-    availabilityKey: 'searchResultRajeshWhen',
-    availabilitySoon: false,
-    availabilitySlots: ['tomorrow'],
-    languageKeys: ['searchLangMarathi', 'searchLangHindi'],
-    consultLanguages: ['mr', 'hi'],
-    modes: ['video'],
-    careNeedIds: ['pain', 'lifestyle'],
-    gender: 'male',
-    cityId: 'pune',
-    recognizedQualification: true,
-    focusCertified: false,
-    keywords: 'rajesh patil pune homeopathy doctor joints',
-    verified: true,
-  },
-  {
-    id: 'sunita',
-    initials: 'SS',
-    nameKey: 'searchResultSunitaName',
-    credentialsKey: 'searchResultSunitaCredentials',
-    experienceKey: 'searchResultSunitaExperience',
-    rating: '4.8',
-    reviewsKey: 'searchResultSunitaReviews',
-    feeKey: 'searchResultSunitaFee',
-    fee: 800,
-    availabilityKey: 'searchResultSunitaWhen',
-    availabilitySoon: true,
-    availabilitySlots: ['now', 'today'],
-    languageKeys: ['searchLangEnglish', 'searchLangHindi'],
-    consultLanguages: ['en', 'hi'],
-    modes: ['video'],
-    careNeedIds: ['skin'],
-    gender: 'female',
-    cityId: 'mumbai',
-    recognizedQualification: true,
-    focusCertified: false,
-    keywords: 'sunita sharma mumbai dermatology skin doctor',
-    verified: false,
-    sponsored: true,
-  },
-];
 
 function toggleValue<T>(list: T[], value: T): T[] {
   return list.includes(value)
@@ -121,7 +46,7 @@ function matchesQuery(
     doctor.keywords,
     t(doctor.nameKey),
     t(doctor.credentialsKey),
-    t(doctor.experienceKey),
+    doctor.experienceKey ? t(doctor.experienceKey) : '',
     doctor.certifiedKey ? t(doctor.certifiedKey) : '',
   ]
     .join(' ')
@@ -156,25 +81,14 @@ function matchesFilters(
     return false;
   }
 
-  if (doctor.fee < filters.feeMin || doctor.fee > filters.feeMax) {
-    return false;
+  if (doctor.fee != null) {
+    if (doctor.fee < filters.feeMin || doctor.fee > filters.feeMax) {
+      return false;
+    }
   }
 
-  if (
-    filters.languages.length > 0 &&
-    !filters.languages.some((language) =>
-      doctor.consultLanguages.includes(language),
-    )
-  ) {
-    return false;
-  }
-
-  if (
-    filters.genders.length > 0 &&
-    !filters.genders.includes(doctor.gender)
-  ) {
-    return false;
-  }
+  // Languages / gender are not on Public/Doctors — skip client inventing them.
+  // If filters request languages/genders and we have no data, do not exclude.
 
   if (filters.recognizedQualification && !doctor.recognizedQualification) {
     return false;
@@ -184,9 +98,7 @@ function matchesFilters(
     return false;
   }
 
-  const cityIds = filters.useCurrentLocation
-    ? [...filters.cityIds, CURRENT_CITY_ID]
-    : filters.cityIds;
+  const cityIds = filters.cityIds;
   if (cityIds.length > 0 && !cityIds.includes(doctor.cityId)) {
     return false;
   }
@@ -198,7 +110,7 @@ function filterDoctors(
   query: string,
   filters: DoctorFilters,
   t: (key: TranslationKey) => string,
-  sourceList: DoctorSearchResult[] = RESULTS,
+  sourceList: DoctorSearchResult[],
 ): DoctorSearchResult[] {
   return sourceList.filter(
     (doctor) => matchesQuery(doctor, query, t) && matchesFilters(doctor, filters),
@@ -228,6 +140,8 @@ export type SearchResultsViewModel = {
   t: (key: TranslationKey) => string;
   query: string;
   loading: boolean;
+  isError: boolean;
+  canLoadMore: boolean;
   results: DoctorSearchResult[];
   filterCount: number;
   videoFilterOn: boolean;
@@ -241,6 +155,8 @@ export type SearchResultsViewModel = {
   matchingCount: number;
   datePickerOpen: boolean;
   customDate: Date;
+  cityOptions: { id: string; label: string }[];
+  qualificationOptions: { id: string; label: string }[];
   onBack: () => void;
   onOpenSearch: () => void;
   onOpenFilters: () => void;
@@ -273,6 +189,8 @@ export type SearchResultsViewModel = {
   onSelectLanguage: (language: AppLanguage) => void;
   onBook: (doctorId: string) => void;
   onBookAssistance: () => void;
+  onRetry: () => void;
+  onLoadMore: () => void;
 };
 
 export function useSearchResultsController({
@@ -291,44 +209,102 @@ export function useSearchResultsController({
   onOpenDoctor: (doctorId: string) => void;
 }): SearchResultsViewModel {
   const { language, setLanguage, t } = useLocalization();
-  const [loading, setLoading] = useState(true);
   const [applied, setApplied] = useState<DoctorFilters>(DEFAULT_DOCTOR_FILTERS);
   const [draft, setDraft] = useState<DoctorFilters>(DEFAULT_DOCTOR_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [whyOrderOpen, setWhyOrderOpen] = useState(false);
+  const [pageNumber, setPageNumber] = useState(1);
+  const [debouncedQuery, setDebouncedQuery] = useState(query);
+  const [accumulated, setAccumulated] = useState<DoctorSearchResult[]>([]);
+
+  useEffect(() => {
+    const handle = setTimeout(() => setDebouncedQuery(query), 300);
+    return () => clearTimeout(handle);
+  }, [query]);
 
   useEffect(() => {
     if (!active) {
-      return undefined;
+      return;
     }
-
-    setLoading(true);
     setApplied(DEFAULT_DOCTOR_FILTERS);
     setDraft(DEFAULT_DOCTOR_FILTERS);
     setFiltersOpen(false);
     setWhyOrderOpen(false);
-    const timer = setTimeout(() => setLoading(false), 1400);
-    return () => clearTimeout(timer);
-  }, [active, query, searchNonce]);
+    setPageNumber(1);
+    setAccumulated([]);
+  }, [active, debouncedQuery, searchNonce]);
 
   const rerunSearch = (next: DoctorFilters) => {
     setApplied(next);
     setDraft(next);
     setFiltersOpen(false);
-    setLoading(true);
-    setTimeout(() => setLoading(false), 900);
+    setPageNumber(1);
+    setAccumulated([]);
   };
 
-  const { data: apiDoctors } = useGetDoctorsQuery(
-    active ? { q: query || undefined } : undefined,
+  const teleOnly = applied.modes.length === 1 && applied.modes[0] === 'video';
+  const cityParam =
+    applied.cityIds.length === 1 ? applied.cityIds[0] : undefined;
+  const feeFilterActive =
+    applied.feeMin !== EMPTY_DOCTOR_FILTERS.feeMin ||
+    applied.feeMax !== EMPTY_DOCTOR_FILTERS.feeMax;
+
+  const {
+    data: apiDoctors,
+    isLoading,
+    isFetching,
+    isError,
+    refetch,
+  } = useGetDoctorsQuery(
+    active
+      ? {
+          q: debouncedQuery.trim() || undefined,
+          city: cityParam,
+          teleOnly: teleOnly || undefined,
+          isOnline: applied.availability.includes('now') ? true : undefined,
+          minFee: feeFilterActive ? applied.feeMin : undefined,
+          maxFee: feeFilterActive ? applied.feeMax : undefined,
+          // BE-029 — omit or send real category id only; unknown → empty list.
+          careCategoryId:
+            applied.careCategoryId != null && applied.careCategoryId > 0
+              ? applied.careCategoryId
+              : undefined,
+          sortBy: 'online',
+          pageNumber,
+          pageSize: 20,
+        }
+      : undefined,
     { skip: !active },
   );
 
-  const combinedDoctors = useMemo<DoctorSearchResult[]>(() => {
-    if (!apiDoctors || apiDoctors.length === 0) return RESULTS;
-    const mapped: DoctorSearchResult[] = apiDoctors.map((doc) => {
-      const docName = doc.displayName || 'Doctor';
+  // BE-009 — cities / qualifications for chips (not hardcoded).
+  const { data: filterOptions } = useGetDoctorFilterOptionsQuery(undefined, {
+    skip: !active,
+  });
+  const cityOptions = useMemo(
+    () =>
+      (filterOptions?.cities ?? []).map((city) => ({
+        id: city.trim().toLowerCase(),
+        label: city.trim(),
+      })).filter((c) => c.label.length > 0),
+    [filterOptions?.cities],
+  );
+  const qualificationOptions = useMemo(
+    () =>
+      (filterOptions?.qualifications ?? []).map((q) => ({
+        id: q.trim().toLowerCase(),
+        label: q.trim(),
+      })).filter((q) => q.label.length > 0),
+    [filterOptions?.qualifications],
+  );
+
+  const pageMapped = useMemo<DoctorSearchResult[]>(() => {
+    if (!apiDoctors) {
+      return [];
+    }
+    return apiDoctors.map((doc) => {
+      const docName = (doc.displayName || '').trim() || 'Doctor';
       const initials = docName
         .split(' ')
         .filter(Boolean)
@@ -336,43 +312,87 @@ export function useSearchResultsController({
         .join('')
         .slice(0, 2)
         .toUpperCase();
-      const fee = doc.consultFeeInClinic || doc.consultFeeTele || 500;
+      const preferredFee =
+        doc.consultFeeTele != null
+          ? doc.consultFeeTele
+          : doc.consultFeeInClinic;
+      const feeLabel = formatMoney(preferredFee ?? null, 'INR');
+      const verified = Boolean(doc.verified ?? doc.isVerified);
+      const modes: DoctorConsultMode[] = [];
+      if (doc.consultFeeTele != null) {
+        modes.push('video');
+      }
+      if (doc.consultFeeInClinic != null) {
+        modes.push('clinic');
+      }
       return {
         id: String(doc.doctorId),
         initials: initials || 'DR',
         nameKey: docName as TranslationKey,
-        credentialsKey: (doc.qualification || 'Homeopathy Consultant') as TranslationKey,
-        experienceKey: 'doctorExperienceYears' as TranslationKey,
-        rating: doc.averageRating != null ? String(doc.averageRating.toFixed(1)) : '4.5',
-        reviewsKey: (doc.reviewCount ? `${doc.reviewCount} reviews` : 'reviewsCount') as TranslationKey,
-        feeKey: `₹${fee}` as TranslationKey,
-        fee,
-        availabilityKey: 'searchResultAnjaliWhen' as TranslationKey,
+        credentialsKey: (doc.qualification || '') as TranslationKey,
+        registrationKey: doc.registrationNumber
+          ? (doc.registrationNumber as TranslationKey)
+          : undefined,
+        experienceKey: null,
+        rating:
+          doc.reviewCount > 0 && doc.averageRating != null
+            ? String(doc.averageRating.toFixed(1))
+            : null,
+        reviewsKey: `${doc.reviewCount}` as TranslationKey,
+        reviewCount: doc.reviewCount ?? 0,
+        feeLabel,
+        feeKey: (feeLabel ?? '') as TranslationKey,
+        fee: preferredFee ?? null,
+        availabilityKey: (doc.isOnline ? 'Online now' : 'Offline') as TranslationKey,
         availabilitySoon: doc.isOnline,
-        availabilitySlots: doc.isOnline ? ['now', 'today'] : ['tomorrow'],
-        languageKeys: ['searchLangMarathi', 'searchLangEnglish'],
-        consultLanguages: ['mr', 'en'],
-        modes: doc.consultFeeTele ? ['video', 'clinic'] : ['clinic'],
-        careNeedIds: ['skin'],
-        gender: 'female',
-        cityId: doc.city?.toLowerCase() || 'pune',
-        recognizedQualification: doc.isVerified,
-        focusCertified: doc.isVerified,
-        keywords: `${docName} ${doc.city || ''} ${doc.qualification || ''} ${doc.clinicName || ''}`.toLowerCase(),
-        verified: doc.isVerified,
+        availabilitySlots: doc.isOnline
+          ? (['now', 'today'] as DoctorAvailabilitySlot[])
+          : (['tomorrow'] as DoctorAvailabilitySlot[]),
+        languageKeys: [],
+        consultLanguages: [],
+        modes,
+        careNeedIds: [],
+        gender: null,
+        cityId: (doc.city || '').toLowerCase(),
+        recognizedQualification: verified,
+        focusCertified: verified,
+        keywords:
+          `${docName} ${doc.city || ''} ${doc.qualification || ''} ${doc.clinicName || ''}`.toLowerCase(),
+        verified,
+        photoUrl: resolveApiUrl(doc.photoUrl ?? doc.photoPath ?? null),
       };
     });
-    return mapped;
   }, [apiDoctors]);
 
+  useEffect(() => {
+    if (!pageMapped.length && pageNumber === 1) {
+      setAccumulated([]);
+      return;
+    }
+    if (pageNumber === 1) {
+      setAccumulated(pageMapped);
+      return;
+    }
+    setAccumulated((prev) => {
+      const seen = new Set(prev.map((d) => d.id));
+      const next = pageMapped.filter((d) => !seen.has(d.id));
+      return next.length ? [...prev, ...next] : prev;
+    });
+  }, [pageMapped, pageNumber]);
+
+  const combinedDoctors = accumulated;
+  const loading = isLoading || (isFetching && pageNumber === 1);
+  const canLoadMore =
+    Boolean(apiDoctors) && apiDoctors!.length >= 20 && !isFetching;
+
   const results = useMemo(
-    () => filterDoctors(query, applied, t, combinedDoctors),
-    [applied, query, t, combinedDoctors],
+    () => filterDoctors(debouncedQuery, applied, t, combinedDoctors),
+    [applied, debouncedQuery, t, combinedDoctors],
   );
 
   const matchingCount = useMemo(
-    () => filterDoctors(query, draft, t, combinedDoctors).length,
-    [draft, query, t, combinedDoctors],
+    () => filterDoctors(debouncedQuery, draft, t, combinedDoctors).length,
+    [draft, debouncedQuery, t, combinedDoctors],
   );
 
   const customDate = draft.customDate
@@ -384,6 +404,8 @@ export function useSearchResultsController({
     t,
     query,
     loading,
+    isError,
+    canLoadMore,
     results,
     filterCount: countActiveFilters(applied),
     videoFilterOn: applied.modes.includes('video'),
@@ -397,6 +419,8 @@ export function useSearchResultsController({
     matchingCount,
     datePickerOpen,
     customDate: Number.isNaN(customDate.getTime()) ? new Date() : customDate,
+    cityOptions,
+    qualificationOptions,
     onBack,
     onOpenSearch,
     onOpenFilters: () => {
@@ -499,5 +523,12 @@ export function useSearchResultsController({
     onSelectLanguage: setLanguage,
     onBook: onOpenDoctor,
     onBookAssistance: () => undefined,
+    onRetry: () => {
+      void refetch();
+    },
+    onLoadMore: () => {
+      if (!canLoadMore) return;
+      setPageNumber((n) => n + 1);
+    },
   };
 }
