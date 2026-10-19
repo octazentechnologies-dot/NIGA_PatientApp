@@ -2,6 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -60,11 +62,16 @@ export function SignInView({
         onSelectLanguage={onSelectLanguage}
       />
 
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
       <ScrollView
         style={styles.scroll}
         bounces={false}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
+        automaticallyAdjustKeyboardInsets
         showsVerticalScrollIndicator={false}
         onLayout={(event) => {
           if (contentMinHeight == null) {
@@ -219,6 +226,7 @@ export function SignInView({
           </AppText>
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
 
       <CountryPickerModal
         visible={isCountryPickerOpen}
@@ -387,6 +395,9 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.page,
+  },
+  flex: {
+    flex: 1,
   },
   scroll: {
     flex: 1,

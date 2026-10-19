@@ -12,6 +12,7 @@ import { SafeAreaModal } from '../components/SafeAreaModal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '../components/AppText';
+import { WhoForMemberSheet } from '../components/WhoForMemberSheet';
 import type { ConsultNowViewModel } from '../controllers/useConsultNowController';
 import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
@@ -317,80 +318,16 @@ export function ConsultNowView(vm: ConsultNowViewModel) {
         </Pressable>
       </View>
 
-      <SafeAreaModal
-        transparent
-        animationType="slide"
+      <WhoForMemberSheet
         visible={vm.memberPickerOpen}
-        onRequestClose={vm.onCloseMemberPicker}
-      >
-        <Pressable style={styles.sheetBackdrop} onPress={vm.onCloseMemberPicker}>
-          <Pressable
-            style={[
-              styles.sheet,
-              { paddingBottom: sheetBottomPadding(insets, spacing.xl) },
-            ]}
-            onPress={() => undefined}
-          >
-            <View style={styles.handle} />
-            <View style={styles.sheetHead}>
-              <AppText variant="headlineMd" color={colors.ink}>
-                {vm.t('bookWhoFor')}
-              </AppText>
-              <Pressable onPress={vm.onCloseMemberPicker} style={styles.iconButton}>
-                <Ionicons name="close" size={22} color={colors.ink} />
-              </Pressable>
-            </View>
-            {vm.members.map((item) => {
-              const selected = item.id === vm.member.id;
-              return (
-                <Pressable
-                  key={item.id}
-                  onPress={() => vm.onSelectMember(item.id)}
-                  style={[styles.memberRow, selected && styles.memberRowSelected]}
-                >
-                  <View
-                    style={[
-                      styles.memberAvatar,
-                      selected && styles.memberAvatarSelected,
-                    ]}
-                  >
-                    <Ionicons
-                      name={item.icon === 'child' ? 'happy-outline' : 'person-outline'}
-                      size={22}
-                      color={colors.ink}
-                    />
-                  </View>
-                  <View style={styles.flex}>
-                    <AppText variant="titleMd" color={colors.ink} style={styles.memberName}>
-                      {item.self ? vm.t('bookMyself') : item.name}
-                    </AppText>
-                    <AppText variant="bodyMd" color={selected ? colors.ink : colors.muted}>
-                      {item.self
-                        ? item.name
-                        : item.relationshipName
-                          ? `${item.relationshipName}${item.age ? ` • ${item.age} yrs` : ''}`
-                          : item.metaKey
-                            ? vm.t(item.metaKey)
-                            : ''}
-                    </AppText>
-                  </View>
-                  {selected ? (
-                    <Ionicons name="checkmark-circle" size={22} color={ICON_BLUE} />
-                  ) : null}
-                </Pressable>
-              );
-            })}
-            <Pressable onPress={vm.onAddMember} style={styles.addMember}>
-              <View style={styles.addAvatar}>
-                <Ionicons name="add" size={22} color={colors.ink} />
-              </View>
-              <AppText variant="titleMd" color={colors.ink} style={styles.memberName}>
-                {vm.t('bookAddMember')}
-              </AppText>
-            </Pressable>
-          </Pressable>
-        </Pressable>
-      </SafeAreaModal>
+        members={vm.members}
+        selectedMemberId={vm.member.id}
+        t={vm.t}
+        language={vm.language}
+        onClose={vm.onCloseMemberPicker}
+        onSelectMember={vm.onSelectMember}
+        onAddMember={vm.onAddMember}
+      />
     </View>
   );
 }

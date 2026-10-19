@@ -10,6 +10,7 @@ import { SafeAreaModal } from '../components/SafeAreaModal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '../components/AppText';
+import { WhoForMemberSheet } from '../components/WhoForMemberSheet';
 import {
   MONTH_KEYS,
   WEEKDAY_KEYS,
@@ -78,7 +79,9 @@ export function BookAppointmentView({
   onAddMember,
 }: BookAppointmentViewModel) {
   const insets = useSafeAreaInsets();
-  const footerReserve = 128 + sheetBottomPadding(insets, spacing.md);
+  // Live inset only — avoid AOSP 48dp fallback that leaves a large empty band under the CTA.
+  const footerBottomPad = Math.max(insets.bottom, spacing.sm);
+  const footerReserve = 128 + footerBottomPad;
   const consultingLabel = member.self
     ? t('bookMyself')
     : member.relationshipName
@@ -339,7 +342,7 @@ export function BookAppointmentView({
         </View>
       </ScrollView>
 
-      <View style={[styles.footer, { paddingBottom: sheetBottomPadding(insets, spacing.md) }]}>
+      <View style={[styles.footer, { paddingBottom: footerBottomPad }]}>
         <View style={styles.flex}>
           <AppText variant="labelSm" color={colors.muted}>
             {t('bookSummary')}
@@ -369,81 +372,15 @@ export function BookAppointmentView({
         </View>
       </View>
 
-      <SafeAreaModal
-        transparent
-        animationType="slide"
+      <WhoForMemberSheet
         visible={memberPickerOpen}
-        onRequestClose={onCloseMemberPicker}
-      >
-        <Pressable style={styles.sheetBackdrop} onPress={onCloseMemberPicker}>
-          <Pressable
-            style={[
-              styles.sheet,
-              { paddingBottom: sheetBottomPadding(insets, spacing.xl) },
-            ]}
-            onPress={() => undefined}
-          >
-            <View style={styles.handle} />
-            <View style={styles.sheetHead}>
-              <AppText variant="headlineMd" color={colors.ink}>
-                {t('bookWhoFor')}
-              </AppText>
-              <Pressable onPress={onCloseMemberPicker} style={styles.iconButton}>
-                <Ionicons name="close" size={22} color={colors.ink} />
-              </Pressable>
-            </View>
-            {members.map((item) => {
-              const selected = item.id === member.id;
-              return (
-                <Pressable
-                  key={item.id}
-                  onPress={() => onSelectMember(item.id)}
-                  style={[styles.memberRow, selected && styles.memberRowSelected]}
-                >
-                  <View style={[styles.memberAvatar, selected && styles.memberAvatarSelected]}>
-                    <Ionicons
-                      name={
-                        item.icon === 'child'
-                          ? 'happy-outline'
-                          : item.icon === 'woman'
-                            ? 'person-outline'
-                            : 'person-outline'
-                      }
-                      size={22}
-                      color={colors.ink}
-                    />
-                  </View>
-                  <View style={styles.flex}>
-                    <AppText variant="titleMd" color={colors.ink} style={styles.memberName}>
-                      {item.self ? t('bookMyself') : item.name}
-                    </AppText>
-                    <AppText variant="bodyMd" color={selected ? colors.ink : colors.muted}>
-                      {item.self
-                        ? item.name
-                        : item.relationshipName
-                          ? `${item.relationshipName}${item.age ? ` • ${item.age} yrs` : ''}`
-                          : item.metaKey
-                            ? t(item.metaKey)
-                            : ''}
-                    </AppText>
-                  </View>
-                  {selected ? (
-                    <Ionicons name="checkmark-circle" size={22} color={ICON_BLUE} />
-                  ) : null}
-                </Pressable>
-              );
-            })}
-            <Pressable onPress={onAddMember} style={styles.addMember}>
-              <View style={styles.addAvatar}>
-                <Ionicons name="add" size={22} color={colors.ink} />
-              </View>
-              <AppText variant="titleMd" color={colors.ink} style={styles.memberName}>
-                {t('bookAddMember')}
-              </AppText>
-            </Pressable>
-          </Pressable>
-        </Pressable>
-      </SafeAreaModal>
+        members={members}
+        selectedMemberId={member.id}
+        t={t}
+        onClose={onCloseMemberPicker}
+        onSelectMember={onSelectMember}
+        onAddMember={onAddMember}
+      />
 
       <SafeAreaModal
         transparent

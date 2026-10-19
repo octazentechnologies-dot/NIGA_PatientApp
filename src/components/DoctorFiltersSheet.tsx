@@ -1,6 +1,7 @@
 import { type ReactNode } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import {
+  Dimensions,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -25,6 +26,7 @@ import { layout, spacing } from '../theme/spacing';
 import { fontFamilyFor } from '../utilities/fonts';
 import { scaleFont } from '../utilities/scale';
 import { sheetBottomPadding } from '../utilities/sheetInset';
+import { useKeyboardHeight } from '../utilities/useKeyboardHeight';
 import { AppButton } from './AppButton';
 import { AppText } from './AppText';
 import { DatePickerSheet } from './DatePickerSheet';
@@ -132,6 +134,15 @@ export function DoctorFiltersSheet({
   qualificationOptions = [],
 }: DoctorFiltersSheetProps) {
   const insets = useSafeAreaInsets();
+  const keyboardHeight = useKeyboardHeight();
+  const windowHeight = Dimensions.get('window').height;
+  const sheetHeight =
+    keyboardHeight > 0
+      ? Math.max(
+          280,
+          windowHeight - keyboardHeight - Math.max(insets.top, spacing.md),
+        )
+      : Math.round(windowHeight * 0.9);
   const cityChips = cityOptions.filter((city) => {
     const needle = draft.locationQuery.trim().toLowerCase();
     if (!needle) {
@@ -153,7 +164,11 @@ export function DoctorFiltersSheet({
         <View
           style={[
             styles.sheet,
-            { paddingBottom: sheetBottomPadding(insets, spacing.sm) },
+            {
+              height: sheetHeight,
+              marginBottom: keyboardHeight > 0 ? keyboardHeight : 0,
+              paddingBottom: sheetBottomPadding(insets, spacing.sm),
+            },
           ]}
         >
           <View style={styles.handle} />
@@ -499,7 +514,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(48, 49, 46, 0.4)',
   },
   sheet: {
-    height: '90%',
     backgroundColor: colors.card,
     borderTopLeftRadius: radii.default,
     borderTopRightRadius: radii.default,

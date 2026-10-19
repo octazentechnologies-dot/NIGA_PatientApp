@@ -9,6 +9,7 @@ import {
   useRequestOtpMutation,
 } from '../store/api/new/signInApi';
 import { useAppDispatch } from '../store/hooks';
+import { registerAuthenticatedDeviceForPush } from '../services/notifications';
 import {
   saveAccessToken,
   saveAuthUserData,
@@ -178,6 +179,13 @@ export function useOtpVerificationController({
               }),
             );
             dispatch(setAuthenticated(true));
+
+            // FCM: register this device after JWT is saved (existing user only).
+            // Fail soft — never block OTP success / navigation.
+            void registerAuthenticatedDeviceForPush({
+              accessToken: response.token,
+              userId: response.user?.userId,
+            });
           }
           setErrorMessage(null);
           onVerified(registered);

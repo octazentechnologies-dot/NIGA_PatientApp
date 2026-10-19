@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import {
   ActivityIndicator,
+  Dimensions,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -18,6 +19,7 @@ import { layout, spacing } from '../theme/spacing';
 import { fontFamilyFor } from '../utilities/fonts';
 import { scaleFont } from '../utilities/scale';
 import { sheetBottomPadding } from '../utilities/sheetInset';
+import { useKeyboardHeight } from '../utilities/useKeyboardHeight';
 import {
   getGenderDisplayName,
   getRelationDisplayName,
@@ -116,6 +118,15 @@ export function AddFamilyMemberSheet({
   onSubmitMember,
 }: AddFamilyMemberSheetProps) {
   const insets = useSafeAreaInsets();
+  const keyboardHeight = useKeyboardHeight();
+  const windowHeight = Dimensions.get('window').height;
+  const sheetMaxHeight =
+    keyboardHeight > 0
+      ? Math.max(
+          280,
+          windowHeight - keyboardHeight - Math.max(insets.top, spacing.md),
+        )
+      : Math.round(windowHeight * 0.9);
   const selectedGenderObj = apiGenders.find(
     (g) => g.genderId === selectedGenderId,
   );
@@ -133,7 +144,11 @@ export function AddFamilyMemberSheet({
         <View
           style={[
             styles.sheet,
-            { paddingBottom: sheetBottomPadding(insets, spacing.md) },
+            {
+              maxHeight: sheetMaxHeight,
+              marginBottom: keyboardHeight > 0 ? keyboardHeight : 0,
+              paddingBottom: sheetBottomPadding(insets, spacing.md),
+            },
           ]}
         >
           <View style={styles.handle} />
@@ -511,7 +526,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(24, 28, 27, 0.4)',
   },
   sheet: {
-    maxHeight: '90%',
+    // maxHeight set dynamically for keyboard avoidance
     backgroundColor: colors.card,
     borderTopLeftRadius: radii.md,
     borderTopRightRadius: radii.md,

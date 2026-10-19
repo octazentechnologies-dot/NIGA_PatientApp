@@ -19,7 +19,7 @@ Use Razorpay **test** keys on the server. Do not use live keys.
 | C4 | Payment failure | Fail test card | Failed message + retry | Order FAILED or pending |
 | C5 | Network drop in Checkout | Airplane mid-flow | NETWORK / failed copy; no local Paid | Ledger unchanged until webhook |
 | C6 | Kill app mid-payment | Force-stop after Checkout success | On reopen, pending id in SecureStore; poll Verify | CAPTURED when webhook lands |
-| C7 | Verify timeout | Block webhook temporarily | `PENDING_CONFIRMATION` after ~60 s; no second charge prompt | Later CAPTURED |
+| C7 | Verify timeout | Block webhook temporarily | `PENDING_CONFIRMATION` after ~60 s; **Check status** re-polls Verify; no second charge | Later CAPTURED |
 | C8 | Double tap | Tap Pay twice quickly | One in-flight attempt | One order (idempotency key) |
 | C9 | Hold expired before Pay | Wait past `holdExpiresAt` | Pay disabled | — |
 | C10 | Hold expires during Checkout | Start pay near expiry | Still Verify/poll; server message if released | 409 HOLD_EXPIRED or free slot |
@@ -46,6 +46,20 @@ Use Razorpay **test** keys on the server. Do not use live keys.
 | S2 | Logs in release | No payment ids / signatures |
 | S3 | Amount tamper | App does not send client amount on ConsultOrders |
 
+## Dev-client smoke (post post-payment fix)
+
+Run on a **custom/dev client** (`expo run:android` / `expo run:ios`), not Expo Go.
+
+| Case | Expect after this fix |
+|------|------------------------|
+| **C1** | Checkout success → Verify CAPTURED → success screen → Visits/Payments refresh → Close returns home with appointment (id = patientAppId) |
+| **C3** | Cancel Checkout → stay on pay sheet; SecureStore pending cleared; Pay retryable |
+| **C6** | Kill after Checkout success → reopen booking pay → auto resume Verify from SecureStore → success when CAPTURED |
+| **C7** | Pending screen → **Check status** / app foreground → re-poll Verify → success when CAPTURED |
+| **C15** | After success + kill/reopen → appointment from Visits API, not a duplicate local seed |
+
+Instant Consult accept-offer redirects to book a slot (B-011) — no null-id Checkout.
+
 ## Untested here
 
-Device Checkout and webhook end-to-end require a physical/simulator build with native Razorpay — mark **untested — needs device** until QA runs C1 on a dev client.
+Device Checkout and webhook end-to-end require a physical/simulator build with native Razorpay — mark **untested — needs device** until QA runs C1 on a dev client. CAPTURED still depends on the server webhook.

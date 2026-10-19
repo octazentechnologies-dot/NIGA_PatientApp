@@ -12,7 +12,7 @@ export function logNotifications(message: string, detail?: string): void {
   // console.log(`[Notifications] ${message}`);
 }
 
-/** Truncate Expo push tokens for safe debug output. */
+/** Truncate native FCM/APNs tokens for safe debug output. */
 export function maskPushToken(token: string): string {
   if (token.length <= 18) {
     return '***';

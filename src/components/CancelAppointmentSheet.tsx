@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import {
+  Dimensions,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -19,6 +20,7 @@ import { radii } from '../theme/radii';
 import { layout, spacing } from '../theme/spacing';
 import { fontFamilyFor } from '../utilities/fonts';
 import { sheetBottomPadding } from '../utilities/sheetInset';
+import { useKeyboardHeight } from '../utilities/useKeyboardHeight';
 import { AppText } from './AppText';
 
 const SUCCESS_BORDER = colors.successContainer;
@@ -55,6 +57,15 @@ export function CancelAppointmentSheet({
   onConfirmCancel,
 }: Props) {
   const insets = useSafeAreaInsets();
+  const keyboardHeight = useKeyboardHeight();
+  const windowHeight = Dimensions.get('window').height;
+  const sheetMaxHeight =
+    keyboardHeight > 0
+      ? Math.max(
+          280,
+          windowHeight - keyboardHeight - Math.max(insets.top, spacing.md),
+        )
+      : Math.round(windowHeight * 0.85);
 
   return (
     <SafeAreaModal
@@ -65,7 +76,16 @@ export function CancelAppointmentSheet({
     >
       <View style={styles.root}>
         <Pressable style={styles.scrim} onPress={onCloseCancelSheet} />
-        <View style={[styles.sheet, { paddingBottom: sheetBottomPadding(insets, spacing.md) }]}>
+        <View
+          style={[
+            styles.sheet,
+            {
+              maxHeight: sheetMaxHeight,
+              marginBottom: keyboardHeight > 0 ? keyboardHeight : 0,
+              paddingBottom: sheetBottomPadding(insets, spacing.md),
+            },
+          ]}
+        >
           <View style={styles.handle} />
           <View style={styles.header}>
             <AppText variant="titleMd" color={colors.ink} style={styles.flex}>

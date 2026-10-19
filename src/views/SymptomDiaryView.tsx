@@ -236,6 +236,7 @@ export function SymptomDiaryView(vm: SymptomDiaryViewModel) {
         members={vm.members}
         selectedMemberId={vm.memberId}
         t={vm.t}
+        language={vm.language}
         onClose={vm.onCloseMemberPicker}
         onSelectMember={vm.onSelectMember}
         onAddMember={vm.onAddMember}

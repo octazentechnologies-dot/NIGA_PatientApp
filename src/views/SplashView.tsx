@@ -76,8 +76,7 @@ function Pulsing({ children }: PropsWithChildren) {
 export function SplashView({
   brandName,
   tagline,
-  loadingEnglish,
-  loadingMarathi,
+  loadingLabel,
 }: SplashViewModel) {
   const insets = useSafeAreaInsets();
   const wash = useRef(new Animated.Value(0)).current;
@@ -152,18 +151,9 @@ export function SplashView({
           <AppText
             variant="labelSm"
             color={colors.muted}
-            languageOverride="en"
-            style={styles.loadingEn}
+            style={styles.loadingLabel}
           >
-            {loadingEnglish}
-          </AppText>
-          <AppText
-            variant="labelSm"
-            color={colors.muted}
-            languageOverride="mr"
-            style={styles.loadingMr}
-          >
-            {loadingMarathi}
+            {loadingLabel}
           </AppText>
         </Pulsing>
       </FadeInUp>
@@ -209,13 +199,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.gutter,
   },
-  loadingEn: {
+  loadingLabel: {
     textAlign: 'center',
     letterSpacing: 1.2,
-    textTransform: 'uppercase',
-  },
-  loadingMr: {
-    textAlign: 'center',
-    marginTop: spacing.xs,
   },
 });

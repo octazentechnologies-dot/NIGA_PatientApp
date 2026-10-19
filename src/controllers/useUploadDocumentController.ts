@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Alert } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
+import { File } from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 
 import {
@@ -15,6 +16,30 @@ import { useGetFamilyQuery } from '../store/api/new/familyApi';
 import { useGetHomeDashboardQuery } from '../store/api/new/homeApi';
 import { useUploadDocumentMutation } from '../store/api/new/recordsApi';
 import { useAppSelector } from '../store/hooks';
+
+function formatDocDate(date: Date): string {
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
+function parseDocDate(value: string): Date | null {
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value.trim());
+  if (!match) return null;
+  const day = Number(match[1]);
+  const month = Number(match[2]) - 1;
+  const year = Number(match[3]);
+  const date = new Date(year, month, day);
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
+  return date;
+}
 
 export type UploadDocTypeId =
   | 'report'
@@ -42,6 +67,8 @@ export type UploadDocumentViewModel = {
   docTypeLabel: string;
   docTypePickerOpen: boolean;
   docDate: string;
+  datePickerOpen: boolean;
+  datePickerValue: Date;
   notes: string;
   visibility: UploadVisibility;
   onClose: () => void;
@@ -54,11 +81,13 @@ export type UploadDocumentViewModel = {
   onPickGallery: () => void;
   onPickFile: () => void;
   onCancelUpload: (id: string) => void;
-  onOpenFileMenu: (id: string) => void;
+  onRemoveFile: (id: string) => void;
   onOpenDocTypePicker: () => void;
   onCloseDocTypePicker: () => void;
   onSelectDocType: (id: UploadDocTypeId) => void;
-  onChangeDocDate: (value: string) => void;
+  onOpenDatePicker: () => void;
+  onCloseDatePicker: () => void;
+  onConfirmDocDate: (date: Date) => void;
   onChangeNotes: (value: string) => void;
   onSelectVisibility: (value: UploadVisibility) => void;
   onCancel: () => void;
@@ -117,6 +146,7 @@ export function useUploadDocumentController({
   const [docType, setDocType] = useState<UploadDocTypeId | null>(null);
   const [docTypePickerOpen, setDocTypePickerOpen] = useState(false);
   const [docDate, setDocDate] = useState('');
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [notes, setNotes] = useState('');
   const [visibility, setVisibility] = useState<UploadVisibility>('doctors');
 
@@ -128,6 +158,7 @@ export function useUploadDocumentController({
       setDocType(null);
       setDocTypePickerOpen(false);
       setDocDate('');
+      setDatePickerOpen(false);
       setNotes('');
       setVisibility('doctors');
     }
@@ -255,6 +286,8 @@ export function useUploadDocumentController({
     docTypeLabel: docType ? t(DOC_TYPE_KEYS[docType]) : '',
     docTypePickerOpen,
     docDate,
+    datePickerOpen,
+    datePickerValue: parseDocDate(docDate) ?? new Date(),
     notes,
     visibility,
     onClose,
@@ -280,14 +313,21 @@ export function useUploadDocumentController({
     onCancelUpload: (fileId) => {
       setFiles((prev) => prev.filter((file) => file.id !== fileId));
     },
-    onOpenFileMenu: (_id: string) => undefined,
+    onRemoveFile: (fileId) => {
+      setFiles((prev) => prev.filter((file) => file.id !== fileId));
+    },
     onOpenDocTypePicker: () => setDocTypePickerOpen(true),
     onCloseDocTypePicker: () => setDocTypePickerOpen(false),
     onSelectDocType: (next) => {
       setDocType(next);
       setDocTypePickerOpen(false);
     },
-    onChangeDocDate: setDocDate,
+    onOpenDatePicker: () => setDatePickerOpen(true),
+    onCloseDatePicker: () => setDatePickerOpen(false),
+    onConfirmDocDate: (date) => {
+      setDocDate(formatDocDate(date));
+      setDatePickerOpen(false);
+    },
     onChangeNotes: setNotes,
     onSelectVisibility: setVisibility,
     onCancel: onClose,
@@ -303,18 +343,11 @@ export function useUploadDocumentController({
       const uploaded: PatientDocument[] = [];
       for (const file of ready) {
         try {
+          // Expo's fetch rejects RN `{ uri, name, type }` FormData parts —
+          // use expo-file-system File (Blob with bytes()) instead.
+          const fsFile = new File(file.uri);
           const formData = new FormData();
-          formData.append('file', {
-            uri: file.uri,
-            name: file.name,
-            type: file.mimeType,
-          } as unknown as Blob);
-          if (docType) {
-            formData.append('docType', docType);
-          }
-          if (notes.trim()) {
-            formData.append('notes', notes.trim());
-          }
+          formData.append('file', fsFile as unknown as Blob, file.name);
           await uploadDocumentApi(formData).unwrap();
           uploaded.push(file);
         } catch (err) {

@@ -15,6 +15,8 @@ export type HomeNextAppointment = {
   paymentStatus?: string;
   paymentMethod?: string;
   payAtClinicAllowed?: boolean;
+  consultFee?: number | null;
+  currency?: string | null;
   bookingToken?: string;
   queuePosition?: number | null;
   cancelReasonCode?: string | null;

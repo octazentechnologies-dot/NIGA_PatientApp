@@ -1,54 +1,59 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
+  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaModal } from './SafeAreaModal';
-
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   type BookingMember,
   resolveBookingMembers,
 } from '../config/appointmentSlots';
-import type { TranslationKey } from '../localization/types';
+import type { AppLanguage, TranslationKey } from '../localization/types';
 import { useGetFamilyQuery } from '../store/api/new/familyApi';
 import { useGetHomeDashboardQuery } from '../store/api/new/homeApi';
 import { useAppSelector } from '../store/hooks';
 import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
 import { spacing } from '../theme/spacing';
+import { fontFamilyFor } from '../utilities/fonts';
 import { scaleFont } from '../utilities/scale';
-import { sheetBottomPadding } from '../utilities/sheetInset';
 import { AppText } from './AppText';
+import { KeyboardAwareSheet } from './KeyboardAwareSheet';
 
 type WhoForMemberSheetProps = {
   visible: boolean;
   members?: BookingMember[];
   selectedMemberId: string;
   t: (key: TranslationKey) => string;
+  language?: AppLanguage;
+  /** Optional title override (defaults to bookWhoFor). */
+  titleKey?: TranslationKey;
   onClose: () => void;
   onSelectMember: (memberId: string) => void;
   onAddMember: () => void;
 };
 
 /**
- * Bottom sheet: “Who is this for?” — displays real family members + Self using app's theme.
+ * Bottom sheet: “Who is this for?” — half-screen, searchable, keyboard-aware.
  */
 export function WhoForMemberSheet({
   visible,
   members: propMembers,
   selectedMemberId,
   t,
+  language = 'en',
+  titleKey = 'bookWhoFor',
   onClose,
   onSelectMember,
   onAddMember,
 }: WhoForMemberSheetProps) {
-  const insets = useSafeAreaInsets();
+  const [searchQuery, setSearchQuery] = useState('');
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const authUser = useAppSelector((state) => state.auth.user);
   const { data: homeDashboardResponse } = useGetHomeDashboardQuery(undefined, {
@@ -65,6 +70,12 @@ export function WhoForMemberSheet({
     { skip: !visible },
   );
 
+  useEffect(() => {
+    if (!visible) {
+      setSearchQuery('');
+    }
+  }, [visible]);
+
   const displayMembers: BookingMember[] = useMemo(() => {
     const apiFamily = familyResponse?.data;
     if (apiFamily && apiFamily.length > 0) {
@@ -76,6 +87,23 @@ export function WhoForMemberSheet({
     return resolveBookingMembers(patientFullName);
   }, [propMembers, familyResponse, patientFullName]);
 
+  const filteredMembers = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return displayMembers;
+    return displayMembers.filter((item) => {
+      const name = (item.self ? t('bookMyself') : item.name || '').toLowerCase();
+      const selfName = (item.name || '').toLowerCase();
+      const relation = (item.relationshipName || '').toLowerCase();
+      const meta = item.metaKey ? t(item.metaKey).toLowerCase() : '';
+      return (
+        name.includes(q) ||
+        selfName.includes(q) ||
+        relation.includes(q) ||
+        meta.includes(q)
+      );
+    });
+  }, [displayMembers, searchQuery, t]);
+
   return (
     <SafeAreaModal
       transparent
@@ -83,182 +111,204 @@ export function WhoForMemberSheet({
       visible={visible}
       onRequestClose={onClose}
     >
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable
-          style={[
-            styles.sheet,
-            { paddingBottom: sheetBottomPadding(insets, spacing.md) },
-          ]}
-          onPress={() => undefined}
-        >
-          <View style={styles.handle} />
-          <View style={styles.header}>
-            <AppText variant="headlineMd" color={colors.onSurface} style={styles.title}>
-              {t('bookWhoFor')}
-            </AppText>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t('close')}
-              onPress={onClose}
-              style={styles.closeButton}
-              hitSlop={8}
-            >
-              <Ionicons name="close" size={22} color={colors.onSurface} />
-            </Pressable>
-          </View>
+      <KeyboardAwareSheet
+        onDismiss={onClose}
+        maxHeightFraction={0.5}
+        header={
+          <>
+            <View style={styles.header}>
+              <AppText
+                variant="headlineMd"
+                color={colors.onSurface}
+                style={styles.title}
+              >
+                {t(titleKey)}
+              </AppText>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t('close')}
+                onPress={onClose}
+                style={styles.closeButton}
+                hitSlop={8}
+              >
+                <Ionicons name="close" size={22} color={colors.onSurface} />
+              </Pressable>
+            </View>
 
-          <ScrollView
-            bounces={false}
-            showsVerticalScrollIndicator={false}
-            style={styles.listScroll}
-            contentContainerStyle={styles.listContent}
-          >
-            {displayMembers.map((item) => {
-              const selected = item.id === selectedMemberId;
-              const isChild = item.icon === 'child';
-              return (
+            <View style={styles.searchWrap}>
+              <Ionicons name="search" size={18} color={colors.onSurfaceVariant} />
+              <TextInput
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder={t('whoForSearchPlaceholder')}
+                placeholderTextColor={colors.onSurfaceVariant}
+                accessibilityLabel={t('whoForSearchPlaceholder')}
+                returnKeyType="search"
+                autoCorrect={false}
+                style={[
+                  styles.searchInput,
+                  {
+                    fontFamily: fontFamilyFor('400', language, 'sans'),
+                    fontSize: scaleFont(15),
+                  },
+                ]}
+              />
+              {searchQuery.trim() ? (
                 <Pressable
-                  key={item.id}
                   accessibilityRole="button"
-                  accessibilityState={{ selected }}
-                  onPress={() => onSelectMember(item.id)}
-                  style={[styles.memberRow, selected && styles.memberRowSelected]}
+                  accessibilityLabel={t('close')}
+                  onPress={() => setSearchQuery('')}
+                  hitSlop={8}
                 >
-                  <View
-                    style={[
-                      styles.avatar,
-                      selected && styles.avatarSelected,
-                      isChild && styles.avatarChild,
-                    ]}
-                  >
-                    <Ionicons
-                      name={
-                        isChild
-                          ? 'happy-outline'
-                          : item.icon === 'woman'
-                            ? 'person-outline'
-                            : 'person-outline'
-                      }
-                      size={22}
-                      color={isChild ? colors.warning : colors.primary}
-                    />
-                  </View>
+                  <Ionicons
+                    name="close-circle"
+                    size={18}
+                    color={colors.onSurfaceVariant}
+                  />
+                </Pressable>
+              ) : null}
+            </View>
+          </>
+        }
+      >
+        <ScrollView
+          bounces={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}
+          style={styles.listScroll}
+          contentContainerStyle={styles.listContent}
+        >
+          {filteredMembers.map((item) => {
+            const selected = item.id === selectedMemberId;
+            const isChild = item.icon === 'child';
+            return (
+              <Pressable
+                key={item.id}
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
+                onPress={() => onSelectMember(item.id)}
+                style={[styles.memberRow, selected && styles.memberRowSelected]}
+              >
+                <View
+                  style={[
+                    styles.avatar,
+                    selected && styles.avatarSelected,
+                    isChild && styles.avatarChild,
+                  ]}
+                >
+                  <Ionicons
+                    name={isChild ? 'happy-outline' : 'person-outline'}
+                    size={22}
+                    color={isChild ? colors.warning : colors.primary}
+                  />
+                </View>
 
-                  <View style={styles.copy}>
-                    <View style={styles.nameRow}>
-                      <AppText
-                        variant="titleMd"
-                        color={colors.onSurface}
-                        weightOverride="600"
-                        style={styles.memberName}
-                        languageOverride="en"
-                        numberOfLines={1}
-                      >
-                        {item.self ? t('bookMyself') : item.name}
-                      </AppText>
-                      {item.self ? (
-                        <View style={styles.youBadge}>
-                          <Ionicons
-                            name="shield-checkmark"
-                            size={11}
-                            color={colors.primary}
-                          />
-                          <AppText
-                            variant="labelSm"
-                            color={colors.primary}
-                            weightOverride="600"
-                          >
-                            {t('familyYouBadge')}
-                          </AppText>
-                        </View>
-                      ) : null}
-                    </View>
-
+                <View style={styles.copy}>
+                  <View style={styles.nameRow}>
                     <AppText
-                      variant="bodyMd"
-                      color={colors.onSurfaceVariant}
+                      variant="titleMd"
+                      color={colors.onSurface}
+                      weightOverride="600"
+                      style={styles.memberName}
                       languageOverride="en"
                       numberOfLines={1}
                     >
-                      {item.self
-                        ? item.name || t('familyYouBadge')
-                        : item.relationshipName
-                          ? `${item.relationshipName}${item.age ? ` • ${item.age} yrs` : ''}`
-                          : item.metaKey
-                            ? t(item.metaKey)
-                            : ''}
+                      {item.self ? t('bookMyself') : item.name}
                     </AppText>
+                    {item.self ? (
+                      <View style={styles.youBadge}>
+                        <Ionicons
+                          name="shield-checkmark"
+                          size={11}
+                          color={colors.primary}
+                        />
+                        <AppText
+                          variant="labelSm"
+                          color={colors.primary}
+                          weightOverride="600"
+                        >
+                          {t('familyYouBadge')}
+                        </AppText>
+                      </View>
+                    ) : null}
                   </View>
 
-                  {selected ? (
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={22}
-                      color={colors.primary}
-                    />
-                  ) : (
-                    <Ionicons
-                      name="ellipse-outline"
-                      size={22}
-                      color={colors.outlineVariant}
-                    />
-                  )}
-                </Pressable>
-              );
-            })}
+                  <AppText
+                    variant="bodyMd"
+                    color={colors.onSurfaceVariant}
+                    languageOverride="en"
+                    numberOfLines={1}
+                  >
+                    {item.self
+                      ? item.name || t('familyYouBadge')
+                      : item.relationshipName
+                        ? `${item.relationshipName}${item.age ? ` • ${item.age} yrs` : ''}`
+                        : item.metaKey
+                          ? t(item.metaKey)
+                          : ''}
+                  </AppText>
+                </View>
 
-            {isFamilyLoading && displayMembers.length <= 1 ? (
-              <View style={styles.loaderWrap}>
-                <ActivityIndicator size="small" color={colors.primary} />
-              </View>
-            ) : null}
+                {selected ? (
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={22}
+                    color={colors.primary}
+                  />
+                ) : (
+                  <Ionicons
+                    name="ellipse-outline"
+                    size={22}
+                    color={colors.outlineVariant}
+                  />
+                )}
+              </Pressable>
+            );
+          })}
 
-            <Pressable
-              accessibilityRole="button"
-              onPress={onAddMember}
-              style={styles.addMember}
+          {isFamilyLoading && displayMembers.length <= 1 ? (
+            <View style={styles.loaderWrap}>
+              <ActivityIndicator size="small" color={colors.primary} />
+            </View>
+          ) : null}
+
+          {!isFamilyLoading &&
+          filteredMembers.length === 0 &&
+          searchQuery.trim() ? (
+            <AppText
+              variant="bodyMd"
+              color={colors.onSurfaceVariant}
+              style={styles.emptySearch}
             >
-              <View style={styles.addAvatar}>
-                <Ionicons name="add" size={22} color={colors.primary} />
-              </View>
-              <AppText
-                variant="titleMd"
-                color={colors.primary}
-                weightOverride="600"
-                style={styles.memberName}
-              >
-                {t('bookAddMember')}
-              </AppText>
-            </Pressable>
-          </ScrollView>
-        </Pressable>
-      </Pressable>
+              {t('whoForNoMatches')}
+            </AppText>
+          ) : null}
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={onAddMember}
+            style={styles.addMember}
+          >
+            <View style={styles.addAvatar}>
+              <Ionicons name="add" size={22} color={colors.primary} />
+            </View>
+            <AppText
+              variant="titleMd"
+              color={colors.primary}
+              weightOverride="600"
+              style={styles.memberName}
+            >
+              {t('bookAddMember')}
+            </AppText>
+          </Pressable>
+        </ScrollView>
+      </KeyboardAwareSheet>
     </SafeAreaModal>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    backgroundColor: colors.card,
-    borderTopLeftRadius: radii.md,
-    borderTopRightRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm,
-    maxHeight: '85%',
-  },
-  handle: {
-    alignSelf: 'center',
-    width: 44,
-    height: 4,
-    borderRadius: radii.full,
-    backgroundColor: colors.outlineVariant,
-    marginBottom: spacing.xs,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -278,8 +328,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.page,
   },
+  searchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    minHeight: 48,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
+    borderRadius: radii.sm,
+    backgroundColor: colors.page,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  searchInput: {
+    flex: 1,
+    minHeight: 48,
+    color: colors.onSurface,
+    paddingVertical: 0,
+  },
   listScroll: {
-    maxHeight: 440,
+    flex: 1,
   },
   listContent: {
     gap: spacing.sm,
@@ -340,6 +408,10 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  emptySearch: {
+    textAlign: 'center',
+    paddingVertical: spacing.md,
   },
   addMember: {
     flexDirection: 'row',

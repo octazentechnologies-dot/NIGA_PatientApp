@@ -1,11 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
-import { type ReactNode } from 'react';
+import { useCallback, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useHardwareBackHandler } from '../hooks/useHardwareBackHandler';
 import { colors } from '../theme/colors';
 import { layout, spacing } from '../theme/spacing';
+import { useAndroidStatusBarBackground } from '../utilities/useAndroidPageStatusBar';
 import { AppText } from './AppText';
+import { StatusBarBleed } from './StatusBarBleed';
 
 type Props = {
   title: string;
@@ -20,6 +23,7 @@ type Props = {
 /**
  * Canonical in-app screen header — back + title + optional actions.
  * Presentation only; callers keep their existing navigation handlers.
+ * Always paints a white (or brand-wash) status-bar strip to match the header.
  */
 export function AppScreenHeader({
   title,
@@ -30,6 +34,20 @@ export function AppScreenHeader({
   brandWash = false,
 }: Props) {
   const insets = useSafeAreaInsets();
+  const statusBarColor = brandWash
+    ? colors.primaryContainer
+    : colors.card;
+  useAndroidStatusBarBackground(statusBarColor);
+
+  const onHardwareBack = useCallback(() => {
+    if (!onBack) {
+      return false;
+    }
+    onBack();
+    return true;
+  }, [onBack]);
+
+  useHardwareBackHandler(onHardwareBack, Boolean(onBack));
 
   return (
     <View
@@ -39,6 +57,7 @@ export function AppScreenHeader({
         { paddingTop: Math.max(insets.top, spacing.sm) },
       ]}
     >
+      <StatusBarBleed color={statusBarColor} />
       <View style={styles.row}>
         {onBack ? (
           <Pressable

@@ -24,10 +24,12 @@ export type PushNotificationData = {
 
 export type PushPlatform = 'android' | 'ios';
 
+/** @deprecated Prefer store/api/new/devicesApi RegisterDeviceRequest (FCM doc). */
 export type RegisterDeviceRequest = {
-  pushToken: string;
-  platform: PushPlatform;
-  deviceId?: string;
+  token: string;
+  userId?: number;
+  deviceType: 'Android' | 'iOS' | 'Website';
+  deviceId: string;
 };
 
 export type RegisterDeviceResponse = {
@@ -36,8 +38,7 @@ export type RegisterDeviceResponse = {
 };
 
 export type UnregisterDeviceRequest = {
-  pushToken: string;
-  platform: PushPlatform;
+  token: string;
 };
 
 export type PushRegistrationStatus =

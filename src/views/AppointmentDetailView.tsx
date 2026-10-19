@@ -44,6 +44,7 @@ export function AppointmentDetailView(vm: AppointmentDetailViewModel) {
         documents={vm.libraryDocuments}
         selectedId={vm.selectedLibraryId}
         t={vm.t}
+        language={vm.language}
         onClose={vm.onCloseSelectSheet}
         onSelect={vm.onSelectExistingDocument}
         onUploadNew={vm.onUploadNewFromSheet}

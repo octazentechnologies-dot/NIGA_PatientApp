@@ -12,6 +12,11 @@ export type CreateBookingRequest = {
   bookingSessionId?: number;
   consentPolicyVersion?: string;
   payAtClinic?: boolean;
+  /** Logged-in user id from JWT / VerifyOtp. */
+  userId?: number;
+  /** Razorpay Checkout ids — null until online payment succeeds. */
+  razorpay_order_id?: string | null;
+  razorpay_payment_id?: string | null;
   /** BE-027 — same key for retries of one attempt. */
   idempotencyKey?: string;
 };
@@ -22,6 +27,10 @@ export type BookAsFamilyRequest = {
   appointmentDate: string; // yyyy-MM-dd
   appointmentTime: string; // HH:mm
   consultMode?: 'Tele' | 'InClinic';
+  userId?: number;
+  payAtClinic?: boolean;
+  razorpay_order_id?: string | null;
+  razorpay_payment_id?: string | null;
 };
 
 export type BookingHoldData = {

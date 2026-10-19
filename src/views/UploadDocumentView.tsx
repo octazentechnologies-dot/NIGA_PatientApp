@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
+import { DatePickerSheet } from '../components/DatePickerSheet';
 import { WhoForMemberSheet } from '../components/WhoForMemberSheet';
 import {
   DOC_TYPE_KEYS,
@@ -164,10 +165,11 @@ export function UploadDocumentView(vm: UploadDocumentViewModel) {
                 ) : (
                   <Pressable
                     accessibilityRole="button"
-                    onPress={() => vm.onOpenFileMenu(file.id)}
+                    accessibilityLabel={vm.t('uploadDocRemove')}
+                    onPress={() => vm.onRemoveFile(file.id)}
                     style={styles.iconHit}
                   >
-                    <Ionicons name="ellipsis-vertical" size={18} color={colors.muted} />
+                    <Ionicons name="trash-outline" size={20} color={colors.error} />
                   </Pressable>
                 )}
               </View>
@@ -196,19 +198,21 @@ export function UploadDocumentView(vm: UploadDocumentViewModel) {
           <Ionicons name="chevron-down" size={20} color={colors.muted} />
         </Pressable>
 
-        <View style={styles.field}>
-          <TextInput
-            value={vm.docDate}
-            onChangeText={vm.onChangeDocDate}
-            placeholder={vm.t('uploadDocDatePlaceholder')}
-            placeholderTextColor={PLACEHOLDER}
-            style={[
-              styles.fieldInput,
-              { fontFamily: fontFamilyFor('400', vm.language, 'sans') },
-            ]}
-          />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={vm.t('uploadDocDatePlaceholder')}
+          onPress={vm.onOpenDatePicker}
+          style={styles.field}
+        >
+          <AppText
+            variant="bodyLg"
+            color={vm.docDate ? colors.ink : PLACEHOLDER}
+            style={styles.flex}
+          >
+            {vm.docDate || vm.t('uploadDocDatePlaceholder')}
+          </AppText>
           <Ionicons name="calendar-outline" size={20} color={colors.muted} />
-        </View>
+        </Pressable>
 
         <View style={[styles.field, styles.notesField]}>
           <TextInput
@@ -294,6 +298,7 @@ export function UploadDocumentView(vm: UploadDocumentViewModel) {
         members={vm.members}
         selectedMemberId={vm.memberId}
         t={vm.t}
+        language={vm.language}
         onClose={vm.onCloseMemberPicker}
         onSelectMember={(id) => vm.onSelectMember(id)}
         onAddMember={vm.onAddMember}
@@ -311,6 +316,18 @@ export function UploadDocumentView(vm: UploadDocumentViewModel) {
         onSelect={(id) =>
           vm.onSelectDocType(id as (typeof UPLOAD_DOC_TYPES)[number])
         }
+      />
+
+      <DatePickerSheet
+        visible={vm.datePickerOpen}
+        value={vm.datePickerValue}
+        maximumDate={new Date()}
+        minimumDate={new Date(1900, 0, 1)}
+        locale={vm.language === 'mr' ? 'mr-IN' : 'en-IN'}
+        cancelLabel={vm.t('cancel')}
+        doneLabel={vm.t('done')}
+        onCancel={vm.onCloseDatePicker}
+        onConfirm={vm.onConfirmDocDate}
       />
     </View>
   );
@@ -529,12 +546,6 @@ const styles = StyleSheet.create({
     borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     paddingHorizontal: spacing.md,
-  },
-  fieldInput: {
-    flex: 1,
-    fontSize: 16,
-    color: colors.ink,
-    paddingVertical: spacing.md,
   },
   notesField: {
     minHeight: 96,

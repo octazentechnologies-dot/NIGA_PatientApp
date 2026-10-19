@@ -87,7 +87,51 @@ export async function clearAuthCredentials(): Promise<void> {
     deleteRefreshToken(),
     deleteAuthUserData(),
     deleteBookingSessionId(),
+    deleteDevicePushTokenId(),
+    deleteNativePushToken(),
   ]);
+}
+
+const DEVICE_ID_KEY = 'push.deviceId';
+/** D1 `devicePushTokenId` — for Device/Unregister. Cleared on logout. */
+const DEVICE_PUSH_TOKEN_ID_KEY = 'push.devicePushTokenId';
+/** Last registered push token string. Cleared on logout. */
+const NATIVE_PUSH_TOKEN_KEY = 'push.nativeToken';
+
+/** Stable per-install id for FCM Device/Register (survives logout). */
+export function saveDeviceId(deviceId: string): Promise<void> {
+  return saveSecret(DEVICE_ID_KEY, deviceId);
+}
+
+export function getDeviceId(): Promise<string | null> {
+  return readSecret(DEVICE_ID_KEY);
+}
+
+export function saveDevicePushTokenId(id: number): Promise<void> {
+  return saveSecret(DEVICE_PUSH_TOKEN_ID_KEY, String(id));
+}
+
+export async function getDevicePushTokenId(): Promise<number | null> {
+  const raw = await readSecret(DEVICE_PUSH_TOKEN_ID_KEY);
+  if (!raw?.trim()) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
+export function deleteDevicePushTokenId(): Promise<void> {
+  return deleteSecret(DEVICE_PUSH_TOKEN_ID_KEY);
+}
+
+export function saveNativePushToken(token: string): Promise<void> {
+  return saveSecret(NATIVE_PUSH_TOKEN_KEY, token);
+}
+
+export function getNativePushToken(): Promise<string | null> {
+  return readSecret(NATIVE_PUSH_TOKEN_KEY);
+}
+
+export function deleteNativePushToken(): Promise<void> {
+  return deleteSecret(NATIVE_PUSH_TOKEN_KEY);
 }
 
 const LANGUAGE_SELECTED_KEY = 'app.hasSelectedLanguage';

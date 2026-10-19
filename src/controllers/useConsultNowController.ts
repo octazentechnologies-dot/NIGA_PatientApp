@@ -288,14 +288,6 @@ export function useConsultNowController({
     }
   }, [matchState, offerSeconds, onDeclineOffer, paymentOpen]);
 
-  // TODO(PAYMENT): do not fake success — ConsultOrders + Verify (BE-P01).
-  useEffect(() => {
-    if (paymentStatus !== 'pending') {
-      return;
-    }
-    setPaymentStatus(null);
-  }, [paymentStatus]);
-
   const { data: homeDashboardResponse } = useGetHomeDashboardQuery(undefined, {
     skip: !isAuthenticated,
   });
@@ -559,8 +551,11 @@ export function useConsultNowController({
         return;
       }
       setFeeDetailsOpen(false);
-      // TODO(PAYMENT): open Razorpay via ConsultOrders create + verify (BE-P01).
-      setPaymentOpen(true);
+      // Instant consult fees / patientAppId land with B-011 — do not open a broken pay sheet.
+      // Guide users to book a scheduled slot until Instant ConsultOrders is available.
+      setPaymentStatus(null);
+      setPaymentOpen(false);
+      onBookEarliest(t(selectedNeed.titleKey));
     },
     onDeclineOffer,
     onWidenSearch: () => {

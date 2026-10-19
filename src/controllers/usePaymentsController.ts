@@ -98,27 +98,40 @@ export function usePaymentsController({
     if (!historyResponse?.data || !Array.isArray(historyResponse.data)) {
       return [];
     }
-    return historyResponse.data.map((order: PaymentHistoryItem) => {
-      const isMedicine = order.stream === 'MEDICINE';
-      const isRefunded =
-        order.status === 'REFUNDED' || order.status === 'REFUND_PENDING';
-      const dateStr = order.createdAt ? order.createdAt.slice(0, 10) : '';
-      const methodStr = order.method || 'Online';
-      const amountLabel =
-        order.amount == null ? '' : `₹${order.amount}`;
-      return {
-        id: String(order.paymentOrderId),
-        kind: (isMedicine ? 'medicines' : 'consultation') as PaymentKind,
-        titleKey: (isMedicine
-          ? 'payHistItemMeds'
-          : 'payHistItemConsult') as TranslationKey,
-        amountLabel,
-        metaKey: `${dateStr} · ${methodStr} · #${order.paymentOrderId}` as TranslationKey,
-        status: (isRefunded ? 'refunded' : 'paid') as PaymentStatus,
-        noteKey: isRefunded ? ('payHistNoteRefund' as TranslationKey) : undefined,
-        monthKey: 'payHistMonthAug2026' as TranslationKey,
-      };
-    });
+    return historyResponse.data
+      .filter((order: PaymentHistoryItem) => {
+        const status = (order.status || '').toUpperCase();
+        // Only terminal ledger rows — never show PENDING/AWAITING as paid.
+        return (
+          status === 'CAPTURED' ||
+          status === 'REFUNDED' ||
+          status === 'REFUND_PENDING'
+        );
+      })
+      .map((order: PaymentHistoryItem) => {
+        const isMedicine = order.stream === 'MEDICINE';
+        const status = (order.status || '').toUpperCase();
+        const isRefunded =
+          status === 'REFUNDED' || status === 'REFUND_PENDING';
+        const dateStr = order.createdAt ? order.createdAt.slice(0, 10) : '';
+        const methodStr = order.method || 'Online';
+        const amountLabel =
+          order.amount == null ? '' : `₹${order.amount}`;
+        return {
+          id: String(order.paymentOrderId),
+          kind: (isMedicine ? 'medicines' : 'consultation') as PaymentKind,
+          titleKey: (isMedicine
+            ? 'payHistItemMeds'
+            : 'payHistItemConsult') as TranslationKey,
+          amountLabel,
+          metaKey: `${dateStr} · ${methodStr} · #${order.paymentOrderId}` as TranslationKey,
+          status: (isRefunded ? 'refunded' : 'paid') as PaymentStatus,
+          noteKey: isRefunded
+            ? ('payHistNoteRefund' as TranslationKey)
+            : undefined,
+          monthKey: 'payHistMonthAug2026' as TranslationKey,
+        };
+      });
   }, [historyResponse]);
 
   const hasPayments = serverPayments.length > 0;

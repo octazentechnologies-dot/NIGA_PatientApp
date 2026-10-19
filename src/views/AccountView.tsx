@@ -63,12 +63,6 @@ const MY_CARE_ROWS: RowConfig[] = [
 
 const PAYMENT_ROWS: RowConfig[] = [
   {
-    id: 'methods',
-    icon: 'card-outline',
-    labelKey: 'accountPaymentMethods',
-    badgeKey: 'accountPaymentMethodsBadge',
-  },
-  {
     id: 'receipts',
     icon: 'receipt-outline',
     labelKey: 'accountPaymentsReceipts',

@@ -1,7 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import {
+  KeyboardAvoidingView,
   Linking,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -53,10 +55,15 @@ export function OtpVerificationView({
         onSelectLanguage={onSelectLanguage}
       />
 
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
       <ScrollView
         bounces={false}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
+        automaticallyAdjustKeyboardInsets
         showsVerticalScrollIndicator={false}
         onLayout={(event) => {
           if (contentMinHeight == null) {
@@ -213,6 +220,7 @@ export function OtpVerificationView({
           </Pressable>
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -221,6 +229,9 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.page,
+  },
+  flex: {
+    flex: 1,
   },
   content: {
     flexGrow: 1,

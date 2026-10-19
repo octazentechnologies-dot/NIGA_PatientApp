@@ -31,6 +31,8 @@ export type PaymentStatusDraft = {
   holdSeconds: number;
   /** Server paymentOrderId — never a seed literal. */
   paymentOrderId: number | null;
+  /** Visit id from hold — aligns local row with Visits refetch. */
+  patientAppId?: number | null;
 };
 
 export type PaymentStatusViewModel = {
@@ -86,16 +88,24 @@ export function usePaymentStatusController({
   }, [active]);
 
   useEffect(() => {
-    // Only add a local calendar row after the server confirmed CAPTURED (status success).
+    // Optimistic local row only until Visits refetch (CAPTURED invalidates Visits).
+    // Use patientAppId as id so the server list replaces this row instead of duplicating.
     if (!active || draft.status !== 'success' || confirmed.current) {
       return;
     }
     confirmed.current = true;
     const paymentId =
       draft.paymentOrderId != null ? String(draft.paymentOrderId) : '';
+    const visitId =
+      draft.patientAppId != null
+        ? String(draft.patientAppId)
+        : `${draft.doctorId}-${draft.whenLabel}-${draft.patientLabel}`;
     onConfirmBooking({
-      id: `${draft.doctorId}-${draft.whenLabel}-${draft.patientLabel}`,
-      bookingId: makeBookingId(),
+      id: visitId,
+      bookingId:
+        draft.patientAppId != null
+          ? `APT-${draft.patientAppId}`
+          : makeBookingId(),
       doctorId: draft.doctorId,
       doctorNameKey: '' as TranslationKey,
       doctorInitials: draft.doctorInitials,

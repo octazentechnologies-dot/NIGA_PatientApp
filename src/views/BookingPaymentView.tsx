@@ -36,8 +36,6 @@ export function BookingPaymentView({
   platformFeeLabel,
   taxesLabel,
   totalLabel,
-  holdLabel,
-  holdExpired,
   breakdownOpen,
   usesGatewayCheckout,
   method,
@@ -52,7 +50,7 @@ export function BookingPaymentView({
   payLabel,
   payBusy,
   payError,
-  payAtClinicEnabled,
+  showPayAtClinic,
   onBack,
   onToggleBreakdown,
   onSelectMethod,
@@ -68,8 +66,9 @@ export function BookingPaymentView({
   onPayAtClinic,
 }: BookingPaymentViewModel) {
   const insets = useSafeAreaInsets();
-  const footerReserve = 88 + sheetBottomPadding(insets, spacing.md);
-  const payDisabled = payBusy || holdExpired;
+  const footerReserve =
+    (showPayAtClinic ? 108 : 72) + sheetBottomPadding(insets, spacing.sm);
+  const payDisabled = payBusy;
 
   return (
     <View style={styles.root}>
@@ -94,12 +93,6 @@ export function BookingPaymentView({
           <View style={styles.iconButton}>
             <Ionicons name="lock-closed" size={18} color={colors.ink} />
           </View>
-        </View>
-        <View style={styles.holdBar}>
-          <Ionicons name="time-outline" size={16} color={AMBER} />
-          <AppText variant="labelSm" color={AMBER} weightOverride="600">
-            {holdLabel}
-          </AppText>
         </View>
       </View>
 
@@ -161,11 +154,6 @@ export function BookingPaymentView({
               {payError ? (
                 <AppText variant="bodyMd" color={colors.error} style={{ marginTop: spacing.sm }}>
                   {payError}
-                </AppText>
-              ) : null}
-              {holdExpired ? (
-                <AppText variant="bodyMd" color={AMBER} style={{ marginTop: spacing.sm }}>
-                  Your slot hold has expired. Choose another time.
                 </AppText>
               ) : null}
             </View>
@@ -318,22 +306,27 @@ export function BookingPaymentView({
         </View>
       </ScrollView>
 
-      <View style={[styles.footer, { paddingBottom: sheetBottomPadding(insets, spacing.sm) }]}>
+      <View
+        style={[
+          styles.footer,
+          { paddingBottom: sheetBottomPadding(insets, spacing.sm) },
+        ]}
+      >
         <AppButton
           label={payLabel}
           onPress={onPay}
           disabled={payDisabled}
           icon={<Ionicons name="lock-closed" size={16} color={colors.card} />}
         />
-        {payAtClinicEnabled ? (
+        {showPayAtClinic ? (
           <Pressable
             accessibilityRole="button"
             onPress={onPayAtClinic}
             disabled={payBusy}
-            style={{ marginTop: spacing.sm, alignItems: 'center', minHeight: 48, justifyContent: 'center' }}
+            style={styles.clinicLink}
           >
             <AppText variant="labelSm" color={ICON_BLUE} weightOverride="600">
-              Pay at clinic instead
+              {t('payAtClinicInstead')}
             </AppText>
           </Pressable>
         ) : null}
@@ -776,6 +769,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     paddingHorizontal: spacing.gutter,
     paddingTop: spacing.sm,
+    gap: spacing.xs,
+  },
+  clinicLink: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
   },
   sheetBackdrop: {
     flex: 1,

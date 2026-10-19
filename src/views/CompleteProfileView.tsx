@@ -1,6 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -170,6 +172,10 @@ export function CompleteProfileView({
         onSelectLanguage={onSelectLanguage}
       />
 
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
       <ScrollView
         style={styles.scroll}
         bounces={false}
@@ -454,6 +460,7 @@ export function CompleteProfileView({
           </AppText>
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
 
       <View
         style={[

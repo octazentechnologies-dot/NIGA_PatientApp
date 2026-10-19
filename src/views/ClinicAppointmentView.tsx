@@ -7,6 +7,7 @@ import { colors } from '../theme/colors';
 import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
 import { CancelAppointmentSheet } from '../components/CancelAppointmentSheet';
+import { ClinicMapPreview } from '../components/ClinicMapPreview';
 import type { AppointmentDetailViewModel } from '../controllers/useAppointmentDetailController';
 import { radii } from '../theme/radii';
 import { spacing } from '../theme/spacing';
@@ -75,17 +76,13 @@ export function ClinicAppointmentView(vm: ClinicAppointmentViewModel) {
               </AppText>
             ) : null}
 
-            {vm.clinicMapLink || vm.clinicAddress ? (
-              <View style={styles.mapBox}>
-                <View style={styles.mapGrid}>
-                  {Array.from({ length: 12 }).map((_, index) => (
-                    <View key={`map-line-${index}`} style={styles.mapLine} />
-                  ))}
-                </View>
-                <View style={styles.mapPin}>
-                  <Ionicons name="location" size={28} color={colors.primaryOutline} />
-                </View>
-              </View>
+            {vm.clinicMapLink || vm.clinicAddress || vm.clinicName ? (
+              <ClinicMapPreview
+                clinicName={vm.clinicName}
+                clinicAddress={vm.clinicAddress}
+                clinicMapLink={vm.clinicMapLink}
+                onPress={vm.onDirections}
+              />
             ) : null}
 
             <View style={styles.actionRow}>
@@ -171,15 +168,42 @@ export function ClinicAppointmentView(vm: ClinicAppointmentViewModel) {
                 <AppText variant="labelMd" color={colors.ink} weightOverride="600" raw>
                   {vm.clinicFeeAmount}
                 </AppText>
-                <View style={styles.payPill}>
-                  <AppText variant="labelSm" color={colors.muted} weightOverride="600">
-                    {vm.t('clinicAptPayAtClinic')}
-                  </AppText>
-                </View>
+                {vm.isVisitPaid ? (
+                  <View style={styles.payPill}>
+                    <AppText variant="labelSm" color={colors.success} weightOverride="600">
+                      {vm.t('clinicAptPaid')}
+                    </AppText>
+                  </View>
+                ) : !vm.showPayNow ? (
+                  <View style={styles.payPill}>
+                    <AppText variant="labelSm" color={colors.muted} weightOverride="600">
+                      {vm.t('clinicAptPayAtClinic')}
+                    </AppText>
+                  </View>
+                ) : null}
               </View>
             </View>
           ) : null}
         </View>
+
+        {vm.showPayNow ? (
+          <View style={styles.card}>
+            <AppText variant="bodyMd" color={colors.muted}>
+              {vm.t('clinicAptPayNowHint')}
+            </AppText>
+            <AppButton
+              label={vm.payNowLabel}
+              onPress={vm.onPayNow}
+              loading={vm.payNowBusy}
+              disabled={vm.payNowBusy}
+            />
+            {vm.payNowError ? (
+              <AppText variant="bodyMd" color={colors.error} raw>
+                {vm.payNowError}
+              </AppText>
+            ) : null}
+          </View>
+        ) : null}
 
         <View style={styles.card}>
           <AppText variant="headlineMd" color={colors.ink}>
@@ -347,35 +371,6 @@ const styles = StyleSheet.create({
     borderRadius: radii.default,
     padding: spacing.md,
     gap: spacing.md,
-  },
-  mapBox: {
-    height: 160,
-    borderRadius: radii.default,
-    backgroundColor: colors.primaryContainer,
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  mapGrid: {
-    ...StyleSheet.absoluteFill,
-    opacity: 0.35,
-    justifyContent: 'space-evenly',
-    paddingVertical: 8,
-  },
-  mapLine: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.primaryOutline,
-    marginHorizontal: 12,
-  },
-  mapPin: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.card,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.outlineVariant,
   },
   actionRow: {
     flexDirection: 'row',

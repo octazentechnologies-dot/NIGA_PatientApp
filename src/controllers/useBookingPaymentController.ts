@@ -1,19 +1,27 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AppState, type AppStateStatus } from 'react-native';
 
 import {
   DEFAULT_PAY_METHOD,
   PAY_BANKS,
   PAY_WALLETS,
-  formatHoldTime,
   type PayMethodId,
   type PayOption,
 } from '../config/bookingPayment';
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
 import { useAppConfig } from '../providers/AppConfigProvider';
-import { usePayment, type PaymentFlowState } from '../payments';
-import { useCreateConsultOrderMutation } from '../store/api/new/paymentsApi';
+import {
+  readPendingPayment,
+  usePayment,
+  type PaymentFlowState,
+} from '../payments';
+import {
+  useCreateConsultOrderMutation,
+  useUpdateBookingPaymentMutation,
+} from '../store/api/new/paymentsApi';
 import { useGetPatientProfileQuery } from '../store/api/new/patientProfileApi';
+import { extractErrorMessage } from '../store/api/new/newBaseApi';
 import { useAppSelector } from '../store/hooks';
 
 export type BookingPaymentDraft = {
@@ -24,12 +32,16 @@ export type BookingPaymentDraft = {
   totalLabel: string;
 };
 
+export type SubmitBookingPaymentResult = {
+  patientAppId: number;
+  bookingToken: string;
+  holdExpiresAt?: string;
+  consultFee?: number;
+};
+
 export type BookingPaymentViewModel = BookingPaymentDraft & {
   language: AppLanguage;
   t: (key: TranslationKey) => string;
-  holdLabel: string;
-  holdSeconds: number;
-  holdExpired: boolean;
   breakdownOpen: boolean;
   /** When true, Razorpay Checkout owns method selection — hide local bank/UPI mocks. */
   usesGatewayCheckout: boolean;
@@ -47,7 +59,9 @@ export type BookingPaymentViewModel = BookingPaymentDraft & {
   payBusy: boolean;
   payError: string | null;
   paymentState: PaymentFlowState;
-  payAtClinicEnabled: boolean;
+  /** Show only when consult mode is InClinic. */
+  showPayAtClinic: boolean;
+  paymentOrderId: number | null;
   onBack: () => void;
   onToggleBreakdown: () => void;
   onSelectMethod: (id: PayMethodId) => void;
@@ -61,45 +75,39 @@ export type BookingPaymentViewModel = BookingPaymentDraft & {
   onAddCard: () => void;
   onPay: () => void;
   onPayAtClinic: () => void;
+  resumePendingPayment: (paymentOrderId?: number) => void;
 };
-
-function secondsUntil(iso: string | null | undefined): number {
-  if (!iso) {
-    return 0;
-  }
-  const end = Date.parse(iso);
-  if (!Number.isFinite(end)) {
-    return 0;
-  }
-  return Math.max(0, Math.floor((end - Date.now()) / 1000));
-}
 
 export function useBookingPaymentController({
   draft,
   active,
-  holdExpiresAt,
-  patientAppId,
-  bookingToken,
-  payAtClinicEnabled = false,
+  patientAppId: initialPatientAppId,
+  bookingToken: initialBookingToken,
+  isInClinicMode = false,
   onBack,
+  onSubmitBooking,
   onPaymentConfirmed,
   onPaymentPending,
   onPaymentFailed,
 }: {
   draft: BookingPaymentDraft;
   active: boolean;
-  holdExpiresAt: string | null;
   patientAppId: number | null;
   bookingToken: string | null;
-  payAtClinicEnabled?: boolean;
+  /** Consult mode is InClinic — show Pay at Clinic Instead. */
+  isInClinicMode?: boolean;
   onBack: () => void;
+  onSubmitBooking: (payment: {
+    payAtClinic: boolean;
+    razorpay_order_id?: string | null;
+    razorpay_payment_id?: string | null;
+  }) => Promise<SubmitBookingPaymentResult>;
   onPaymentConfirmed: (paymentOrderId: number) => void;
   onPaymentPending?: (paymentOrderId: number) => void;
   onPaymentFailed?: (message: string) => void;
 }): BookingPaymentViewModel {
   const { language, t } = useLocalization();
   const appConfig = useAppConfig();
-  const [secondsLeft, setSecondsLeft] = useState(() => secondsUntil(holdExpiresAt));
   const [breakdownOpen, setBreakdownOpen] = useState(false);
   const [method, setMethod] = useState<PayMethodId>(DEFAULT_PAY_METHOD);
   const [upiId, setUpiId] = useState('');
@@ -108,6 +116,13 @@ export function useBookingPaymentController({
   const [bankPickerOpen, setBankPickerOpen] = useState(false);
   const [walletPickerOpen, setWalletPickerOpen] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [clinicBusy, setClinicBusy] = useState(false);
+  const [livePatientAppId, setLivePatientAppId] = useState<number | null>(
+    initialPatientAppId,
+  );
+  const [liveBookingToken, setLiveBookingToken] = useState<string | null>(
+    initialBookingToken,
+  );
 
   const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
   const authUser = useAppSelector((s) => s.auth.user);
@@ -118,6 +133,7 @@ export function useBookingPaymentController({
   const profile = profileResponse?.data;
 
   const [createConsultOrder] = useCreateConsultOrderMutation();
+  const [updateBookingPayment] = useUpdateBookingPaymentMutation();
 
   const prefill = useMemo(
     () => ({
@@ -137,23 +153,45 @@ export function useBookingPaymentController({
     [authMobile, authUser, profile],
   );
 
+  const onPaymentPendingRef = useRef(onPaymentPending);
+  onPaymentPendingRef.current = onPaymentPending;
+  const onSubmitBookingRef = useRef(onSubmitBooking);
+  onSubmitBookingRef.current = onSubmitBooking;
+  const livePatientAppIdRef = useRef(livePatientAppId);
+  livePatientAppIdRef.current = livePatientAppId;
+  const liveBookingTokenRef = useRef(liveBookingToken);
+  liveBookingTokenRef.current = liveBookingToken;
+
   const payment = usePayment({
     flow: 'consult',
     appConfigKeyId: appConfig.razorpayKeyId,
     prefill,
     description: draft.paymentSummaryLine || 'Consultation',
-    patientAppId,
+    patientAppId: livePatientAppId,
     createOrder: async () => {
+      // Ensure a visit exists so ConsultOrders can quote the fee / create gateway order.
+      let patientAppId = livePatientAppIdRef.current;
+      let bookingToken = liveBookingTokenRef.current;
       if (!patientAppId) {
-        throw { data: { code: 'VALIDATION', message: 'Booking is missing. Please book again.' } };
+        const hold = await onSubmitBookingRef.current({
+          payAtClinic: false,
+          razorpay_order_id: null,
+          razorpay_payment_id: null,
+        });
+        patientAppId = hold.patientAppId;
+        bookingToken = hold.bookingToken;
+        setLivePatientAppId(hold.patientAppId);
+        setLiveBookingToken(hold.bookingToken);
+        livePatientAppIdRef.current = hold.patientAppId;
+        liveBookingTokenRef.current = hold.bookingToken;
       }
+
       const idempotencyKey = `pa-${patientAppId}-${Date.now()}`;
       const res = await createConsultOrder({
         patientAppId,
         bookingToken: bookingToken || undefined,
         payAtClinic: false,
         idempotencyKey,
-        // Do not send amount — server quotes from the visit fee.
       }).unwrap();
       return {
         gatewayReady: res.gatewayReady,
@@ -162,12 +200,47 @@ export function useBookingPaymentController({
         data: res.data,
       };
     },
+    onCheckoutSuccess: async (checkout) => {
+      // After Razorpay SUCCESS — POST /Payments/Bookings/UpdatePayment (pay later contract).
+      // Fail soft: Verify poll still runs if UpdatePayment is not PAID yet.
+      const patientAppId = livePatientAppIdRef.current;
+      const userId =
+        typeof authUser?.userId === 'number' ? authUser.userId : undefined;
+      if (patientAppId == null || userId == null) {
+        console.warn(
+          '[BookingPayment] UpdatePayment skipped — missing patientAppId or userId',
+        );
+        return undefined;
+      }
+      try {
+        const res = await updateBookingPayment({
+          userId,
+          patientAppId,
+          razorpay_order_id: checkout.orderId,
+          razorpay_payment_id: checkout.paymentId,
+          paymentOrderId: checkout.paymentOrderId,
+        }).unwrap();
+        const paid =
+          (res.data?.paymentStatus || '').toUpperCase() === 'PAID';
+        return { paid, method: res.data?.method ?? null };
+      } catch (attachErr) {
+        console.warn(
+          '[BookingPayment] UpdatePayment failed — Verify poll will continue:',
+          attachErr,
+        );
+        return undefined;
+      }
+    },
     onConfirmed: (order) => {
       onPaymentConfirmed(order.paymentOrderId);
     },
+    onPendingConfirmation: (orderId) => {
+      onPaymentPendingRef.current?.(orderId);
+    },
   });
 
-  const { reset: resetPayment } = payment;
+  const { reset: resetPayment, resumePending } = payment;
+  const resumedForSession = useRef<number | null>(null);
 
   useEffect(() => {
     if (!active) {
@@ -179,89 +252,109 @@ export function useBookingPaymentController({
       setBankPickerOpen(false);
       setWalletPickerOpen(false);
       setLocalError(null);
+      setClinicBusy(false);
+      setLivePatientAppId(null);
+      setLiveBookingToken(null);
       resetPayment();
+      resumedForSession.current = null;
       return;
     }
-    setSecondsLeft(secondsUntil(holdExpiresAt));
-    const timer = setInterval(() => {
-      setSecondsLeft(secondsUntil(holdExpiresAt));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [active, holdExpiresAt, resetPayment]);
+    setLivePatientAppId(initialPatientAppId);
+    setLiveBookingToken(initialBookingToken);
+  }, [active, initialBookingToken, initialPatientAppId, resetPayment]);
 
   useEffect(() => {
-    if (payment.state === 'PENDING_CONFIRMATION' && payment.paymentOrderId) {
-      onPaymentPending?.(payment.paymentOrderId);
+    if (!active || livePatientAppId == null) {
+      return;
     }
+    let cancelled = false;
+    void (async () => {
+      const pending = await readPendingPayment();
+      if (cancelled || !pending || pending.flow !== 'consult') {
+        return;
+      }
+      if (pending.patientAppId != null && pending.patientAppId !== livePatientAppId) {
+        return;
+      }
+      if (resumedForSession.current === pending.paymentOrderId) {
+        return;
+      }
+      resumedForSession.current = pending.paymentOrderId;
+      onPaymentPendingRef.current?.(pending.paymentOrderId);
+      await resumePending(pending.paymentOrderId);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [active, livePatientAppId, resumePending]);
+
+  useEffect(() => {
+    if (!active) {
+      return;
+    }
+    const onChange = (next: AppStateStatus) => {
+      if (next !== 'active') {
+        return;
+      }
+      if (payment.state !== 'PENDING_CONFIRMATION' || payment.paymentOrderId == null) {
+        return;
+      }
+      void resumePending(payment.paymentOrderId);
+    };
+    const sub = AppState.addEventListener('change', onChange);
+    return () => sub.remove();
+  }, [active, payment.paymentOrderId, payment.state, resumePending]);
+
+  useEffect(() => {
     if (payment.state === 'FAILED' && payment.errorMessage) {
       onPaymentFailed?.(payment.errorMessage);
     }
-  }, [
-    onPaymentFailed,
-    onPaymentPending,
-    payment.errorMessage,
-    payment.paymentOrderId,
-    payment.state,
-  ]);
+  }, [onPaymentFailed, payment.errorMessage, payment.state]);
 
-  const holdExpired = secondsLeft <= 0 && Boolean(holdExpiresAt);
   const selectedBank = PAY_BANKS.find((item) => item.id === selectedBankId);
   const selectedWallet = PAY_WALLETS.find((item) => item.id === selectedWalletId);
 
   const onPay = useCallback(() => {
     setLocalError(null);
-    if (holdExpired) {
-      setLocalError('Your slot hold has expired. Please choose another time.');
-      return;
-    }
-    if (!patientAppId) {
-      setLocalError('Booking is incomplete. Go back and book again.');
-      return;
-    }
     void payment.startPayment();
-  }, [holdExpired, patientAppId, payment]);
+  }, [payment]);
 
   const onPayAtClinic = useCallback(() => {
-    if (!payAtClinicEnabled || !patientAppId) {
+    if (!isInClinicMode || clinicBusy) {
       return;
     }
     void (async () => {
       try {
+        setClinicBusy(true);
         setLocalError(null);
-        const idempotencyKey = `pa-clinic-${patientAppId}-${Date.now()}`;
-        await createConsultOrder({
-          patientAppId,
-          bookingToken: bookingToken || undefined,
+        const result = await onSubmitBooking({
           payAtClinic: true,
-          idempotencyKey,
-        }).unwrap();
-        // Pay-at-clinic is recorded; visit stays unpaid until reception — treat as pending success path.
+          razorpay_order_id: null,
+          razorpay_payment_id: null,
+        });
+        setLivePatientAppId(result.patientAppId);
+        setLiveBookingToken(result.bookingToken);
+        // Clinic pay recorded — visit unpaid until reception.
         onPaymentPending?.(0);
       } catch (err) {
-        const e = err as { data?: { message?: string } };
-        setLocalError(e?.data?.message || 'Could not record pay at clinic.');
+        const e = err as { data?: unknown };
+        setLocalError(
+          extractErrorMessage(e?.data ?? err, 'Could not record pay at clinic.'),
+        );
+      } finally {
+        setClinicBusy(false);
       }
     })();
-  }, [
-    bookingToken,
-    createConsultOrder,
-    onPaymentPending,
-    patientAppId,
-    payAtClinicEnabled,
-  ]);
+  }, [clinicBusy, isInClinicMode, onPaymentPending, onSubmitBooking]);
 
   const payError = localError || payment.errorMessage;
-  const payBusy = payment.busy || payment.state === 'CREATING_ORDER';
+  const payBusy =
+    clinicBusy || payment.busy || payment.state === 'CREATING_ORDER';
 
   return {
     language,
     t,
     ...draft,
-    holdLabel: holdExpiresAt
-      ? t('paySlotHeld').replace('{time}', formatHoldTime(secondsLeft))
-      : t('paySlotHeld').replace('{time}', '--:--'),
-    holdSeconds: secondsLeft,
-    holdExpired,
     breakdownOpen,
     usesGatewayCheckout: true,
     method,
@@ -282,7 +375,8 @@ export function useBookingPaymentController({
     payBusy,
     payError,
     paymentState: payment.state,
-    payAtClinicEnabled,
+    showPayAtClinic: isInClinicMode,
+    paymentOrderId: payment.paymentOrderId,
     onBack,
     onToggleBreakdown: () => setBreakdownOpen((current) => !current),
     onSelectMethod: (id) => {
@@ -314,5 +408,8 @@ export function useBookingPaymentController({
     onAddCard: () => setMethod('addCard'),
     onPay,
     onPayAtClinic,
+    resumePendingPayment: (orderId) => {
+      void resumePending(orderId);
+    },
   };
 }

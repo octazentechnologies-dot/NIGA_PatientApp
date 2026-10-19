@@ -7,12 +7,11 @@ export const SPLASH_DURATION_MS = 2800;
 export type SplashViewModel = {
   brandName: string;
   tagline: string;
-  loadingEnglish: string;
-  loadingMarathi: string;
+  loadingLabel: string;
 };
 
 export function useSplashController(onFinished: () => void): SplashViewModel {
-  const { t } = useLocalization();
+  const { language, t } = useLocalization();
 
   useEffect(() => {
     const timer = setTimeout(onFinished, SPLASH_DURATION_MS);
@@ -22,7 +21,7 @@ export function useSplashController(onFinished: () => void): SplashViewModel {
   return {
     brandName: t('brandName'),
     tagline: t('tagline'),
-    loadingEnglish: t('splashLoadingEn'),
-    loadingMarathi: t('splashLoadingMr'),
+    loadingLabel:
+      language === 'mr' ? t('splashLoadingMr') : t('splashLoadingEn'),
   };
 }

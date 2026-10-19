@@ -4,18 +4,21 @@ import type { TranslationKey } from '../localization/types';
 
 export type CareNeed = {
   id: string;
-  image: ImageSourcePropType;
-  titleKey: TranslationKey;
-  hintKey: TranslationKey;
+  /** Optional illustration; letter avatar used when omitted. */
+  image?: ImageSourcePropType;
+  title: string;
+  hint: string;
   wide?: boolean;
+  /** Numeric id from CareCategories API when available. */
+  careCategoryId?: number;
 };
 
 export type NearbyDoctor = {
   id: string;
-  nameKey: TranslationKey;
+  name: string;
   initials: string;
-  metaKey: TranslationKey;
-  placeKey: TranslationKey;
+  meta: string;
+  place: string;
   verified: boolean;
 };
 

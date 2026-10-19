@@ -20,6 +20,7 @@ import {
   useGetPatientProfileQuery,
   useUpdatePatientProfileMutation,
 } from '../store/api/new/patientProfileApi';
+import { registerAuthenticatedDeviceForPush } from '../services/notifications';
 import { saveAccessToken, saveAuthUserData } from '../services/secureStorage';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
@@ -1012,6 +1013,13 @@ export function useCompleteProfileController({
       );
       if (sessionToken) {
         dispatch(setAuthenticated(true));
+
+        // FCM: register this device after JWT + userId are saved.
+        // Fail soft — never block profile continue.
+        void registerAuthenticatedDeviceForPush({
+          accessToken: sessionToken,
+          userId: response.userId,
+        });
       }
 
       // Navigate to next screen

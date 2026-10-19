@@ -1,52 +1,95 @@
-import { Platform } from 'react-native';
-
-import { API_CONFIG } from '../../config/apiConfig';
-import { getAccessToken } from '../secureStorage';
+import { devicesApi } from '../../store/api/new/devicesApi';
+import { store } from '../../store';
+import {
+  getAccessToken,
+  getAuthUserData,
+  getDevicePushTokenId,
+  getNativePushToken,
+  saveDevicePushTokenId,
+  saveNativePushToken,
+  deleteDevicePushTokenId,
+  deleteNativePushToken,
+} from '../secureStorage';
+import { getOrCreateDeviceId, resolveDeviceType } from './deviceId';
 import { logNotifications, maskPushToken } from './log';
 
+type AuthUserForPush = {
+  userId?: number;
+};
+
+export type RegisterDeviceTokenOptions = {
+  /** Prefer when JWT was just saved and Redux may lag. */
+  accessToken?: string;
+  /** Prefer when userId is known from VerifyOtp / CreatePatient response. */
+  userId?: number;
+};
+
+const MIN_TOKEN_LEN = 8;
+const MAX_TOKEN_LEN = 512;
+
 /**
- * Backend Push Notification Device Registry:
- * - M1: POST /api/Devices/Register { platform: 'android' | 'ios', token }
- * - M2: POST /api/Device/Register { platform: 'FCM' | 'APNs', token }
- * - M3: POST /api/Device/Unregister { token }
- * Auth: Bearer token (patient)
+ * POST /api/Device/Register — FCM-Mobile-API.md
+ * Body: { token, userId?, deviceType, deviceId }
  */
 export async function registerDeviceToken(
   pushToken: string,
-  authHeaders?: Record<string, string>,
+  options?: RegisterDeviceTokenOptions,
 ): Promise<boolean> {
-  const token =
-    authHeaders?.Authorization || authHeaders?.authorization
-      ? undefined
-      : await getAccessToken();
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...authHeaders,
-  };
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
+  const token = pushToken.trim();
+  if (token.length < MIN_TOKEN_LEN || token.length > MAX_TOKEN_LEN) {
+    logNotifications('Device registration skipped — invalid token length');
+    return false;
   }
 
-  const base = API_CONFIG.new.baseUrl.replace(/\/+$/, '');
+  const accessToken = options?.accessToken ?? (await getAccessToken());
+  if (!accessToken) {
+    logNotifications('Device registration skipped — no access token');
+    return false;
+  }
+
+  let userId = options?.userId;
+  if (userId == null) {
+    const saved = await getAuthUserData<AuthUserForPush>();
+    if (typeof saved?.userId === 'number' && Number.isFinite(saved.userId)) {
+      userId = saved.userId;
+    } else {
+      const fromStore = store.getState().auth.userId;
+      if (typeof fromStore === 'number' && Number.isFinite(fromStore)) {
+        userId = fromStore;
+      }
+    }
+  }
+
+  const deviceId = await getOrCreateDeviceId();
+  const deviceType = resolveDeviceType();
 
   try {
-    // M1: POST /api/Devices/Register
-    const m1Platform = Platform.OS === 'ios' ? 'ios' : 'android';
-    await fetch(`${base}/api/Devices/Register`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ platform: m1Platform, token: pushToken }),
-    }).catch(() => undefined);
+    const result = await store
+      .dispatch(
+        devicesApi.endpoints.registerDevice.initiate({
+          token,
+          userId,
+          deviceType,
+          deviceId,
+        }),
+      )
+      .unwrap();
 
-    // M2: POST /api/Device/Register
-    const m2Platform = Platform.OS === 'ios' ? 'APNs' : 'FCM';
-    await fetch(`${base}/api/Device/Register`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ platform: m2Platform, token: pushToken }),
-    }).catch(() => undefined);
+    if (result?.success === false) {
+      logNotifications(
+        'Device registration rejected',
+        result.message ?? 'success=false',
+      );
+      return false;
+    }
 
-    logNotifications('Device registered via New API', maskPushToken(pushToken));
+    const pushId = result?.data?.devicePushTokenId;
+    if (typeof pushId === 'number' && Number.isFinite(pushId)) {
+      await saveDevicePushTokenId(pushId);
+    }
+    await saveNativePushToken(token);
+
+    logNotifications('Device registered via New API', maskPushToken(token));
     return true;
   } catch (error) {
     const message = error instanceof Error ? error.message : 'unknown';
@@ -55,37 +98,50 @@ export async function registerDeviceToken(
   }
 }
 
+/**
+ * POST /api/Device/Unregister — by devicePushTokenId (preferred) or token.
+ * @see FCM-Mobile-API.md §3
+ */
 export async function unregisterDeviceToken(
-  pushToken: string,
-  authHeaders?: Record<string, string>,
+  pushToken?: string,
 ): Promise<boolean> {
-  const token =
-    authHeaders?.Authorization || authHeaders?.authorization
-      ? undefined
-      : await getAccessToken();
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...authHeaders,
-  };
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
+  const accessToken = await getAccessToken();
+  if (!accessToken) {
+    logNotifications('Device unregister skipped — no access token');
+    await deleteDevicePushTokenId();
+    await deleteNativePushToken();
+    return false;
   }
 
-  const base = API_CONFIG.new.baseUrl.replace(/\/+$/, '');
+  const storedId = await getDevicePushTokenId();
+  const token =
+    pushToken?.trim() || (await getNativePushToken())?.trim() || null;
+
+  if (storedId == null && !token) {
+    return true;
+  }
 
   try {
-    // M3: POST /api/Device/Unregister
-    await fetch(`${base}/api/Device/Unregister`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ token: pushToken }),
-    }).catch(() => undefined);
+    const body =
+      storedId != null
+        ? { devicePushTokenId: storedId }
+        : { token: token as string };
 
-    logNotifications('Device unregistered via New API', maskPushToken(pushToken));
+    await store
+      .dispatch(devicesApi.endpoints.unregisterDevice.initiate(body))
+      .unwrap();
+    logNotifications(
+      'Device unregistered via New API',
+      storedId != null ? `id=${storedId}` : maskPushToken(token ?? ''),
+    );
+    await deleteDevicePushTokenId();
+    await deleteNativePushToken();
     return true;
   } catch (error) {
     const message = error instanceof Error ? error.message : 'unknown';
     logNotifications('Device unregister failed', message);
+    await deleteDevicePushTokenId();
+    await deleteNativePushToken();
     return false;
   }
 }

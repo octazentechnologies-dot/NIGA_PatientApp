@@ -49,6 +49,19 @@ export type UsePaymentOptions = {
   patientAppId?: number | null;
   medicineOrderId?: number | null;
   onConfirmed?: (order: ConsultPaymentOrderData) => void;
+  /** Fired when Verify poll times out — pending SecureStore kept for resume. */
+  onPendingConfirmation?: (paymentOrderId: number) => void;
+  /**
+   * After Checkout SUCCESS (before Verify poll).
+   * Prefer `POST /Payments/Bookings/UpdatePayment`. Return `{ paid: true }` when
+   * `data.paymentStatus === 'PAID'` so the flow can skip Verify polling.
+   */
+  onCheckoutSuccess?: (checkout: {
+    paymentId: string;
+    orderId: string;
+    signature: string;
+    paymentOrderId: number;
+  }) => Promise<void | { paid?: boolean; method?: string | null }>;
 };
 
 function sleep(ms: number): Promise<void> {
@@ -102,6 +115,8 @@ export function usePayment(options: UsePaymentOptions) {
     patientAppId,
     medicineOrderId,
     onConfirmed,
+    onPendingConfirmation,
+    onCheckoutSuccess,
   } = options;
 
   const { openCheckout } = useRazorpayCheckout();
@@ -111,6 +126,12 @@ export function usePayment(options: UsePaymentOptions) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [paymentOrderId, setPaymentOrderId] = useState<number | null>(null);
   const inFlight = useRef(false);
+  const onConfirmedRef = useRef(onConfirmed);
+  const onPendingRef = useRef(onPendingConfirmation);
+  const onCheckoutSuccessRef = useRef(onCheckoutSuccess);
+  onConfirmedRef.current = onConfirmed;
+  onPendingRef.current = onPendingConfirmation;
+  onCheckoutSuccessRef.current = onCheckoutSuccess;
 
   const reset = useCallback(() => {
     inFlight.current = false;
@@ -119,19 +140,29 @@ export function usePayment(options: UsePaymentOptions) {
   }, []);
 
   const pollUntilCaptured = useCallback(
-    async (orderId: number, gatewayPaymentId?: string) => {
+    async (
+      orderId: number,
+      checkout?: {
+        paymentId?: string;
+        orderId?: string;
+        signature?: string;
+      },
+    ) => {
       const started = Date.now();
       while (Date.now() - started < POLL_MAX_MS) {
         try {
           const res = await verifyPayment({
             paymentOrderId: orderId,
-            gatewayPaymentId,
+            gatewayPaymentId: checkout?.paymentId,
+            razorpay_payment_id: checkout?.paymentId,
+            razorpay_order_id: checkout?.orderId,
+            razorpay_signature: checkout?.signature,
           }).unwrap();
           const status = (res.data?.status || '').toUpperCase();
           if (status === 'CAPTURED') {
             await clearPendingPayment();
             setState('CONFIRMED');
-            onConfirmed?.(res.data);
+            onConfirmedRef.current?.(res.data);
             return;
           }
           if (status === 'FAILED') {
@@ -157,30 +188,33 @@ export function usePayment(options: UsePaymentOptions) {
         }
         await sleep(POLL_MS);
       }
+      // Keep SecureStore pending so Check status / app resume can re-poll.
       setState('PENDING_CONFIRMATION');
       setErrorMessage(
         'Payment received, confirming… Check this screen again in a minute, or open Support if it stays pending.',
       );
+      onPendingRef.current?.(orderId);
     },
-    [onConfirmed, verifyPayment],
+    [verifyPayment],
   );
 
   const resumePending = useCallback(
-    async (orderId: number) => {
-      if (inFlight.current) {
+    async (orderId?: number) => {
+      const id = orderId ?? paymentOrderId;
+      if (id == null || inFlight.current) {
         return;
       }
       inFlight.current = true;
-      setPaymentOrderId(orderId);
+      setPaymentOrderId(id);
       setState('VERIFYING');
       setErrorMessage(null);
       try {
-        await pollUntilCaptured(orderId);
+        await pollUntilCaptured(id);
       } finally {
         inFlight.current = false;
       }
     },
-    [pollUntilCaptured],
+    [paymentOrderId, pollUntilCaptured],
   );
 
   const startPayment = useCallback(async () => {
@@ -221,13 +255,17 @@ export function usePayment(options: UsePaymentOptions) {
       const checkout = await openCheckout(mapped, prefill, description);
 
       if (checkout.type === 'CANCELLED') {
+        // User closed Checkout without paying — drop pending so resume won't re-poll unpaid.
+        await clearPendingPayment();
         setState('CANCELLED');
         setErrorMessage(null);
         return;
       }
       if (checkout.type === 'NETWORK_ERROR') {
-        setState('FAILED');
+        // Payment may have succeeded offline — treat as pending confirmation.
+        setState('PENDING_CONFIRMATION');
         setErrorMessage(mapPaymentError('NETWORK_ERROR'));
+        onPendingRef.current?.(mapped.paymentOrderId);
         return;
       }
       if (checkout.type === 'FAILED') {
@@ -236,13 +274,49 @@ export function usePayment(options: UsePaymentOptions) {
         return;
       }
 
-      // Checkout SUCCESS — do NOT mark paid. Verify + poll.
-      logDev('checkout ok → verify', {
+      // Checkout SUCCESS — UpdatePayment (preferred), then Verify poll if not yet PAID.
+      // Never mark paid from Checkout alone.
+      logDev('checkout ok → UpdatePayment + verify', {
         paymentOrderId: maskPaymentId(mapped.paymentOrderId),
         paymentId: maskPaymentId(checkout.paymentId),
       });
+      let alreadyPaid = false;
+      let paidMethod: string | null | undefined;
+      if (onCheckoutSuccessRef.current) {
+        const attachResult = await onCheckoutSuccessRef.current({
+          paymentId: checkout.paymentId,
+          orderId: checkout.orderId,
+          signature: checkout.signature,
+          paymentOrderId: mapped.paymentOrderId,
+        });
+        alreadyPaid = Boolean(attachResult?.paid);
+        paidMethod = attachResult?.method;
+      }
+      if (alreadyPaid) {
+        await clearPendingPayment();
+        setState('CONFIRMED');
+        onConfirmedRef.current?.({
+          paymentOrderId: mapped.paymentOrderId,
+          stream: 'CONSULT',
+          patientAppId: patientAppId ?? 0,
+          medicineOrderId: medicineOrderId ?? null,
+          doctorId: 0,
+          patientId: 0,
+          amount: mapped.amount,
+          currency: mapped.currency,
+          status: 'CAPTURED',
+          method: paidMethod ?? null,
+          gatewayOrderId: checkout.orderId,
+          gatewayPaymentId: checkout.paymentId,
+        });
+        return;
+      }
       setState('VERIFYING');
-      await pollUntilCaptured(mapped.paymentOrderId, checkout.paymentId);
+      await pollUntilCaptured(mapped.paymentOrderId, {
+        paymentId: checkout.paymentId,
+        orderId: checkout.orderId,
+        signature: checkout.signature,
+      });
     } catch (err) {
       const e = err as { data?: { code?: string; message?: string }; status?: number };
       setState('FAILED');

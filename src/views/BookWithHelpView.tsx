@@ -223,9 +223,6 @@ export function BookWithHelpView(vm: BookWithHelpViewModel) {
           <AppText variant="labelSm" color={colors.muted} style={styles.center}>
             {vm.t('bookHelpDisclaimer')}
           </AppText>
-          <AppText variant="labelSm" color={colors.muted} style={styles.center}>
-            {vm.t('bookHelpDisclaimerMr')}
-          </AppText>
         </View>
       </ScrollView>
 

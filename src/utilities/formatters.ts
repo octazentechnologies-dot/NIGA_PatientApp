@@ -78,6 +78,25 @@ export function formatDate(
   }
 }
 
+/** Weekday long name for an API date (`YYYY-MM-DD` / ISO). */
+export function formatWeekday(
+  value: string | Date | null | undefined,
+  locale = 'en-IN',
+): string | null {
+  if (value == null) {
+    return null;
+  }
+  const date = value instanceof Date ? value : parseApiDateTime(String(value));
+  if (!date) {
+    return null;
+  }
+  try {
+    return new Intl.DateTimeFormat(locale, { weekday: 'long' }).format(date);
+  } catch {
+    return null;
+  }
+}
+
 export function formatTime(
   value: string | Date | null | undefined,
   locale = 'en-IN',

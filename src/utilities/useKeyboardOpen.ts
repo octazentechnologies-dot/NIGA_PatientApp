@@ -1,23 +1,6 @@
-import { useEffect, useState } from 'react';
-import { Keyboard, Platform } from 'react-native';
+import { useKeyboardHeight } from './useKeyboardHeight';
 
+/** True while the soft keyboard is visible. */
 export function useKeyboardOpen() {
-  const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    const show = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      () => setOpen(true),
-    );
-    const hide = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => setOpen(false),
-    );
-    return () => {
-      show.remove();
-      hide.remove();
-    };
-  }, []);
-
-  return open;
+  return useKeyboardHeight() > 0;
 }

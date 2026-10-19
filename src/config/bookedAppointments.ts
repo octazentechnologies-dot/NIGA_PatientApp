@@ -23,6 +23,11 @@ export type BookedAppointment = {
   paymentId: string;
   reasonKey: TranslationKey;
   status: AppointmentRequestStatus;
+  /** From Home / Visits — PENDING | PAID | … */
+  paymentStatus?: string;
+  payAtClinicAllowed?: boolean;
+  consultFee?: number | null;
+  currency?: string | null;
   /** Follow-up / chat consultation window end (ISO). */
   chatClosesAt?: string;
   /** Linked prior consult date label shown in chat header strip. */

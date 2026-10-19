@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { SlideStrip } from '../components/SlideStrip';
 import { StatusBarBleed } from '../components/StatusBarBleed';
+import { useHardwareBackHandler } from '../hooks/useHardwareBackHandler';
 import { usePushNotificationLifecycle } from '../hooks/usePushNotificationLifecycle';
 import {
   clearAuthCredentials,
@@ -317,9 +318,16 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
   const search = useSearchDoctorsController({
     active: home.searchOpen && !home.resultsOpen,
     onBack: home.onCloseSearch,
-    onSubmitSearch: home.onOpenResults,
+    onSubmitSearch: home.onSearchDoctorsTab,
     onOpenDoctor: home.onOpenDoctorProfile,
+    onSeeAvailability: () => {
+      home.onCloseSearch();
+      home.onSelectTab('doctors');
+    },
   });
+
+  // Home chrome and stack overlays all use white headers.
+  useAndroidStatusBarBackground(colors.card);
   const results = useSearchResultsController({
     query: home.resultsQuery,
     active: home.resultsOpen,
@@ -362,12 +370,12 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
   const payment = useBookingPaymentController({
     active: home.bookingOpen && booking.paymentOpen,
     onBack: booking.onClosePayment,
-    holdExpiresAt: booking.holdExpiresAt,
     patientAppId: booking.patientAppId,
     bookingToken: booking.bookingToken,
-    payAtClinicEnabled: booking.payAtClinicEnabled,
+    isInClinicMode: booking.isInClinicMode,
+    onSubmitBooking: booking.onSubmitBooking,
     onPaymentConfirmed: booking.onPaymentConfirmed,
-    onPaymentPending: () => booking.onOpenPaymentStatus('pending'),
+    onPaymentPending: booking.onPaymentPending,
     onPaymentFailed: () => booking.onOpenPaymentStatus('failed'),
     draft: {
       paymentSummaryLine: booking.paymentSummaryLine,
@@ -386,8 +394,12 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
     },
     onChooseMethod: booking.onClosePaymentStatus,
     onChooseSlot: booking.onChooseOtherSlot,
-    // Never invent success — pending stays pending until Verify/poll confirms.
-    onConfirmPending: () => undefined,
+    // Re-poll Verify — never invent success from the client alone.
+    onConfirmPending: () => {
+      payment.resumePendingPayment(
+        booking.lastPaymentOrderId ?? payment.paymentOrderId ?? undefined,
+      );
+    },
     draft: {
       status: booking.paymentStatus ?? 'pending',
       doctorId: booking.profile.id,
@@ -404,8 +416,9 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
       modeConsultLabel: booking.modeConsultLabel,
       patientLabel: booking.patientLabel,
       totalLabel: booking.feeLabel,
-      holdSeconds: payment.holdSeconds,
-      paymentOrderId: booking.lastPaymentOrderId,
+      holdSeconds: 0,
+      paymentOrderId: booking.lastPaymentOrderId ?? payment.paymentOrderId,
+      patientAppId: booking.patientAppId,
     },
   });
   const selectedAppointment =
@@ -628,14 +641,20 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
   });
   // Instant consult payment waits on B-011 (fee fields on Tele/Instant). No fake Checkout.
   const consultPayment = useBookingPaymentController({
-    active: home.consultNowOpen && consultNow.paymentOpen,
+    active: false,
     onBack: consultNow.onClosePayment,
-    holdExpiresAt: null,
     patientAppId: null,
     bookingToken: null,
-    payAtClinicEnabled: false,
+    isInClinicMode: false,
+    onSubmitBooking: async () => {
+      throw new Error('Instant consult payment is not available yet.');
+    },
     onPaymentConfirmed: () => consultNow.onOpenPaymentStatus('success'),
-    onPaymentPending: () => consultNow.onOpenPaymentStatus('pending'),
+    onPaymentPending: (orderId) => {
+      if (orderId > 0) {
+        consultNow.onOpenPaymentStatus('pending');
+      }
+    },
     onPaymentFailed: () => consultNow.onOpenPaymentStatus('failed'),
     draft: {
       paymentSummaryLine: consultNow.paymentSummaryLine,
@@ -653,7 +672,9 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
     onRetry: consultNow.onClosePaymentStatus,
     onChooseMethod: consultNow.onClosePaymentStatus,
     onChooseSlot: consultNow.onClosePayment,
-    onConfirmPending: () => undefined,
+    onConfirmPending: () => {
+      consultPayment.resumePendingPayment(consultPayment.paymentOrderId ?? undefined);
+    },
     draft: {
       status: consultNow.paymentStatus ?? 'pending',
       doctorId: consultNow.offeredDoctorId,
@@ -670,7 +691,7 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
       modeConsultLabel: consultNow.instantModeConsultLabel,
       patientLabel: consultNow.instantPatientLabel,
       totalLabel: consultNow.totalLabel,
-      holdSeconds: consultPayment.holdSeconds,
+      holdSeconds: 0,
       paymentOrderId: null,
     },
   });
@@ -680,6 +701,351 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
     onOpenRelated: home.onOpenHealthTip,
     onFindDoctor: home.onFindDoctorFromTip,
   });
+
+  /** Android system back → same as in-app back on the topmost overlay. */
+  const onHomeHardwareBack = useCallback((): boolean => {
+    if (appointmentDetail.cancelledOpen) {
+      appointmentDetail.onCloseCancelled();
+      return true;
+    }
+
+    if (home.selectedAppointmentId && selectedAppointment) {
+      if (appointmentDetail.rateConsultationOpen) {
+        appointmentDetail.onCloseRateConsultation();
+        return true;
+      }
+      if (appointmentDetail.consultationCompleteOpen) {
+        appointmentDetail.onCloseConsultationComplete();
+        return true;
+      }
+      if (appointmentDetail.videoCallOpen) {
+        videoCall.onBack();
+        return true;
+      }
+      if (appointmentDetail.waitingRoomOpen) {
+        appointmentDetail.onCloseWaitingRoom();
+        return true;
+      }
+      if (appointmentDetail.joinFailedOpen) {
+        appointmentDetail.onCloseJoinFailed();
+        return true;
+      }
+      if (appointmentDetail.deviceCheckOpen) {
+        appointmentDetail.onCloseDeviceCheck();
+        return true;
+      }
+      if (appointmentDetail.consultationChatOpen) {
+        appointmentDetail.onCloseConsultationChat();
+        return true;
+      }
+      if (appointmentDetail.rescheduleOpen) {
+        if (appointmentDetail.rescheduleReasonOpen) {
+          appointmentDetail.onCloseRescheduleReason();
+          return true;
+        }
+        appointmentDetail.onCloseReschedule();
+        return true;
+      }
+      if (appointmentDetail.cancelSheetOpen) {
+        appointmentDetail.onCloseCancelSheet();
+        return true;
+      }
+      if (appointmentDetail.uploadOpen) {
+        appointmentDetail.onCloseUpload();
+        return true;
+      }
+      if (appointmentDetail.selectSheetOpen) {
+        appointmentDetail.onCloseSelectSheet();
+        return true;
+      }
+      if (appointmentDetail.clinicCheckInOpen) {
+        appointmentDetail.onCloseCheckIn();
+        return true;
+      }
+      appointmentDetail.onBack();
+      return true;
+    }
+
+    if (home.orderDetailsOpen) {
+      orderDetails.onBack();
+      return true;
+    }
+    if (home.orderTrackingOpen) {
+      orderTracking.onBack();
+      return true;
+    }
+    if (home.orderMedicinesOpen) {
+      if (orderMedicines.addressPickerOpen) {
+        orderMedicines.onCloseAddressPicker();
+        return true;
+      }
+      orderMedicines.onBack();
+      return true;
+    }
+
+    if (home.symptomDiaryOpen) {
+      if (symptomDiary.entryOpen) {
+        symptomDiary.onCloseEntry();
+        return true;
+      }
+      if (symptomDiary.memberPickerOpen) {
+        symptomDiary.onCloseMemberPicker();
+        return true;
+      }
+      symptomDiary.onBack();
+      return true;
+    }
+
+    if (home.remindersOpen) {
+      remindersCentre.onBack();
+      return true;
+    }
+    if (home.editProfileOpen) {
+      home.onCloseEditProfile();
+      return true;
+    }
+    if (home.accountFamilyOpen) {
+      home.onCloseAccountFamily();
+      return true;
+    }
+    if (home.appointmentRequestsOpen) {
+      appointmentRequests.onBack();
+      return true;
+    }
+    if (home.myAppointmentsOpen) {
+      myAppointments.onBack();
+      return true;
+    }
+    if (home.accountRecordsOpen) {
+      home.onCloseAccountRecords();
+      return true;
+    }
+    if (home.healthInsightsOpen) {
+      healthInsights.onBack();
+      return true;
+    }
+    if (home.clinisightProgressOpen) {
+      cliniSightProgress.onBack();
+      return true;
+    }
+    if (home.paymentsOpen) {
+      if (payments.refundOpen) {
+        payments.onCloseRefund();
+        return true;
+      }
+      payments.onBack();
+      return true;
+    }
+    if (home.consentCentreOpen) {
+      consentCentre.onBack();
+      return true;
+    }
+    if (home.appealReviewOpen) {
+      appealReview.onBack();
+      return true;
+    }
+    if (home.myReviewsOpen) {
+      myReviews.onBack();
+      return true;
+    }
+    if (home.raiseTicketOpen) {
+      raiseTicket.onBack();
+      return true;
+    }
+    if (home.helpCentreOpen) {
+      helpCentre.onBack();
+      return true;
+    }
+    if (home.bookWithHelpOpen) {
+      bookWithHelp.onBack();
+      return true;
+    }
+    if (home.legalDocId) {
+      legalDocument.onBack();
+      return true;
+    }
+    if (home.notificationsOpen) {
+      notifications.onBack();
+      return true;
+    }
+    if (home.notificationSettingsOpen) {
+      notificationSettings.onBack();
+      return true;
+    }
+    if (home.followUpPlanOpen) {
+      if (followUpPlan.prescriptionOpen) {
+        followUpPlan.onClosePrescription();
+        return true;
+      }
+      if (followUpPlan.consultationNoteOpen) {
+        followUpPlan.onCloseConsultationNote();
+        return true;
+      }
+      followUpPlan.onBack();
+      return true;
+    }
+
+    if (home.consultNowOpen) {
+      if (consultNow.paymentStatus) {
+        consultNow.onClosePaymentStatus();
+        return true;
+      }
+      if (consultNow.paymentOpen) {
+        if (consultPayment.bankPickerOpen) {
+          consultPayment.onCloseBankPicker();
+          return true;
+        }
+        if (consultPayment.walletPickerOpen) {
+          consultPayment.onCloseWalletPicker();
+          return true;
+        }
+        if (consultPayment.breakdownOpen) {
+          consultPayment.onToggleBreakdown();
+          return true;
+        }
+        consultNow.onClosePayment();
+        return true;
+      }
+      if (consultNow.searchingOpen) {
+        if (consultNow.feeDetailsOpen) {
+          consultNow.onCloseFeeDetails();
+          return true;
+        }
+        consultNow.onCancelSearch();
+        return true;
+      }
+      if (consultNow.memberPickerOpen) {
+        consultNow.onCloseMemberPicker();
+        return true;
+      }
+      consultNow.onBack();
+      return true;
+    }
+
+    if (home.healthTipId) {
+      healthTip.onBack();
+      return true;
+    }
+
+    if (home.bookingOpen && home.profileDoctorId) {
+      if (booking.paymentStatus) {
+        booking.onClosePaymentStatus();
+        return true;
+      }
+      if (booking.paymentOpen) {
+        if (payment.bankPickerOpen) {
+          payment.onCloseBankPicker();
+          return true;
+        }
+        if (payment.walletPickerOpen) {
+          payment.onCloseWalletPicker();
+          return true;
+        }
+        if (payment.breakdownOpen) {
+          payment.onToggleBreakdown();
+          return true;
+        }
+        booking.onClosePayment();
+        return true;
+      }
+      if (booking.reviewOpen) {
+        if (review.selectSheetOpen) {
+          review.onCloseSelectSheet();
+          return true;
+        }
+        if (review.uploadOpen) {
+          review.onCloseUpload();
+          return true;
+        }
+        booking.onCloseReview();
+        return true;
+      }
+      if (booking.memberPickerOpen) {
+        booking.onCloseMemberPicker();
+        return true;
+      }
+      if (booking.monthPickerOpen) {
+        booking.onCloseMonthPicker();
+        return true;
+      }
+      booking.onBack();
+      return true;
+    }
+
+    if (home.profileDoctorId) {
+      profile.onBack();
+      return true;
+    }
+
+    if (home.resultsOpen) {
+      if (results.whyOrderOpen) {
+        results.onCloseWhyOrder();
+        return true;
+      }
+      if (results.datePickerOpen) {
+        results.onCloseDatePicker();
+        return true;
+      }
+      if (results.filtersOpen) {
+        results.onCloseFilters();
+        return true;
+      }
+      results.onBack();
+      return true;
+    }
+
+    if (home.searchOpen) {
+      if (search.cityPickerOpen) {
+        search.onCloseCityPicker();
+        return true;
+      }
+      search.onBack();
+      return true;
+    }
+
+    if (home.memberPickerOpen) {
+      home.onCloseMemberPicker();
+      return true;
+    }
+
+    return false;
+  }, [
+    appealReview,
+    appointmentDetail,
+    appointmentRequests,
+    bookWithHelp,
+    booking,
+    cliniSightProgress,
+    consentCentre,
+    consultNow,
+    consultPayment,
+    followUpPlan,
+    healthInsights,
+    healthTip,
+    helpCentre,
+    home,
+    legalDocument,
+    myAppointments,
+    myReviews,
+    notificationSettings,
+    notifications,
+    orderDetails,
+    orderMedicines,
+    orderTracking,
+    payment,
+    payments,
+    profile,
+    raiseTicket,
+    remindersCentre,
+    results,
+    review,
+    search,
+    selectedAppointment,
+    symptomDiary,
+    videoCall,
+  ]);
+
+  useHardwareBackHandler(onHomeHardwareBack);
 
   if (appointmentDetail.cancelledOpen) {
     return <CancelledConfirmationView {...appointmentDetail} />;
@@ -783,6 +1149,7 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
         }
         onOpenFollowUpPlan={home.onOpenFollowUpPlan}
         onOpenOrderMedicines={home.onOpenOrderMedicines}
+        onAddMember={home.onAddMember}
         notificationCount={notifications.unreadCount}
       />
     );
@@ -1138,21 +1505,55 @@ export function AppNavigator() {
     [step],
   );
 
-  // Splash → onboarding: page (#F5F6F7). Auth/profile funnel: white header.
-  // Home keeps no absolute bleed — screen headers (and video) paint themselves.
+  // Splash / first-launch / onboarding: page grey. Every header screen: white.
   const pageStatusBar =
     step === 'splash' || step === 'firstLaunch' || step === 'onboarding';
-  const headerStatusBar =
-    step === 'signIn' ||
-    step === 'otp' ||
-    step === 'completeProfile' ||
-    step === 'consent' ||
-    step === 'phoneSetup' ||
-    step === 'familyMembers';
   const statusBarCanvas = pageStatusBar ? colors.page : colors.card;
 
-  useAndroidStatusBarBackground(
-    pageStatusBar || headerStatusBar ? statusBarCanvas : colors.page,
+  useAndroidStatusBarBackground(statusBarCanvas);
+
+  const onAuthHardwareBack = useCallback((): boolean => {
+    if (step === 'otp') {
+      backFromOtp();
+      return true;
+    }
+    if (step === 'completeProfile') {
+      backFromProfile();
+      return true;
+    }
+    if (step === 'consent') {
+      backFromConsent();
+      return true;
+    }
+    if (step === 'phoneSetup') {
+      backFromPhoneSetup();
+      return true;
+    }
+    if (step === 'familyMembers') {
+      backFromFamilyMembers();
+      return true;
+    }
+    if (step === 'signIn') {
+      backFromSignIn();
+      return true;
+    }
+    return false;
+  }, [
+    backFromConsent,
+    backFromFamilyMembers,
+    backFromOtp,
+    backFromPhoneSetup,
+    backFromProfile,
+    backFromSignIn,
+    step,
+  ]);
+
+  useHardwareBackHandler(
+    onAuthHardwareBack,
+    step !== 'splash' &&
+      step !== 'home' &&
+      step !== 'firstLaunch' &&
+      step !== 'onboarding',
   );
 
   if (step === 'splash') {
@@ -1166,9 +1567,8 @@ export function AppNavigator() {
 
   return (
     <View style={styles.stage}>
-      {pageStatusBar || headerStatusBar ? (
-        <StatusBarBleed color={statusBarCanvas} />
-      ) : null}
+      {/* Home headers paint their own status strip; absolute bleed would cover video. */}
+      {step !== 'home' ? <StatusBarBleed color={statusBarCanvas} /> : null}
       <SlideStrip index={slideIndex}>
         <FirstLaunchRoute onContinue={finishFirstLaunch} />
         <OnboardingRoute onFinished={finishOnboarding} />

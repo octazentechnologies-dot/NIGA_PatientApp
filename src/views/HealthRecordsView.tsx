@@ -38,6 +38,7 @@ export function HealthRecordsView({
   onOpenFollowUpPlan,
   onOpenOrderMedicines,
   onOpenNotifications,
+  onAddMember,
   notificationCount = 0,
   onBack,
   initialFilter = 'all',
@@ -46,6 +47,7 @@ export function HealthRecordsView({
   onOpenFollowUpPlan?: () => void;
   onOpenOrderMedicines?: () => void;
   onOpenNotifications?: () => void;
+  onAddMember?: () => void;
   notificationCount?: number;
   onBack?: () => void;
   initialFilter?: RecordsFilterId;
@@ -54,6 +56,7 @@ export function HealthRecordsView({
   const vm = useHealthRecordsController({
     onOpenFollowUpPlan,
     onOpenNotifications,
+    onAddMember,
     initialFilter,
   });
   const insets = useSafeAreaInsets();
@@ -188,8 +191,9 @@ export function HealthRecordsView({
                   weightOverride={selected ? '600' : undefined}
                   style={styles.memberName}
                   numberOfLines={2}
+                  raw
                 >
-                  {vm.t(member.nameKey)}
+                  {member.label}
                 </AppText>
               </Pressable>
             );

@@ -12,6 +12,7 @@ import Svg, { Circle, Path } from 'react-native-svg';
 
 import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
+import { SimpleMemberPickerSheet } from '../components/SimpleMemberPickerSheet';
 import type { HealthInsightsViewModel } from '../controllers/useHealthInsightsController';
 import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
@@ -567,52 +568,17 @@ function SeverityChart({ t }: { t: HealthInsightsViewModel['t'] }) {
 }
 
 function MemberPickerSheet({ vm }: { vm: HealthInsightsViewModel }) {
-  const insets = useSafeAreaInsets();
   return (
-    <SafeAreaModal
-      transparent
-      animationType="slide"
+    <SimpleMemberPickerSheet
       visible={vm.memberPickerOpen}
-      onRequestClose={vm.onCloseMemberPicker}
-    >
-      <View style={styles.sheetRoot}>
-        <Pressable style={styles.sheetScrim} onPress={vm.onCloseMemberPicker} />
-        <View
-          style={[
-            styles.sheet,
-            { paddingBottom: sheetBottomPadding(insets, spacing.lg) },
-          ]}
-        >
-          <View style={styles.sheetHandle} />
-          <AppText variant="titleMd" color={colors.ink} style={styles.sheetTitle}>
-            {vm.t('insightsShowingFor')}
-          </AppText>
-          {vm.members.map((member) => {
-            const selected = member.id === vm.memberId;
-            return (
-              <Pressable
-                key={member.id}
-                accessibilityRole="button"
-                onPress={() => vm.onSelectMember(member.id)}
-                style={styles.sheetRow}
-              >
-                <AppText
-                  variant="bodyLg"
-                  color={colors.ink}
-                  weightOverride={selected ? '600' : undefined}
-                  style={styles.flex}
-                >
-                  {member.label}
-                </AppText>
-                {selected ? (
-                  <Ionicons name="checkmark" size={20} color={colors.primary} />
-                ) : null}
-              </Pressable>
-            );
-          })}
-        </View>
-      </View>
-    </SafeAreaModal>
+      title={vm.t('insightsShowingFor')}
+      members={vm.members}
+      selectedMemberId={vm.memberId}
+      t={vm.t}
+      language={vm.language}
+      onClose={vm.onCloseMemberPicker}
+      onSelectMember={(id) => vm.onSelectMember(id as typeof vm.memberId)}
+    />
   );
 }
 

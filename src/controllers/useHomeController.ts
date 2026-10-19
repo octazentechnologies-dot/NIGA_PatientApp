@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAccountController, type AccountViewModel } from './useAccountController';
 import type { HelpTopicId } from './useHelpCentreController';
@@ -16,8 +16,17 @@ import {
 } from '../config/appointmentSlots';
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import {
+  DEFAULT_DOCTOR_FILTERS,
+  EMPTY_DOCTOR_FILTERS,
+  type DoctorAvailabilitySlot,
+  type DoctorConsultMode,
+  type DoctorFilterLanguage,
+  type DoctorFilters,
+} from '../models/search';
 import { useAppSelector } from '../store/hooks';
 import {
+  useGetDoctorFilterOptionsQuery,
   useGetDoctorsQuery,
   type PublicDoctor,
 } from '../store/api/new/doctorsApi';
@@ -28,7 +37,11 @@ import {
   useGetHomeDashboardQuery,
 } from '../store/api/new/homeApi';
 import { useGetPatientVisitsQuery } from '../store/api/new/visitsApi';
-import { resolveApiUrl } from '../utilities/formatters';
+import {
+  formatDate,
+  formatTime,
+  resolveApiUrl,
+} from '../utilities/formatters';
 
 export type HomeCareCategoryItem = {
   id: string;
@@ -49,9 +62,109 @@ export type HomeTab =
   | 'medicines'
   | 'account';
 
+/** Criteria applied on the Doctors tab via Search Doctors / care need / city. */
+export type DoctorsTabSearch = {
+  q?: string;
+  city?: string;
+  careCategoryId?: number;
+};
+
+function toggleValue<T>(list: T[], value: T): T[] {
+  return list.includes(value)
+    ? list.filter((item) => item !== value)
+    : [...list, value];
+}
+
+function countDoctorsTabFilters(
+  search: DoctorsTabSearch,
+  filters: DoctorFilters,
+): number {
+  let count = 0;
+  if (search.q?.trim()) count += 1;
+  if (search.city?.trim() || filters.cityIds.length > 0) count += 1;
+  if (
+    (search.careCategoryId != null && search.careCategoryId > 0) ||
+    (filters.careCategoryId != null && filters.careCategoryId > 0)
+  ) {
+    count += 1;
+  }
+  count += filters.careNeedIds.length;
+  count += filters.modes.length;
+  count += filters.availability.length;
+  count += filters.languages.length;
+  count += filters.genders.length;
+  if (filters.useCurrentLocation) count += 1;
+  if (filters.recognizedQualification) count += 1;
+  if (filters.focusCertified) count += 1;
+  if (
+    filters.feeMin !== EMPTY_DOCTOR_FILTERS.feeMin ||
+    filters.feeMax !== EMPTY_DOCTOR_FILTERS.feeMax
+  ) {
+    count += 1;
+  }
+  return count;
+}
+
+function filtersFromDoctorsSearch(search: DoctorsTabSearch): DoctorFilters {
+  const city = search.city?.trim();
+  return {
+    ...DEFAULT_DOCTOR_FILTERS,
+    cityIds: city ? [city.toLowerCase()] : [],
+    careCategoryId: search.careCategoryId ?? null,
+  };
+}
+
 /** Stable empty fallback — inline `[]` in render deps causes max update depth. */
 const EMPTY_VISITS: unknown[] = [];
 const EMPTY_PUBLIC_DOCTORS: PublicDoctor[] = [];
+const EMPTY_DOCTORS_TAB_SEARCH: DoctorsTabSearch = {};
+
+/** Sort key from appointment date (YYYY-MM-DD) + time (HH:mm). Ascending = soonest first. */
+function appointmentSortMs(
+  appointmentDate?: string,
+  appointmentTime?: string,
+): number {
+  const datePart = (appointmentDate || '').trim().slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+    return Number.MAX_SAFE_INTEGER;
+  }
+  let hour = 0;
+  let minute = 0;
+  const timeRaw = (appointmentTime || '').trim();
+  const match = timeRaw.match(/^(\d{1,2}):(\d{2})/);
+  if (match) {
+    hour = Number(match[1]);
+    minute = Number(match[2]);
+  }
+  if (
+    !Number.isFinite(hour) ||
+    !Number.isFinite(minute) ||
+    hour < 0 ||
+    hour > 23 ||
+    minute < 0 ||
+    minute > 59
+  ) {
+    hour = 0;
+    minute = 0;
+  }
+  const ms = new Date(
+    `${datePart}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`,
+  ).getTime();
+  return Number.isFinite(ms) ? ms : Number.MAX_SAFE_INTEGER;
+}
+
+function sortBookingsByDateTime(
+  rows: BookedAppointment[],
+): BookedAppointment[] {
+  return [...rows].sort((a, b) => {
+    const aMs = Date.parse(a.startsAt) || Number.MAX_SAFE_INTEGER;
+    const bMs = Date.parse(b.startsAt) || Number.MAX_SAFE_INTEGER;
+    if (aMs !== bMs) {
+      return aMs - bMs;
+    }
+    return a.id.localeCompare(b.id);
+  });
+}
 
 export type HomeMemberOption = BookingMember;
 
@@ -72,6 +185,39 @@ export type HomeViewModel = {
   onOpenSearch: () => void;
   onCloseSearch: () => void;
   onOpenResults: (query: string) => void;
+  /** Apply search on Doctors tab (skips Search Results overlay). */
+  onSearchDoctorsTab: (params: DoctorsTabSearch) => void;
+  onClearDoctorsSearch: () => void;
+  onRemoveDoctorsCity: () => void;
+  onRemoveDoctorsQuery: () => void;
+  doctorsSearch: DoctorsTabSearch;
+  doctorsFilterCount: number;
+  doctorsFiltersOpen: boolean;
+  doctorsFilterDraft: DoctorFilters;
+  doctorsFilterMatchingCount: number;
+  doctorsDatePickerOpen: boolean;
+  doctorsFilterCustomDate: Date;
+  doctorsCityOptions: Array<{ id: string; label: string }>;
+  doctorsQualificationOptions: Array<{ id: string; label: string }>;
+  onOpenDoctorsFilters: () => void;
+  onCloseDoctorsFilters: () => void;
+  onResetDoctorsFilterDraft: () => void;
+  onClearDoctorsFilters: () => void;
+  onApplyDoctorsFilters: () => void;
+  onToggleDoctorsCareNeed: (id: string) => void;
+  onToggleDoctorsMode: (mode: DoctorConsultMode) => void;
+  onToggleDoctorsAvailability: (slot: DoctorAvailabilitySlot) => void;
+  onChangeDoctorsFeeRange: (low: number, high: number) => void;
+  onToggleDoctorsFilterLanguage: (language: DoctorFilterLanguage) => void;
+  onToggleDoctorsGender: (gender: 'male' | 'female') => void;
+  onToggleDoctorsRecognized: () => void;
+  onToggleDoctorsFocusCert: () => void;
+  onChangeDoctorsLocationQuery: (value: string) => void;
+  onToggleDoctorsCity: (cityId: string) => void;
+  onToggleDoctorsCurrentLocation: () => void;
+  onOpenDoctorsDatePicker: () => void;
+  onCloseDoctorsDatePicker: () => void;
+  onSelectDoctorsCustomDate: (date: Date) => void;
   onCloseResults: () => void;
   onReopenSearch: () => void;
   onSelectTab: (tab: HomeTab) => void;
@@ -80,7 +226,7 @@ export type HomeViewModel = {
   onSelectMember: (memberId: string) => void;
   onAddMember: () => void;
   onSelectLanguage: (language: AppLanguage) => void;
-  onJoinConsultation: () => void;
+  onJoinConsultation: (appointmentId?: string) => void;
   onFillSymptomDiary: () => void;
   onTrackOrder: () => void;
   orderTrackingOpen: boolean;
@@ -100,6 +246,10 @@ export type HomeViewModel = {
   onCloseHealthTip: () => void;
   onFindDoctorFromTip: (query: string) => void;
   appointments: BookedAppointment[];
+  /** Toast when a Home booking left the dashboard because it completed. */
+  completedMovedToastVisible: boolean;
+  onDismissCompletedMovedToast: () => void;
+  onOpenMyAppointmentsFromCompletedToast: () => void;
   selectedAppointmentId: string | null;
   onOpenAppointment: (id: string) => void;
   onCloseAppointment: () => void;
@@ -202,6 +352,16 @@ export function useHomeController({
   const [searchOpen, setSearchOpen] = useState(false);
   const [resultsOpen, setResultsOpen] = useState(false);
   const [resultsQuery, setResultsQuery] = useState('');
+  const [doctorsSearch, setDoctorsSearch] = useState<DoctorsTabSearch>(
+    EMPTY_DOCTORS_TAB_SEARCH,
+  );
+  const [doctorsFilters, setDoctorsFilters] = useState<DoctorFilters>(
+    DEFAULT_DOCTOR_FILTERS,
+  );
+  const [doctorsFilterDraft, setDoctorsFilterDraft] =
+    useState<DoctorFilters>(DEFAULT_DOCTOR_FILTERS);
+  const [doctorsFiltersOpen, setDoctorsFiltersOpen] = useState(false);
+  const [doctorsDatePickerOpen, setDoctorsDatePickerOpen] = useState(false);
   const [searchNonce, setSearchNonce] = useState(0);
   const [searchOrigin, setSearchOrigin] = useState<HomeTab>('home');
   const [selectedTab, setSelectedTab] = useState<HomeTab>('home');
@@ -211,6 +371,13 @@ export function useHomeController({
   const [selectedMemberId, setSelectedMemberId] = useState('self');
   const [memberPickerOpen, setMemberPickerOpen] = useState(false);
   const [appointments, setAppointments] = useState<BookedAppointment[]>([]);
+  const [completedMovedToastVisible, setCompletedMovedToastVisible] =
+    useState(false);
+  const previousDashboardIdsRef = useRef<Set<string> | null>(null);
+  const notifiedCompletedIdsRef = useRef<Set<string>>(new Set());
+  const completedToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(
     null,
   );
@@ -247,12 +414,84 @@ export function useHomeController({
   const [medicineOrderPlaced, setMedicineOrderPlaced] = useState(false);
   const [orderDetailsId, setOrderDetailsId] = useState<string | null>(null);
 
+  const doctorsQueryArgs = useMemo(() => {
+    const q = doctorsSearch.q?.trim() || undefined;
+    const cityFromSearch = doctorsSearch.city?.trim() || undefined;
+    const cityFromFilters =
+      doctorsFilters.cityIds.length === 1
+        ? doctorsFilters.cityIds[0]
+        : undefined;
+    const city = cityFromSearch || cityFromFilters;
+    const careCategoryId =
+      doctorsSearch.careCategoryId != null && doctorsSearch.careCategoryId > 0
+        ? doctorsSearch.careCategoryId
+        : doctorsFilters.careCategoryId != null &&
+            doctorsFilters.careCategoryId > 0
+          ? doctorsFilters.careCategoryId
+          : undefined;
+    const teleOnly =
+      doctorsFilters.modes.length === 1 && doctorsFilters.modes[0] === 'video';
+    const feeFilterActive =
+      doctorsFilters.feeMin !== EMPTY_DOCTOR_FILTERS.feeMin ||
+      doctorsFilters.feeMax !== EMPTY_DOCTOR_FILTERS.feeMax;
+    const hasCriteria =
+      Boolean(q) ||
+      Boolean(city) ||
+      careCategoryId != null ||
+      teleOnly ||
+      doctorsFilters.availability.includes('now') ||
+      feeFilterActive;
+    if (!hasCriteria) {
+      return undefined;
+    }
+    return {
+      q,
+      city,
+      careCategoryId,
+      teleOnly: teleOnly || undefined,
+      isOnline: doctorsFilters.availability.includes('now') ? true : undefined,
+      minFee: feeFilterActive ? doctorsFilters.feeMin : undefined,
+      maxFee: feeFilterActive ? doctorsFilters.feeMax : undefined,
+      pageNumber: 1,
+      pageSize: 50,
+      sortBy: 'online' as const,
+    };
+  }, [doctorsFilters, doctorsSearch]);
+
+  const doctorsFilterCount = useMemo(
+    () => countDoctorsTabFilters(doctorsSearch, doctorsFilters),
+    [doctorsFilters, doctorsSearch],
+  );
+
   const {
     data: publicDoctors = EMPTY_PUBLIC_DOCTORS,
     isLoading: isDoctorsLoading,
     isError: isDoctorsError,
     refetch: refetchDoctors,
-  } = useGetDoctorsQuery(undefined);
+  } = useGetDoctorsQuery(doctorsQueryArgs);
+
+  const { data: doctorsFilterOptions } = useGetDoctorFilterOptionsQuery(
+    undefined,
+    { skip: selectedTab !== 'doctors' && !doctorsFiltersOpen },
+  );
+
+  const doctorsCityOptions = useMemo(
+    () =>
+      (doctorsFilterOptions?.cities ?? []).map((city) => ({
+        id: city.trim().toLowerCase(),
+        label: city.trim(),
+      })),
+    [doctorsFilterOptions?.cities],
+  );
+
+  const doctorsQualificationOptions = useMemo(
+    () =>
+      (doctorsFilterOptions?.qualifications ?? []).map((name) => ({
+        id: name.trim().toLowerCase(),
+        label: name.trim(),
+      })),
+    [doctorsFilterOptions?.qualifications],
+  );
 
   const { data: careCategoriesResponse } = useGetCareCategoriesQuery();
   const { data: articlesResponse } = useGetArticlesQuery({
@@ -498,7 +737,12 @@ export function useHomeController({
       : EMPTY_VISITS;
 
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated) {
+      previousDashboardIdsRef.current = null;
+      notifiedCompletedIdsRef.current = new Set();
+      setCompletedMovedToastVisible(false);
+      return;
+    }
 
     type RawVisit = {
       patientAppId: number;
@@ -513,20 +757,28 @@ export function useHomeController({
       bookingToken?: string;
       patientName?: string;
       teleSessionId?: number | null;
+      paymentStatus?: string;
+      payAtClinicAllowed?: boolean;
+      consultFee?: number | null;
+      currency?: string | null;
     };
 
     const dashboardApps = (homeDashboardData?.nextAppointments ??
       EMPTY_VISITS) as RawVisit[];
     const serverVisits = apiVisitsList as RawVisit[];
 
-    // Combine visits from dashboard and visits endpoint, deduplicating by patientAppId
+    // Combine dashboard + visits; prefer visits when both exist so terminal
+    // statuses (COMPLETED / CANCELLED) are not masked by a stale dashboard row.
     const combinedMap = new Map<number, RawVisit>();
     for (const item of dashboardApps) {
       combinedMap.set(item.patientAppId, item);
     }
     for (const item of serverVisits) {
-      if (!combinedMap.has(item.patientAppId)) {
+      const existing = combinedMap.get(item.patientAppId);
+      if (!existing) {
         combinedMap.set(item.patientAppId, item);
+      } else {
+        combinedMap.set(item.patientAppId, { ...existing, ...item });
       }
     }
 
@@ -534,6 +786,7 @@ export function useHomeController({
       (a) => a.status !== 'CANCELLED' && a.status !== 'COMPLETED',
     );
 
+    const locale = language === 'mr' ? 'mr-IN' : 'en-IN';
     const mapped: BookedAppointment[] = activeList.map((a) => {
       const mode: ConsultMode =
         a.isTele || a.visitType === 'Tele' || a.consultMode === 'Tele'
@@ -547,6 +800,16 @@ export function useHomeController({
         .join('')
         .slice(0, 2)
         .toUpperCase();
+      const dateRaw = a.appointmentDate ? a.appointmentDate.slice(0, 10) : '';
+      const dateLine = formatDate(dateRaw, locale) ?? dateRaw;
+      const timeLine =
+        formatTime(a.appointmentTime, locale) ?? a.appointmentTime ?? '';
+      const whenLabel = [dateLine, timeLine].filter(Boolean).join(' · ');
+      const sortMs = appointmentSortMs(a.appointmentDate, a.appointmentTime);
+      const startsAt =
+        sortMs === Number.MAX_SAFE_INTEGER
+          ? a.appointmentDate || new Date().toISOString()
+          : new Date(sortMs).toISOString();
 
       return {
         id: String(a.patientAppId),
@@ -556,13 +819,21 @@ export function useHomeController({
         doctorInitials: initials || 'DR',
         credentialsKey: '' as TranslationKey,
         experienceKey: '' as TranslationKey,
-        whenLabel: `${a.appointmentDate ? a.appointmentDate.slice(0, 10) : ''} · ${a.appointmentTime || ''}`,
-        dateLine: a.appointmentDate ? a.appointmentDate.slice(0, 10) : '',
-        timeLine: a.appointmentTime || '',
-        startsAt: a.appointmentDate || new Date().toISOString(),
-        bookedOnLabel: a.appointmentDate ? a.appointmentDate.slice(0, 10) : '',
+        whenLabel,
+        dateLine,
+        timeLine,
+        startsAt,
+        bookedOnLabel: dateLine,
         mode,
-        modeConsultLabel: mode === 'video' ? 'Video Consultation' : 'In Clinic',
+        modeConsultLabel:
+          (
+            {
+              video: 'Video',
+              audio: 'Audio',
+              chat: 'Chat',
+              clinic: 'Clinic',
+            } as const satisfies Record<ConsultMode, string>
+          )[mode],
         patientLabel: a.patientName || patientFullName,
         feeLabel: '', // fee from visit detail; list payload has no consultFee yet — hide blank
         paymentId: a.bookingToken || '',
@@ -571,15 +842,55 @@ export function useHomeController({
           a.status === 'NOT ARRIVED' || a.status === 'WAITING' || a.status === 'E-CONSULT'
             ? ('confirmed' as AppointmentRequestStatus)
             : ('waiting_acceptance' as AppointmentRequestStatus),
+        paymentStatus: a.paymentStatus,
+        payAtClinicAllowed: a.payAtClinicAllowed,
+        consultFee:
+          a.consultFee != null && Number.isFinite(Number(a.consultFee))
+            ? Number(a.consultFee)
+            : null,
+        currency: a.currency ?? null,
       };
     });
+
+    const sortedMapped = sortBookingsByDateTime(mapped);
+    const nextIds = new Set(sortedMapped.map((row) => row.id));
+
+    if (previousDashboardIdsRef.current) {
+      let shouldShowCompletedToast = false;
+      for (const prevId of previousDashboardIdsRef.current) {
+        if (nextIds.has(prevId)) continue;
+        if (notifiedCompletedIdsRef.current.has(prevId)) continue;
+        const numericId = Number(prevId);
+        const raw =
+          (Number.isFinite(numericId)
+            ? combinedMap.get(numericId)
+            : undefined) ??
+          serverVisits.find((v) => String(v.patientAppId) === prevId) ??
+          dashboardApps.find((v) => String(v.patientAppId) === prevId);
+        if (raw?.status === 'COMPLETED') {
+          notifiedCompletedIdsRef.current.add(prevId);
+          shouldShowCompletedToast = true;
+        }
+      }
+      if (shouldShowCompletedToast) {
+        setCompletedMovedToastVisible(true);
+        if (completedToastTimerRef.current) {
+          clearTimeout(completedToastTimerRef.current);
+        }
+        completedToastTimerRef.current = setTimeout(() => {
+          setCompletedMovedToastVisible(false);
+          completedToastTimerRef.current = null;
+        }, 6000);
+      }
+    }
+    previousDashboardIdsRef.current = nextIds;
 
     setAppointments((current) => {
       // Keep any newly placed bookings from this session that might not yet be in server response
       const clientOnly = current.filter(
         (c) => c.id !== 'seed-followup-chat' && !mapped.some((m) => m.id === c.id),
       );
-      const next = [...mapped, ...clientOnly];
+      const next = sortBookingsByDateTime([...sortedMapped, ...clientOnly]);
       if (
         next.length === current.length &&
         next.every(
@@ -587,14 +898,29 @@ export function useHomeController({
             item.id === current[index]?.id &&
             item.status === current[index]?.status &&
             item.whenLabel === current[index]?.whenLabel &&
-            item.patientLabel === current[index]?.patientLabel,
+            item.patientLabel === current[index]?.patientLabel &&
+            item.startsAt === current[index]?.startsAt,
         )
       ) {
         return current;
       }
       return next;
     });
-  }, [homeDashboardData?.nextAppointments, apiVisitsList, isAuthenticated, patientFullName]);
+  }, [
+    homeDashboardData?.nextAppointments,
+    apiVisitsList,
+    isAuthenticated,
+    language,
+    patientFullName,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      if (completedToastTimerRef.current) {
+        clearTimeout(completedToastTimerRef.current);
+      }
+    };
+  }, []);
 
   const memberOptions: HomeMemberOption[] = useMemo(
     () => resolveBookingMembers(patientFullName, undefined, apiFamily),
@@ -647,15 +973,198 @@ export function useHomeController({
       setSelectedTab(searchOrigin);
     },
     onOpenResults: (query) => {
-      setResultsQuery(query);
+      const trimmed = query.trim();
+      const nextSearch: DoctorsTabSearch = {
+        q: trimmed || undefined,
+      };
+      setResultsQuery(trimmed);
+      setDoctorsSearch(nextSearch);
+      setDoctorsFilters(filtersFromDoctorsSearch(nextSearch));
+      setDoctorsFilterDraft(filtersFromDoctorsSearch(nextSearch));
       setSearchNonce((current) => current + 1);
       setSelectedTab('doctors');
-      setSearchOpen(true);
-      setResultsOpen(true);
+      setSearchOpen(false);
+      setResultsOpen(false);
       setProfileDoctorId(null);
       setBookingOpen(false);
       setHealthTipId(null);
       setConsultNowOpen(false);
+    },
+    onSearchDoctorsTab: (params) => {
+      const q = params.q?.trim() || undefined;
+      const city = params.city?.trim() || undefined;
+      const careCategoryId =
+        params.careCategoryId != null && params.careCategoryId > 0
+          ? params.careCategoryId
+          : undefined;
+      const nextSearch: DoctorsTabSearch = { q, city, careCategoryId };
+      setDoctorsSearch(nextSearch);
+      setDoctorsFilters(filtersFromDoctorsSearch(nextSearch));
+      setDoctorsFilterDraft(filtersFromDoctorsSearch(nextSearch));
+      setResultsQuery(q || city || '');
+      setSearchNonce((current) => current + 1);
+      setSelectedTab('doctors');
+      setSearchOpen(false);
+      setResultsOpen(false);
+      setProfileDoctorId(null);
+      setBookingOpen(false);
+      setHealthTipId(null);
+      setConsultNowOpen(false);
+    },
+    onClearDoctorsSearch: () => {
+      setDoctorsSearch(EMPTY_DOCTORS_TAB_SEARCH);
+      setDoctorsFilters(DEFAULT_DOCTOR_FILTERS);
+      setDoctorsFilterDraft(DEFAULT_DOCTOR_FILTERS);
+      setResultsQuery('');
+    },
+    onRemoveDoctorsCity: () => {
+      setDoctorsSearch((current) => ({ ...current, city: undefined }));
+      setDoctorsFilters((current) => ({
+        ...current,
+        cityIds: [],
+        useCurrentLocation: false,
+      }));
+    },
+    onRemoveDoctorsQuery: () => {
+      setDoctorsSearch((current) => ({
+        ...current,
+        q: undefined,
+        careCategoryId: undefined,
+      }));
+      setDoctorsFilters((current) => ({
+        ...current,
+        careCategoryId: null,
+        careNeedIds: [],
+      }));
+      setResultsQuery('');
+    },
+    doctorsSearch,
+    doctorsFilterCount,
+    doctorsFiltersOpen,
+    doctorsFilterDraft,
+    doctorsFilterMatchingCount: publicDoctors.length,
+    doctorsDatePickerOpen,
+    doctorsFilterCustomDate: doctorsFilterDraft.customDate
+      ? new Date(`${doctorsFilterDraft.customDate}T12:00:00`)
+      : new Date(),
+    doctorsCityOptions,
+    doctorsQualificationOptions,
+    onOpenDoctorsFilters: () => {
+      setDoctorsFilterDraft({
+        ...doctorsFilters,
+        cityIds: doctorsSearch.city?.trim()
+          ? [doctorsSearch.city.trim().toLowerCase()]
+          : doctorsFilters.cityIds,
+        careCategoryId:
+          doctorsSearch.careCategoryId ??
+          doctorsFilters.careCategoryId ??
+          null,
+      });
+      setDoctorsFiltersOpen(true);
+    },
+    onCloseDoctorsFilters: () => {
+      setDoctorsFiltersOpen(false);
+      setDoctorsDatePickerOpen(false);
+      setDoctorsFilterDraft(doctorsFilters);
+    },
+    onResetDoctorsFilterDraft: () =>
+      setDoctorsFilterDraft(EMPTY_DOCTOR_FILTERS),
+    onClearDoctorsFilters: () => {
+      setDoctorsSearch(EMPTY_DOCTORS_TAB_SEARCH);
+      setDoctorsFilters(EMPTY_DOCTOR_FILTERS);
+      setDoctorsFilterDraft(EMPTY_DOCTOR_FILTERS);
+      setResultsQuery('');
+      setDoctorsFiltersOpen(false);
+      setDoctorsDatePickerOpen(false);
+    },
+    onApplyDoctorsFilters: () => {
+      const draft = doctorsFilterDraft;
+      const cityId = draft.cityIds.length === 1 ? draft.cityIds[0] : undefined;
+      const cityLabel =
+        doctorsCityOptions.find((c) => c.id === cityId)?.label ||
+        (cityId
+          ? cityId.replace(/\b\w/g, (ch) => ch.toUpperCase())
+          : undefined);
+      setDoctorsFilters(draft);
+      setDoctorsSearch((current) => ({
+        q: current.q,
+        city: cityLabel,
+        careCategoryId:
+          draft.careCategoryId != null && draft.careCategoryId > 0
+            ? draft.careCategoryId
+            : current.careCategoryId,
+      }));
+      setDoctorsFiltersOpen(false);
+      setDoctorsDatePickerOpen(false);
+    },
+    onToggleDoctorsCareNeed: (id) =>
+      setDoctorsFilterDraft((current) => ({
+        ...current,
+        careNeedIds: toggleValue(current.careNeedIds, id),
+      })),
+    onToggleDoctorsMode: (mode) =>
+      setDoctorsFilterDraft((current) => ({
+        ...current,
+        modes: toggleValue(current.modes, mode),
+      })),
+    onToggleDoctorsAvailability: (slot) =>
+      setDoctorsFilterDraft((current) => ({
+        ...current,
+        availability: toggleValue(current.availability, slot),
+      })),
+    onChangeDoctorsFeeRange: (low, high) =>
+      setDoctorsFilterDraft((current) => ({
+        ...current,
+        feeMin: low,
+        feeMax: high,
+      })),
+    onToggleDoctorsFilterLanguage: (next) =>
+      setDoctorsFilterDraft((current) => ({
+        ...current,
+        languages: toggleValue(current.languages, next),
+      })),
+    onToggleDoctorsGender: (gender) =>
+      setDoctorsFilterDraft((current) => ({
+        ...current,
+        genders: toggleValue(current.genders, gender),
+      })),
+    onToggleDoctorsRecognized: () =>
+      setDoctorsFilterDraft((current) => ({
+        ...current,
+        recognizedQualification: !current.recognizedQualification,
+      })),
+    onToggleDoctorsFocusCert: () =>
+      setDoctorsFilterDraft((current) => ({
+        ...current,
+        focusCertified: !current.focusCertified,
+      })),
+    onChangeDoctorsLocationQuery: (value) =>
+      setDoctorsFilterDraft((current) => ({
+        ...current,
+        locationQuery: value,
+      })),
+    onToggleDoctorsCity: (cityId) =>
+      setDoctorsFilterDraft((current) => ({
+        ...current,
+        cityIds: toggleValue(current.cityIds, cityId),
+      })),
+    onToggleDoctorsCurrentLocation: () =>
+      setDoctorsFilterDraft((current) => ({
+        ...current,
+        useCurrentLocation: !current.useCurrentLocation,
+      })),
+    onOpenDoctorsDatePicker: () => setDoctorsDatePickerOpen(true),
+    onCloseDoctorsDatePicker: () => setDoctorsDatePickerOpen(false),
+    onSelectDoctorsCustomDate: (date) => {
+      const stamp = date.toISOString().slice(0, 10);
+      setDoctorsFilterDraft((current) => ({
+        ...current,
+        customDate: stamp,
+        availability: current.availability.includes('date')
+          ? current.availability
+          : [...current.availability, 'date'],
+      }));
+      setDoctorsDatePickerOpen(false);
     },
     onCloseResults: () => {
       setResultsOpen(false);
@@ -712,7 +1221,14 @@ export function useHomeController({
       setNotificationsOpen(true);
       setNotificationSettingsOpen(false);
     },
-    onJoinConsultation: () => {
+    onJoinConsultation: (appointmentId) => {
+      if (appointmentId) {
+        const target = appointments.find((item) => item.id === appointmentId);
+        if (target && (target.mode === 'video' || target.mode === 'audio')) {
+          setSelectedAppointmentId(target.id);
+          return;
+        }
+      }
       const joinable = appointments.find(
         (item) => item.mode === 'video' || item.mode === 'audio',
       );
@@ -753,11 +1269,28 @@ export function useHomeController({
     careCategories,
     healthArticles,
     onSelectCareCategory: (name) => {
-      setSearchOrigin('home');
-      setResultsQuery(name);
-      setResultsOpen(true);
-      setSearchOpen(false);
+      const trimmed = name.trim();
+      const match = careCategories.find(
+        (c) => c.name.toLowerCase() === trimmed.toLowerCase(),
+      );
+      const careCategoryId = match?.id ? Number(match.id) : undefined;
+      const nextSearch: DoctorsTabSearch = {
+        q: trimmed || undefined,
+        careCategoryId:
+          careCategoryId != null &&
+          !Number.isNaN(careCategoryId) &&
+          careCategoryId > 0
+            ? careCategoryId
+            : undefined,
+      };
+      setDoctorsSearch(nextSearch);
+      setDoctorsFilters(filtersFromDoctorsSearch(nextSearch));
+      setDoctorsFilterDraft(filtersFromDoctorsSearch(nextSearch));
+      setResultsQuery(trimmed);
       setSearchNonce((n) => n + 1);
+      setSelectedTab('doctors');
+      setSearchOpen(false);
+      setResultsOpen(false);
     },
     profileDoctorId,
     onOpenDoctorProfile: (doctorId) => {
@@ -780,6 +1313,23 @@ export function useHomeController({
     },
     onCloseHealthTip: () => setHealthTipId(null),
     appointments,
+    completedMovedToastVisible,
+    onDismissCompletedMovedToast: () => {
+      setCompletedMovedToastVisible(false);
+      if (completedToastTimerRef.current) {
+        clearTimeout(completedToastTimerRef.current);
+        completedToastTimerRef.current = null;
+      }
+    },
+    onOpenMyAppointmentsFromCompletedToast: () => {
+      setCompletedMovedToastVisible(false);
+      if (completedToastTimerRef.current) {
+        clearTimeout(completedToastTimerRef.current);
+        completedToastTimerRef.current = null;
+      }
+      setSelectedTab('account');
+      setMyAppointmentsOpen(true);
+    },
     selectedAppointmentId,
     onOpenAppointment: (id) => {
       setAppointments((current) =>
@@ -965,12 +1515,14 @@ export function useHomeController({
       setBookingOpen(false);
     },
     onFindDoctorFromTip: (query) => {
+      const trimmed = query.trim();
       setHealthTipId(null);
-      setResultsQuery(query);
+      setResultsQuery(trimmed);
+      setDoctorsSearch({ q: trimmed || undefined });
       setSearchNonce((current) => current + 1);
       setSelectedTab('doctors');
-      setSearchOpen(true);
-      setResultsOpen(true);
+      setSearchOpen(false);
+      setResultsOpen(false);
       setProfileDoctorId(null);
     },
     publicDoctors,

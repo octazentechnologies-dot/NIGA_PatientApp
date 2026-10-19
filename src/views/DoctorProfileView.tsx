@@ -1,10 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { sheetBottomPadding } from '../utilities/sheetInset';
 
 import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
+import { DoctorProfileSkeleton } from '../components/DoctorProfileSkeleton';
 import type { ProfileTab } from '../config/doctorProfiles';
 import type { DoctorProfileViewModel } from '../controllers/useDoctorProfileController';
 import type { TranslationKey } from '../localization/types';
@@ -31,6 +31,7 @@ export function DoctorProfileView({
   tab,
   saved: _saved,
   aboutExpanded,
+  isLoading,
   onBack,
   onShare,
   onToggleSave: _onToggleSave,
@@ -40,7 +41,33 @@ export function DoctorProfileView({
   onBook,
 }: DoctorProfileViewModel) {
   const insets = useSafeAreaInsets();
-  const footerReserve = 118 + sheetBottomPadding(insets, spacing.md);
+  const bottomInset = Math.max(insets.bottom, 0);
+  const footerReserve = 118 + bottomInset;
+
+  if (isLoading) {
+    return (
+      <View style={styles.root}>
+        <DoctorProfileSkeleton />
+        <View
+          style={[
+            styles.loadingTopBar,
+            { paddingTop: Math.max(insets.top, spacing.sm) },
+          ]}
+          pointerEvents="box-none"
+        >
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('back')}
+            onPress={onBack}
+            hitSlop={8}
+            style={styles.iconButton}
+          >
+            <Ionicons name="arrow-back" size={24} color={colors.ink} />
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.root}>
@@ -60,19 +87,15 @@ export function DoctorProfileView({
           >
             <Ionicons name="arrow-back" size={24} color={colors.ink} />
           </Pressable>
-          <View style={styles.topActions}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t('profileShare')}
-              onPress={onShare}
-              hitSlop={8}
-              style={styles.iconButton}
-            >
-              <Ionicons name="share-outline" size={22} color={colors.ink} />
-            </Pressable>
-            {/* BE-031 — bookmarks not planned */}
-            <View style={styles.iconButton} />
-          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('profileShare')}
+            onPress={onShare}
+            hitSlop={8}
+            style={styles.iconButton}
+          >
+            <Ionicons name="share-social-outline" size={22} color={colors.ink} />
+          </Pressable>
         </View>
 
         <View style={styles.hero}>
@@ -180,7 +203,7 @@ export function DoctorProfileView({
       <View
         style={[
           styles.footer,
-          { paddingBottom: sheetBottomPadding(insets, spacing.md) },
+          { paddingBottom: bottomInset },
         ]}
       >
         {profile.nextAvailableKey ? (
@@ -491,6 +514,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.page,
   },
+  loadingTopBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 2,
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.sm,
+  },
   topBar: {
     backgroundColor: colors.card,
     minHeight: 48,
@@ -498,10 +532,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.sm,
-  },
-  topActions: {
-    flexDirection: 'row',
-    gap: spacing.xs,
   },
   iconButton: {
     width: layout.buttonHeight,
@@ -803,6 +833,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.gutter,
     paddingTop: 12,
+    paddingBottom: 12,
     gap: spacing.md,
   },
   feeCaption: {

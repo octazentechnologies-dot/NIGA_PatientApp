@@ -2,7 +2,6 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useEffect, useRef } from 'react';
 import {
   Animated,
-  BackHandler,
   Easing,
   Pressable,
   ScrollView,
@@ -29,14 +28,6 @@ const PENDING = colors.outline;
 
 export function ConsultNowSearchingView(vm: ConsultNowViewModel) {
   const insets = useSafeAreaInsets();
-
-  useEffect(() => {
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      vm.onCancelSearch();
-      return true;
-    });
-    return () => sub.remove();
-  }, [vm.onCancelSearch]);
 
   if (vm.matchState === 'none') {
     return <ConsultNowUnavailableView {...vm} />;

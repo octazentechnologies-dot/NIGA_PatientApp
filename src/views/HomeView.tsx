@@ -3,6 +3,7 @@ import { useState, type ComponentProps } from 'react';
 import {
   ActivityIndicator,
   Image,
+  Linking,
   Platform,
   Pressable,
   RefreshControl,
@@ -17,10 +18,15 @@ import { HealthRecordsView } from './HealthRecordsView';
 import { MedicinesView } from './MedicinesView';
 import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
+import { DoctorFiltersSheet } from '../components/DoctorFiltersSheet';
+import { EmptyDoctorsIllustration } from '../components/EmptyDoctorsIllustration';
 import { NotificationBell } from '../components/NotificationBell';
 import { PatientTabBar, usePatientTabScrollInset } from '../components/PatientTabBar';
 import { Screen } from '../components/Screen';
+import { StatusBarBleed } from '../components/StatusBarBleed';
 import { WhoForMemberSheet } from '../components/WhoForMemberSheet';
+import { DEFAULT_DOCTOR_FILTERS } from '../models/search';
+import { useAndroidStatusBarBackground } from '../utilities/useAndroidPageStatusBar';
 import {
   CONSULT_NOW_AVAILABLE_DOCTORS,
   CONSULT_NOW_WAIT_MAX,
@@ -33,7 +39,7 @@ import type { PublicDoctor } from '../store/api/new/doctorsApi';
 import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
 import { spacing } from '../theme/spacing';
-import { resolveApiUrl } from '../utilities/formatters';
+import { formatWeekday, resolveApiUrl } from '../utilities/formatters';
 import { scaleFont } from '../utilities/scale';
 
 function getDoctorPhotoUrl(photoPath: string | null | undefined): string | null {
@@ -284,21 +290,55 @@ export function HomeView({
   onOpenHealthTip,
   onTrackOrder,
   appointments,
+  completedMovedToastVisible,
+  onDismissCompletedMovedToast,
+  onOpenMyAppointmentsFromCompletedToast,
   onOpenAppointment,
   followUpPlanAvailable,
   onOpenFollowUpPlan,
   onOpenOrderMedicines,
   medicineOrderPlaced,
   onOpenOrderDetails,
+  onOpenAccountRecords,
   publicDoctors = [],
   isDoctorsLoading = false,
   isDoctorsError = false,
   refetchDoctors,
   onOpenDoctorProfile,
   onOpenBooking,
-  careCategories = [],
   healthArticles = [],
-  onSelectCareCategory,
+  doctorsSearch = {},
+  doctorsFilterCount = 0,
+  onClearDoctorsSearch,
+  onRemoveDoctorsCity,
+  onRemoveDoctorsQuery,
+  doctorsFiltersOpen = false,
+  doctorsFilterDraft = DEFAULT_DOCTOR_FILTERS,
+  doctorsFilterMatchingCount = 0,
+  doctorsDatePickerOpen = false,
+  doctorsFilterCustomDate = new Date(),
+  doctorsCityOptions = [],
+  doctorsQualificationOptions = [],
+  onOpenDoctorsFilters,
+  onCloseDoctorsFilters,
+  onResetDoctorsFilterDraft,
+  onClearDoctorsFilters,
+  onApplyDoctorsFilters,
+  onToggleDoctorsCareNeed,
+  onToggleDoctorsMode,
+  onToggleDoctorsAvailability,
+  onChangeDoctorsFeeRange,
+  onToggleDoctorsFilterLanguage,
+  onToggleDoctorsGender,
+  onToggleDoctorsRecognized,
+  onToggleDoctorsFocusCert,
+  onChangeDoctorsLocationQuery,
+  onToggleDoctorsCity,
+  onToggleDoctorsCurrentLocation,
+  onOpenDoctorsDatePicker,
+  onCloseDoctorsDatePicker,
+  onSelectDoctorsCustomDate,
+  onOpenBookWithHelp,
   account,
   notificationCount,
 }: HomeViewModel & { notificationCount: number }) {
@@ -311,12 +351,55 @@ export function HomeView({
       ? publicDoctors.filter((doc) => doc.isOnline)
       : publicDoctors;
 
-  const upcomingAppointment = appointments.find(
-    (a) => a.status === 'confirmed' || a.status === 'waiting_acceptance',
+  const bookedAppointments = appointments.filter(
+    (a) =>
+      a.id !== 'seed-followup-chat' &&
+      (a.status === 'confirmed' || a.status === 'waiting_acceptance'),
   );
+
+  useAndroidStatusBarBackground(colors.card);
 
   return (
     <Screen edges={['left', 'right']} style={styles.root}>
+      <StatusBarBleed color={colors.card} />
+      {completedMovedToastVisible ? (
+        <View
+          style={[
+            styles.completedMovedToast,
+            { top: Math.max(insets.top, spacing.sm) + spacing.xs },
+          ]}
+          accessibilityLiveRegion="polite"
+        >
+          <AppText
+            variant="bodyMd"
+            color={colors.onPrimaryContainer}
+            style={styles.completedMovedToastText}
+          >
+            {t('homeBookingMovedToAccount')}
+          </AppText>
+          <View style={styles.completedMovedToastActions}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={onOpenMyAppointmentsFromCompletedToast}
+              style={styles.completedMovedToastCta}
+              hitSlop={8}
+            >
+              <AppText variant="labelSm" color={colors.primaryOutline}>
+                {t('homeBookingMovedToAccountAction')}
+              </AppText>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('close')}
+              onPress={onDismissCompletedMovedToast}
+              hitSlop={12}
+              style={styles.completedMovedToastDismiss}
+            >
+              <Ionicons name="close" size={18} color={colors.onPrimaryContainer} />
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
       {selectedTab === 'home' ? (
         <View style={styles.homeTab}>
           <View
@@ -400,105 +483,231 @@ export function HomeView({
             contentContainerStyle={{ paddingBottom: tabScrollInset }}
           >
             <View style={styles.body}>
-              {upcomingAppointment ? (
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={() => onOpenAppointment(upcomingAppointment.id)}
-                  style={styles.consultCard}
-                >
-                  <View style={styles.consultTop}>
-                    <View style={styles.doctorRow}>
-                      <View style={styles.flex}>
-                        <View style={styles.nameRow}>
-                          <AppText
-                            variant="titleMd"
-                            color={colors.onSurface}
-                            style={styles.doctorName}
-                          >
-                            {t(upcomingAppointment.doctorNameKey)}
-                          </AppText>
-                          <View
-                            accessibilityLabel={t('homeVerified')}
-                            style={styles.verifiedBadge}
-                          >
-                            <Ionicons
-                              name="shield-checkmark"
-                              size={14}
-                              color={colors.ink}
-                            />
+              {bookedAppointments.length > 0 ? (
+                <View style={styles.bookingsSection}>
+                  <AppText variant="headlineMd" color={colors.ink}>
+                    {t('homeMyBookings')}
+                  </AppText>
+                  {bookedAppointments.map((appointment) => {
+                    const canJoin =
+                      appointment.mode === 'video' ||
+                      appointment.mode === 'audio';
+                    const isClinic = appointment.mode === 'clinic';
+                    const doctorName = appointment.doctorNameKey
+                      ? t(appointment.doctorNameKey)
+                      : t('homeDoctorName');
+                    const locale = language === 'mr' ? 'mr-IN' : 'en-IN';
+                    const weekday =
+                      formatWeekday(appointment.startsAt, locale) ??
+                      formatWeekday(appointment.dateLine, locale) ??
+                      '';
+                    const modeIcon =
+                      appointment.mode === 'video'
+                        ? 'videocam-outline'
+                        : appointment.mode === 'audio'
+                          ? 'call-outline'
+                          : appointment.mode === 'chat'
+                            ? 'chatbubble-outline'
+                            : 'storefront-outline';
+                    const modeSubtitle = isClinic
+                      ? t('homeBookingClinicVisit')
+                      : t('homeBookingOnlineConsult');
+                    const modeShortLabel =
+                      appointment.mode === 'audio'
+                        ? t('bookAudio')
+                        : appointment.mode === 'chat'
+                          ? t('bookChat')
+                          : appointment.mode === 'clinic'
+                            ? t('bookClinic')
+                            : t('bookVideo');
+                    return (
+                      <Pressable
+                        key={appointment.id}
+                        accessibilityRole="button"
+                        accessibilityLabel={doctorName}
+                        onPress={() => onOpenAppointment(appointment.id)}
+                        style={styles.consultCard}
+                      >
+                        <View style={styles.doctorRow}>
+                          <View style={styles.flex}>
+                            <View style={styles.nameRow}>
+                              <AppText
+                                variant="titleMd"
+                                color={colors.ink}
+                                style={styles.doctorName}
+                                numberOfLines={2}
+                                raw
+                              >
+                                {doctorName}
+                              </AppText>
+                              <Ionicons
+                                name="shield-checkmark"
+                                size={16}
+                                color={colors.primary}
+                                accessibilityLabel={t('homeVerified')}
+                              />
+                            </View>
+                            <AppText
+                              variant="bodyMd"
+                              color={colors.onSurfaceVariant}
+                              numberOfLines={2}
+                            >
+                              {appointment.credentialsKey
+                                ? t(appointment.credentialsKey)
+                                : t('homeDoctorQualification')}
+                            </AppText>
+                            {appointment.patientLabel ? (
+                              <AppText
+                                variant="labelSm"
+                                color={colors.onSurfaceVariant}
+                                numberOfLines={1}
+                                raw
+                              >
+                                {`${t('homeForPrefix')}: ${appointment.patientLabel}`}
+                              </AppText>
+                            ) : null}
+                          </View>
+                          <View style={styles.doctorInitials}>
+                            <AppText
+                              variant="titleMd"
+                              color={colors.onPrimaryContainer}
+                              weightOverride="600"
+                              languageOverride="en"
+                            >
+                              {appointment.doctorInitials || 'DR'}
+                            </AppText>
                           </View>
                         </View>
-                        <AppText variant="bodyMd" color={colors.onSurfaceVariant}>
-                          {upcomingAppointment.credentialsKey
-                            ? t(upcomingAppointment.credentialsKey)
-                            : t('homeDoctorQualification')}
-                        </AppText>
-                      </View>
-                      <Image
-                        source={images.doctorPortrait}
-                        resizeMode="cover"
-                        style={styles.doctorPhoto}
-                      />
-                    </View>
 
-                    <View style={styles.metaRow}>
-                      <Ionicons
-                        name="calendar-outline"
-                        size={16}
-                        color={colors.onSurfaceVariant}
-                      />
-                      <AppText variant="bodyMd" color={colors.onSurface}>
-                        {upcomingAppointment.whenLabel || t('homeConsultDate')}
-                      </AppText>
-                    </View>
-                    <View style={styles.metaRow}>
-                      <Ionicons
-                        name={
-                          upcomingAppointment.mode === 'video'
-                            ? 'videocam-outline'
-                            : 'storefront-outline'
-                        }
-                        size={16}
-                        color={colors.onSurfaceVariant}
-                      />
-                      <AppText variant="bodyMd" color={colors.onSurface}>
-                        {upcomingAppointment.modeConsultLabel || t('homeConsultMode')}
-                      </AppText>
-                    </View>
-                  </View>
+                        <View style={styles.bookingMetaRow}>
+                          <View style={[styles.bookingMetaTile, styles.dateTile]}>
+                            <View style={styles.metaIconBubble}>
+                              <Ionicons
+                                name="calendar-outline"
+                                size={16}
+                                color={colors.primary}
+                              />
+                            </View>
+                            <View style={styles.bookingMetaCopy}>
+                              <AppText
+                                variant="labelSm"
+                                color={colors.onSurfaceVariant}
+                                numberOfLines={1}
+                              >
+                                {t('homeBookingAppointmentDate')}
+                              </AppText>
+                              <AppText
+                                variant="bodyMd"
+                                color={colors.ink}
+                                weightOverride="600"
+                                numberOfLines={2}
+                                raw
+                              >
+                                {appointment.dateLine ||
+                                  appointment.whenLabel ||
+                                  t('homeConsultDate')}
+                              </AppText>
+                              {weekday ? (
+                                <AppText
+                                  variant="labelSm"
+                                  color={colors.onSurfaceVariant}
+                                  numberOfLines={1}
+                                  raw
+                                >
+                                  {weekday}
+                                </AppText>
+                              ) : null}
+                            </View>
+                          </View>
+                          <View
+                            style={[
+                              styles.bookingMetaTile,
+                              isClinic ? styles.clinicTypeTile : styles.typeTile,
+                            ]}
+                          >
+                            <View style={styles.metaIconBubble}>
+                              <Ionicons
+                                name={modeIcon}
+                                size={16}
+                                color={colors.primary}
+                              />
+                            </View>
+                            <View style={styles.bookingMetaCopy}>
+                              <AppText
+                                variant="labelSm"
+                                color={colors.onSurfaceVariant}
+                                numberOfLines={1}
+                              >
+                                {t('homeBookingConsultationType')}
+                              </AppText>
+                              <AppText
+                                variant="bodyMd"
+                                color={colors.ink}
+                                weightOverride="600"
+                                numberOfLines={1}
+                              >
+                                {modeShortLabel}
+                              </AppText>
+                              <AppText
+                                variant="labelSm"
+                                color={colors.onSurfaceVariant}
+                                numberOfLines={2}
+                              >
+                                {modeSubtitle}
+                              </AppText>
+                            </View>
+                          </View>
+                        </View>
 
-                  <View style={styles.consultBottom}>
-                    <View style={styles.startsBanner}>
-                      <Ionicons
-                        name="time-outline"
-                        size={16}
-                        color={colors.onSurfaceVariant}
-                      />
-                      <AppText variant="bodyMd" color={colors.onSurface}>
-                        {upcomingAppointment.startsAt
-                          ? `${t('homeStartsIn')} · ${upcomingAppointment.timeLine || ''}`
-                          : t('homeStartsIn')}
-                      </AppText>
-                    </View>
+                        {appointment.timeLine ? (
+                          <View style={styles.timeStrip}>
+                            <View style={styles.metaIconBubble}>
+                              <Ionicons
+                                name="time-outline"
+                                size={16}
+                                color={colors.primary}
+                              />
+                            </View>
+                            <View style={styles.bookingMetaCopy}>
+                              <AppText
+                                variant="labelSm"
+                                color={colors.onSurfaceVariant}
+                                numberOfLines={1}
+                              >
+                                {t('homeBookingConsultationTime')}
+                              </AppText>
+                              <AppText
+                                variant="bodyMd"
+                                color={colors.ink}
+                                weightOverride="600"
+                                numberOfLines={1}
+                                raw
+                              >
+                                {appointment.timeLine}
+                              </AppText>
+                            </View>
+                          </View>
+                        ) : null}
 
-                    <AppButton
-                      label={
-                        upcomingAppointment.mode === 'video'
-                          ? t('homeJoinConsultation')
-                          : t('clinicAptDirections')
-                      }
-                      textVariant="titleMd"
-                      onPress={() => {
-                        if (upcomingAppointment.mode === 'video') {
-                          onJoinConsultation();
-                        } else {
-                          onOpenAppointment(upcomingAppointment.id);
-                        }
-                      }}
-                      style={styles.joinButton}
-                    />
-                  </View>
-                </Pressable>
+                        {canJoin ? (
+                          <AppButton
+                            label={t('homeJoinConsultation')}
+                            onPress={() => onJoinConsultation(appointment.id)}
+                            icon={
+                              <Ionicons
+                                name="arrow-forward"
+                                size={18}
+                                color={colors.onPrimary}
+                              />
+                            }
+                            iconPosition="end"
+                            style={styles.joinButton}
+                          />
+                        ) : null}
+                      </Pressable>
+                    );
+                  })}
+                </View>
               ) : null}
 
               {followUpPlanAvailable ? (
@@ -529,6 +738,7 @@ export function HomeView({
                 onPress={onOpenConsultNow}
                 style={styles.instantCard}
               >
+                <View style={styles.instantDecorCircle} />
                 <View style={styles.instantHead}>
                   <View style={styles.instantIcon}>
                     <MaterialCommunityIcons
@@ -539,11 +749,15 @@ export function HomeView({
                   </View>
                   <View style={styles.flex}>
                     <View style={styles.instantTitleRow}>
-                      <AppText variant="titleMd" color={colors.ink} style={styles.flex}>
+                      <AppText variant="titleMd" color={colors.ink} weightOverride="700">
                         {t('homeInstantAdvice')}
                       </AppText>
                       <View style={styles.instantPill}>
-                        <AppText variant="labelSm" color={colors.warning} weightOverride="600">
+                        <AppText
+                          variant="labelSm"
+                          color={colors.warning}
+                          weightOverride="600"
+                        >
                           {t('homeInstantBadge')}
                         </AppText>
                       </View>
@@ -566,10 +780,15 @@ export function HomeView({
                         )}
                     </AppText>
                   </View>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={22}
+                    color={colors.warning}
+                  />
                 </View>
               </Pressable>
 
-              <AppText variant="headlineMd" color={colors.onSurface}>
+              <AppText variant="headlineMd" color={colors.ink}>
                 {t('homeQuickActions')}
               </AppText>
               <View style={styles.quickGrid}>
@@ -582,15 +801,21 @@ export function HomeView({
                         ? onOpenConsultNow
                         : action.labelKey === 'homeBookConsultation'
                           ? onOpenSearch
-                          : undefined
+                          : action.labelKey === 'homeMyPrescriptions'
+                            ? () => onOpenAccountRecords('prescriptions')
+                            : action.labelKey === 'homeOrderMedicines'
+                              ? onOpenOrderMedicines
+                              : undefined
                     }
                     style={styles.quickCard}
                   >
+                    <View style={styles.quickDecorCircle} />
                     {action.badgeKey ? (
                       <View style={styles.quickBadge}>
                         <AppText
                           variant="labelSm"
                           color={colors.onPrimary}
+                          weightOverride="600"
                           style={styles.badgeText}
                         >
                           {t(action.badgeKey)}
@@ -600,66 +825,39 @@ export function HomeView({
                     <View style={styles.quickIconWrap}>
                       <MaterialCommunityIcons
                         name={action.icon}
-                        size={26}
+                        size={24}
                         color={colors.primary}
                       />
                     </View>
-                    <AppText
-                      variant="bodyMd"
-                      color={colors.onSurface}
-                      style={styles.centerText}
-                    >
-                      {t(action.labelKey)}
-                    </AppText>
+                    <View style={styles.quickFooter}>
+                      <AppText
+                        variant="titleMd"
+                        color={colors.ink}
+                        weightOverride="700"
+                        style={styles.quickLabel}
+                        numberOfLines={2}
+                      >
+                        {t(action.labelKey)}
+                      </AppText>
+                      <View
+                        accessibilityElementsHidden
+                        importantForAccessibility="no-hide-descendants"
+                        style={styles.quickArrowBtn}
+                      >
+                        <Ionicons
+                          name="chevron-forward"
+                          size={16}
+                          color={colors.primary}
+                        />
+                      </View>
+                    </View>
                   </Pressable>
                 ))}
               </View>
 
-              {careCategories.length > 0 ? (
-                <>
-                  <AppText variant="headlineMd" color={colors.onSurface}>
-                    {t('homeCareCategories')}
-                  </AppText>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.categoryRow}
-                  >
-                    {careCategories.map((category) => (
-                      <Pressable
-                        key={category.id}
-                        accessibilityRole="button"
-                        onPress={() => onSelectCareCategory(category.name)}
-                        style={styles.categoryItem}
-                      >
-                        <View style={styles.categoryIcon}>
-                          <AppText
-                            variant="titleMd"
-                            color={colors.primary}
-                            languageOverride="en"
-                            raw
-                          >
-                            {category.name.slice(0, 1).toUpperCase()}
-                          </AppText>
-                        </View>
-                        <AppText
-                          variant="labelSm"
-                          color={colors.onSurface}
-                          style={styles.centerText}
-                          numberOfLines={2}
-                          raw
-                        >
-                          {category.name}
-                        </AppText>
-                      </Pressable>
-                    ))}
-                  </ScrollView>
-                </>
-              ) : null}
-
               {healthArticles.length > 0 ? (
                 <>
-                  <AppText variant="headlineMd" color={colors.onSurface}>
+                  <AppText variant="headlineMd" color={colors.ink}>
                     {t('homeHealthTips')}
                   </AppText>
                   <ScrollView
@@ -674,21 +872,33 @@ export function HomeView({
                         onPress={() => onOpenHealthTip(article.id)}
                         style={styles.tipCard}
                       >
-                        {article.imageUrl ? (
-                          <Image
-                            source={{ uri: article.imageUrl }}
-                            resizeMode="cover"
-                            style={styles.tipImage}
-                          />
-                        ) : (
-                          <View style={[styles.tipImage, styles.tipImagePlaceholder]}>
-                            <Ionicons
-                              name="newspaper-outline"
-                              size={28}
-                              color={colors.primary}
+                        <View style={styles.tipHero}>
+                          {article.imageUrl ? (
+                            <Image
+                              source={{ uri: article.imageUrl }}
+                              resizeMode="cover"
+                              style={styles.tipHeroImage}
                             />
-                          </View>
-                        )}
+                          ) : (
+                            <>
+                              <View style={styles.tipDecorCircleLeft} />
+                              <View style={styles.tipDecorCircleRight} />
+                              <View style={styles.tipDecorDots}>
+                                {Array.from({ length: 15 }).map((_, index) => (
+                                  <View
+                                    key={`tip-dot-${article.id}-${index}`}
+                                    style={styles.tipDecorDot}
+                                  />
+                                ))}
+                              </View>
+                              <Ionicons
+                                name="newspaper-outline"
+                                size={36}
+                                color={colors.primary}
+                              />
+                            </>
+                          )}
+                        </View>
                         {article.subtitle ? (
                           <View style={styles.tipChip}>
                             <AppText
@@ -702,15 +912,28 @@ export function HomeView({
                             </AppText>
                           </View>
                         ) : null}
-                        <AppText
-                          variant="titleMd"
-                          color={colors.onSurface}
-                          numberOfLines={3}
-                          style={styles.tipTitle}
-                          raw
-                        >
-                          {article.title}
-                        </AppText>
+                        <View style={styles.tipFooter}>
+                          <AppText
+                            variant="titleMd"
+                            color={colors.ink}
+                            numberOfLines={2}
+                            style={styles.tipTitle}
+                            raw
+                          >
+                            {article.title}
+                          </AppText>
+                          <View
+                            accessibilityElementsHidden
+                            importantForAccessibility="no-hide-descendants"
+                            style={styles.tipArrowBtn}
+                          >
+                            <Ionicons
+                              name="arrow-forward"
+                              size={18}
+                              color={colors.primary}
+                            />
+                          </View>
+                        </View>
                       </Pressable>
                     ))}
                   </ScrollView>
@@ -771,13 +994,81 @@ export function HomeView({
               <Ionicons name="search" size={20} color={colors.onSurfaceVariant} />
               <AppText
                 variant="bodyMd"
-                color={colors.onSurfaceVariant}
+                color={
+                  doctorsSearch.q || doctorsSearch.city
+                    ? colors.onSurface
+                    : colors.onSurfaceVariant
+                }
                 style={styles.searchPlaceholder}
                 numberOfLines={1}
+                raw={Boolean(doctorsSearch.q || doctorsSearch.city)}
               >
-                {t('homeSearchPlaceholder')}
+                {doctorsSearch.q?.trim() ||
+                  doctorsSearch.city?.trim() ||
+                  t('homeSearchPlaceholder')}
               </AppText>
             </Pressable>
+            <ScrollView
+              horizontal
+              bounces={false}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.doctorsBadgeRow}
+            >
+              <Pressable
+                accessibilityRole="button"
+                onPress={onOpenDoctorsFilters}
+                style={styles.doctorsToolButton}
+              >
+                <Ionicons name="filter" size={18} color={colors.ink} />
+                <AppText variant="labelMd" color={colors.ink}>
+                  {`${t('searchAllFilters')} (${doctorsFilterCount})`}
+                </AppText>
+              </Pressable>
+              {doctorsSearch.city?.trim() ? (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={onRemoveDoctorsCity}
+                  style={styles.doctorsActiveChip}
+                >
+                  <Ionicons
+                    name="location-outline"
+                    size={14}
+                    color={colors.ink}
+                  />
+                  <AppText variant="labelMd" color={colors.ink} raw>
+                    {doctorsSearch.city.trim()}
+                  </AppText>
+                  <Ionicons name="close" size={14} color={colors.ink} />
+                </Pressable>
+              ) : null}
+              {doctorsSearch.q?.trim() &&
+              doctorsSearch.q.trim() !== doctorsSearch.city?.trim() ? (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={onRemoveDoctorsQuery}
+                  style={styles.doctorsActiveChip}
+                >
+                  <AppText
+                    variant="labelMd"
+                    color={colors.ink}
+                    raw
+                    numberOfLines={1}
+                  >
+                    {doctorsSearch.q.trim()}
+                  </AppText>
+                  <Ionicons name="close" size={14} color={colors.ink} />
+                </Pressable>
+              ) : null}
+              <Pressable
+                accessibilityRole="button"
+                onPress={onOpenDoctorsFilters}
+                style={styles.doctorsToolButton}
+              >
+                <AppText variant="labelMd" color={colors.ink}>
+                  {t('searchSortDistance')}
+                </AppText>
+              </Pressable>
+            </ScrollView>
           </View>
 
           <ScrollView
@@ -793,57 +1084,74 @@ export function HomeView({
             }
             contentContainerStyle={[
               styles.bookingsList,
+              displayedDoctors.length === 0 && !isDoctorsLoading
+                ? styles.doctorsEmptyScroll
+                : null,
               { paddingBottom: tabScrollInset },
             ]}
           >
-            <View style={styles.availableDoctorsSectionHead}>
-              <View style={styles.availableDoctorsTitleRow}>
-                <AppText variant="headlineMd" color={colors.ink} weightOverride="700">
-                  {t('doctorsAvailableTitle')}
-                </AppText>
-                {publicDoctors.length > 0 ? (
-                  <AppText variant="bodyMd" color={colors.muted}>
-                    {`${publicDoctors.length} verified doctors`}
+            {displayedDoctors.length > 0 || isDoctorsLoading ? (
+              <View style={styles.availableDoctorsSectionHead}>
+                <View style={styles.availableDoctorsTitleRow}>
+                  <AppText
+                    variant="headlineMd"
+                    color={colors.ink}
+                    weightOverride="700"
+                  >
+                    {t('doctorsAvailableTitle')}
                   </AppText>
-                ) : null}
-              </View>
+                  {publicDoctors.length > 0 ? (
+                    <AppText variant="bodyMd" color={colors.muted}>
+                      {`${publicDoctors.length} verified doctors`}
+                    </AppText>
+                  ) : null}
+                </View>
 
-              <View style={styles.doctorFilterPills}>
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={() => setDoctorFilter('all')}
-                  style={[
-                    styles.filterPill,
-                    doctorFilter === 'all' && styles.filterPillActive,
-                  ]}
-                >
-                  <AppText
-                    variant="labelMd"
-                    color={doctorFilter === 'all' ? colors.primary : colors.muted}
-                    weightOverride={doctorFilter === 'all' ? '600' : '500'}
+                <View style={styles.doctorFilterPills}>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => setDoctorFilter('all')}
+                    style={[
+                      styles.filterPill,
+                      doctorFilter === 'all' && styles.filterPillActive,
+                    ]}
                   >
-                    {`${t('doctorsFilterAll')} (${publicDoctors.length})`}
-                  </AppText>
-                </Pressable>
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={() => setDoctorFilter('online')}
-                  style={[
-                    styles.filterPill,
-                    doctorFilter === 'online' && styles.filterPillActive,
-                  ]}
-                >
-                  <View style={styles.onlineDot} />
-                  <AppText
-                    variant="labelMd"
-                    color={doctorFilter === 'online' ? colors.primary : colors.muted}
-                    weightOverride={doctorFilter === 'online' ? '600' : '500'}
+                    <AppText
+                      variant="labelMd"
+                      color={
+                        doctorFilter === 'all' ? colors.primary : colors.muted
+                      }
+                      weightOverride={doctorFilter === 'all' ? '600' : '500'}
+                    >
+                      {`${t('doctorsFilterAll')} (${publicDoctors.length})`}
+                    </AppText>
+                  </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => setDoctorFilter('online')}
+                    style={[
+                      styles.filterPill,
+                      doctorFilter === 'online' && styles.filterPillActive,
+                    ]}
                   >
-                    {`${t('doctorsFilterOnline')} (${publicDoctors.filter((d) => d.isOnline).length})`}
-                  </AppText>
-                </Pressable>
+                    <View style={styles.onlineDot} />
+                    <AppText
+                      variant="labelMd"
+                      color={
+                        doctorFilter === 'online'
+                          ? colors.primary
+                          : colors.muted
+                      }
+                      weightOverride={
+                        doctorFilter === 'online' ? '600' : '500'
+                      }
+                    >
+                      {`${t('doctorsFilterOnline')} (${publicDoctors.filter((d) => d.isOnline).length})`}
+                    </AppText>
+                  </Pressable>
+                </View>
               </View>
-            </View>
+            ) : null}
 
             {isDoctorsLoading && publicDoctors.length === 0 ? (
               <View style={styles.doctorLoadingWrap}>
@@ -854,7 +1162,11 @@ export function HomeView({
               </View>
             ) : isDoctorsError && publicDoctors.length === 0 ? (
               <View style={styles.doctorErrorWrap}>
-                <Ionicons name="alert-circle-outline" size={40} color={colors.error} />
+                <Ionicons
+                  name="alert-circle-outline"
+                  size={40}
+                  color={colors.error}
+                />
                 <AppText variant="bodyMd" color={colors.ink}>
                   {t('genericError')}
                 </AppText>
@@ -865,9 +1177,53 @@ export function HomeView({
                 />
               </View>
             ) : displayedDoctors.length === 0 ? (
-              <View style={styles.bookingsEmpty}>
-                <AppText variant="bodyMd" color={colors.onSurfaceVariant}>
-                  {t('doctorsNoDoctors')}
+              <View style={styles.doctorsSearchEmpty}>
+                <View style={styles.doctorsEmptyArt}>
+                  <EmptyDoctorsIllustration />
+                </View>
+                <AppText
+                  variant="titleMd"
+                  color={colors.ink}
+                  style={styles.centerText}
+                >
+                  {t('searchResultsEmptyTitle')}
+                </AppText>
+                <AppText
+                  variant="bodyMd"
+                  color={colors.muted}
+                  style={styles.doctorsEmptyBody}
+                >
+                  {t('searchResultsEmptyBody')}
+                </AppText>
+                <View style={styles.doctorsEmptyActions}>
+                  <AppButton
+                    label={t('searchResultsClearFilters')}
+                    textVariant="titleMd"
+                    onPress={onClearDoctorsSearch}
+                    style={styles.doctorsEmptyButton}
+                  />
+                  <AppButton
+                    label={t('searchResultsBookAssistance')}
+                    variant="secondary"
+                    textVariant="titleMd"
+                    onPress={onOpenBookWithHelp}
+                    style={styles.doctorsEmptyButton}
+                  />
+                </View>
+                <AppText
+                  variant="bodyMd"
+                  color={colors.muted}
+                  style={styles.centerText}
+                >
+                  {t('searchResultsHelplinePrefix')}
+                  <AppText
+                    variant="labelMd"
+                    color={colors.primary}
+                    style={styles.helplineLink}
+                    onPress={() => Linking.openURL('tel:104')}
+                  >
+                    {t('searchResultsHelplineNumber')}
+                  </AppText>
                 </AppText>
               </View>
             ) : (
@@ -888,6 +1244,7 @@ export function HomeView({
           onOpenFollowUpPlan={onOpenFollowUpPlan}
           onOpenOrderMedicines={onOpenOrderMedicines}
           onOpenNotifications={onOpenNotifications}
+          onAddMember={onAddMember}
           notificationCount={notificationCount}
         />
       ) : selectedTab === 'medicines' ? (
@@ -935,9 +1292,44 @@ export function HomeView({
         members={memberOptions}
         selectedMemberId={selectedMemberId}
         t={t}
+        language={language}
         onClose={onCloseMemberPicker}
         onSelectMember={onSelectMember}
         onAddMember={onAddMember}
+      />
+
+      <DoctorFiltersSheet
+        language={language}
+        t={t}
+        visible={doctorsFiltersOpen}
+        draft={doctorsFilterDraft}
+        matchingCount={doctorsFilterMatchingCount}
+        datePickerOpen={doctorsDatePickerOpen}
+        customDate={
+          Number.isNaN(doctorsFilterCustomDate.getTime())
+            ? new Date()
+            : doctorsFilterCustomDate
+        }
+        cityOptions={doctorsCityOptions}
+        qualificationOptions={doctorsQualificationOptions}
+        onClose={onCloseDoctorsFilters}
+        onReset={onResetDoctorsFilterDraft}
+        onClear={onClearDoctorsFilters}
+        onApply={onApplyDoctorsFilters}
+        onToggleCareNeed={onToggleDoctorsCareNeed}
+        onToggleMode={onToggleDoctorsMode}
+        onToggleAvailability={onToggleDoctorsAvailability}
+        onChangeFeeRange={onChangeDoctorsFeeRange}
+        onToggleLanguage={onToggleDoctorsFilterLanguage}
+        onToggleGender={onToggleDoctorsGender}
+        onToggleRecognized={onToggleDoctorsRecognized}
+        onToggleFocusCert={onToggleDoctorsFocusCert}
+        onChangeLocationQuery={onChangeDoctorsLocationQuery}
+        onToggleCity={onToggleDoctorsCity}
+        onToggleCurrentLocation={onToggleDoctorsCurrentLocation}
+        onOpenDatePicker={onOpenDoctorsDatePicker}
+        onCloseDatePicker={onCloseDoctorsDatePicker}
+        onSelectCustomDate={onSelectDoctorsCustomDate}
       />
     </Screen>
   );
@@ -947,6 +1339,41 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.page,
+  },
+  completedMovedToast: {
+    position: 'absolute',
+    alignSelf: 'center',
+    left: spacing.gutter,
+    right: spacing.gutter,
+    zIndex: 99,
+    gap: spacing.sm,
+    borderRadius: radii.default,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.primaryContainer,
+    borderWidth: 1,
+    borderColor: colors.primaryFixedDim,
+  },
+  completedMovedToastText: {
+    flexShrink: 1,
+  },
+  completedMovedToastActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    minHeight: 48,
+  },
+  completedMovedToastCta: {
+    minHeight: 48,
+    justifyContent: 'center',
+    paddingRight: spacing.sm,
+  },
+  completedMovedToastDismiss: {
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   header: {
     paddingHorizontal: spacing.gutter,
@@ -1013,19 +1440,102 @@ const styles = StyleSheet.create({
   searchPlaceholder: {
     flex: 1,
   },
+  doctorsBadgeRow: {
+    gap: spacing.sm,
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+  },
+  doctorsToolButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
+    borderRadius: radii.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.card,
+    minHeight: 40,
+  },
+  doctorsActiveChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    maxWidth: 180,
+    backgroundColor: colors.primaryContainer,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: radii.full,
+    paddingLeft: 12,
+    paddingRight: spacing.sm,
+    paddingVertical: 6,
+    minHeight: 40,
+  },
+  doctorsEmptyScroll: {
+    flexGrow: 1,
+  },
+  doctorsSearchEmpty: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.lg,
+    gap: spacing.md,
+  },
+  doctorsEmptyArt: {
+    width: 208,
+    height: 208,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
+    backgroundColor: colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+  },
+  doctorsEmptyBody: {
+    textAlign: 'center',
+    paddingHorizontal: spacing.sm,
+  },
+  doctorsEmptyActions: {
+    width: '100%',
+    gap: spacing.md,
+    marginTop: spacing.sm,
+  },
+  doctorsEmptyButton: {
+    width: '100%',
+    minHeight: 52,
+    borderRadius: radii.button,
+  },
+  centerText: {
+    textAlign: 'center',
+  },
+  helplineLink: {
+    textDecorationLine: 'underline',
+  },
   body: {
     paddingHorizontal: spacing.gutter,
     gap: spacing.md,
+  },
+  bookingsSection: {
+    gap: spacing.sm,
+    marginTop: spacing.md,
   },
   consultCard: {
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.outlineVariant,
-    borderRadius: radii.sm,
+    borderRadius: radii.default,
     padding: spacing.md,
-    marginTop: spacing.md,
-    minHeight: 280,
-    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  doctorInitials: {
+    width: 56,
+    height: 56,
+    borderRadius: radii.sm,
+    backgroundColor: colors.primaryContainer,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   followUpCard: {
     backgroundColor: colors.card,
@@ -1046,12 +1556,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  consultTop: {
-    gap: spacing.sm,
-  },
-  consultBottom: {
-    gap: spacing.sm,
-  },
   doctorRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -1066,53 +1570,83 @@ const styles = StyleSheet.create({
   doctorName: {
     flexShrink: 1,
   },
-  verifiedBadge: {
-    width: 18,
-    height: 18,
+  bookingMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: spacing.sm,
+  },
+  bookingMetaTile: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.xs,
+    borderRadius: radii.sm,
+    padding: spacing.sm,
+  },
+  bookingMetaCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  dateTile: {
+    backgroundColor: colors.primaryContainer,
+  },
+  typeTile: {
+    backgroundColor: colors.tertiaryFixed,
+  },
+  clinicTypeTile: {
+    backgroundColor: colors.surfaceContainer,
+  },
+  metaIconBubble: {
+    width: 28,
+    height: 28,
+    borderRadius: radii.sm,
+    backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 2,
   },
-  doctorPhoto: {
-    width: 56,
-    height: 64,
-    borderRadius: radii.sm,
-    backgroundColor: colors.surfaceContainerHigh,
-  },
-  metaRow: {
+  timeStrip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-  },
-  startsBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.surfaceContainerLow,
+    backgroundColor: colors.primaryContainer,
     borderRadius: radii.sm,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
+    minHeight: 52,
   },
   joinButton: {
     minHeight: 48,
     width: '100%',
-    borderRadius: radii.button,
   },
   instantCard: {
     backgroundColor: colors.warningContainer,
     borderWidth: 1,
     borderColor: colors.tertiaryContainer,
-    borderRadius: radii.sm,
+    borderRadius: radii.default,
     padding: spacing.md,
-    gap: 8,
+    overflow: 'hidden',
+  },
+  instantDecorCircle: {
+    position: 'absolute',
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: colors.tertiaryContainer,
+    opacity: 0.35,
+    right: -28,
+    bottom: -36,
   },
   instantHead: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: 12,
   },
   instantIcon: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: radii.sm,
     backgroundColor: colors.card,
     alignItems: 'center',
@@ -1121,15 +1655,17 @@ const styles = StyleSheet.create({
   instantTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 8,
+    marginBottom: 2,
   },
   instantPill: {
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.tertiaryContainer,
     borderRadius: radii.full,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
   },
   quickGrid: {
     flexDirection: 'row',
@@ -1139,65 +1675,65 @@ const styles = StyleSheet.create({
   quickCard: {
     width: '47%',
     flexGrow: 1,
-    minHeight: 112,
+    minHeight: 128,
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.outlineVariant,
-    borderRadius: radii.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
+    borderRadius: radii.default,
+    justifyContent: 'space-between',
+    gap: spacing.md,
     padding: spacing.md,
     overflow: 'hidden',
+  },
+  quickDecorCircle: {
+    position: 'absolute',
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: colors.primaryContainer,
+    opacity: 0.45,
+    top: -24,
+    right: -20,
   },
   quickIconWrap: {
     width: 48,
     height: 48,
     borderRadius: radii.sm,
-    backgroundColor: colors.buttonFill,
+    backgroundColor: colors.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
   },
   quickBadge: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: colors.onSurface,
-    borderRadius: radii.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
+    top: 10,
+    right: 10,
+    zIndex: 1,
+    backgroundColor: colors.ink,
+    borderRadius: radii.full,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
   },
   badgeText: {
     fontSize: 10,
     lineHeight: 14,
   },
-  centerText: {
-    textAlign: 'center',
-  },
-  categoryRow: {
-    gap: spacing.md,
-    paddingRight: spacing.md,
-    paddingBottom: spacing.sm,
-  },
-  categoryItem: {
-    width: 88,
-    alignItems: 'center',
+  quickFooter: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
     gap: spacing.sm,
+    minHeight: 48,
   },
-  categoryIcon: {
-    width: 72,
-    height: 72,
-    borderRadius: radii.sm,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.outlineVariant,
+  quickLabel: {
+    flex: 1,
+    minWidth: 0,
+  },
+  quickArrowBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: radii.full,
+    backgroundColor: colors.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  categoryImage: {
-    width: 36,
-    height: 36,
-    tintColor: colors.primary,
   },
   tipRow: {
     gap: spacing.md,
@@ -1205,34 +1741,86 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
   },
   tipCard: {
-    width: 260,
+    width: 280,
     borderWidth: 1,
     borderColor: colors.outlineVariant,
-    borderRadius: radii.sm,
+    borderRadius: radii.default,
     padding: spacing.md,
     gap: spacing.sm,
     backgroundColor: colors.card,
   },
-  tipImage: {
+  tipHero: {
     width: '100%',
-    height: 132,
+    height: 120,
     borderRadius: radii.sm,
-    backgroundColor: colors.buttonFill,
-  },
-  tipImagePlaceholder: {
+    backgroundColor: colors.primaryContainer,
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  tipHeroImage: {
+    ...StyleSheet.absoluteFill,
+  },
+  tipDecorCircleLeft: {
+    position: 'absolute',
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: colors.secondaryContainer,
+    opacity: 0.55,
+    left: -28,
+    top: -24,
+  },
+  tipDecorCircleRight: {
+    position: 'absolute',
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: colors.secondaryContainer,
+    opacity: 0.45,
+    right: -18,
+    bottom: -22,
+  },
+  tipDecorDots: {
+    position: 'absolute',
+    right: 18,
+    top: 28,
+    width: 36,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+  },
+  tipDecorDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.primaryFixedDim,
+  },
   tipChip: {
     alignSelf: 'flex-start',
-    backgroundColor: colors.buttonFill,
+    maxWidth: '100%',
+    backgroundColor: colors.primaryContainer,
     borderRadius: radii.full,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  tipFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    minHeight: 48,
   },
   tipTitle: {
-    fontSize: scaleFont(16),
-    lineHeight: scaleFont(22),
+    flex: 1,
+    minWidth: 0,
+  },
+  tipArrowBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.full,
+    backgroundColor: colors.primaryContainer,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   homeTab: {
     flex: 1,

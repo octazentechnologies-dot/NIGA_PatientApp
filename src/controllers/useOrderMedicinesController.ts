@@ -72,6 +72,7 @@ export type OrderMedicinesViewModel = {
 export function useOrderMedicinesController({
   onBack,
   onViewPrescription,
+  onPlaceOrder,
 }: {
   onBack: () => void;
   onViewPrescription?: () => void;
@@ -234,6 +235,8 @@ export function useOrderMedicinesController({
       setCheckoutOpen(false);
       setReviewOpen(false);
       setPharmacyOpen(false);
+      // CAPTURED already invalidates Orders; mark home medicines tab state.
+      onPlaceOrder?.();
     },
   });
 

@@ -58,9 +58,6 @@ export function OfflineModeView(vm: OfflineModeViewModel) {
           <AppText variant="bodyMd" color={colors.muted} style={styles.center}>
             {vm.t('offlineSubtitle')}
           </AppText>
-          <AppText variant="bodyMd" color={colors.muted} style={styles.center}>
-            {vm.t('offlineSubtitleMr')}
-          </AppText>
         </View>
 
         <View style={styles.card}>

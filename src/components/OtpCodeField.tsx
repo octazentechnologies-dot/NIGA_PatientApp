@@ -78,6 +78,8 @@ export function OtpCodeField({
         autoComplete="sms-otp"
         maxLength={OTP_LENGTH}
         caretHidden
+        allowFontScaling={false}
+        maxFontSizeMultiplier={1}
         accessibilityLabel={accessibilityLabel}
         style={[
           styles.hiddenInput,

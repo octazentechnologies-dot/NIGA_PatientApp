@@ -4,7 +4,6 @@ import {
   attachNotificationListeners,
   registerAuthenticatedDeviceForPush,
   setNotificationNavigationHandlers,
-  unregisterAuthenticatedDevicePush,
 } from '../services/notifications';
 import type { NotificationNavigationHandlers } from '../services/notifications';
 
@@ -15,8 +14,8 @@ type Options = {
 };
 
 /**
- * Root-level push lifecycle: listeners once, register when authenticated,
- * unregister when leaving authenticated session (logout / unmount).
+ * Root-level push lifecycle: listeners once, register when authenticated.
+ * Unregister is handled by `performLogout` (Device/Unregister + Account/Logout).
  */
 export function usePushNotificationLifecycle({
   authenticated,
@@ -36,9 +35,8 @@ export function usePushNotificationLifecycle({
     if (!authenticated) {
       return;
     }
+    // Register when session is live. Unregister only via performLogout
+    // (Account/Logout clears all tokens; Device/Unregister is optional).
     void registerAuthenticatedDeviceForPush();
-    return () => {
-      void unregisterAuthenticatedDevicePush();
-    };
   }, [authenticated]);
 }

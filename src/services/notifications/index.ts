@@ -6,6 +6,7 @@ export {
 export {
   registerDeviceToken,
   unregisterDeviceToken,
+  type RegisterDeviceTokenOptions,
 } from './deviceTokenApi';
 export {
   parseNotificationPayload,
@@ -17,6 +18,7 @@ export {
   attachNotificationListeners,
   configureForegroundNotificationHandler,
   getLastRegisteredPushToken,
+  obtainNativeDevicePushToken,
   obtainExpoPushToken,
   registerAuthenticatedDeviceForPush,
   unregisterAuthenticatedDevicePush,

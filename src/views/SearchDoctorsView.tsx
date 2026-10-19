@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect } from 'react';
 import {
+  ActivityIndicator,
   BackHandler,
   Image,
   Keyboard,
@@ -16,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
+import { StatusBarBleed } from '../components/StatusBarBleed';
 import type { SearchDoctorsViewModel } from '../controllers/useSearchDoctorsController';
 import type { CareNeed, NearbyDoctor } from '../models/search';
 import { colors } from '../theme/colors';
@@ -24,6 +26,7 @@ import { layout, spacing } from '../theme/spacing';
 import { fontFamilyFor } from '../utilities/fonts';
 import { scaleFont } from '../utilities/scale';
 import { sheetBottomPadding } from '../utilities/sheetInset';
+import { useAndroidStatusBarBackground } from '../utilities/useAndroidPageStatusBar';
 
 export function SearchDoctorsView({
   language,
@@ -32,6 +35,7 @@ export function SearchDoctorsView({
   recents,
   careNeeds,
   doctors,
+  doctorsLoading,
   cities,
   selectedCityId,
   selectedCityLabel,
@@ -45,7 +49,6 @@ export function SearchDoctorsView({
   onOpenCityPicker,
   onCloseCityPicker,
   onSelectCity,
-  onSelectLanguage,
   onVoiceSearch,
   onSeeAvailability,
   onOpenDoctor,
@@ -53,6 +56,7 @@ export function SearchDoctorsView({
   onBack,
 }: SearchDoctorsViewModel) {
   const insets = useSafeAreaInsets();
+  useAndroidStatusBarBackground(colors.card);
 
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -65,6 +69,7 @@ export function SearchDoctorsView({
 
   return (
     <View style={styles.root}>
+      <StatusBarBleed color={colors.card} />
       <View
         style={[
           styles.header,
@@ -91,23 +96,7 @@ export function SearchDoctorsView({
         >
           {t('searchDoctorsTitle')}
         </AppText>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('searchVoice')}
-          accessibilityState={{ selected: listening }}
-          hitSlop={8}
-          onPress={() => {
-            Keyboard.dismiss();
-            onVoiceSearch();
-          }}
-          style={styles.headerSide}
-        >
-          <Ionicons
-            name={listening ? 'mic' : 'mic-outline'}
-            size={22}
-            color={listening ? colors.primary : colors.onSurface}
-          />
-        </Pressable>
+        <View style={styles.headerSide} />
       </View>
 
       <ScrollView
@@ -147,17 +136,20 @@ export function SearchDoctorsView({
           />
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={t('languageLabel')}
-            onPress={() => onSelectLanguage(language === 'en' ? 'mr' : 'en')}
-            style={styles.langChip}
+            accessibilityLabel={t('searchVoice')}
+            accessibilityState={{ selected: listening }}
+            hitSlop={8}
+            onPress={() => {
+              Keyboard.dismiss();
+              onVoiceSearch();
+            }}
+            style={styles.micButton}
           >
-            <AppText
-              variant="labelSm"
-              color={colors.primary}
-              languageOverride={language === 'en' ? 'mr' : 'en'}
-            >
-              {language === 'en' ? 'मराठी' : 'EN'}
-            </AppText>
+            <Ionicons
+              name={listening ? 'mic' : 'mic-outline'}
+              size={22}
+              color={listening ? colors.primary : colors.onSurface}
+            />
           </Pressable>
         </View>
         {listening || voiceErrorKey ? (
@@ -255,8 +247,6 @@ export function SearchDoctorsView({
             <CareNeedCard
               key={need.id}
               need={need}
-              title={t(need.titleKey)}
-              hint={t(need.hintKey)}
               onPress={() => onSelectCareNeed(need)}
             />
           ))}
@@ -281,7 +271,7 @@ export function SearchDoctorsView({
           >
             <Ionicons name="location-outline" size={16} color={colors.primary} />
             <AppText variant="labelMd" color={colors.onSurface}>
-              {selectedCityLabel}
+              {selectedCityLabel || t('searchLocation')}
             </AppText>
             <Ionicons
               name="chevron-down"
@@ -292,18 +282,24 @@ export function SearchDoctorsView({
         </View>
 
         <View style={styles.doctorList}>
-          {doctors.map((doctor) => (
-            <DoctorRow
-              key={doctor.id}
-              doctor={doctor}
-              name={t(doctor.nameKey)}
-              meta={t(doctor.metaKey)}
-              place={t(doctor.placeKey)}
-              verifiedLabel={t('homeVerified')}
-              openLabel={t('searchDoctorOpen')}
-              onPress={() => onOpenDoctor(doctor.id)}
-            />
-          ))}
+          {doctorsLoading ? (
+            <View style={styles.doctorsLoading}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <AppText variant="bodyMd" color={colors.onSurfaceVariant}>
+                {t('loading')}
+              </AppText>
+            </View>
+          ) : (
+            doctors.map((doctor) => (
+              <DoctorRow
+                key={doctor.id}
+                doctor={doctor}
+                verifiedLabel={t('homeVerified')}
+                openLabel={t('searchDoctorOpen')}
+                onPress={() => onOpenDoctor(doctor.id)}
+              />
+            ))
+          )}
         </View>
       </ScrollView>
 
@@ -355,49 +351,50 @@ export function SearchDoctorsView({
 
 function CareNeedCard({
   need,
-  title,
-  hint,
   onPress,
 }: {
   need: CareNeed;
-  title: string;
-  hint: string;
   onPress: () => void;
 }) {
+  const letter = need.title.trim().charAt(0).toUpperCase() || '?';
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
       style={[styles.careCard, need.wide && styles.careCardWide]}
     >
-      <Image
-        source={need.image}
-        resizeMode="contain"
-        style={styles.careImage}
-      />
-      <AppText variant="titleMd" color={colors.onSurface}>
-        {title}
+      {need.image ? (
+        <Image
+          source={need.image}
+          resizeMode="contain"
+          style={styles.careImage}
+        />
+      ) : (
+        <View style={styles.careLetter}>
+          <AppText variant="labelMd" color={colors.primary} languageOverride="en">
+            {letter}
+          </AppText>
+        </View>
+      )}
+      <AppText variant="titleMd" color={colors.onSurface} raw>
+        {need.title}
       </AppText>
-      <AppText variant="bodyMd" color={colors.onSurfaceVariant}>
-        {hint}
-      </AppText>
+      {need.hint ? (
+        <AppText variant="bodyMd" color={colors.onSurfaceVariant} raw>
+          {need.hint}
+        </AppText>
+      ) : null}
     </Pressable>
   );
 }
 
 function DoctorRow({
   doctor,
-  name,
-  meta,
-  place,
   verifiedLabel,
   openLabel,
   onPress,
 }: {
   doctor: NearbyDoctor;
-  name: string;
-  meta: string;
-  place: string;
   verifiedLabel: string;
   openLabel: string;
   onPress: () => void;
@@ -405,7 +402,7 @@ function DoctorRow({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${openLabel}: ${name}`}
+      accessibilityLabel={`${openLabel}: ${doctor.name}`}
       onPress={onPress}
       style={styles.doctorCard}
     >
@@ -420,8 +417,13 @@ function DoctorRow({
       </View>
       <View style={styles.flex}>
         <View style={styles.doctorNameRow}>
-          <AppText variant="titleMd" color={colors.onSurface} numberOfLines={1}>
-            {name}
+          <AppText
+            variant="titleMd"
+            color={colors.onSurface}
+            numberOfLines={1}
+            raw
+          >
+            {doctor.name}
           </AppText>
           {doctor.verified ? (
             <Ionicons
@@ -432,12 +434,16 @@ function DoctorRow({
             />
           ) : null}
         </View>
-        <AppText variant="bodyMd" color={colors.onSurfaceVariant}>
-          {meta}
-        </AppText>
-        <AppText variant="labelSm" color={colors.onSurfaceVariant}>
-          {place}
-        </AppText>
+        {doctor.meta ? (
+          <AppText variant="bodyMd" color={colors.onSurfaceVariant} raw>
+            {doctor.meta}
+          </AppText>
+        ) : null}
+        {doctor.place ? (
+          <AppText variant="labelSm" color={colors.onSurfaceVariant} raw>
+            {doctor.place}
+          </AppText>
+        ) : null}
       </View>
       <View style={styles.doctorArrow}>
         <Ionicons name="arrow-forward" size={16} color={colors.primary} />
@@ -494,12 +500,9 @@ const styles = StyleSheet.create({
     minHeight: 48,
     color: colors.onSurface,
   },
-  langChip: {
-    minHeight: 28,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    borderColor: colors.primary,
+  micButton: {
+    width: 48,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -562,6 +565,14 @@ const styles = StyleSheet.create({
     height: 36,
     tintColor: colors.primary,
   },
+  careLetter: {
+    width: 36,
+    height: 36,
+    borderRadius: radii.full,
+    backgroundColor: colors.buttonFill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   careCardWide: {
     width: '100%',
     flexGrow: 1,
@@ -583,8 +594,15 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
+    minHeight: 48,
   },
   doctorList: {
+    gap: spacing.sm,
+  },
+  doctorsLoading: {
+    minHeight: 120,
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: spacing.sm,
   },
   doctorCard: {

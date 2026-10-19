@@ -84,7 +84,8 @@ export function AppText({
   return (
     <Text
       {...props}
-      allowFontScaling={props.allowFontScaling ?? true}
+      allowFontScaling={props.allowFontScaling ?? false}
+      maxFontSizeMultiplier={props.maxFontSizeMultiplier ?? 1}
       style={[fontStyle, style]}
     >
       {content}

@@ -79,6 +79,8 @@ export function FormField({
       multiline={multiline}
       autoCapitalize={autoCapitalize}
       autoComplete={autoComplete}
+      allowFontScaling={false}
+      maxFontSizeMultiplier={1}
       textAlignVertical={multiline ? 'top' : 'center'}
       editable={!onPress}
       pointerEvents={onPress ? 'none' : 'auto'}

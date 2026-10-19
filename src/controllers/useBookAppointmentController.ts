@@ -85,17 +85,34 @@ export type BookAppointmentViewModel = {
   /** From booking create — required for ConsultOrders. */
   patientAppId: number | null;
   bookingToken: string | null;
-  payAtClinicEnabled: boolean;
+  /** True when consult mode is InClinic — show Pay at Clinic on payment screen. */
+  isInClinicMode: boolean;
   /** Server payment order id after Checkout confirm (never a seed). */
   lastPaymentOrderId: number | null;
   bookingInFlight: boolean;
   onBack: () => void;
   onCloseReview: () => void;
+  /** Navigate to Payment only — does not call Bookings / BookAs. */
   onOpenPayment: () => void;
   onClosePayment: () => void;
+  /**
+   * Create / update slot booking with payAtClinic + optional Razorpay ids.
+   * Called from Payment: Pay at Clinic (direct) or after Razorpay success (online).
+   */
+  onSubmitBooking: (payment: {
+    payAtClinic: boolean;
+    razorpay_order_id?: string | null;
+    razorpay_payment_id?: string | null;
+  }) => Promise<{
+    patientAppId: number;
+    bookingToken: string;
+    holdExpiresAt?: string;
+    consultFee?: number;
+  }>;
   onOpenPaymentStatus: (status: PaymentStatus) => void;
   onClosePaymentStatus: () => void;
   onPaymentConfirmed: (paymentOrderId: number) => void;
+  onPaymentPending: (paymentOrderId: number) => void;
   onChooseOtherSlot: () => void;
   onOpenMemberPicker: () => void;
   onCloseMemberPicker: () => void;
@@ -243,7 +260,6 @@ export function useBookAppointmentController({
   const [holdExpiresAt, setHoldExpiresAt] = useState<string | null>(null);
   const [patientAppId, setPatientAppId] = useState<number | null>(null);
   const [bookingToken, setBookingToken] = useState<string | null>(null);
-  const [payAtClinicEnabled, setPayAtClinicEnabled] = useState(false);
   const [lastPaymentOrderId, setLastPaymentOrderId] = useState<number | null>(
     null,
   );
@@ -273,7 +289,6 @@ export function useBookAppointmentController({
     setHoldExpiresAt(null);
     setPatientAppId(null);
     setBookingToken(null);
-    setPayAtClinicEnabled(false);
     setLastPaymentOrderId(null);
     setHoldConsultFee(null);
     const nextMonth = { year: today.getFullYear(), month: today.getMonth() };
@@ -347,14 +362,27 @@ export function useBookAppointmentController({
       }
 
       const apiSlots = slotsResponse?.data?.slots ?? [];
+      const now = new Date();
       const mapped: TimeSlot[] = apiSlots
         .filter((slot) => slot.status !== 'break')
         .map((slot) => {
           const time = (slot.time || '').slice(0, 5);
+          const [hh, mm] = time.split(':').map(Number);
+          const slotStart = new Date(
+            day.year,
+            day.month,
+            day.day,
+            Number.isFinite(hh) ? hh : 0,
+            Number.isFinite(mm) ? mm : 0,
+            0,
+            0,
+          );
+          const isPastToday =
+            day.isToday && slotStart.getTime() <= now.getTime();
           return {
             id: time,
             labelKey: (slot.label || time) as TranslationKey,
-            booked: slot.status !== 'available',
+            booked: slot.status !== 'available' || isPastToday,
           };
         });
 
@@ -387,11 +415,30 @@ export function useBookAppointmentController({
     if (!slotsResponse?.data?.slots || !dayId) {
       return;
     }
-    const available = slotsResponse.data.slots.find(
-      (slot) => slot.status === 'available',
-    );
+    const selectedDayMeta = calendarDays.find((day) => day.id === dayId);
+    const now = new Date();
+    const available = slotsResponse.data.slots.find((slot) => {
+      if (slot.status !== 'available') {
+        return false;
+      }
+      const time = (slot.time || '').slice(0, 5);
+      if (!selectedDayMeta?.isToday) {
+        return true;
+      }
+      const [hh, mm] = time.split(':').map(Number);
+      const slotStart = new Date(
+        selectedDayMeta.year,
+        selectedDayMeta.month,
+        selectedDayMeta.day,
+        Number.isFinite(hh) ? hh : 0,
+        Number.isFinite(mm) ? mm : 0,
+        0,
+        0,
+      );
+      return slotStart.getTime() > now.getTime();
+    });
     setSlotId(available ? available.time.slice(0, 5) : null);
-  }, [dayId, slotsResponse?.data?.slots]);
+  }, [calendarDays, dayId, slotsResponse?.data?.slots]);
 
   const { data: homeDashboardResponse } = useGetHomeDashboardQuery(undefined, {
     skip: !isAuthenticated,
@@ -515,7 +562,18 @@ export function useBookAppointmentController({
           ? 'reviewChatConsult'
           : 'reviewVideoConsult',
   );
-  const canContinue = Boolean(selectedSlot) && !isFull && !slotsEmpty;
+  const canContinue =
+    Boolean(selectedSlot) &&
+    !selectedSlot?.booked &&
+    !isFull &&
+    !slotsEmpty;
+
+  // Drop selection if it became past / unavailable after slot remap.
+  useEffect(() => {
+    if (slotId && selectedSlot?.booked) {
+      setSlotId(null);
+    }
+  }, [selectedSlot?.booked, slotId]);
   const doctorFeeLabel = feeLabel;
   // Contract: platformFee only from visit/payment — never invent 90.
   const platformFeeLabel = '';
@@ -600,7 +658,7 @@ export function useBookAppointmentController({
     holdExpiresAt,
     patientAppId,
     bookingToken,
-    payAtClinicEnabled,
+    isInClinicMode: mode === 'clinic',
     lastPaymentOrderId,
     bookingInFlight,
     onBack,
@@ -610,20 +668,27 @@ export function useBookAppointmentController({
       setReviewOpen(false);
       setBookingError(null);
     },
-    onOpenPayment: async () => {
-      if (bookingInFlight || !selectedDay || !selectedSlot) {
+    onOpenPayment: () => {
+      // Proceed To Pay — navigate only; Bookings / BookAs run from Payment buttons.
+      if (!selectedDay || !selectedSlot) {
         return;
       }
       setBookingError(null);
+      setLastPaymentOrderId(null);
+      setPaymentStatus(null);
+      setPaymentOpen(true);
+    },
+    onSubmitBooking: async (payment) => {
+      if (!selectedDay || !selectedSlot) {
+        throw new Error('Select a day and time slot first.');
+      }
       const docIdNum = Number(profile.id);
       if (!docIdNum) {
-        setBookingError('Doctor id is required.');
-        return;
+        throw new Error('Doctor id is required.');
       }
       const phone = authUser?.mobile || authUser?.mobileNo || authMobile;
       if (!phone) {
-        setBookingError('Mobile number is required.');
-        return;
+        throw new Error('Mobile number is required.');
       }
       const patientName =
         patientFullName ||
@@ -633,75 +698,83 @@ export function useBookAppointmentController({
       const consultMode = mode === 'clinic' ? 'InClinic' : 'Tele';
       const appointmentDate = selectedDay.id;
       const appointmentTime = selectedSlot.id;
+      const userId =
+        typeof authUser?.userId === 'number' ? authUser.userId : undefined;
+      const razorpay_order_id = payment.razorpay_order_id ?? null;
+      const razorpay_payment_id = payment.razorpay_payment_id ?? null;
 
-      try {
-        const memberPatientId = Number(member.id);
-        const isFamilyMember =
-          !member.self && Number.isFinite(memberPatientId) && memberPatientId > 0;
+      const applyHold = (data: {
+        patientAppId?: number;
+        bookingToken?: string;
+        holdExpiresAt?: string;
+        consultFee?: number;
+      } | null | undefined) => {
+        setPatientAppId(data?.patientAppId ?? null);
+        setBookingToken(data?.bookingToken ?? null);
+        setHoldExpiresAt(data?.holdExpiresAt ?? null);
+        setHoldConsultFee(
+          data?.consultFee != null ? Number(data.consultFee) : null,
+        );
+      };
 
-        const applyHold = (data: {
-          patientAppId?: number;
-          bookingToken?: string;
-          holdExpiresAt?: string;
-          consultFee?: number;
-          payAtClinicEnabled?: boolean;
-          payAtClinicAllowed?: boolean;
-        } | null | undefined) => {
-          setPatientAppId(data?.patientAppId ?? null);
-          setBookingToken(data?.bookingToken ?? null);
-          setHoldExpiresAt(data?.holdExpiresAt ?? null);
-          setHoldConsultFee(
-            data?.consultFee != null ? Number(data.consultFee) : null,
-          );
-          setPayAtClinicEnabled(
-            Boolean(data?.payAtClinicEnabled ?? data?.payAtClinicAllowed),
-          );
-        };
+      const memberPatientId = Number(member.id);
+      const isFamilyMember =
+        !member.self && Number.isFinite(memberPatientId) && memberPatientId > 0;
 
-        if (isFamilyMember) {
-          const booking = await bookAsFamilyMutation({
-            memberPatientId,
-            doctorId: docIdNum,
-            appointmentDate,
-            appointmentTime,
-            consultMode,
-          }).unwrap();
-          applyHold(booking.data);
-        } else {
-          const booking = await createBookingMutation({
-            doctorId: docIdNum,
-            mobile: phone,
-            patientName: patientName || 'Patient',
-            appointmentDate,
-            appointmentTime,
-            consultMode,
-            visitType: consultMode,
-            bookingSessionId: bookingSessionId ?? undefined,
-            idempotencyKey: createIdempotencyKey(`pa-${docIdNum}`),
-          }).unwrap();
-          applyHold(booking.data);
-        }
+      let data: {
+        patientAppId?: number;
+        bookingToken?: string;
+        holdExpiresAt?: string;
+        consultFee?: number;
+      } | null | undefined;
 
-        // TODO(PAYMENT): phase2 — ConsultOrders + Verify / webhook (BE-P01). Hold UI only if gateway not ready.
-        setLastPaymentOrderId(null);
-        setPaymentOpen(true);
-        setPaymentStatus(null);
-      } catch (err) {
-        const e = err as { status?: number; data?: { message?: string; code?: string } };
-        if (e?.data?.code === 'IDEMPOTENCY_CONFLICT') {
-          setBookingError(
-            e?.data?.message ||
-              'That booking attempt conflicted. Please try again.',
-          );
-        } else if (e?.status === 409 || e?.data?.code === 'CONFLICT') {
-          setBookingError(
-            e?.data?.message ||
-              'That slot is no longer available. Please choose another time.',
-          );
-        } else {
-          setBookingError(extractErrorMessage(err));
-        }
+      if (isFamilyMember) {
+        const booking = await bookAsFamilyMutation({
+          memberPatientId,
+          doctorId: docIdNum,
+          appointmentDate,
+          appointmentTime,
+          consultMode,
+          userId,
+          payAtClinic: payment.payAtClinic,
+          razorpay_order_id,
+          razorpay_payment_id,
+        }).unwrap();
+        data = booking.data;
+      } else {
+        const booking = await createBookingMutation({
+          doctorId: docIdNum,
+          mobile: phone,
+          patientName: patientName || 'Patient',
+          appointmentDate,
+          appointmentTime,
+          consultMode,
+          visitType: consultMode,
+          bookingSessionId: bookingSessionId ?? undefined,
+          userId,
+          payAtClinic: payment.payAtClinic,
+          razorpay_order_id,
+          razorpay_payment_id,
+          idempotencyKey: createIdempotencyKey(
+            `pa-${docIdNum}-${payment.payAtClinic ? 'clinic' : 'online'}`,
+          ),
+        }).unwrap();
+        data = booking.data;
       }
+
+      applyHold(data);
+
+      if (!data?.patientAppId || !data?.bookingToken) {
+        throw new Error('Booking response was incomplete.');
+      }
+
+      return {
+        patientAppId: data.patientAppId,
+        bookingToken: data.bookingToken,
+        holdExpiresAt: data.holdExpiresAt,
+        consultFee:
+          data.consultFee != null ? Number(data.consultFee) : undefined,
+      };
     },
     onClosePayment: () => {
       setPaymentStatus(null);
@@ -712,6 +785,12 @@ export function useBookAppointmentController({
     onPaymentConfirmed: (paymentOrderId) => {
       setLastPaymentOrderId(paymentOrderId);
       setPaymentStatus('success');
+    },
+    onPaymentPending: (paymentOrderId) => {
+      if (paymentOrderId > 0) {
+        setLastPaymentOrderId(paymentOrderId);
+      }
+      setPaymentStatus('pending');
     },
     onChooseOtherSlot: () => {
       setPaymentStatus(null);

@@ -1,3 +1,4 @@
+import type { RegisterDeviceTokenOptions } from './deviceTokenApi';
 import { isExpoGo } from './environment';
 import { logNotifications } from './log';
 import type { PushRegistrationResult } from './types';
@@ -28,7 +29,7 @@ export function configureForegroundNotificationHandler(): void {
   impl.configureForegroundNotificationHandler();
 }
 
-export async function obtainExpoPushToken(): Promise<PushRegistrationResult> {
+export async function obtainNativeDevicePushToken(): Promise<PushRegistrationResult> {
   const impl = loadImpl();
   if (!impl) {
     return {
@@ -38,11 +39,16 @@ export async function obtainExpoPushToken(): Promise<PushRegistrationResult> {
         'Push requires a development or preview build (not supported in Expo Go)',
     };
   }
-  return impl.obtainExpoPushToken();
+  return impl.obtainNativeDevicePushToken();
+}
+
+/** @deprecated Prefer obtainNativeDevicePushToken. */
+export async function obtainExpoPushToken(): Promise<PushRegistrationResult> {
+  return obtainNativeDevicePushToken();
 }
 
 export async function registerAuthenticatedDeviceForPush(
-  authHeaders?: Record<string, string>,
+  options?: RegisterDeviceTokenOptions,
 ): Promise<PushRegistrationResult> {
   const impl = loadImpl();
   if (!impl) {
@@ -53,17 +59,15 @@ export async function registerAuthenticatedDeviceForPush(
         'Push requires a development or preview build (not supported in Expo Go)',
     };
   }
-  return impl.registerAuthenticatedDeviceForPush(authHeaders);
+  return impl.registerAuthenticatedDeviceForPush(options);
 }
 
-export async function unregisterAuthenticatedDevicePush(
-  authHeaders?: Record<string, string>,
-): Promise<void> {
+export async function unregisterAuthenticatedDevicePush(): Promise<void> {
   const impl = loadImpl();
   if (!impl) {
     return;
   }
-  await impl.unregisterAuthenticatedDevicePush(authHeaders);
+  await impl.unregisterAuthenticatedDevicePush();
 }
 
 export function getLastRegisteredPushToken(): string | null {

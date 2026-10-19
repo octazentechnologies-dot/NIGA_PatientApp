@@ -52,6 +52,13 @@ export const baseQueryWithReauth: BaseQueryFn<
       url.includes('PatientAuth/VerifyOtp');
 
     if (!isAuthRoute) {
+      // No stored token → not a logged-in session (first install / already signed out).
+      // Do not treat anonymous 401s as "session ended".
+      const existingToken = await getAccessToken();
+      if (!existingToken) {
+        return result;
+      }
+
       if (!refreshPromise) {
         refreshPromise = (async () => {
           try {
@@ -106,7 +113,7 @@ export const baseQueryWithReauth: BaseQueryFn<
         // Retry the original request once with the refreshed token
         result = await rawBaseQuery(args, api, extraOptions);
       } else {
-        // Refresh failed: session has ended
+        // Had a token but refresh failed — real session end
         api.dispatch(
           setSessionEndedMessage(
             'Your session has ended. Please sign in again.',

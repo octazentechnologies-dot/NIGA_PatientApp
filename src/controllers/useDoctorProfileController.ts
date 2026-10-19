@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Share } from 'react-native';
+import { Platform, Share } from 'react-native';
 
 import type { DoctorProfileSeed, ProfileTab } from '../config/doctorProfiles';
 import {
@@ -10,7 +10,13 @@ import {
 } from '../store/api/new/doctorsApi';
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
-import { formatMoney, resolveApiUrl } from '../utilities/formatters';
+import { useAppConfig } from '../providers/AppConfigProvider';
+import {
+  formatDate,
+  formatMoney,
+  formatTime,
+  resolveApiUrl,
+} from '../utilities/formatters';
 
 export type DynamicDoctorReview = {
   id: string;
@@ -81,23 +87,41 @@ export function useDoctorProfileController({
   onBook?: () => void;
 }): DoctorProfileViewModel {
   const { language, t } = useLocalization();
+  const appConfig = useAppConfig();
   const isNumeric = Boolean(doctorId) && /^\d+$/.test(doctorId);
   const {
     data: doctorDetailResponse,
+    currentData: doctorDetailCurrent,
     isLoading: detailLoading,
+    isFetching: detailFetching,
   } = useGetDoctorByIdQuery(doctorId, {
     skip: !isNumeric,
   });
-  const { data: feesResponse } = useGetDoctorFeesQuery(doctorId, {
+  const {
+    data: feesResponse,
+    currentData: feesCurrent,
+    isLoading: feesLoading,
+    isFetching: feesFetching,
+  } = useGetDoctorFeesQuery(doctorId, {
     skip: !isNumeric,
   });
-  const { data: reviewsResponse } = useGetDoctorReviewsQuery(doctorId, {
-    skip: !isNumeric,
-  });
-  const { data: teleAvailability } = useGetDoctorTeleAvailabilityQuery(
-    doctorId,
-    { skip: !isNumeric },
-  );
+  const { data: reviewsResponse, currentData: reviewsCurrent } =
+    useGetDoctorReviewsQuery(doctorId, {
+      skip: !isNumeric,
+    });
+  const {
+    data: teleAvailability,
+    currentData: teleCurrent,
+    isLoading: teleLoading,
+    isFetching: teleFetching,
+  } = useGetDoctorTeleAvailabilityQuery(doctorId, { skip: !isNumeric });
+
+  // Prefer currentData so a previous doctor's cached payload never paints
+  // while the newly selected doctorId is still fetching.
+  const doctorDetail = doctorDetailCurrent ?? doctorDetailResponse;
+  const fees = feesCurrent ?? feesResponse;
+  const reviewsPayload = reviewsCurrent ?? reviewsResponse;
+  const teleAvailabilityPayload = teleCurrent ?? teleAvailability;
 
   useEffect(() => {
     if (!isNumeric) {
@@ -105,22 +129,29 @@ export function useDoctorProfileController({
     }
   }, [isNumeric, onBack]);
 
+  const detailMatches =
+    doctorDetail?.data != null &&
+    String(doctorDetail.data.doctorId) === String(doctorId);
+
   const profile = useMemo((): DoctorProfileSeed => {
     if (!isNumeric) {
       return emptyProfile(doctorId || '0');
     }
 
-    const doc = doctorDetailResponse?.data;
-    if (!doc) {
+    const doc = doctorDetail?.data;
+    if (!doc || String(doc.doctorId) !== String(doctorId)) {
       return emptyProfile(doctorId);
     }
-    const tele = teleAvailability?.data;
-    const nextAt =
+    const tele = teleAvailabilityPayload?.data;
+    const nextRaw =
       tele?.nextAvailableAt?.trim() ||
       (doc as { nextAvailableAt?: string | null }).nextAvailableAt?.trim() ||
       '';
     const teleOnline =
       tele?.isOnline === true || tele?.available === true;
+    const nextDate = formatDate(nextRaw || null, language === 'mr' ? 'mr-IN' : 'en-IN');
+    const nextTime = formatTime(nextRaw || null, language === 'mr' ? 'mr-IN' : 'en-IN');
+    const nextLabel = [nextDate, nextTime].filter(Boolean).join(' · ');
 
     const docName = (doc.displayName || '').trim() || 'Doctor';
     const initials =
@@ -133,19 +164,21 @@ export function useDoctorProfileController({
         .toUpperCase() || 'DR';
 
     const reviewCount =
-      reviewsResponse?.reviewCount ?? doc.reviewCount ?? 0;
+      reviewsPayload?.reviewCount ?? doc.reviewCount ?? 0;
     const averageRating =
-      reviewsResponse?.averageRating ?? doc.averageRating ?? null;
+      reviewsPayload?.averageRating ?? doc.averageRating ?? null;
     const rating =
       reviewCount > 0 && averageRating != null
         ? averageRating.toFixed(1)
         : null;
 
+    // Prefer Public doctor detail fees (same as search/booking). Fees/Public can
+    // lag behind doctor fee updates for some profiles.
     const teleFee =
-      feesResponse?.data?.teleFee ?? doc.consultFeeTele ?? null;
+      doc.consultFeeTele ?? fees?.data?.teleFee ?? null;
     const clinicFee =
-      feesResponse?.data?.inClinicFee ?? doc.consultFeeInClinic ?? null;
-    const currency = feesResponse?.data?.currency ?? 'INR';
+      doc.consultFeeInClinic ?? fees?.data?.inClinicFee ?? null;
+    const currency = fees?.data?.currency ?? 'INR';
     const teleFeeLabel = formatMoney(teleFee, currency);
     const clinicFeeLabel = formatMoney(clinicFee, currency);
     const verified = Boolean(doc.verified ?? doc.isVerified);
@@ -178,8 +211,8 @@ export function useDoctorProfileController({
       aboutKey: (doc.rankingSummary?.trim() || '') as TranslationKey,
       regVerifiedKey: (verified ? 'verifiedByCouncil' : '') as TranslationKey,
       lastVerifiedKey: '',
-      nextAvailableKey: nextAt
-        ? (`Next available ${nextAt}` as TranslationKey)
+      nextAvailableKey: nextLabel
+        ? (`Next available ${nextLabel}` as TranslationKey)
         : teleOnline
           ? ('Online now' as TranslationKey)
           : ('' as TranslationKey),
@@ -208,20 +241,24 @@ export function useDoctorProfileController({
       },
     };
   }, [
-    doctorDetailResponse?.data,
+    doctorDetail?.data,
     doctorId,
-    feesResponse?.data,
+    fees?.data,
     isNumeric,
-    reviewsResponse?.averageRating,
-    reviewsResponse?.reviewCount,
-    teleAvailability?.data,
+    language,
+    reviewsPayload?.averageRating,
+    reviewsPayload?.reviewCount,
+    teleAvailabilityPayload?.data,
   ]);
 
   const reviews = useMemo<DynamicDoctorReview[]>(() => {
-    if (!reviewsResponse?.data || !Array.isArray(reviewsResponse.data)) {
+    if (!detailMatches) {
       return [];
     }
-    return reviewsResponse.data.map((r, index) => {
+    if (!reviewsPayload?.data || !Array.isArray(reviewsPayload.data)) {
+      return [];
+    }
+    return reviewsPayload.data.map((r, index) => {
       let dateLabel = '';
       if (r.at) {
         try {
@@ -241,7 +278,7 @@ export function useDoctorProfileController({
         dateLabel,
       };
     });
-  }, [reviewsResponse?.data]);
+  }, [detailMatches, reviewsPayload?.data]);
 
   const [tab, setTab] = useState<ProfileTab>('about');
   const saved = false;
@@ -252,6 +289,18 @@ export function useDoctorProfileController({
     setAboutExpanded(true);
   }, [doctorId]);
 
+  // Hold the shimmer until THIS doctor's detail (+ fee + tele) have settled.
+  // detailMatches blocks painting a previously selected doctor.
+  const isLoading =
+    isNumeric &&
+    (!detailMatches ||
+      detailLoading ||
+      feesLoading ||
+      teleLoading ||
+      (detailFetching && !detailMatches) ||
+      (feesFetching && fees == null) ||
+      (teleFetching && teleAvailabilityPayload == null));
+
   return {
     language,
     t,
@@ -260,14 +309,29 @@ export function useDoctorProfileController({
     tab,
     saved,
     aboutExpanded,
-    isLoading: isNumeric && detailLoading,
+    isLoading,
     onBack,
     onShare: () => {
-      const name = String(profile.nameKey);
-      const creds = String(profile.credentialsKey);
-      Share.share({
-        message: creds ? `${name}\n${creds}` : name,
-      }).catch(() => undefined);
+      const name = String(profile.nameKey).trim() || 'Doctor';
+      const creds = String(profile.credentialsKey).trim();
+      const site = appConfig.siteUrl?.replace(/\/$/, '') || null;
+      const profileUrl = site
+        ? `${site}/doctor/${profile.id}`
+        : `nigapatient://doctor/${profile.id}`;
+      const lines = [
+        name,
+        creds || null,
+        profile.teleFeeLabel ? `Tele ${profile.teleFeeLabel}` : null,
+        profile.clinicFeeLabel ? `In-clinic ${profile.clinicFeeLabel}` : null,
+        '',
+        profileUrl,
+      ].filter((line) => line != null) as string[];
+      const message = lines.join('\n');
+      void Share.share(
+        Platform.OS === 'ios'
+          ? { message, url: profileUrl, title: name }
+          : { message, title: name },
+      ).catch(() => undefined);
     },
     onToggleSave: () => undefined,
     onSelectTab: setTab,

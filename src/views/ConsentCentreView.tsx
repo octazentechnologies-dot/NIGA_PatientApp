@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppSwitch } from '../components/AppSwitch';
 import { AppText } from '../components/AppText';
+import { SimpleMemberPickerSheet } from '../components/SimpleMemberPickerSheet';
 import type { ConsentItem } from '../store/api/new/consentApi';
 import type {
   ConsentCentreViewModel,
@@ -380,52 +381,17 @@ function ConsentCard({
 }
 
 function MemberPickerSheet({ vm }: { vm: ConsentCentreViewModel }) {
-  const insets = useSafeAreaInsets();
   return (
-    <SafeAreaModal
-      transparent
-      animationType="slide"
+    <SimpleMemberPickerSheet
       visible={vm.memberPickerOpen}
-      onRequestClose={vm.onCloseMemberPicker}
-    >
-      <View style={styles.sheetRoot}>
-        <Pressable style={styles.sheetScrim} onPress={vm.onCloseMemberPicker} />
-        <View
-          style={[
-            styles.sheet,
-            { paddingBottom: sheetBottomPadding(insets, spacing.lg) },
-          ]}
-        >
-          <View style={styles.sheetHandle} />
-          <AppText variant="titleMd" color={colors.ink} style={styles.sheetTitle}>
-            {vm.t('consentCentreShowingFor')}
-          </AppText>
-          {vm.members.map((member) => {
-            const selected = member.id === vm.memberId;
-            return (
-              <Pressable
-                key={member.id}
-                accessibilityRole="button"
-                onPress={() => vm.onSelectMember(member.id)}
-                style={styles.sheetRow}
-              >
-                <AppText
-                  variant="bodyLg"
-                  color={colors.ink}
-                  weightOverride={selected ? '600' : undefined}
-                  style={styles.flex}
-                >
-                  {vm.t(member.labelKey)}
-                </AppText>
-                {selected ? (
-                  <Ionicons name="checkmark" size={20} color={colors.primary} />
-                ) : null}
-              </Pressable>
-            );
-          })}
-        </View>
-      </View>
-    </SafeAreaModal>
+      title={vm.t('consentCentreShowingFor')}
+      members={vm.members}
+      selectedMemberId={vm.memberId}
+      t={vm.t}
+      language={vm.language}
+      onClose={vm.onCloseMemberPicker}
+      onSelectMember={vm.onSelectMember}
+    />
   );
 }
 

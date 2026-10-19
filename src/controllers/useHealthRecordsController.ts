@@ -36,7 +36,7 @@ export type PrescriptionLifecycleStatus =
 
 export type RecordsMember = {
   id: RecordsMemberId;
-  nameKey: TranslationKey;
+  label: string;
   pending?: boolean;
   initials: string;
 };
@@ -100,17 +100,25 @@ export type HealthRecordsViewModel = {
   onDeleteDocument: (itemId: string) => void;
 };
 
-const MEMBERS: RecordsMember[] = [
-  { id: 'self', nameKey: 'recordsMyself', initials: 'PK' },
-  { id: 'aarav', nameKey: 'recordsAarav', initials: 'AK' },
-  { id: 'meera', nameKey: 'recordsMeera', initials: 'MK' },
-  {
-    id: 'sunita',
-    nameKey: 'recordsSunitaPending',
-    initials: 'SK',
-    pending: true,
-  },
-];
+function memberInitials(name: string, fallback = 'FM'): string {
+  const cleaned = name.trim();
+  if (!cleaned) return fallback;
+  return (
+    cleaned
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((w) => w[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase() || fallback
+  );
+}
+
+function memberDisplayName(name: string): string {
+  const cleaned = name.trim();
+  if (!cleaned) return '';
+  return cleaned.split(/\s+/)[0] || cleaned;
+}
 
 const FILTERS: { id: RecordsFilterId; labelKey: TranslationKey }[] = [
   { id: 'all', labelKey: 'recordsFilterAll' },
@@ -239,10 +247,12 @@ function filterItems(
 export function useHealthRecordsController({
   onOpenFollowUpPlan,
   onOpenNotifications,
+  onAddMember,
   initialFilter = 'all',
 }: {
   onOpenFollowUpPlan?: () => void;
   onOpenNotifications?: () => void;
+  onAddMember?: () => void;
   initialFilter?: RecordsFilterId;
 } = {}): HealthRecordsViewModel {
   const { language, t, setLanguage } = useLocalization();
@@ -271,46 +281,52 @@ export function useHealthRecordsController({
     skip: !isAuthenticated,
   });
 
-  const authUserInitials = useMemo(() => {
-    const name =
+  const members = useMemo<RecordsMember[]>(() => {
+    if (!isAuthenticated) {
+      return [
+        { id: 'self', label: t('recordsMyself'), initials: 'PK' },
+        { id: 'aarav', label: t('recordsAarav'), initials: 'AK' },
+        { id: 'meera', label: t('recordsMeera'), initials: 'MK' },
+        {
+          id: 'sunita',
+          label: t('recordsSunitaPending'),
+          initials: 'SK',
+          pending: true,
+        },
+      ];
+    }
+
+    const selfName =
       authUser?.patientName ||
       [authUser?.firstName, authUser?.lastName].filter(Boolean).join(' ');
-    if (!name) return 'ME';
-    return (
-      name
-        .split(' ')
-        .filter(Boolean)
-        .map((w) => w[0])
-        .join('')
-        .slice(0, 2)
-        .toUpperCase() || 'ME'
-    );
-  }, [authUser]);
-
-  const members = useMemo<RecordsMember[]>(() => {
-    if (!isAuthenticated) return MEMBERS;
     const list: RecordsMember[] = [
-      { id: 'self', nameKey: 'recordsMyself', initials: authUserInitials },
+      {
+        id: 'self',
+        label: t('recordsMyself'),
+        initials: memberInitials(selfName, 'ME'),
+      },
     ];
     if (familyResponse?.data) {
       for (const m of familyResponse.data) {
-        const initials =
-          (m.fullName || m.relation || 'FM')
-            .split(' ')
-            .filter(Boolean)
-            .map((w) => w[0])
-            .join('')
-            .slice(0, 2)
-            .toUpperCase() || 'FM';
+        const fullName = (
+          m.patientName ||
+          m.fullName ||
+          m.name ||
+          ''
+        ).trim();
+        const label =
+          memberDisplayName(fullName) ||
+          (m.relation || m.relationName || m.relationship || '').trim() ||
+          'Member';
         list.push({
-          id: String(m.familyMemberId),
-          nameKey: (m.fullName || m.relation) as TranslationKey,
-          initials,
+          id: String(m.familyMemberId ?? m.id ?? m.memberPatientId),
+          label,
+          initials: memberInitials(fullName || label),
         });
       }
     }
     return list;
-  }, [isAuthenticated, authUserInitials, familyResponse?.data]);
+  }, [authUser, familyResponse?.data, isAuthenticated, t]);
 
   const selectedMember =
     members.find((member) => member.id === selectedMemberId) ?? members[0];
@@ -436,7 +452,7 @@ export function useHealthRecordsController({
     onOpenCalendar: () => undefined,
     onOpenNotifications: () => onOpenNotifications?.(),
     onSelectLanguage: setLanguage,
-    onAddMember: () => undefined,
+    onAddMember: () => onAddMember?.(),
     onOpenFollowUp: () => {
       setFabOpen(false);
       onOpenFollowUpPlan?.();

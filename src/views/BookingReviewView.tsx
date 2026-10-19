@@ -90,6 +90,7 @@ export function BookingReviewView({
         documents={libraryDocuments}
         selectedId={selectedLibraryId}
         t={t}
+        language={language}
         onClose={onCloseSelectSheet}
         onSelect={onSelectExistingDocument}
         onUploadNew={onUploadNewFromSheet}

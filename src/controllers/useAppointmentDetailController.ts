@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Linking, Share } from 'react-native';
 
 import {
@@ -32,9 +32,27 @@ import {
   useRescheduleAppointmentMutation,
   useSwitchVisitToTeleMutation,
 } from '../store/api/new/visitsApi';
+import { useAppConfig } from '../providers/AppConfigProvider';
+import {
+  useCreateConsultOrderMutation,
+  useUpdateBookingPaymentMutation,
+} from '../store/api/new/paymentsApi';
+import { useGetPatientProfileQuery } from '../store/api/new/patientProfileApi';
 import { useAppSelector } from '../store/hooks';
+import { usePayment } from '../payments';
 import { messageFromUnknownError } from '../utilities/apiResponse';
 import { formatMoney } from '../utilities/formatters';
+
+function isPaymentSettled(
+  paymentStatus?: string | null,
+  isPaidFlag?: boolean,
+): boolean {
+  if (isPaidFlag === true) {
+    return true;
+  }
+  const status = (paymentStatus || '').toUpperCase();
+  return status === 'PAID' || status === 'CAPTURED';
+}
 
 export type AppointmentPhase = 'confirmed' | 'upcoming' | 'live' | 'ended';
 
@@ -212,6 +230,13 @@ export type AppointmentDetailViewModel = {
   queuePosition: number | null;
   waitMinutes: number | null;
   checkInBusy: boolean;
+  /** Unpaid clinic visit — show Pay now with doctor fee. */
+  showPayNow: boolean;
+  payNowLabel: string;
+  payNowBusy: boolean;
+  payNowError: string | null;
+  isVisitPaid: boolean;
+  onPayNow: () => void;
   onOpenCheckIn: () => void;
   onCloseCheckIn: () => void;
   onConfirmCheckIn: () => void;
@@ -355,12 +380,19 @@ export function useAppointmentDetailController({
   onBookAnotherConsultation: () => void;
 }): AppointmentDetailViewModel {
   const { language, t } = useLocalization();
+  const appConfig = useAppConfig();
+  const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
+  const authUser = useAppSelector((s) => s.auth.user);
+  const authMobile = useAppSelector((s) => s.auth.mobile);
   const [cancelledSnapshot, setCancelledSnapshot] = useState<BookedAppointment | null>(
     null,
   );
   const item = cancelledSnapshot ?? appointment ?? FALLBACK_APPOINTMENT;
   const isNumericId = !isNaN(Number(item.id));
-  const { data: serverVisitDetailResponse } = useGetVisitDetailQuery(item.id, {
+  const {
+    data: serverVisitDetailResponse,
+    refetch: refetchVisitDetail,
+  } = useGetVisitDetailQuery(item.id, {
     skip: !isNumericId,
   });
   const visitDetail = serverVisitDetailResponse?.data;
@@ -369,6 +401,114 @@ export function useAppointmentDetailController({
   const [checkInVisit, { isLoading: checkInBusy }] = useCheckInVisitMutation();
   const [switchVisitToTele] = useSwitchVisitToTeleMutation();
   const [reportRunningLate] = useReportRunningLateMutation();
+  const [createConsultOrder] = useCreateConsultOrderMutation();
+  const [updateBookingPayment] = useUpdateBookingPaymentMutation();
+  const { data: profileResponse } = useGetPatientProfileQuery(undefined, {
+    skip: !isAuthenticated || !isNumericId,
+  });
+  const profile = profileResponse?.data;
+  const [localPaidOverride, setLocalPaidOverride] = useState(false);
+  const [payNowError, setPayNowError] = useState<string | null>(null);
+
+  const patientAppIdNum = isNumericId ? Number(item.id) : null;
+  const patientAppIdRef = useRef(patientAppIdNum);
+  patientAppIdRef.current = patientAppIdNum;
+  const authUserRef = useRef(authUser);
+  authUserRef.current = authUser;
+
+  const payPrefill = useMemo(
+    () => ({
+      name:
+        profile?.patientName ||
+        authUser?.patientName ||
+        [authUser?.firstName, authUser?.lastName].filter(Boolean).join(' ') ||
+        null,
+      email: profile?.email || authUser?.email || null,
+      contact:
+        profile?.mobileNo ||
+        authUser?.mobile ||
+        authUser?.mobileNo ||
+        authMobile ||
+        null,
+    }),
+    [authMobile, authUser, profile],
+  );
+
+  const payLater = usePayment({
+    flow: 'consult',
+    appConfigKeyId: appConfig.razorpayKeyId,
+    prefill: payPrefill,
+    description: 'Clinic consultation',
+    patientAppId: patientAppIdNum,
+    createOrder: async () => {
+      const patientAppId = patientAppIdRef.current;
+      if (patientAppId == null) {
+        throw new Error('Missing appointment id for payment.');
+      }
+      const idempotencyKey = `pa-${patientAppId}-paylater-${Date.now()}`;
+      const res = await createConsultOrder({
+        patientAppId,
+        bookingToken: item.bookingId || undefined,
+        payAtClinic: false,
+        idempotencyKey,
+      }).unwrap();
+      return {
+        gatewayReady: res.gatewayReady,
+        keyId: res.keyId,
+        message: res.message,
+        data: res.data,
+      };
+    },
+    onCheckoutSuccess: async (checkout) => {
+      const patientAppId = patientAppIdRef.current;
+      const userId =
+        typeof authUserRef.current?.userId === 'number'
+          ? authUserRef.current.userId
+          : undefined;
+      if (patientAppId == null || userId == null) {
+        return undefined;
+      }
+      try {
+        const res = await updateBookingPayment({
+          userId,
+          patientAppId,
+          razorpay_order_id: checkout.orderId,
+          razorpay_payment_id: checkout.paymentId,
+          paymentOrderId: checkout.paymentOrderId,
+        }).unwrap();
+        const paid =
+          (res.data?.paymentStatus || '').toUpperCase() === 'PAID';
+        return { paid, method: res.data?.method ?? null };
+      } catch {
+        return undefined;
+      }
+    },
+    onConfirmed: () => {
+      setLocalPaidOverride(true);
+      setPayNowError(null);
+      onUpdateAppointment(item.id, {
+        paymentStatus: 'PAID',
+      });
+      void refetchVisitDetail();
+    },
+    onPendingConfirmation: () => {
+      setPayNowError(t('aptPayNowPending'));
+    },
+  });
+
+  useEffect(() => {
+    setLocalPaidOverride(false);
+    setPayNowError(null);
+    payLater.reset();
+    // Reset when switching appointments only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional id-scoped reset
+  }, [item.id]);
+
+  useEffect(() => {
+    if (payLater.state === 'FAILED' && payLater.errorMessage) {
+      setPayNowError(payLater.errorMessage);
+    }
+  }, [payLater.errorMessage, payLater.state]);
   const startMs = useMemo(
     () => new Date(item.startsAt).getTime(),
     [item.startsAt],
@@ -403,7 +543,6 @@ export function useAppointmentDetailController({
   const [joinMbps, setJoinMbps] = useState(4.2);
   const [joinDisplayMbps, setJoinDisplayMbps] = useState(0.3);
   const [videoJoinRetried, setVideoJoinRetried] = useState(false);
-  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const { data: documentsResponse } = useGetDocumentsQuery(undefined, {
     skip: !isAuthenticated,
   });
@@ -479,7 +618,25 @@ export function useAppointmentDetailController({
 
   const startDate = new Date(item.startsAt);
   const fee =
-    visitDetail?.consultFee != null ? Number(visitDetail.consultFee) : null;
+    visitDetail?.consultFee != null
+      ? Number(visitDetail.consultFee)
+      : item.consultFee != null
+        ? Number(item.consultFee)
+        : null;
+  const resolvedPaymentStatus =
+    visitDetail?.paymentStatus ?? item.paymentStatus ?? null;
+  const visitIsPaid =
+    localPaidOverride ||
+    isPaymentSettled(resolvedPaymentStatus, visitDetail?.isPaid);
+  // Unpaid clinic visits (incl. pay-at-clinic holds): Pay now using doctor fee.
+  // Hide when paymentStatus / isPaid says already paid (Home or visit detail).
+  const showPayNow =
+    isClinic &&
+    !visitIsPaid &&
+    phase !== 'ended' &&
+    fee != null &&
+    fee > 0 &&
+    (visitDetail?.actions?.canPay !== false);
   const refundPercent =
     remainingMs <= 0 ? 0 : remainingMs > FOUR_HOURS_MS ? 100 : 50;
   const refundAmount =
@@ -612,11 +769,29 @@ export function useAppointmentDetailController({
   );
 
   const visitFeeLabel =
-    formatMoney(visitDetail?.consultFee, visitDetail?.currency) || '';
+    formatMoney(
+      fee,
+      visitDetail?.currency ?? item.currency ?? null,
+    ) || '';
   // platformFee: hide when null — available for UI rows via visitDetail
   void formatMoney(visitDetail?.platformFee ?? null, visitDetail?.currency);
+  const payNowLabel = visitFeeLabel
+    ? t('aptPayNowWithFee').replace('{amount}', visitFeeLabel)
+    : t('aptPayNow');
+  const onPayNow = useCallback(() => {
+    if (!showPayNow || payLater.busy || !payLater.canPay) {
+      return;
+    }
+    setPayNowError(null);
+    void payLater.startPayment();
+  }, [payLater, showPayNow]);
   const clinicName = visitDetail?.clinicName?.trim() || '';
-  const clinicAddress = [visitDetail?.clinicCity].filter(Boolean).join(', ');
+  const clinicAddress = [
+    visitDetail?.clinicAddressLine?.trim(),
+    visitDetail?.clinicCity?.trim(),
+  ]
+    .filter(Boolean)
+    .join(', ');
   const clinicPhone = visitDetail?.clinicPhone?.trim() || null;
   const clinicMapLink = visitDetail?.clinicMapLink?.trim() || null;
   const queuePosition =
@@ -648,7 +823,9 @@ export function useAppointmentDetailController({
             : 'videocam-outline',
     reason: visitDetail?.reasonText?.trim() || t(item.reasonKey),
     feeLabel: visitFeeLabel
-      ? t('aptPaidAmount').replace('{amount}', visitFeeLabel)
+      ? visitIsPaid
+        ? t('aptPaidAmount').replace('{amount}', visitFeeLabel)
+        : visitFeeLabel
       : '',
     paymentId: item.paymentId,
     isClinic,
@@ -992,6 +1169,12 @@ export function useAppointmentDetailController({
     queuePosition,
     waitMinutes: null,
     checkInBusy,
+    showPayNow,
+    payNowLabel,
+    payNowBusy: payLater.busy || payLater.state === 'CREATING_ORDER',
+    payNowError,
+    isVisitPaid: visitIsPaid,
+    onPayNow,
     onOpenCheckIn: () => {
       setClinicCheckInState(clinicCheckInState === 'waiting' ? 'waiting' : 'ready');
       setClinicCheckInOpen(true);

@@ -4,6 +4,9 @@ import * as SplashScreen from 'expo-splash-screen';
 import * as SystemUI from 'expo-system-ui';
 
 import App from './src/App';
+import { disableSystemFontScaling } from './src/utilities/disableSystemFontScaling';
+
+disableSystemFontScaling();
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 // setOptions is unsupported in Expo Go — only apply in a native/dev build.
