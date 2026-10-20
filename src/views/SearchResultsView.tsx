@@ -636,7 +636,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     flex: 1,
-      textAlign: 'left',
+    textAlign: 'left',
   },
   languageButton: {
     minHeight: 40,

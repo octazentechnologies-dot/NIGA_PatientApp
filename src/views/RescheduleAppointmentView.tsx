@@ -215,7 +215,7 @@ export function RescheduleAppointmentView(vm: AppointmentDetailViewModel) {
             {vm.currentShortWhen}
           </AppText>
           <Ionicons name="arrow-forward" size={18} color={ICON_BLUE} />
-          <AppText variant="bodyLg" color={colors.ink} weightOverride="700">
+          <AppText variant="bodyLg" color={colors.ink} weightOverride="600">
             {vm.nextShortWhen || '—'}
           </AppText>
         </View>

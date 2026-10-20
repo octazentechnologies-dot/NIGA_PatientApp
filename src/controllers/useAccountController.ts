@@ -64,6 +64,7 @@ export function useAccountController({
   onOpenMyReviews,
   onOpenHelpCentre,
   onOpenBookWithHelp,
+  onOpenRaiseTicket,
   onOpenLegalDoc,
 }: {
   onLogOut: () => void;
@@ -80,6 +81,7 @@ export function useAccountController({
   onOpenMyReviews?: () => void;
   onOpenHelpCentre?: () => void;
   onOpenBookWithHelp?: () => void;
+  onOpenRaiseTicket?: (topicId?: string) => void;
   onOpenLegalDoc?: (doc: 'terms' | 'privacy' | 'about') => void;
 } = { onLogOut: () => undefined }): AccountViewModel {
   const { language, setLanguage, t } = useLocalization();
@@ -192,6 +194,9 @@ export function useAccountController({
       }
       if (id === 'book-help') {
         onOpenBookWithHelp?.();
+      }
+      if (id === 'tickets') {
+        onOpenRaiseTicket?.();
       }
       if (id === 'terms') {
         onOpenLegalDoc?.('terms');

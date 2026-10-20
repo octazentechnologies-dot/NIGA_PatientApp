@@ -12,7 +12,16 @@ export type TypographyVariant =
   | 'bodyMd'
   | 'labelLg'
   | 'labelMd'
-  | 'labelSm';
+  | 'labelSm'
+  | 'pageTitle'
+  | 'sectionTitle'
+  | 'cardTitle'
+  | 'body'
+  | 'bodyMedium'
+  | 'label'
+  | 'caption'
+  | 'button'
+  | 'helperText';
 
 type TypographyStyle = Pick<
   TextStyle,
@@ -30,9 +39,18 @@ function size(fontSize: number, lineHeight: number): Pick<
 }
 
 /**
- * Mobile type scale (Clinical Trust / patient):
- * Display 22–26 · Section 17–20 · Body 15–16 · Caption 12–13 · Button 15
- * Slightly tighter than the old prototype scale — refined, not shouty.
+ * Mobile type scale (Standardized Clinical Trust / patient):
+ * - Large titles (displayLg / pageTitle): 22–24
+ * - Section headings (headlineMd / sectionTitle): 18–20
+ * - Card titles & subheadings (titleMd / cardTitle): 16–17
+ * - Standard body text (bodyLg / bodyMd / body): 14–16
+ * - Secondary labels & buttons (labelLg / button / labelMd): 12–15
+ * - Captions & metadata (labelSm / caption / helperText): 11–12
+ *
+ * Weights:
+ * - Regular: 400
+ * - Medium emphasis: 500
+ * - Semibold: 600 (refined, avoiding excessive 700 bold)
  */
 export function typography(
   variant: TypographyVariant,
@@ -46,56 +64,75 @@ export function typography(
   switch (variant) {
     case 'displayLg':
       return {
-        ...size(compact ? 22 : 26, lh(compact ? 30 : 34)),
-        fontWeight: '700',
+        ...size(compact ? 22 : 24, lh(compact ? 28 : 32)),
+        fontWeight: '600',
         letterSpacing: mr ? 0 : -0.2,
       };
     case 'headlineLg':
+    case 'pageTitle':
       return {
-        ...size(compact ? 20 : 22, lh(compact ? 28 : 30)),
+        ...size(compact ? 20 : 22, lh(compact ? 26 : 28)),
         fontWeight: '600',
         letterSpacing: mr ? 0 : undefined,
       };
     case 'headlineMd':
+    case 'sectionTitle':
       return {
-        ...size(20, lh(28)),
+        ...size(compact ? 18 : 20, lh(compact ? 24 : 26)),
         fontWeight: '600',
         letterSpacing: mr ? 0 : undefined,
       };
     case 'titleMd':
+    case 'cardTitle':
       return {
-        ...size(17, lh(24)),
+        ...size(compact ? 16 : 17, lh(compact ? 22 : 24)),
         fontWeight: '600',
         letterSpacing: mr ? 0 : undefined,
       };
     case 'bodyLg':
       return {
-        ...size(16, lh(24)),
+        ...size(compact ? 15 : 16, lh(compact ? 22 : 24)),
         fontWeight: '400',
         letterSpacing: mr ? 0 : undefined,
       };
     case 'bodyMd':
+    case 'body':
       return {
-        ...size(15, lh(22)),
+        ...size(compact ? 14 : 15, lh(compact ? 20 : 22)),
         fontWeight: '400',
         letterSpacing: mr ? 0 : undefined,
       };
-    case 'labelLg':
+    case 'bodyMedium':
       return {
-        ...size(15, lh(20)),
+        ...size(compact ? 14 : 15, lh(compact ? 20 : 22)),
+        fontWeight: '500',
+        letterSpacing: mr ? 0 : undefined,
+      };
+    case 'labelLg':
+    case 'button':
+      return {
+        ...size(compact ? 14 : 15, lh(compact ? 18 : 20)),
         fontWeight: '600',
         letterSpacing: mr ? 0 : undefined,
       };
     case 'labelMd':
+    case 'label':
       return {
-        ...size(13, lh(18)),
+        ...size(compact ? 12 : 13, lh(compact ? 16 : 18)),
         fontWeight: '600',
         letterSpacing: mr ? 0 : 0.14,
       };
     case 'labelSm':
       return {
-        ...size(12, lh(16)),
+        ...size(compact ? 11 : 12, lh(compact ? 15 : 16)),
         fontWeight: '500',
+        letterSpacing: mr ? 0 : undefined,
+      };
+    case 'caption':
+    case 'helperText':
+      return {
+        ...size(compact ? 11 : 12, lh(compact ? 15 : 16)),
+        fontWeight: '400',
         letterSpacing: mr ? 0 : undefined,
       };
   }
@@ -106,15 +143,25 @@ export function weightTokenFor(
 ): '400' | '500' | '600' | '700' {
   switch (variant) {
     case 'displayLg':
-      return '700';
     case 'headlineLg':
     case 'headlineMd':
     case 'titleMd':
     case 'labelLg':
     case 'labelMd':
+    case 'pageTitle':
+    case 'sectionTitle':
+    case 'cardTitle':
+    case 'button':
+    case 'label':
       return '600';
     case 'labelSm':
+    case 'bodyMedium':
       return '500';
+    case 'caption':
+    case 'helperText':
+    case 'bodyLg':
+    case 'bodyMd':
+    case 'body':
     default:
       return '400';
   }

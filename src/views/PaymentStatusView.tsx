@@ -372,8 +372,8 @@ const styles = StyleSheet.create({
   title: {
     flex: 1,
     textAlign: 'left',
-    fontSize: scaleFont(22),
-    lineHeight: scaleFont(30),
+    fontSize: scaleFont(20),
+    lineHeight: scaleFont(26),
   },
   iconButton: {
     width: layout.buttonHeight,
@@ -406,8 +406,8 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     textAlign: 'center',
-    fontSize: scaleFont(24),
-    lineHeight: scaleFont(32),
+    fontSize: scaleFont(22),
+    lineHeight: scaleFont(28),
   },
   successRing: {
     width: 80,
@@ -454,8 +454,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   doctorName: {
-    fontSize: scaleFont(18),
-    lineHeight: scaleFont(24),
+    fontSize: scaleFont(16),
+    lineHeight: scaleFont(22),
   },
   detail: {
     flexDirection: 'row',
@@ -524,8 +524,8 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   failTitle: {
-    fontSize: scaleFont(32),
-    lineHeight: scaleFont(40),
+    fontSize: scaleFont(22),
+    lineHeight: scaleFont(28),
     textAlign: 'center',
   },
   centerCopy: {

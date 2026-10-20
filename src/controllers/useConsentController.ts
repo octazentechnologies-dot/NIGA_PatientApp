@@ -117,6 +117,7 @@ export function useConsentController({
             ? 'Manage caregiver access from the Caregiver page.'
             : 'Caregiver access is managed separately.',
         );
+        setTogglingConsentId(null);
         return;
       }
 

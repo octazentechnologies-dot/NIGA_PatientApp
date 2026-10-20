@@ -553,8 +553,8 @@ const styles = StyleSheet.create({
   title: {
     flex: 1,
     textAlign: 'left',
-    fontSize: scaleFont(22),
-    lineHeight: scaleFont(30),
+    fontSize: scaleFont(20),
+    lineHeight: scaleFont(26),
   },
   iconButton: {
     width: layout.buttonHeight,
@@ -580,16 +580,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   doctorName: {
-    fontSize: scaleFont(18),
-    lineHeight: scaleFont(24),
+    fontSize: scaleFont(16),
+    lineHeight: scaleFont(22),
   },
   creds: {
-    fontSize: scaleFont(14),
-    lineHeight: scaleFont(20),
+    fontSize: scaleFont(13),
+    lineHeight: scaleFont(18),
   },
   fee: {
-    fontSize: scaleFont(20),
-    lineHeight: scaleFont(28),
+    fontSize: scaleFont(18),
+    lineHeight: scaleFont(24),
   },
   scroll: {
     flex: 1,
@@ -610,8 +610,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   sectionTitle: {
-    fontSize: scaleFont(20),
-    lineHeight: scaleFont(28),
+    fontSize: scaleFont(18),
+    lineHeight: scaleFont(24),
   },
   modeRow: {
     gap: 12,
@@ -706,8 +706,8 @@ const styles = StyleSheet.create({
     fontSize: scaleFont(11),
   },
   dateNum: {
-    fontSize: scaleFont(20),
-    lineHeight: scaleFont(26),
+    fontSize: scaleFont(18),
+    lineHeight: scaleFont(24),
   },
   dateDot: {
     width: 6,
@@ -737,8 +737,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   waitTitle: {
-    fontSize: scaleFont(18),
-    lineHeight: scaleFont(24),
+    fontSize: scaleFont(16),
+    lineHeight: scaleFont(22),
     marginBottom: 4,
   },
   waitButton: {
@@ -878,8 +878,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.iconFill,
   },
   memberName: {
-    fontSize: scaleFont(18),
-    lineHeight: scaleFont(24),
+    fontSize: scaleFont(16),
+    lineHeight: scaleFont(22),
   },
   addMember: {
     flexDirection: 'row',

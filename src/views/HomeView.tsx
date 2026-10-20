@@ -100,7 +100,7 @@ function DoctorCard({
                 variant="titleMd"
                 color={colors.primary}
                 languageOverride="en"
-                weightOverride="700"
+                weightOverride="600"
               >
                 {initials}
               </AppText>
@@ -114,7 +114,7 @@ function DoctorCard({
             <AppText
               variant="titleMd"
               color={colors.ink}
-              weightOverride="700"
+              weightOverride="600"
               style={styles.docName}
               numberOfLines={2}
             >
@@ -174,7 +174,7 @@ function DoctorCard({
           <AppText
             variant="labelLg"
             color={colors.ink}
-            weightOverride="700"
+            weightOverride="600"
             style={styles.feePrice}
           >
             {doctor.consultFeeTele != null ? `₹${doctor.consultFeeTele}` : '—'}
@@ -198,7 +198,7 @@ function DoctorCard({
           <AppText
             variant="labelLg"
             color={colors.ink}
-            weightOverride="700"
+            weightOverride="600"
             style={styles.feePrice}
           >
             {doctor.consultFeeInClinic != null
@@ -231,7 +231,7 @@ function DoctorCard({
             ]}
           >
             <Ionicons name="flash" size={14} color={colors.warning} />
-            <AppText variant="labelMd" color={colors.warning} weightOverride="700">
+            <AppText variant="labelMd" color={colors.warning} weightOverride="600">
               {t('homeInstantBadge')}
             </AppText>
           </Pressable>
@@ -244,7 +244,7 @@ function DoctorCard({
             pressed && styles.pressed,
           ]}
         >
-          <AppText variant="labelMd" color={colors.card} weightOverride="700">
+          <AppText variant="labelMd" color={colors.card} weightOverride="600">
             {t('doctorsBookAppointment')}
           </AppText>
         </Pressable>
@@ -749,7 +749,7 @@ export function HomeView({
                   </View>
                   <View style={styles.flex}>
                     <View style={styles.instantTitleRow}>
-                      <AppText variant="titleMd" color={colors.ink} weightOverride="700">
+                      <AppText variant="titleMd" color={colors.ink} weightOverride="600">
                         {t('homeInstantAdvice')}
                       </AppText>
                       <View style={styles.instantPill}>
@@ -833,7 +833,7 @@ export function HomeView({
                       <AppText
                         variant="titleMd"
                         color={colors.ink}
-                        weightOverride="700"
+                        weightOverride="600"
                         style={styles.quickLabel}
                         numberOfLines={2}
                       >
@@ -1042,7 +1042,7 @@ export function HomeView({
                 </Pressable>
               ) : null}
               {doctorsSearch.q?.trim() &&
-              doctorsSearch.q.trim() !== doctorsSearch.city?.trim() ? (
+                doctorsSearch.q.trim() !== doctorsSearch.city?.trim() ? (
                 <Pressable
                   accessibilityRole="button"
                   onPress={onRemoveDoctorsQuery}
@@ -1059,15 +1059,6 @@ export function HomeView({
                   <Ionicons name="close" size={14} color={colors.ink} />
                 </Pressable>
               ) : null}
-              <Pressable
-                accessibilityRole="button"
-                onPress={onOpenDoctorsFilters}
-                style={styles.doctorsToolButton}
-              >
-                <AppText variant="labelMd" color={colors.ink}>
-                  {t('searchSortDistance')}
-                </AppText>
-              </Pressable>
             </ScrollView>
           </View>
 
@@ -1096,7 +1087,7 @@ export function HomeView({
                   <AppText
                     variant="headlineMd"
                     color={colors.ink}
-                    weightOverride="700"
+                    weightOverride="600"
                   >
                     {t('doctorsAvailableTitle')}
                   </AppText>
@@ -1394,8 +1385,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   greeting: {
-    fontSize: scaleFont(22),
-    lineHeight: scaleFont(28),
+    fontSize: scaleFont(20),
+    lineHeight: scaleFont(26),
   },
   forWhomChip: {
     alignSelf: 'flex-start',

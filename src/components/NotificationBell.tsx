@@ -31,7 +31,7 @@ export function NotificationBell({ count, label, onPress }: NotificationBellProp
               color={colors.onError}
               languageOverride="en"
               raw
-              weightOverride="700"
+              weightOverride="600"
               style={styles.badgeLabel}
             >
               {labelCount}

@@ -10,6 +10,7 @@ import {
   useGetRemindersQuery,
   useUpdateReminderMutation,
 } from '../store/api/new/remindersApi';
+import { useAppSelector } from '../store/hooks';
 
 export type ReminderMemberId = 'aarav' | 'self';
 
@@ -131,7 +132,8 @@ export function useRemindersCentreController({
   onBookConsultation?: () => void;
 }): RemindersCentreViewModel {
   const { language, t } = useLocalization();
-  const { data } = useGetRemindersQuery();
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+  const { data } = useGetRemindersQuery(undefined, { skip: !isAuthenticated });
   const apiReminders = data ?? EMPTY_REMINDERS;
   const [createReminder] = useCreateReminderMutation();
   const [updateReminder] = useUpdateReminderMutation();

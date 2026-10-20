@@ -387,8 +387,8 @@ const styles = StyleSheet.create({
   title: {
     flex: 1,
     textAlign: 'left',
-    fontSize: scaleFont(22),
-    lineHeight: scaleFont(30),
+    fontSize: scaleFont(20),
+    lineHeight: scaleFont(26),
   },
   iconButton: {
     width: layout.buttonHeight,
@@ -429,8 +429,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   timer: {
-    fontSize: scaleFont(32),
-    lineHeight: scaleFont(40),
+    fontSize: scaleFont(24),
+    lineHeight: scaleFont(30),
     letterSpacing: 1,
   },
   center: {

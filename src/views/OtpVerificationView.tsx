@@ -120,7 +120,7 @@ export function OtpVerificationView({
               <AppText
                 variant="titleMd"
                 color={colors.primary}
-                weightOverride="700"
+                weightOverride="600"
               >
                 {devOtp}
               </AppText>

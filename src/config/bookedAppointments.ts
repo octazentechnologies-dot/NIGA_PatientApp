@@ -32,6 +32,8 @@ export type BookedAppointment = {
   chatClosesAt?: string;
   /** Linked prior consult date label shown in chat header strip. */
   linkedConsultationLabel?: string;
+  teleSessionId?: number | null;
+  patientAppId?: number | null;
 };
 
 export const SEED_PAYMENT_ID = 'PAY-9F2K41B';

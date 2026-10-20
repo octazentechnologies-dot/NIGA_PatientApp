@@ -7,6 +7,7 @@ import {
   useUpdateNotificationPreferencesMutation,
   type NotificationPreferences,
 } from '../store/api/new/notificationsApi';
+import { useAppSelector } from '../store/hooks';
 
 export type NotifChannel = 'push' | 'sms' | 'inApp' | 'email';
 
@@ -139,7 +140,10 @@ export function useNotificationSettingsController({
   onOpenNotifications?: () => void;
 }): NotificationSettingsViewModel {
   const { language, t } = useLocalization();
-  const { data: apiPrefs } = useGetNotificationPreferencesQuery();
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+  const { data: apiPrefs } = useGetNotificationPreferencesQuery(undefined, {
+    skip: !isAuthenticated,
+  });
   const [updatePrefs, { isLoading: isSaving }] =
     useUpdateNotificationPreferencesMutation();
 

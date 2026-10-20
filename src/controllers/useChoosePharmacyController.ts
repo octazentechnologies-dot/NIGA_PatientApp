@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
 import { useGetPharmacySellersQuery } from '../store/api/new/medicinesApi';
+import { useAppSelector } from '../store/hooks';
 
 /** BE-010 — commercial sort fields stay null; no price/ETA/distance sorts. */
 export type PharmacySortId = never;
@@ -76,12 +77,15 @@ export function useChoosePharmacyController({
   );
   const [emptyAltId, setEmptyAltId] = useState<EmptyAltId | null>(null);
 
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const {
     data: sellersResponse,
     isLoading,
     isError,
     refetch,
-  } = useGetPharmacySellersQuery();
+  } = useGetPharmacySellersQuery(undefined, {
+    skip: !isAuthenticated,
+  });
 
   const pharmacies = useMemo(() => {
     const rows = sellersResponse?.data;

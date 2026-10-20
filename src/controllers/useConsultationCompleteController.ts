@@ -80,8 +80,10 @@ export function useConsultationCompleteController({
     '';
 
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
-  const patientAppId = (appointment as unknown as { patientAppId?: number; appointmentId?: number })?.patientAppId ??
-    (appointment as unknown as { patientAppId?: number; appointmentId?: number })?.appointmentId;
+  const patientAppId =
+    appointment?.patientAppId ??
+    (appointment as unknown as { appointmentId?: number })?.appointmentId ??
+    (appointment?.id && Number.isFinite(Number(appointment.id)) ? Number(appointment.id) : undefined);
   const {
     data: summaryResponse,
     isLoading,

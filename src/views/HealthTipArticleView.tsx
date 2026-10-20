@@ -596,8 +596,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   relatedTitle: {
-    fontSize: scaleFont(20),
-    lineHeight: scaleFont(28),
+    fontSize: scaleFont(18),
+    lineHeight: scaleFont(24),
     marginTop: spacing.sm,
   },
   relatedRow: {

@@ -31,6 +31,11 @@ const TITLE_CASE_VARIANTS: ReadonlySet<TypographyVariant> = new Set([
   'labelLg',
   'labelMd',
   'labelSm',
+  'pageTitle',
+  'sectionTitle',
+  'cardTitle',
+  'button',
+  'label',
 ]);
 
 function titleCaseChildren(children: ReactNode): ReactNode {

@@ -70,6 +70,7 @@ export function useRazorpayCheckout() {
         },
         theme: { color: colors.primary },
       };
+      console.log("options for razorpay", options)
 
       logDev('opening checkout', {
         paymentOrderId: maskPaymentId(order.paymentOrderId),

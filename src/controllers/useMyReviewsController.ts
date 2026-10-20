@@ -4,6 +4,7 @@ import { mapAppealStatus } from '../constants/statusMaps';
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
 import { useGetMyReviewsQuery } from '../store/api/new/supportApi';
+import { useAppSelector } from '../store/hooks';
 
 export type ReviewStatus = 'published' | 'moderation' | 'rejected';
 
@@ -65,7 +66,10 @@ export function useMyReviewsController({
   onAppeal?: (reviewId: string) => void;
 }): MyReviewsViewModel {
   const { language, t } = useLocalization();
-  const { data, isLoading, isError, refetch } = useGetMyReviewsQuery();
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+  const { data, isLoading, isError, refetch } = useGetMyReviewsQuery(undefined, {
+    skip: !isAuthenticated,
+  });
 
   const reviews = useMemo<MyReviewItem[]>(() => {
     const rows = data?.data;

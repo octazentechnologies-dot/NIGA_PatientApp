@@ -657,6 +657,11 @@ export function useHomeController({
       closeAccountOverlays();
       setBookWithHelpOpen(true);
     },
+    onOpenRaiseTicket: (topicId) => {
+      closeAccountOverlays();
+      setRaiseTicketTopicId(topicId ?? ('medicines' as HelpTopicId));
+      setRaiseTicketOpen(true);
+    },
     onOpenLegalDoc: (doc) => {
       setLegalDocId(doc);
       setBookWithHelpOpen(false);
@@ -849,6 +854,8 @@ export function useHomeController({
             ? Number(a.consultFee)
             : null,
         currency: a.currency ?? null,
+        teleSessionId: a.teleSessionId ?? null,
+        patientAppId: a.patientAppId ?? null,
       };
     });
 

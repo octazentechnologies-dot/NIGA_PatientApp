@@ -239,26 +239,6 @@ export function SearchDoctorsView({
           />
         </View>
 
-        <AppText variant="headlineMd" color={colors.onSurface}>
-          {t('searchBrowseCareNeed')}
-        </AppText>
-        <View style={styles.careGrid}>
-          {careNeeds.map((need) => (
-            <CareNeedCard
-              key={need.id}
-              need={need}
-              onPress={() => onSelectCareNeed(need)}
-            />
-          ))}
-        </View>
-        <AppText
-          variant="labelSm"
-          color={colors.onSurfaceVariant}
-          style={styles.disclaimer}
-        >
-          {t('searchCareDisclaimer')}
-        </AppText>
-
         <View style={styles.nearHeader}>
           <AppText variant="headlineMd" color={colors.onSurface} style={styles.flex}>
             {t('searchNearYou')}
@@ -301,6 +281,26 @@ export function SearchDoctorsView({
             ))
           )}
         </View>
+
+        <AppText variant="headlineMd" color={colors.onSurface}>
+          {t('searchBrowseCareNeed')}
+        </AppText>
+        <View style={styles.careGrid}>
+          {careNeeds.map((need) => (
+            <CareNeedCard
+              key={need.id}
+              need={need}
+              onPress={() => onSelectCareNeed(need)}
+            />
+          ))}
+        </View>
+        <AppText
+          variant="labelSm"
+          color={colors.onSurfaceVariant}
+          style={styles.disclaimer}
+        >
+          {t('searchCareDisclaimer')}
+        </AppText>
       </ScrollView>
 
       <SafeAreaModal

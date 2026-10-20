@@ -5,6 +5,8 @@ import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
 import type { HelpTopicId } from './useHelpCentreController';
 import { useCreateTicketMutation } from '../store/api/new/supportApi';
+import { useGetMedicineOrdersQuery } from '../store/api/new/medicinesApi';
+import { useAppSelector } from '../store/hooks';
 
 export type TicketIssueId =
   | 'wrongItem'
@@ -102,6 +104,15 @@ export function useRaiseTicketController({
 
   const issues = topicId === 'medicines' ? MEDICINE_ISSUES : GENERIC_ISSUES;
   const [createTicketMutation] = useCreateTicketMutation();
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+  const { data: ordersResponse } = useGetMedicineOrdersQuery(undefined, {
+    skip: !isAuthenticated,
+  });
+  const latestOrder = ordersResponse?.data?.[0];
+  const relatedOrderId = latestOrder?.medicineOrderId
+    ? `#HM-${latestOrder.medicineOrderId}`
+    : '';
+  const hasRelatedOrder = Boolean(latestOrder?.medicineOrderId);
 
   const canSubmit = useMemo(
     () => issueId !== 'other' || description.trim().length >= 4,
@@ -123,7 +134,9 @@ export function useRaiseTicketController({
     else if (topicId === 'prescriptions') category = 'clinical';
 
     const orderContext =
-      topicId === 'medicines' && relatedVisible ? ' [Order #HM-4821]' : '';
+      topicId === 'medicines' && relatedVisible && relatedOrderId
+        ? ` [Order ${relatedOrderId}]`
+        : '';
     const bodyText = `${description.trim() || subject}${orderContext} (Contact preference: ${contactPref})`;
 
     try {
@@ -149,6 +162,7 @@ export function useRaiseTicketController({
     issues,
     t,
     relatedVisible,
+    relatedOrderId,
     description,
     contactPref,
     createTicketMutation,
@@ -162,8 +176,8 @@ export function useRaiseTicketController({
     topicId,
     topicOptions: TOPIC_OPTIONS,
     topicPickerOpen,
-    relatedVisible: topicId === 'medicines' && relatedVisible,
-    relatedOrderId: '#HM-4821',
+    relatedVisible: topicId === 'medicines' && relatedVisible && hasRelatedOrder,
+    relatedOrderId,
     relatedOrderMeta: t('ticketRelatedDelivered'),
     issues,
     issueId,

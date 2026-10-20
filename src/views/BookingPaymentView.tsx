@@ -535,8 +535,8 @@ const styles = StyleSheet.create({
   title: {
     flex: 1,
     textAlign: 'left',
-    fontSize: scaleFont(22),
-    lineHeight: scaleFont(30),
+    fontSize: scaleFont(20),
+    lineHeight: scaleFont(26),
   },
   iconButton: {
     width: layout.buttonHeight,
@@ -571,8 +571,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
   },
   amount: {
-    fontSize: scaleFont(32),
-    lineHeight: scaleFont(40),
+    fontSize: scaleFont(24),
+    lineHeight: scaleFont(30),
   },
   summary: {
     textAlign: 'center',
@@ -599,8 +599,8 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   sectionTitle: {
-    fontSize: scaleFont(20),
-    lineHeight: scaleFont(28),
+    fontSize: scaleFont(18),
+    lineHeight: scaleFont(24),
     marginTop: 8,
   },
   group: {

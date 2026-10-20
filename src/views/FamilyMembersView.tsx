@@ -193,7 +193,7 @@ export function FamilyMembersView({
             </AppText>
             {members.length > 0 ? (
               <View style={styles.countBadge}>
-                <AppText variant="labelSm" color={colors.primary} weightOverride="700">
+                <AppText variant="labelSm" color={colors.primary} weightOverride="600">
                   {String(members.length)}
                 </AppText>
               </View>

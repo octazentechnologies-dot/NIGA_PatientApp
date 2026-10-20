@@ -501,7 +501,6 @@ export function useAppointmentDetailController({
     setPayNowError(null);
     payLater.reset();
     // Reset when switching appointments only.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional id-scoped reset
   }, [item.id]);
 
   useEffect(() => {

@@ -637,8 +637,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.iconFill,
   },
   memberName: {
-    fontSize: scaleFont(18),
-    lineHeight: scaleFont(24),
+    fontSize: scaleFont(16),
+    lineHeight: scaleFont(22),
   },
   addMember: {
     flexDirection: 'row',

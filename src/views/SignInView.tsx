@@ -539,7 +539,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   modalTitle: {
-    fontWeight: '700',
+    fontWeight: '600',
   },
   searchBar: {
     flexDirection: 'row',

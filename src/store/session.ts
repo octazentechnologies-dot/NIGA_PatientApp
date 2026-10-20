@@ -5,6 +5,7 @@ import { accountApi } from './api/new/accountApi';
 import { clearAuthState } from './slices/authSlice';
 import { clearAuthCredentials } from '../services/secureStorage';
 import { unregisterAuthenticatedDevicePush } from '../services/notifications';
+import { clearPendingPayment } from '../payments';
 
 /**
  * Clears in-memory RTK cache, auth state, and SecureStore credentials.
@@ -15,7 +16,10 @@ export async function resetAuthenticatedSession(
   dispatch(legacyBaseApi.util.resetApiState());
   dispatch(newBaseApi.util.resetApiState());
   dispatch(clearAuthState());
-  await clearAuthCredentials();
+  await Promise.all([
+    clearAuthCredentials(),
+    clearPendingPayment().catch(() => undefined),
+  ]);
 }
 
 /**

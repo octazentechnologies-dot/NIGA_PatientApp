@@ -1274,6 +1274,7 @@ export function AppNavigator() {
   const [countryCode, setCountryCode] = useState('+91');
   const [devOtp, setDevOtp] = useState<string | undefined>();
   const [isUserRegistered, setIsUserRegistered] = useState(false);
+  const [sessionNonce, setSessionNonce] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -1296,8 +1297,7 @@ export function AppNavigator() {
               }
             } catch {
               // Token cannot be refreshed (expired > 7 days or revoked)
-              await clearAuthCredentials();
-              dispatch(clearAuthState());
+              await resetAuthenticatedSession(dispatch);
               dispatch(
                 setSessionEndedMessage(
                   'Your session has ended. Please sign in again.',
@@ -1350,8 +1350,7 @@ export function AppNavigator() {
           } catch (profileErr: unknown) {
             const status = (profileErr as { status?: number })?.status;
             if (status === 401) {
-              await clearAuthCredentials();
-              dispatch(clearAuthState());
+              await resetAuthenticatedSession(dispatch);
               dispatch(
                 setSessionEndedMessage(
                   'Your session has ended. Please sign in again.',
@@ -1498,6 +1497,11 @@ export function AppNavigator() {
   );
   const handleLogOut = useCallback(async () => {
     await performLogout(dispatch);
+    setMobileNumber('');
+    setCountryCode('+91');
+    setDevOtp(undefined);
+    setIsUserRegistered(false);
+    setSessionNonce((n) => n + 1);
     setStep('signIn');
   }, [dispatch]);
   const slideIndex = useMemo(
@@ -1572,8 +1576,13 @@ export function AppNavigator() {
       <SlideStrip index={slideIndex}>
         <FirstLaunchRoute onContinue={finishFirstLaunch} />
         <OnboardingRoute onFinished={finishOnboarding} />
-        <SignInRoute onBack={backFromSignIn} onOtpRequested={openOtp} />
+        <SignInRoute
+          key={`signin-${sessionNonce}`}
+          onBack={backFromSignIn}
+          onOtpRequested={openOtp}
+        />
         <OtpRoute
+          key={`otp-${sessionNonce}`}
           mobileNumber={mobileNumber}
           devOtp={devOtp}
           isUserRegistered={isUserRegistered}
@@ -1582,7 +1591,7 @@ export function AppNavigator() {
           onVerified={handleOtpVerified}
         />
         <CompleteProfileRoute
-          key={mobileNumber ? `complete-${mobileNumber}` : 'complete-profile'}
+          key={`complete-${sessionNonce}-${mobileNumber || 'new'}`}
           mobileNumber={mobileNumber}
           countryCode={countryCode}
           onBack={backFromProfile}
@@ -1590,21 +1599,27 @@ export function AppNavigator() {
           onSkip={openConsent}
         />
         <ConsentRoute
+          key={`consent-${sessionNonce}`}
           active={step === 'consent'}
           onBack={backFromConsent}
           onFinished={openPhoneSetup}
         />
         <PhoneSetupRoute
+          key={`phone-${sessionNonce}`}
           active={step === 'phoneSetup'}
           onBack={backFromPhoneSetup}
           onContinue={openFamilyMembers}
         />
         <FamilyMembersRoute
+          key={`family-${sessionNonce}`}
           onBack={backFromFamilyMembers}
           onContinue={openHome}
           onSkip={openHome}
         />
-        <HomeRoute onLogOut={handleLogOut} />
+        <HomeRoute
+          key={`home-${sessionNonce}`}
+          onLogOut={handleLogOut}
+        />
       </SlideStrip>
     </View>
   );

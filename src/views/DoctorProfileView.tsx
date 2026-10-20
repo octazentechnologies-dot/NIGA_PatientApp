@@ -590,8 +590,8 @@ const styles = StyleSheet.create({
   name: {
     textAlign: 'center',
     marginTop: 12,
-    fontSize: scaleFont(24),
-    lineHeight: scaleFont(32),
+    fontSize: scaleFont(22),
+    lineHeight: scaleFont(28),
     paddingHorizontal: spacing.md,
   },
   credentials: {
@@ -678,8 +678,8 @@ const styles = StyleSheet.create({
   },
   verifyTitle: {
     flex: 1,
-    fontSize: scaleFont(20),
-    lineHeight: scaleFont(28),
+    fontSize: scaleFont(18),
+    lineHeight: scaleFont(24),
   },
   shield: {
     width: 28,
@@ -717,8 +717,8 @@ const styles = StyleSheet.create({
     lineHeight: scaleFont(20),
   },
   sectionTitle: {
-    fontSize: scaleFont(20),
-    lineHeight: scaleFont(28),
+    fontSize: scaleFont(18),
+    lineHeight: scaleFont(24),
   },
   wrap: {
     flexDirection: 'row',
@@ -841,8 +841,8 @@ const styles = StyleSheet.create({
     lineHeight: scaleFont(16),
   },
   feeValue: {
-    fontSize: scaleFont(20),
-    lineHeight: scaleFont(28),
+    fontSize: scaleFont(18),
+    lineHeight: scaleFont(24),
   },
   bookButton: {
     minHeight: 48,

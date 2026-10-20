@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import { useGetMedicineOrderTrackingQuery } from '../store/api/new/medicinesApi';
+import { useAppSelector } from '../store/hooks';
 export type RefillFeeling = 'improved' | 'same' | 'worse' | 'returned';
 
 export type OrderDetailItem = {
@@ -101,10 +103,31 @@ export function useOrderDetailsController({
     'improved',
   );
 
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const numericOrderId = Number(String(orderId).replace(/\D/g, ''));
   const hasValidId = Number.isFinite(numericOrderId) && numericOrderId > 0;
   const canRefill = hasValidId;
-  // blocked: B-028 — order detail payload not fully bound; require real id, no seed doctor/fees.
+
+  const { data: trackingResponse } = useGetMedicineOrderTrackingQuery(numericOrderId, {
+    skip: !isAuthenticated || !hasValidId,
+  });
+
+  const trackingData = trackingResponse?.data;
+  const rawItems = trackingData?.items ?? trackingData?.lines ?? [];
+  const items: OrderDetailItem[] = useMemo(() => {
+    return rawItems.map((item, index) => ({
+      id: item.remedyCode || String(index),
+      nameKey: item.remedyName as TranslationKey,
+      detailKey: [item.potencyCode, item.quantityLabel].filter(Boolean).join(' · ') as TranslationKey,
+      priceLabel: '',
+    }));
+  }, [rawItems]);
+
+  const totalPaidLabel = trackingData?.quoteAmount != null
+    ? `${trackingData.currency ?? '₹'}${trackingData.quoteAmount.toFixed(2)}`
+    : '';
+  const subtotalLabel = totalPaidLabel;
+
   const deliveredLine = hasValidId ? t('orderDetailDeliveredOn') : '';
 
   return {
@@ -112,10 +135,10 @@ export function useOrderDetailsController({
     t,
     orderId: hasValidId ? `#HM-${numericOrderId}` : '',
     deliveredLine,
-    items: [],
-    subtotalLabel: '',
+    items,
+    subtotalLabel,
     deliveryLabel: '',
-    totalPaidLabel: '',
+    totalPaidLabel,
     paymentMethodLine: '',
     rxId: '',
     doctorName: '',

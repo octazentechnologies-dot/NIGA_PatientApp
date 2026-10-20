@@ -479,8 +479,8 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   title: {
-    fontSize: scaleFont(22),
-    lineHeight: scaleFont(28),
+    fontSize: scaleFont(20),
+    lineHeight: scaleFont(26),
   },
   iconButton: {
     width: 48,

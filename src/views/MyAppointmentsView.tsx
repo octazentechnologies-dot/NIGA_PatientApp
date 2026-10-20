@@ -1,3 +1,4 @@
+import { useCallback, useMemo, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import {
   FlatList,
@@ -5,7 +6,6 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
-  TextInput,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,6 +13,7 @@ import { sheetBottomPadding } from '../utilities/sheetInset';
 
 import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
+import { DatePickerSheet } from '../components/DatePickerSheet';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { LoadingState } from '../components/LoadingState';
@@ -23,45 +24,153 @@ import type {
 import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
 import { layout, spacing } from '../theme/spacing';
+import { formatDate, formatLocalDateYmd } from '../utilities/formatters';
+
+function parseYmdToLocalDate(raw: string): Date {
+  const parts = raw.split('-').map(Number);
+  if (parts.length === 3 && parts.every((p) => !Number.isNaN(p))) {
+    return new Date(parts[0], parts[1] - 1, parts[2]);
+  }
+  return new Date();
+}
 
 export function MyAppointmentsView(vm: MyAppointmentsViewModel) {
   const { t } = vm;
   const insets = useSafeAreaInsets();
+  const [pickerTarget, setPickerTarget] = useState<'from' | 'to' | null>(null);
 
-  const listHeader = (
-    <>
-      <View style={styles.dateRow}>
-        <TextInput
-          accessibilityLabel="From date YYYY-MM-DD"
-          placeholder="From (YYYY-MM-DD)"
-          placeholderTextColor={colors.muted}
-          value={vm.fromDate}
-          onChangeText={vm.onFromDateChange}
-          style={styles.dateInput}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-        <TextInput
-          accessibilityLabel="To date YYYY-MM-DD"
-          placeholder="To (YYYY-MM-DD)"
-          placeholderTextColor={colors.muted}
-          value={vm.toDate}
-          onChangeText={vm.onToDateChange}
-          style={styles.dateInput}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-      </View>
-      {vm.appointments.length > 0 ? (
-        <AppButton
-          variant="secondary"
-          label={t('payHistBookConsultation')}
-          onPress={vm.onBookNew}
-          icon={<Ionicons name="add" size={18} color={colors.button} />}
-        />
-      ) : null}
-    </>
+  const pickerValue = useMemo(() => {
+    if (pickerTarget === 'from' && vm.fromDate) {
+      return parseYmdToLocalDate(vm.fromDate);
+    }
+    if (pickerTarget === 'to' && vm.toDate) {
+      return parseYmdToLocalDate(vm.toDate);
+    }
+    if (pickerTarget === 'to' && vm.fromDate) {
+      return parseYmdToLocalDate(vm.fromDate);
+    }
+    return new Date();
+  }, [pickerTarget, vm.fromDate, vm.toDate]);
+
+  const minDate = useMemo(() => {
+    if (pickerTarget === 'to' && vm.fromDate) {
+      return parseYmdToLocalDate(vm.fromDate);
+    }
+    return undefined;
+  }, [pickerTarget, vm.fromDate]);
+
+  const maxDate = useMemo(() => {
+    if (pickerTarget === 'from' && vm.toDate) {
+      return parseYmdToLocalDate(vm.toDate);
+    }
+    return undefined;
+  }, [pickerTarget, vm.toDate]);
+
+  const onConfirmDate = useCallback(
+    (selected: Date) => {
+      const ymd = formatLocalDateYmd(selected);
+      if (pickerTarget === 'from') {
+        vm.onFromDateChange(ymd);
+      } else if (pickerTarget === 'to') {
+        vm.onToDateChange(ymd);
+      }
+      setPickerTarget(null);
+    },
+    [pickerTarget, vm],
   );
+
+  const dateLocale = vm.language === 'mr' ? 'mr-IN' : 'en-IN';
+
+  const dateFilterRow = (
+    <View style={styles.dateFilterContainer}>
+      <View style={styles.dateRow}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Select from date"
+          onPress={() => setPickerTarget('from')}
+          style={[styles.dateButton, Boolean(vm.fromDate) && styles.dateButtonActive]}
+        >
+          <Ionicons
+            name="calendar-outline"
+            size={18}
+            color={vm.fromDate ? colors.primary : colors.muted}
+          />
+          <AppText
+            variant="bodyMd"
+            color={vm.fromDate ? colors.ink : colors.muted}
+            style={styles.dateText}
+            numberOfLines={1}
+          >
+            {vm.fromDate
+              ? formatDate(vm.fromDate, dateLocale) ?? vm.fromDate
+              : 'From (Date)'}
+          </AppText>
+          {vm.fromDate ? (
+            <Pressable
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Clear from date"
+              onPress={(e) => {
+                e.stopPropagation?.();
+                vm.onFromDateChange('');
+              }}
+              style={styles.clearHit}
+            >
+              <Ionicons name="close-circle" size={16} color={colors.muted} />
+            </Pressable>
+          ) : null}
+        </Pressable>
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Select to date"
+          onPress={() => setPickerTarget('to')}
+          style={[styles.dateButton, Boolean(vm.toDate) && styles.dateButtonActive]}
+        >
+          <Ionicons
+            name="calendar-outline"
+            size={18}
+            color={vm.toDate ? colors.primary : colors.muted}
+          />
+          <AppText
+            variant="bodyMd"
+            color={vm.toDate ? colors.ink : colors.muted}
+            style={styles.dateText}
+            numberOfLines={1}
+          >
+            {vm.toDate
+              ? formatDate(vm.toDate, dateLocale) ?? vm.toDate
+              : 'To (Date)'}
+          </AppText>
+          {vm.toDate ? (
+            <Pressable
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Clear to date"
+              onPress={(e) => {
+                e.stopPropagation?.();
+                vm.onToDateChange('');
+              }}
+              style={styles.clearHit}
+            >
+              <Ionicons name="close-circle" size={16} color={colors.muted} />
+            </Pressable>
+          ) : null}
+        </Pressable>
+      </View>
+    </View>
+  );
+
+  const listHeader = vm.appointments.length > 0 ? (
+    <View style={styles.listHeaderWrap}>
+      <AppButton
+        variant="secondary"
+        label={t('payHistBookConsultation')}
+        onPress={vm.onBookNew}
+        icon={<Ionicons name="add" size={18} color={colors.button} />}
+      />
+    </View>
+  ) : null;
 
   return (
     <View style={styles.root}>
@@ -126,6 +235,7 @@ export function MyAppointmentsView(vm: MyAppointmentsViewModel) {
             );
           })}
         </ScrollView>
+        {dateFilterRow}
       </View>
 
       {vm.isLoading ? (
@@ -138,7 +248,11 @@ export function MyAppointmentsView(vm: MyAppointmentsViewModel) {
       ) : vm.isEmpty ? (
         <EmptyState
           title={t('doctorsNoBookings')}
-          body=""
+          body={
+            vm.fromDate || vm.toDate
+              ? 'No appointments found for the selected dates.'
+              : ''
+          }
           actionLabel={t('payHistBookConsultation')}
           onAction={vm.onBookNew}
         />
@@ -180,6 +294,18 @@ export function MyAppointmentsView(vm: MyAppointmentsViewModel) {
           }
         />
       )}
+
+      <DatePickerSheet
+        visible={pickerTarget !== null}
+        value={pickerValue}
+        minimumDate={minDate}
+        maximumDate={maxDate}
+        locale={dateLocale}
+        cancelLabel={t('cancel')}
+        doneLabel={t('done')}
+        onCancel={() => setPickerTarget(null)}
+        onConfirm={onConfirmDate}
+      />
     </View>
   );
 }
@@ -315,20 +441,40 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
+  dateFilterContainer: {
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.sm,
+  },
   dateRow: {
     flexDirection: 'row',
     gap: spacing.sm,
+  },
+  listHeaderWrap: {
     marginBottom: spacing.md,
   },
-  dateInput: {
+  dateButton: {
     flex: 1,
     minHeight: layout.buttonHeight,
     borderWidth: 1,
     borderColor: colors.outlineVariant,
     borderRadius: radii.sm,
     paddingHorizontal: spacing.sm,
-    color: colors.ink,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
     backgroundColor: colors.card,
+  },
+  dateButtonActive: {
+    borderColor: colors.primary,
+  },
+  dateText: {
+    flex: 1,
+    fontSize: 13,
+  },
+  clearHit: {
+    padding: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   flex: {
     flex: 1,

@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   statusWeight: {
-    fontWeight: '700',
+    fontWeight: '600',
   },
   actions: {
     gap: spacing.sm,
