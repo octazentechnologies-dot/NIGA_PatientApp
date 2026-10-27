@@ -9,10 +9,15 @@ import {
 } from '../store/api/new/recordsApi';
 
 export type PrescriptionMedicine = {
+  name: string;
   nameKey: TranslationKey;
+  dose: string;
   doseKey: TranslationKey;
+  time: string;
   timeKey: TranslationKey;
+  duration: string;
   durationKey: TranslationKey;
+  note: string;
   noteKey: TranslationKey;
   noteAlert?: boolean;
 };
@@ -22,6 +27,13 @@ export type PrescriptionViewModel = {
   t: (key: TranslationKey) => string;
   medicines: PrescriptionMedicine[];
   adviceKeys: TranslationKey[];
+  doctorName: string;
+  doctorCredentials: string;
+  doctorInitials: string;
+  patientName: string;
+  rxNumber: string;
+  rxDate: string;
+  status: string;
   loading: boolean;
   isError: boolean;
   isEmpty: boolean;
@@ -55,6 +67,12 @@ function messageForPdfError(err: unknown): string {
 export function usePrescriptionController({
   patientAppId,
   erxSnapshotId: erxSnapshotIdProp,
+  doctorName: doctorNameProp,
+  doctorCredentials: doctorCredentialsProp,
+  doctorInitials: doctorInitialsProp,
+  patientName: patientNameProp,
+  diagnosis: _diagnosisProp,
+  appointmentDate: appointmentDateProp,
   onBack,
   onOrder,
 }: {
@@ -62,6 +80,12 @@ export function usePrescriptionController({
   patientAppId?: number | string | null;
   /** Prefer explicit snapshot id from visit detail when available. */
   erxSnapshotId?: number | string | null;
+  doctorName?: string | null;
+  doctorCredentials?: string | null;
+  doctorInitials?: string | null;
+  patientName?: string | null;
+  diagnosis?: string | null;
+  appointmentDate?: string | null;
   onBack: () => void;
   onOrder?: () => void;
 }): PrescriptionViewModel {
@@ -134,31 +158,100 @@ export function usePrescriptionController({
 
   const medicines = useMemo<PrescriptionMedicine[]>(() => {
     const items = data?.data?.items;
-    if (!Array.isArray(items)) return [];
-    return items.map((item) => ({
-      nameKey: (item.remedyName || item.remedyCode || '') as TranslationKey,
-      doseKey: (item.dose || '') as TranslationKey,
-      timeKey: (item.frequency || '') as TranslationKey,
-      durationKey: (item.duration || '') as TranslationKey,
-      noteKey: (item.instructions || '') as TranslationKey,
-    }));
+    if (Array.isArray(items) && items.length > 0) {
+      return items.map((item) => {
+        const remedyName = item.remedyName?.trim();
+        const remedyCode = item.remedyCode?.trim();
+        const potency = item.potencyCode?.trim();
+        let name = '';
+        if (remedyName) {
+          name = potency ? `${remedyName} (${potency})` : remedyName;
+        } else if (remedyCode) {
+          name = potency ? `${remedyCode} (${potency})` : remedyCode;
+        } else {
+          name = 'Remedy';
+        }
+        const dose = item.dose?.trim() || '-';
+        const time = item.frequency?.trim() || '-';
+        const duration = item.duration?.trim() || '-';
+        const note = item.instructions?.trim() || '-';
+
+        return {
+          name,
+          nameKey: name as TranslationKey,
+          dose,
+          doseKey: dose as TranslationKey,
+          time,
+          timeKey: time as TranslationKey,
+          duration,
+          durationKey: duration as TranslationKey,
+          note,
+          noteKey: note as TranslationKey,
+        };
+      });
+    }
+    return [];
   }, [data?.data?.items]);
 
   const adviceKeys = useMemo<TranslationKey[]>(() => {
-    if (data?.data?.notesIncluded) {
-      return [];
-    }
     return [];
-  }, [data?.data?.notesIncluded]);
+  }, []);
+
+  const rxNumber = useMemo(() => {
+    if (data?.data?.erxSnapshotId) {
+      return `RX-${data.data.erxSnapshotId}`;
+    }
+    if (erxSnapshotId) {
+      return `RX-${erxSnapshotId}`;
+    }
+    if (id) {
+      return `RX-${id}`;
+    }
+    return t('rxNumber');
+  }, [data?.data?.erxSnapshotId, erxSnapshotId, id, t]);
+
+  const rxDate = useMemo(() => {
+    const raw = data?.data?.signedAt;
+    if (raw && !isNaN(Date.parse(raw))) {
+      return new Date(raw).toLocaleDateString(
+        language === 'mr' ? 'mr-IN' : 'en-IN',
+        { day: 'numeric', month: 'short', year: 'numeric' },
+      );
+    }
+    return appointmentDateProp || t('rxDate');
+  }, [data?.data?.signedAt, appointmentDateProp, language, t]);
+
+  const doctorName = doctorNameProp || '';
+  const doctorCredentials = doctorCredentialsProp || '';
+  const doctorInitials =
+    doctorInitialsProp ||
+    (doctorName
+      ? doctorName
+          .split(' ')
+          .filter(Boolean)
+          .map((w) => w[0])
+          .slice(0, 2)
+          .join('')
+          .toUpperCase()
+      : 'DR');
+  const patientName = patientNameProp || '';
+  const status = data?.data?.status || 'SIGNED';
 
   return {
     language,
     t,
     medicines,
     adviceKeys,
+    doctorName,
+    doctorCredentials,
+    doctorInitials,
+    patientName,
+    rxNumber,
+    rxDate,
+    status,
     loading: id != null && (isLoading || isFetching),
     isError: id != null && isError,
-    isEmpty: id == null || (!isLoading && !isError && medicines.length === 0),
+    isEmpty: id != null && !isLoading && !isFetching && !isError && medicines.length === 0,
     onBack,
     onShare: () => {
       void openPdf('share');

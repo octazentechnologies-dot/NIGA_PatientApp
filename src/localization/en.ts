@@ -841,6 +841,8 @@ export const en: TranslationMap = {
   aptReasonCough: 'Dry cough for 3 days',
   aptDocuments: 'Attached documents',
   aptAddDocument: '+ Add documents',
+  aptAddPrescription: 'Add Prescription',
+  aptViewPrescription: 'View Prescription',
   aptNoDocuments: 'Nothing attached',
   aptPaidAmount: '{amount} paid',
   aptReceipt: 'Receipt',
@@ -2151,6 +2153,9 @@ export const en: TranslationMap = {
   clinicAptCheckInBody:
     "Check in from within 200 m of the clinic so the doctor knows you're here.",
   clinicAptCheckInCta: 'Check in',
+  clinicAptCheckedInTitle: 'You are checked in.',
+  clinicAptCheckedInBody:
+    'Please have a seat in the waiting area. The doctor will call you shortly.',
   clinicAptBringTitle: 'What to bring',
   clinicAptBring1: 'Your past prescriptions',
   clinicAptBring2: 'Any reports you have',

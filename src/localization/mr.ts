@@ -839,6 +839,8 @@ export const mr: TranslationMap = {
   aptReasonCough: '३ दिवसांपासून कोरडा खोकला',
   aptDocuments: 'जोडलेली कागदपत्रे',
   aptAddDocument: '+ दस्तऐवज जोडा',
+  aptAddPrescription: 'प्रिस्क्रिप्शन जोडा',
+  aptViewPrescription: 'प्रिस्क्रिप्शन पहा',
   aptNoDocuments: 'काहीही जोडलेले नाही',
   aptPaidAmount: '{amount} भरले',
   aptReceipt: 'पावती',
@@ -2149,6 +2151,9 @@ export const mr: TranslationMap = {
   clinicAptCheckInBody:
     'क्लिनिकच्या २०० मी आत चेक-इन करा जेणेकरून डॉक्टरांना कळेल की तुम्ही आलात.',
   clinicAptCheckInCta: 'चेक-इन',
+  clinicAptCheckedInTitle: 'तुम्ही चेक-इन केले आहे.',
+  clinicAptCheckedInBody:
+    'कृपया प्रतीक्षा कक्षात बसा. डॉक्टर लवकरच तुम्हाला बोलवतील.',
   clinicAptBringTitle: 'काय आणावे',
   clinicAptBring1: 'तुमची जुनी प्रिस्क्रिप्शन',
   clinicAptBring2: 'तुमच्याकडे असलेले अहवाल',

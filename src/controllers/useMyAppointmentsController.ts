@@ -99,10 +99,10 @@ function mapVisitToRow(
   const statusUpper = (item.status || '').toUpperCase();
   const aptStatus: AppointmentRequestStatus =
     statusUpper === 'NOT ARRIVED' ||
-    statusUpper === 'WAITING' ||
-    statusUpper === 'E-CONSULT' ||
-    statusUpper === 'REMAINING' ||
-    statusUpper === 'WALK-IN'
+      statusUpper === 'WAITING' ||
+      statusUpper === 'E-CONSULT' ||
+      statusUpper === 'REMAINING' ||
+      statusUpper === 'WALK-IN'
       ? 'confirmed'
       : 'waiting_acceptance';
 
@@ -133,6 +133,7 @@ function mapVisitToRow(
     paymentId: '',
     reasonKey: '' as TranslationKey,
     status: aptStatus,
+    visitStatus: item.status,
     visitStatusLabel: visual.label,
     visitStatusColor: visual.color,
     visitStatusBg: visual.background,
@@ -189,7 +190,30 @@ export function useMyAppointmentsController({
   }, [visitsResponse]);
 
   useEffect(() => {
-    const mapped = pageItems.items.map((row) => mapVisitToRow(row, patientLabel));
+    const filtered = pageItems.items.filter((item) => {
+      const payStatus = (
+        (item as { paymentStatus?: string }).paymentStatus || ''
+      ).toUpperCase();
+      if (
+        payStatus === 'FAILED' ||
+        payStatus === 'CANCELLED' ||
+        payStatus === 'UNPAID'
+      ) {
+        return false;
+      }
+      // Online payments (Tele or InClinic) MUST be PAID/CAPTURED to appear as confirmed bookings.
+      const isOnlineTele = Boolean(item.isTele || item.consultMode === 'Tele');
+      const isPayAtClinic = Boolean(
+        !isOnlineTele &&
+          ((item as { payAtClinicAllowed?: boolean }).payAtClinicAllowed === true ||
+            payStatus === 'PAY_AT_CLINIC'),
+      );
+      if (payStatus === 'PENDING' && !isPayAtClinic) {
+        return false;
+      }
+      return true;
+    });
+    const mapped = filtered.map((row) => mapVisitToRow(row, patientLabel));
     setAccumulated((prev) => {
       if (pageNumber <= 1) {
         if (

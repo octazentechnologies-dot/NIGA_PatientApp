@@ -33,12 +33,16 @@ export type PaymentStatusDraft = {
   paymentOrderId: number | null;
   /** Visit id from hold — aligns local row with Visits refetch. */
   patientAppId?: number | null;
+  failReason?: string | null;
+  errorMessage?: string | null;
 };
 
 export type PaymentStatusViewModel = {
   language: AppLanguage;
   t: (key: TranslationKey) => string;
   status: PaymentStatus;
+  failReason?: string | null;
+  errorMessage?: string | null;
   doctorName: string;
   doctorInitials: string;
   specialtyLine: string;
@@ -64,6 +68,7 @@ export function usePaymentStatusController({
   active,
   onConfirmBooking,
   onCloseSuccess,
+  onCloseFailure,
   onRetry,
   onChooseMethod,
   onChooseSlot,
@@ -73,6 +78,7 @@ export function usePaymentStatusController({
   active: boolean;
   onConfirmBooking: (item: BookedAppointment) => void;
   onCloseSuccess: () => void;
+  onCloseFailure?: () => void;
   onRetry: () => void;
   onChooseMethod: () => void;
   onChooseSlot: () => void;
@@ -86,6 +92,33 @@ export function usePaymentStatusController({
       confirmed.current = false;
     }
   }, [active]);
+
+  useEffect(() => {
+    if (active && draft.status === 'failed') {
+      const reason =
+        draft.failReason ||
+        draft.errorMessage ||
+        'Bank declined the transaction (default / gateway failure)';
+      console.log('🚨 [PaymentStatusView / Failed Screen] Booking Failed Reason:', {
+        reason,
+        doctorId: draft.doctorId,
+        doctorName: draft.doctorName,
+        patientAppId: draft.patientAppId,
+        paymentOrderId: draft.paymentOrderId,
+        whenLabel: draft.whenLabel,
+      });
+    }
+  }, [
+    active,
+    draft.status,
+    draft.failReason,
+    draft.errorMessage,
+    draft.doctorId,
+    draft.doctorName,
+    draft.patientAppId,
+    draft.paymentOrderId,
+    draft.whenLabel,
+  ]);
 
   useEffect(() => {
     // Optimistic local row only until Visits refetch (CAPTURED invalidates Visits).
@@ -143,6 +176,8 @@ export function usePaymentStatusController({
     language,
     t,
     status: draft.status,
+    failReason: draft.failReason ?? draft.errorMessage ?? null,
+    errorMessage: draft.errorMessage ?? draft.failReason ?? null,
     doctorName: draft.doctorName,
     doctorInitials: draft.doctorInitials,
     specialtyLine: draft.experienceKey
@@ -158,7 +193,10 @@ export function usePaymentStatusController({
     holdMoreLabel: t('payStatusHoldMore')
       .replace('{slot}', draft.slotTimeLabel)
       .replace('{time}', formatHoldTime(draft.holdSeconds)),
-    onClose: onCloseSuccess,
+    onClose:
+      draft.status === 'failed' && onCloseFailure
+        ? onCloseFailure
+        : onCloseSuccess,
     onViewAppointment: onCloseSuccess,
     onAddCalendar: () => undefined,
     onDownloadReceipt: () => undefined,

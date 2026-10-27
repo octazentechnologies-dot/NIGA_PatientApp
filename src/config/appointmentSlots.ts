@@ -13,6 +13,9 @@ export type BookingMember = {
   age?: number;
   gender?: number | string;
   self?: boolean;
+  memberPatientId?: number;
+  familyMemberId?: number;
+  patientId?: number;
 };
 
 export type TimeSlot = {
@@ -50,6 +53,7 @@ export function resolveBookingMembers(
   userName?: string | null,
   userInitials?: string | null,
   familyMembers?: ApiFamilyMember[] | null,
+  selfPatientId?: number | null,
 ): BookingMember[] {
   const cleanName = userName?.trim() || 'Self';
   const initials =
@@ -63,12 +67,19 @@ export function resolveBookingMembers(
       .toUpperCase() ||
     'ME';
 
+  const resolvedSelfPatientId =
+    typeof selfPatientId === 'number' && selfPatientId > 0
+      ? selfPatientId
+      : Number(selfPatientId) || undefined;
+
   const selfMember: BookingMember = {
     id: 'self',
     name: cleanName,
     initials,
     icon: 'person',
     self: true,
+    patientId: resolvedSelfPatientId,
+    memberPatientId: resolvedSelfPatientId,
   };
 
   if (!familyMembers || !Array.isArray(familyMembers) || familyMembers.length === 0) {
@@ -76,16 +87,30 @@ export function resolveBookingMembers(
   }
 
   const mappedMembers: BookingMember[] = familyMembers.map((m, index) => {
-    const id = String(m.familyMemberId ?? m.id ?? m.memberPatientId ?? `fam_${index}`);
+    // Keep familyMemberId and memberPatientId distinct
+    const rawMemberPatientId =
+      typeof m.memberPatientId === 'number' && m.memberPatientId > 0
+        ? m.memberPatientId
+        : typeof m.patientId === 'number' && m.patientId > 0
+          ? m.patientId
+          : Number(m.memberPatientId ?? m.patientId) || undefined;
+
+    const rawFamilyMemberId =
+      typeof m.familyMemberId === 'number' && m.familyMemberId > 0
+        ? m.familyMemberId
+        : Number(m.familyMemberId) || undefined;
+
+    // Prioritize memberPatientId for family booking contract (§E8 POST /api/Family/BookAs)
+    const id = String(rawMemberPatientId ?? rawFamilyMemberId ?? m.id ?? `fam_${index}`);
     const mName = (m.patientName || m.fullName || m.name || '').trim();
     const mInitials = mName
       ? mName
-          .split(' ')
-          .filter(Boolean)
-          .map((w) => w[0])
-          .join('')
-          .slice(0, 2)
-          .toUpperCase()
+        .split(' ')
+        .filter(Boolean)
+        .map((w) => w[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase()
       : 'FM';
     const rel = (m.relation || m.relationName || m.relationship || '').trim();
     const age = typeof m.age === 'number' ? m.age : undefined;
@@ -111,6 +136,9 @@ export function resolveBookingMembers(
       relationshipName: rel,
       age,
       self: false,
+      memberPatientId: rawMemberPatientId,
+      familyMemberId: rawFamilyMemberId,
+      patientId: rawMemberPatientId,
     };
   });
 

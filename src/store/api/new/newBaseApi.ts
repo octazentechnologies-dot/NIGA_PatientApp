@@ -49,7 +49,8 @@ export const baseQueryWithReauth: BaseQueryFn<
       url.includes('Account/RefreshToken') ||
       url.includes('Account/Logout') ||
       url.includes('PatientAuth/RequestOtp') ||
-      url.includes('PatientAuth/VerifyOtp');
+      url.includes('PatientAuth/VerifyOtp') ||
+      url.includes('Payments/ConsultOrders');
 
     if (!isAuthRoute) {
       // No stored token → not a logged-in session (first install / already signed out).

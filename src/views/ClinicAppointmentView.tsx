@@ -8,7 +8,13 @@ import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
 import { CancelAppointmentSheet } from '../components/CancelAppointmentSheet';
 import { ClinicMapPreview } from '../components/ClinicMapPreview';
+import { SafeAreaModal } from '../components/SafeAreaModal';
+import { SelectExistingDocumentSheet } from '../components/SelectExistingDocumentSheet';
 import type { AppointmentDetailViewModel } from '../controllers/useAppointmentDetailController';
+import { usePrescriptionController } from '../controllers/usePrescriptionController';
+import { useUploadDocumentController } from '../controllers/useUploadDocumentController';
+import { PrescriptionView } from './PrescriptionView';
+import { UploadDocumentView } from './UploadDocumentView';
 import { radii } from '../theme/radii';
 import { spacing } from '../theme/spacing';
 
@@ -29,9 +35,56 @@ type ClinicAppointmentViewModel = AppointmentDetailViewModel & {
 
 export function ClinicAppointmentView(vm: ClinicAppointmentViewModel) {
   const insets = useSafeAreaInsets();
+  const upload = useUploadDocumentController({
+    active: vm.uploadOpen,
+    onClose: vm.onCloseUpload,
+    onSaved: vm.onUploadSaved,
+  });
+  const prescription = usePrescriptionController({
+    patientAppId: vm.id,
+    erxSnapshotId: vm.erxSnapshotId,
+    doctorName: vm.doctorName,
+    doctorCredentials: vm.credentials,
+    doctorInitials: vm.doctorInitials,
+    patientName: vm.patientLabel,
+    diagnosis: vm.reason,
+    appointmentDate: vm.dateLine,
+    onBack: vm.onClosePrescription,
+    onOrder: () => {
+      vm.onClosePrescription();
+      vm.onOrderMedicines?.();
+    },
+  });
 
   return (
     <View style={styles.root}>
+      <SafeAreaModal
+        visible={vm.uploadOpen}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={vm.onCloseUpload}
+      >
+        <UploadDocumentView {...upload} />
+      </SafeAreaModal>
+      <SafeAreaModal
+        visible={vm.prescriptionOpen}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={vm.onClosePrescription}
+      >
+        <PrescriptionView {...prescription} />
+      </SafeAreaModal>
+      <SelectExistingDocumentSheet
+        open={vm.selectSheetOpen}
+        documents={vm.libraryDocuments}
+        selectedId={vm.selectedLibraryId}
+        t={vm.t}
+        language={vm.language}
+        onClose={vm.onCloseSelectSheet}
+        onSelect={vm.onSelectExistingDocument}
+        onUploadNew={vm.onUploadNewFromSheet}
+      />
+
       <View style={[styles.header, { paddingTop: Math.max(insets.top, spacing.sm) }]}>
         <View style={styles.headerRow}>
           <Pressable
@@ -56,12 +109,47 @@ export function ClinicAppointmentView(vm: ClinicAppointmentViewModel) {
           { paddingBottom: 28 + sheetBottomPadding(insets, spacing.md) },
         ]}
       >
-        <View style={styles.banner}>
-          <Ionicons name="checkmark-circle" size={22} color={colors.success} />
-          <AppText variant="labelMd" color={colors.success} weightOverride="600" style={styles.flex}>
-            {vm.clinicBannerLabel}
-          </AppText>
-        </View>
+        {vm.isCancelled ? (
+          <View style={[styles.banner, styles.bannerCancelled]}>
+            <Ionicons name="close-circle" size={22} color={colors.error} />
+            <AppText variant="labelMd" color={colors.error} weightOverride="600" style={styles.flex}>
+              {vm.t('cancelledTitle')}
+            </AppText>
+          </View>
+        ) : !vm.isCompleted ? (
+          <View style={styles.banner}>
+            <Ionicons name="checkmark-circle" size={22} color={colors.success} />
+            <AppText variant="labelMd" color={colors.success} weightOverride="600" style={styles.flex}>
+              {vm.clinicBannerLabel}
+            </AppText>
+          </View>
+        ) : null}
+
+        {vm.isCheckedIn && !vm.isCompleted && !vm.isCancelled ? (
+          <View style={styles.checkedInCard}>
+            <View style={styles.checkedInHeader}>
+              <Ionicons name="checkmark-circle" size={24} color={colors.success} />
+              <View style={styles.flex}>
+                <AppText variant="titleMd" color={colors.ink} weightOverride="700">
+                  {vm.t('clinicAptCheckedInTitle')}
+                </AppText>
+                <AppText variant="bodyMd" color={colors.muted}>
+                  {vm.checkedInAtLabel
+                    ? vm.t('clinicCheckInCheckedAt').replace('{time}', vm.checkedInAtLabel)
+                    : vm.t('clinicAptCheckedInBody')}
+                </AppText>
+              </View>
+            </View>
+            {vm.queuePosition != null ? (
+              <View style={styles.checkedInBadge}>
+                <Ionicons name="people" size={16} color={colors.primaryOutline} />
+                <AppText variant="labelSm" color={colors.ink} weightOverride="600">
+                  {vm.t('clinicCheckInQueue').replace('{n}', String(vm.queuePosition))}
+                </AppText>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
 
         {vm.clinicName || vm.clinicAddress ? (
           <View style={styles.card}>
@@ -157,6 +245,19 @@ export function ClinicAppointmentView(vm: ClinicAppointmentViewModel) {
 
           <DetailRow label={vm.t('clinicAptWhen')} value={vm.whenLabel} />
           <DetailRow label={vm.t('clinicAptType')} value={vm.modeConsultLabel} />
+          {vm.isCheckedIn && !vm.isCompleted && !vm.isCancelled ? (
+            <View style={styles.detailRow}>
+              <AppText variant="bodyMd" color={colors.muted}>
+                {vm.t('clinicCheckInLabel')}
+              </AppText>
+              <View style={styles.checkedInPill}>
+                <Ionicons name="checkmark-circle" size={14} color={colors.success} />
+                <AppText variant="labelSm" color={colors.success} weightOverride="600">
+                  {vm.t('clinicAptCheckedInTitle')}
+                </AppText>
+              </View>
+            </View>
+          ) : null}
           <DetailRow label={vm.t('clinicAptPatient')} value={vm.patientLabel} />
           <DetailRow label={vm.t('clinicAptBookingId')} value={vm.bookingId} />
           {vm.clinicFeeAmount ? (
@@ -205,15 +306,26 @@ export function ClinicAppointmentView(vm: ClinicAppointmentViewModel) {
           </View>
         ) : null}
 
-        <View style={styles.card}>
-          <AppText variant="headlineMd" color={colors.ink}>
-            {vm.t('clinicAptCheckInTitle')}
-          </AppText>
-          <AppText variant="bodyMd" color={colors.muted}>
-            {vm.t('clinicAptCheckInBody')}
-          </AppText>
-          <AppButton label={vm.t('clinicAptCheckInCta')} onPress={vm.onOpenCheckIn} />
-        </View>
+        {vm.isCompleted ? (
+          vm.hasPrescription ? (
+            <View style={styles.card}>
+              <AppButton
+                label={vm.t('aptViewPrescription')}
+                onPress={vm.onOpenPrescription}
+              />
+            </View>
+          ) : null
+        ) : !vm.isCheckedIn && !vm.isCancelled && vm.phase !== 'ended' ? (
+          <View style={styles.card}>
+            <AppText variant="headlineMd" color={colors.ink}>
+              {vm.t('clinicAptCheckInTitle')}
+            </AppText>
+            <AppText variant="bodyMd" color={colors.muted}>
+              {vm.t('clinicAptCheckInBody')}
+            </AppText>
+            <AppButton label={vm.t('clinicCheckInNowCta')} onPress={vm.onOpenCheckIn} />
+          </View>
+        ) : null}
 
         <View style={styles.card}>
           <AppText variant="headlineMd" color={colors.ink}>
@@ -236,36 +348,40 @@ export function ClinicAppointmentView(vm: ClinicAppointmentViewModel) {
           ))}
         </View>
 
-        <View style={styles.footerActions}>
-          <Pressable
-            accessibilityRole="button"
-            onPress={vm.onChangeTime}
-            style={styles.outlineBtn}
-          >
-            <AppText variant="labelMd" color={colors.primaryOutline} weightOverride="600">
-              {vm.t('clinicAptReschedule')}
-            </AppText>
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            onPress={vm.onCancel}
-            style={styles.outlineBtn}
-          >
-            <AppText variant="labelMd" color={colors.primaryOutline} weightOverride="600">
-              {vm.t('clinicAptCancel')}
-            </AppText>
-          </Pressable>
-        </View>
+        {!vm.isCompleted && !vm.isCancelled ? (
+          <View style={styles.footerActions}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={vm.onChangeTime}
+              style={styles.outlineBtn}
+            >
+              <AppText variant="labelMd" color={colors.primaryOutline} weightOverride="600">
+                {vm.t('clinicAptReschedule')}
+              </AppText>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              onPress={vm.onCancel}
+              style={styles.outlineBtn}
+            >
+              <AppText variant="labelMd" color={colors.primaryOutline} weightOverride="600">
+                {vm.t('clinicAptCancel')}
+              </AppText>
+            </Pressable>
+          </View>
+        ) : null}
 
-        <Pressable
-          accessibilityRole="button"
-          onPress={vm.onSwitchOnline}
-          style={styles.switchLink}
-        >
-          <AppText variant="labelMd" color={colors.primaryOutline} weightOverride="600">
-            {vm.t('clinicAptSwitchOnline')}
-          </AppText>
-        </Pressable>
+        {!vm.isCompleted && !vm.isCancelled ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={vm.onSwitchOnline}
+            style={styles.switchLink}
+          >
+            <AppText variant="labelMd" color={colors.primaryOutline} weightOverride="600">
+              {vm.t('clinicAptSwitchOnline')}
+            </AppText>
+          </Pressable>
+        ) : null}
       </ScrollView>
 
       <CancelAppointmentSheet
@@ -364,6 +480,33 @@ const styles = StyleSheet.create({
     borderRadius: radii.default,
     padding: spacing.md,
   },
+  bannerCancelled: {
+    backgroundColor: colors.errorContainer,
+  },
+  checkedInCard: {
+    backgroundColor: colors.successContainer,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
+    borderRadius: radii.default,
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  checkedInHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
+  checkedInBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.card,
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: radii.full,
+    marginTop: spacing.xs,
+  },
   card: {
     backgroundColor: colors.card,
     borderWidth: 1,
@@ -457,6 +600,15 @@ const styles = StyleSheet.create({
     borderColor: colors.outlineVariant,
     backgroundColor: colors.page,
     paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  checkedInPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.successContainer,
+    borderRadius: radii.full,
+    paddingHorizontal: 8,
     paddingVertical: 4,
   },
   bringRow: {

@@ -23,6 +23,8 @@ export type BookedAppointment = {
   paymentId: string;
   reasonKey: TranslationKey;
   status: AppointmentRequestStatus;
+  /** Server visit status e.g. 'COMPLETED', 'WAITING', 'NOT ARRIVED', etc. */
+  visitStatus?: string;
   /** From Home / Visits — PENDING | PAID | … */
   paymentStatus?: string;
   payAtClinicAllowed?: boolean;

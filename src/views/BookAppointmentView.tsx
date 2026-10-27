@@ -36,8 +36,8 @@ const ICON_BLUE = colors.primary;
 const MODES: { id: ConsultMode; icon: keyof typeof Ionicons.glyphMap; labelKey: TranslationKey }[] =
   [
     { id: 'video', icon: 'videocam-outline', labelKey: 'bookVideo' },
-    { id: 'audio', icon: 'call-outline', labelKey: 'bookAudio' },
-    { id: 'chat', icon: 'chatbubble-outline', labelKey: 'bookChat' },
+    // { id: 'audio', icon: 'call-outline', labelKey: 'bookAudio' },
+    // { id: 'chat', icon: 'chatbubble-outline', labelKey: 'bookChat' },
     { id: 'clinic', icon: 'business-outline', labelKey: 'bookClinic' },
   ];
 

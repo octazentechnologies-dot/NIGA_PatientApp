@@ -9,6 +9,7 @@ export type CreateBookingRequest = {
   appointmentTime: string; // HH:mm
   consultMode: 'Tele' | 'InClinic';
   visitType: 'Tele' | 'InClinic';
+  isTele?: boolean;
   bookingSessionId?: number;
   consentPolicyVersion?: string;
   payAtClinic?: boolean;
@@ -26,11 +27,14 @@ export type BookAsFamilyRequest = {
   doctorId: number;
   appointmentDate: string; // yyyy-MM-dd
   appointmentTime: string; // HH:mm
+  visitType?: 'Tele' | 'InClinic' | string;
   consultMode?: 'Tele' | 'InClinic';
+  isTele?: boolean;
   userId?: number;
   payAtClinic?: boolean;
   razorpay_order_id?: string | null;
   razorpay_payment_id?: string | null;
+  patientName?: string;
 };
 
 export type BookingHoldData = {
@@ -140,23 +144,33 @@ export const bookingApi = newBaseApi.injectEndpoints({
   overrideExisting: true,
   endpoints: (build) => ({
     createBooking: build.mutation<BookingResponse, CreateBookingRequest>({
-      query: ({ doctorId, idempotencyKey, ...body }) => ({
-        url: `api/Public/Doctors/${doctorId}/Bookings`,
-        method: 'POST',
-        body,
-        headers: idempotencyKey
-          ? { 'Idempotency-Key': idempotencyKey }
-          : undefined,
-      }),
-      invalidatesTags: ['Visits', 'VisitDetail', 'Slots', 'Bookings'],
+      query: ({ doctorId, idempotencyKey, ...body }) => {
+        return {
+          url: `api/Public/Doctors/${doctorId}/Bookings`,
+          method: 'POST',
+          body,
+          headers: idempotencyKey
+            ? { 'Idempotency-Key': idempotencyKey }
+            : undefined,
+        };
+      },
+      invalidatesTags: (_result, _error, arg) =>
+        arg?.payAtClinic
+          ? ['Visits', 'VisitDetail', 'Slots', 'Bookings']
+          : ['Slots', 'Bookings'],
     }),
     bookAsFamily: build.mutation<BookingResponse, BookAsFamilyRequest>({
-      query: (body) => ({
-        url: 'api/Family/BookAs',
-        method: 'POST',
-        body,
-      }),
-      invalidatesTags: ['Visits', 'VisitDetail', 'Slots', 'Bookings'],
+      query: (body) => {
+        return {
+          url: 'api/Family/BookAs',
+          method: 'POST',
+          body,
+        };
+      },
+      invalidatesTags: (_result, _error, arg) =>
+        arg?.payAtClinic
+          ? ['Visits', 'VisitDetail', 'Slots', 'Bookings']
+          : ['Slots', 'Bookings'],
     }),
     getBookingByToken: build.query<BookingDetailResponse, string>({
       query: (bookingToken) => `api/Public/Bookings/${bookingToken}`,

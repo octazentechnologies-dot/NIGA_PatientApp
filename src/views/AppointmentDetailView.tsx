@@ -5,15 +5,18 @@ import { SafeAreaModal } from '../components/SafeAreaModal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sheetBottomPadding } from '../utilities/sheetInset';
 
+import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
 import { CancelAppointmentSheet } from '../components/CancelAppointmentSheet';
 import { SelectExistingDocumentSheet } from '../components/SelectExistingDocumentSheet';
 import type { AppointmentDetailViewModel } from '../controllers/useAppointmentDetailController';
+import { usePrescriptionController } from '../controllers/usePrescriptionController';
 import { useUploadDocumentController } from '../controllers/useUploadDocumentController';
 import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
 import { layout, spacing } from '../theme/spacing';
 import { scaleFont } from '../utilities/scale';
+import { PrescriptionView } from './PrescriptionView';
 import { UploadDocumentView } from './UploadDocumentView';
 
 const ICON_BLUE = colors.primary;
@@ -28,6 +31,21 @@ export function AppointmentDetailView(vm: AppointmentDetailViewModel) {
     onClose: vm.onCloseUpload,
     onSaved: vm.onUploadSaved,
   });
+  const prescription = usePrescriptionController({
+    patientAppId: vm.id,
+    erxSnapshotId: vm.erxSnapshotId,
+    doctorName: vm.doctorName,
+    doctorCredentials: vm.credentials,
+    doctorInitials: vm.doctorInitials,
+    patientName: vm.patientLabel,
+    diagnosis: vm.reason,
+    appointmentDate: vm.dateLine,
+    onBack: vm.onClosePrescription,
+    onOrder: () => {
+      vm.onClosePrescription();
+      vm.onOrderMedicines?.();
+    },
+  });
 
   return (
     <View style={styles.root}>
@@ -38,6 +56,14 @@ export function AppointmentDetailView(vm: AppointmentDetailViewModel) {
         onRequestClose={vm.onCloseUpload}
       >
         <UploadDocumentView {...upload} />
+      </SafeAreaModal>
+      <SafeAreaModal
+        visible={vm.prescriptionOpen}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={vm.onClosePrescription}
+      >
+        <PrescriptionView {...prescription} />
       </SafeAreaModal>
       <SelectExistingDocumentSheet
         open={vm.selectSheetOpen}
@@ -76,12 +102,30 @@ export function AppointmentDetailView(vm: AppointmentDetailViewModel) {
           { paddingBottom: 28 + sheetBottomPadding(insets, spacing.md) },
         ]}
       >
-        <View style={styles.banner}>
-          <Ionicons name="checkmark-circle" size={22} color={colors.success} />
-          <AppText variant="bodyMd" color={colors.success} weightOverride="600" style={styles.flex}>
-            {vm.bannerLabel}
-          </AppText>
-        </View>
+        {vm.isCancelled ? (
+          <View style={[styles.banner, styles.bannerCancelled]}>
+            <Ionicons name="close-circle" size={22} color={colors.error} />
+            <AppText variant="bodyMd" color={colors.error} weightOverride="600" style={styles.flex}>
+              {vm.t('cancelledTitle')}
+            </AppText>
+          </View>
+        ) : !vm.isCompleted ? (
+          <View style={styles.banner}>
+            <Ionicons name="checkmark-circle" size={22} color={colors.success} />
+            <AppText variant="bodyMd" color={colors.success} weightOverride="600" style={styles.flex}>
+              {vm.bannerLabel}
+            </AppText>
+          </View>
+        ) : null}
+
+        {vm.isCompleted && vm.hasPrescription ? (
+          <View style={styles.card}>
+            <AppButton
+              label={vm.t('aptViewPrescription')}
+              onPress={vm.onOpenPrescription}
+            />
+          </View>
+        ) : null}
 
         {vm.showJoin || vm.showOpenChat ? (
           <View style={styles.card}>
@@ -303,29 +347,33 @@ export function AppointmentDetailView(vm: AppointmentDetailViewModel) {
           ))}
         </View>
 
-        <View style={styles.actions}>
-          <Pressable
-            accessibilityRole="button"
-            onPress={vm.onChangeTime}
-            style={({ pressed }) => [styles.outlineBtn, pressed && styles.pressed]}
-          >
-            <AppText variant="titleMd" color={ICON_BLUE}>
-              {vm.t('aptChangeTime')}
+        {!vm.isCompleted && !vm.isCancelled ? (
+          <>
+            <View style={styles.actions}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={vm.onChangeTime}
+                style={({ pressed }) => [styles.outlineBtn, pressed && styles.pressed]}
+              >
+                <AppText variant="titleMd" color={ICON_BLUE}>
+                  {vm.t('aptChangeTime')}
+                </AppText>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                onPress={vm.onCancel}
+                style={({ pressed }) => [styles.ghostBtn, pressed && styles.pressed]}
+              >
+                <AppText variant="titleMd" color={colors.error}>
+                  {vm.t('aptCancel')}
+                </AppText>
+              </Pressable>
+            </View>
+            <AppText variant="labelSm" color={colors.muted} style={styles.center}>
+              {vm.t('aptRescheduleHint')}
             </AppText>
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            onPress={vm.onCancel}
-            style={({ pressed }) => [styles.ghostBtn, pressed && styles.pressed]}
-          >
-            <AppText variant="titleMd" color={colors.error}>
-              {vm.t('aptCancel')}
-            </AppText>
-          </Pressable>
-        </View>
-        <AppText variant="labelSm" color={colors.muted} style={styles.center}>
-          {vm.t('aptRescheduleHint')}
-        </AppText>
+          </>
+        ) : null}
 
         <Pressable
           accessibilityRole="button"
@@ -411,6 +459,10 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
     paddingHorizontal: spacing.md,
     paddingVertical: 12,
+  },
+  bannerCancelled: {
+    backgroundColor: colors.errorContainer,
+    borderColor: colors.error,
   },
   card: {
     backgroundColor: colors.card,

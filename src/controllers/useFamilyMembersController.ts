@@ -660,20 +660,11 @@ export function useFamilyMembersController({
           age,
         };
 
-        console.log(
-          `[UpdateFamilyMember] Request PUT api/Family/${targetId} Payload:`,
-          JSON.stringify(updatePayload, null, 2),
-        );
-
         try {
           const res = await updateFamilyMember({
             id: targetId,
             body: updatePayload,
           }).unwrap();
-          console.log(
-            '[UpdateFamilyMember] Response:',
-            JSON.stringify(res, null, 2),
-          );
           if (res && res.success === false) {
             const msg =
               res.errorMessage ||
@@ -726,17 +717,8 @@ export function useFamilyMembersController({
           existingMemberPatientId: 0,
         };
 
-        console.log(
-          '[CreateFamilyMember] Request Payload:',
-          JSON.stringify(payload, null, 2),
-        );
-
         try {
           const res = await createFamilyMember(payload).unwrap();
-          console.log(
-            '[CreateFamilyMember] Response:',
-            JSON.stringify(res, null, 2),
-          );
           if (res && res.success === false) {
             const msg =
               res.errorMessage ||
@@ -862,15 +844,8 @@ export function useFamilyMembersController({
         return;
       }
       isDeletingRef.current = true;
-      console.log(
-        `[DeleteFamilyMember] Request: DELETE api/Family/${targetId}`,
-      );
       try {
         const res = await deleteFamilyMember(targetId).unwrap();
-        console.log(
-          '[DeleteFamilyMember] Response:',
-          JSON.stringify(res, null, 2),
-        );
         if (res && typeof res === 'object' && res.success === false) {
           const msg =
             res.errorMessage ||

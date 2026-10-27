@@ -7,6 +7,7 @@ import {
   type AppointmentRequestStatus,
   type BookedAppointment,
   createSeedFollowUpChat,
+  JOIN_GRACE_MS,
 } from '../config/bookedAppointments';
 import {
   BOOKING_MEMBERS,
@@ -24,7 +25,8 @@ import {
   type DoctorFilterLanguage,
   type DoctorFilters,
 } from '../models/search';
-import { useAppSelector } from '../store/hooks';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { setSelectedMemberId as setReduxSelectedMemberId } from '../store/slices/authSlice';
 import {
   useGetDoctorFilterOptionsQuery,
   useGetDoctorsQuery,
@@ -135,6 +137,13 @@ function appointmentSortMs(
   if (match) {
     hour = Number(match[1]);
     minute = Number(match[2]);
+    const isPm = /pm/i.test(timeRaw);
+    const isAm = /am/i.test(timeRaw);
+    if (isPm && hour < 12) {
+      hour += 12;
+    } else if (isAm && hour === 12) {
+      hour = 0;
+    }
   }
   if (
     !Number.isFinite(hour) ||
@@ -151,6 +160,39 @@ function appointmentSortMs(
     `${datePart}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`,
   ).getTime();
   return Number.isFinite(ms) ? ms : Number.MAX_SAFE_INTEGER;
+}
+
+function isPastAppointment(
+  appointmentDate?: string,
+  appointmentTime?: string,
+  graceMs: number = JOIN_GRACE_MS,
+): boolean {
+  const ms = appointmentSortMs(appointmentDate, appointmentTime);
+  if (ms !== Number.MAX_SAFE_INTEGER) {
+    return ms + graceMs < Date.now();
+  }
+  if (appointmentDate) {
+    const raw = appointmentDate.trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw.slice(0, 10))) {
+      const d = new Date(raw.slice(0, 10));
+      d.setHours(23, 59, 59, 999);
+      if (!Number.isNaN(d.getTime())) {
+        return d.getTime() < Date.now();
+      }
+    }
+    const parsed = Date.parse(raw);
+    if (!Number.isNaN(parsed)) {
+      return parsed + graceMs < Date.now();
+    }
+  }
+  return false;
+}
+
+function isPastBooking(startsAt?: string, graceMs: number = JOIN_GRACE_MS): boolean {
+  if (!startsAt) return false;
+  const ms = Date.parse(startsAt);
+  if (Number.isNaN(ms)) return false;
+  return ms + graceMs < Date.now();
 }
 
 function sortBookingsByDateTime(
@@ -254,7 +296,7 @@ export type HomeViewModel = {
   onOpenAppointment: (id: string) => void;
   onCloseAppointment: () => void;
   onConfirmBooking: (item: BookedAppointment) => void;
-  onFinishBookingFlow: () => void;
+  onFinishBookingFlow: (targetTab?: HomeTab) => void;
   onRemoveAppointment: (id: string) => void;
   onUpdateAppointment: (id: string, patch: Partial<BookedAppointment>) => void;
   onBookAnotherConsultation: () => void;
@@ -340,6 +382,8 @@ export type HomeViewModel = {
   careCategories: HomeCareCategoryItem[];
   healthArticles: HomeArticleItem[];
   onSelectCareCategory: (name: string) => void;
+  isHomeRefreshing: boolean;
+  onRefreshHome: () => Promise<void> | void;
   account: AccountViewModel;
 };
 
@@ -364,13 +408,36 @@ export function useHomeController({
   const [doctorsDatePickerOpen, setDoctorsDatePickerOpen] = useState(false);
   const [searchNonce, setSearchNonce] = useState(0);
   const [searchOrigin, setSearchOrigin] = useState<HomeTab>('home');
+  const dispatch = useAppDispatch();
+  const reduxSelectedMemberId = useAppSelector(
+    (state) => state.auth.selectedMemberId,
+  );
   const [selectedTab, setSelectedTab] = useState<HomeTab>('home');
   const [profileDoctorId, setProfileDoctorId] = useState<string | null>(null);
   const [bookingOpen, setBookingOpen] = useState(false);
   const [healthTipId, setHealthTipId] = useState<string | null>(null);
-  const [selectedMemberId, setSelectedMemberId] = useState('self');
+  const [selectedMemberId, setSelectedMemberId] = useState(
+    reduxSelectedMemberId || 'self',
+  );
   const [memberPickerOpen, setMemberPickerOpen] = useState(false);
+
+  useEffect(() => {
+    if (reduxSelectedMemberId && reduxSelectedMemberId !== selectedMemberId) {
+      setSelectedMemberId(reduxSelectedMemberId);
+    }
+  }, [reduxSelectedMemberId, selectedMemberId]);
   const [appointments, setAppointments] = useState<BookedAppointment[]>([]);
+
+  useEffect(() => {
+    console.log(
+      '📋 [useHomeController] Current Bookings List (count: ' +
+      appointments.length +
+      '):',
+      JSON.stringify(
+        appointments
+      ),
+    );
+  }, [appointments]);
   const [completedMovedToastVisible, setCompletedMovedToastVisible] =
     useState(false);
   const previousDashboardIdsRef = useRef<Set<string> | null>(null);
@@ -426,7 +493,7 @@ export function useHomeController({
       doctorsSearch.careCategoryId != null && doctorsSearch.careCategoryId > 0
         ? doctorsSearch.careCategoryId
         : doctorsFilters.careCategoryId != null &&
-            doctorsFilters.careCategoryId > 0
+          doctorsFilters.careCategoryId > 0
           ? doctorsFilters.careCategoryId
           : undefined;
     const teleOnly =
@@ -493,11 +560,13 @@ export function useHomeController({
     [doctorsFilterOptions?.qualifications],
   );
 
-  const { data: careCategoriesResponse } = useGetCareCategoriesQuery();
-  const { data: articlesResponse } = useGetArticlesQuery({
-    pageNumber: 1,
-    pageSize: 10,
-  });
+  const { data: careCategoriesResponse, refetch: refetchCareCategories } =
+    useGetCareCategoriesQuery();
+  const { data: articlesResponse, refetch: refetchArticles } =
+    useGetArticlesQuery({
+      pageNumber: 1,
+      pageSize: 10,
+    });
 
   const careCategories = useMemo<HomeCareCategoryItem[]>(() => {
     const rows = careCategoriesResponse?.data;
@@ -697,20 +766,27 @@ export function useHomeController({
     });
   }, []);
 
-  const onFinishBookingFlow = useCallback(() => {
+  const onFinishBookingFlow = useCallback((targetTab: HomeTab = 'home') => {
     setBookingOpen(false);
     setProfileDoctorId(null);
     setSearchOpen(false);
     setResultsOpen(false);
     setHealthTipId(null);
     setSelectedAppointmentId(null);
-    setSelectedTab('doctors');
+    setMyAppointmentsOpen(false);
+    setAppointmentRequestsOpen(false);
+    setSelectedTab(targetTab);
   }, []);
 
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const authUser = useAppSelector((state) => state.auth.user);
+  const authPatientId = useAppSelector((state) => state.auth.patientId);
+  const selfPatientId = authPatientId ?? authUser?.patientId;
 
-  const { data: homeDashboardResponse } = useGetHomeDashboardQuery(undefined, {
+  const {
+    data: homeDashboardResponse,
+    refetch: refetchHomeDashboard,
+  } = useGetHomeDashboardQuery(undefined, {
     skip: !isAuthenticated,
   });
   const homeDashboardData = homeDashboardResponse?.data;
@@ -724,22 +800,56 @@ export function useHomeController({
     authUser?.firstName ||
     (patientFullName ? patientFullName.split(' ')[0] : '');
 
-  const { data: familyResponse } = useGetFamilyQuery(undefined, {
+  const {
+    data: familyResponse,
+    refetch: refetchFamily,
+  } = useGetFamilyQuery(undefined, {
     skip: !isAuthenticated,
   });
   const apiFamily = familyResponse?.data;
 
-  const { data: visitsResponse } = useGetPatientVisitsQuery(undefined, {
+  const {
+    data: visitsResponse,
+    refetch: refetchVisits,
+  } = useGetPatientVisitsQuery(undefined, {
     skip: !isAuthenticated,
   });
   const apiVisitsRaw = visitsResponse?.data;
   const apiVisitsList = Array.isArray(apiVisitsRaw)
     ? apiVisitsRaw
     : apiVisitsRaw &&
-        typeof apiVisitsRaw === 'object' &&
-        Array.isArray((apiVisitsRaw as { data?: unknown }).data)
+      typeof apiVisitsRaw === 'object' &&
+      Array.isArray((apiVisitsRaw as { data?: unknown }).data)
       ? (apiVisitsRaw as { data: unknown[] }).data
       : EMPTY_VISITS;
+
+  const [isHomeRefreshing, setIsHomeRefreshing] = useState(false);
+
+  const onRefreshHome = useCallback(async () => {
+    setIsHomeRefreshing(true);
+    try {
+      const refetches: Promise<unknown>[] = [];
+      if (isAuthenticated) {
+        refetches.push(Promise.resolve(refetchHomeDashboard()));
+        refetches.push(Promise.resolve(refetchVisits()));
+        refetches.push(Promise.resolve(refetchFamily()));
+      }
+      refetches.push(Promise.resolve(refetchArticles()));
+      refetches.push(Promise.resolve(refetchCareCategories()));
+      await Promise.allSettled(refetches);
+    } catch {
+      // Ignore network errors during pull-to-refresh
+    } finally {
+      setIsHomeRefreshing(false);
+    }
+  }, [
+    isAuthenticated,
+    refetchHomeDashboard,
+    refetchVisits,
+    refetchFamily,
+    refetchArticles,
+    refetchCareCategories,
+  ]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -767,7 +877,7 @@ export function useHomeController({
       consultFee?: number | null;
       currency?: string | null;
     };
-
+    console.log('homeDashboardData?.nextAppointments', homeDashboardData?.nextAppointments)
     const dashboardApps = (homeDashboardData?.nextAppointments ??
       EMPTY_VISITS) as RawVisit[];
     const serverVisits = apiVisitsList as RawVisit[];
@@ -787,8 +897,41 @@ export function useHomeController({
       }
     }
 
-    const activeList = Array.from(combinedMap.values()).filter(
-      (a) => a.status !== 'CANCELLED' && a.status !== 'COMPLETED',
+    console.log('📡 [useHomeController] Raw serverVisits & dashboardApps:', {
+      dashboardCount: dashboardApps.length,
+      visitsCount: serverVisits.length,
+      rawItems: Array.from(combinedMap.values()).map((v) => ({
+        patientAppId: v.patientAppId,
+        doctorName: v.doctorName,
+        date: v.appointmentDate,
+        time: v.appointmentTime,
+        status: v.status,
+        paymentStatus: v.paymentStatus,
+        visitType: v.visitType,
+        isTele: v.isTele,
+        payAtClinicAllowed: v.payAtClinicAllowed,
+      })),
+    });
+
+    // Show homeDashboardData?.nextAppointments directly on Home with all filters removed
+    const activeList = (
+      homeDashboardData?.nextAppointments !== undefined
+        ? homeDashboardData.nextAppointments
+        : dashboardApps.length > 0
+          ? dashboardApps
+          : serverVisits
+    ) as RawVisit[];
+
+    console.log(
+      '🔍 [useHomeController] Active list count (no filters):',
+      activeList.length,
+      activeList.map((a) => ({
+        patientAppId: a.patientAppId,
+        doctorName: a.doctorName,
+        status: a.status,
+        paymentStatus: a.paymentStatus,
+        visitType: a.visitType,
+      })),
     );
 
     const locale = language === 'mr' ? 'mr-IN' : 'en-IN';
@@ -894,9 +1037,11 @@ export function useHomeController({
 
     setAppointments((current) => {
       // Keep any newly placed bookings from this session that might not yet be in server response
-      const clientOnly = current.filter(
-        (c) => c.id !== 'seed-followup-chat' && !mapped.some((m) => m.id === c.id),
-      );
+      const clientOnly = current.filter((c) => {
+        if (c.id === 'seed-followup-chat') return false;
+        if (mapped.some((m) => m.id === c.id)) return false;
+        return true;
+      });
       const next = sortBookingsByDateTime([...sortedMapped, ...clientOnly]);
       if (
         next.length === current.length &&
@@ -930,8 +1075,8 @@ export function useHomeController({
   }, []);
 
   const memberOptions: HomeMemberOption[] = useMemo(
-    () => resolveBookingMembers(patientFullName, undefined, apiFamily),
-    [patientFullName, apiFamily],
+    () => resolveBookingMembers(patientFullName, undefined, apiFamily, selfPatientId),
+    [patientFullName, apiFamily, selfPatientId],
   );
 
   const selectedMember =
@@ -1209,6 +1354,7 @@ export function useHomeController({
     onCloseMemberPicker: () => setMemberPickerOpen(false),
     onSelectMember: (memberId) => {
       setSelectedMemberId(memberId);
+      dispatch(setReduxSelectedMemberId(memberId));
       setMemberPickerOpen(false);
     },
     onAddMember: () => {
@@ -1268,6 +1414,7 @@ export function useHomeController({
       setOrderTrackingOpen(false);
       setSelectedTab('medicines');
       setSelectedMemberId('self');
+      dispatch(setReduxSelectedMemberId('self'));
     },
     onViewAllCategories: () => {
       setSearchOrigin('home');
@@ -1285,8 +1432,8 @@ export function useHomeController({
         q: trimmed || undefined,
         careCategoryId:
           careCategoryId != null &&
-          !Number.isNaN(careCategoryId) &&
-          careCategoryId > 0
+            !Number.isNaN(careCategoryId) &&
+            careCategoryId > 0
             ? careCategoryId
             : undefined,
       };
@@ -1346,7 +1493,6 @@ export function useHomeController({
             : row,
         ),
       );
-      setMyAppointmentsOpen(false);
       setAccountRecordsOpen(false);
       setEditProfileOpen(false);
       setAccountFamilyOpen(false);
@@ -1536,6 +1682,8 @@ export function useHomeController({
     isDoctorsLoading,
     isDoctorsError,
     refetchDoctors,
+    isHomeRefreshing,
+    onRefreshHome,
     account,
   };
 }

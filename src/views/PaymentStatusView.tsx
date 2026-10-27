@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,6 +22,8 @@ const PLACEHOLDER = colors.outline;
 
 export function PaymentStatusView(vm: PaymentStatusViewModel) {
   if (vm.status === 'failed') {
+    const reason = vm.failReason || vm.errorMessage || 'Bank declined the transaction';
+    console.log('🚨 [PaymentStatusView] Rendering Failed Screen. Booking/Payment Fail Reason:', reason);
     return <FailedStatus {...vm} />;
   }
   if (vm.status === 'pending') {
@@ -138,11 +141,16 @@ function FailedStatus({
   t,
   holdMoreLabel,
   attemptId,
+  onClose,
   onRetry,
   onChooseMethod,
   onChooseSlot,
+  failReason,
+  errorMessage,
 }: PaymentStatusViewModel) {
   const insets = useSafeAreaInsets();
+  const reasonText = failReason || errorMessage || t('payStatusFailReason');
+  console.log('🚨 [PaymentStatusView - Failed Card] Reason displayed:', reasonText);
   return (
     <View style={styles.root}>
       <View
@@ -154,7 +162,7 @@ function FailedStatus({
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t('back')}
-          onPress={onRetry}
+          onPress={onClose}
           style={styles.iconButton}
         >
           <Ionicons name="arrow-back" size={24} color={colors.ink} />
@@ -185,7 +193,7 @@ function FailedStatus({
               {t('payStatusReason')}
             </AppText>
             <AppText variant="bodyMd" color={colors.ink} weightOverride="600" style={styles.kvValue}>
-              {t('payStatusFailReason')}
+              {reasonText}
             </AppText>
           </View>
           <View style={styles.hairline} />
@@ -226,11 +234,25 @@ function FailedStatus({
 
 function PendingStatus({
   t,
+  doctorName,
+  doctorInitials,
+  whenLabel,
   onClose,
   onCheckStatus,
   onContactSupport,
 }: PaymentStatusViewModel) {
   const insets = useSafeAreaInsets();
+  const [checking, setChecking] = useState(false);
+
+  const handleCheck = async () => {
+    setChecking(true);
+    try {
+      await onCheckStatus();
+    } finally {
+      setTimeout(() => setChecking(false), 2000);
+    }
+  };
+
   return (
     <View style={[styles.root, styles.pendingRoot]}>
       <View
@@ -248,16 +270,45 @@ function PendingStatus({
           <Ionicons name="close" size={24} color={colors.ink} />
         </Pressable>
       </View>
-      <View style={styles.pendingBody}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[
+          styles.pendingBody,
+          { paddingBottom: sheetBottomPadding(insets, spacing.xl) },
+        ]}
+      >
         <View style={styles.pendingIcon}>
           <Ionicons name="time" size={48} color={AMBER} />
         </View>
         <AppText variant="headlineMd" color={colors.ink} style={styles.heroTitle}>
           {t('payStatusPendingTitle')}
         </AppText>
-        <AppText variant="bodyLg" color={colors.muted} style={styles.centerCopy}>
+        <AppText variant="bodyMd" color={colors.muted} style={styles.centerCopy}>
           {t('payStatusPendingBody')}
         </AppText>
+
+        {doctorName ? (
+          <View style={[styles.card, { paddingVertical: spacing.sm, marginVertical: 4 }]}>
+            <View style={styles.doctorRow}>
+              <View style={styles.avatar}>
+                <AppText variant="titleMd" color={ICON_BLUE} languageOverride="en">
+                  {doctorInitials}
+                </AppText>
+              </View>
+              <View style={styles.flex}>
+                <AppText variant="titleMd" color={colors.ink} style={styles.doctorName}>
+                  {doctorName}
+                </AppText>
+                {whenLabel ? (
+                  <AppText variant="bodyMd" color={colors.muted}>
+                    {whenLabel}
+                  </AppText>
+                ) : null}
+              </View>
+            </View>
+          </View>
+        ) : null}
+
         <View style={styles.stepCard}>
           <View style={styles.stepTrack} />
           <View style={styles.stepProgress} />
@@ -265,7 +316,11 @@ function PendingStatus({
           <Step active label={t('payStatusBankConfirming')} />
           <Step label={t('payStatusConfirmed')} />
         </View>
-        <AppButton label={t('payStatusCheck')} onPress={onCheckStatus} />
+        <AppButton
+          label={t('payStatusCheck')}
+          loading={checking}
+          onPress={handleCheck}
+        />
         <AppButton
           variant="secondary"
           label={t('payStatusSupport')}
@@ -277,7 +332,7 @@ function PendingStatus({
             {t('payStatusNotify')}
           </AppText>
         </View>
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -569,9 +624,10 @@ const styles = StyleSheet.create({
   },
   stepCard: {
     alignSelf: 'stretch',
+    backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.outlineVariant,
-    borderRadius: radii.sm,
+    borderRadius: radii.md,
     paddingVertical: 20,
     paddingHorizontal: 12,
     flexDirection: 'row',

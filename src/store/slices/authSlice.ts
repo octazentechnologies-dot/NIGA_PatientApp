@@ -51,6 +51,7 @@ type AuthState = {
   detectedLocation: DetectedGeoLocation | null;
   user: AuthUser;
   sessionEndedMessage: string | null;
+  selectedMemberId: string;
 };
 
 const initialState: AuthState = {
@@ -66,6 +67,7 @@ const initialState: AuthState = {
   detectedLocation: null,
   user: null,
   sessionEndedMessage: null,
+  selectedMemberId: 'self',
 };
 
 const authSlice = createSlice({
@@ -84,6 +86,7 @@ const authSlice = createSlice({
         state.userId = null;
         state.bookingSessionId = null;
         state.mobile = null;
+        state.selectedMemberId = 'self';
       }
     },
     setAuthUser(
@@ -163,6 +166,9 @@ const authSlice = createSlice({
     clearSessionEndedMessage(state) {
       state.sessionEndedMessage = null;
     },
+    setSelectedMemberId(state, action: { payload: string }) {
+      state.selectedMemberId = action.payload || 'self';
+    },
     clearAuthState(state) {
       const message = state.sessionEndedMessage;
       return {
@@ -180,6 +186,7 @@ export const {
   setAuthMobile,
   setDetectedLocation,
   setBookingSession,
+  setSelectedMemberId,
   setSessionEndedMessage,
   clearSessionEndedMessage,
   clearAuthState,

@@ -27,6 +27,7 @@ export type ClinicCheckInViewModel = {
   readyAtLabel: string | null;
   doctorName: string;
   checkInBusy?: boolean;
+  checkInError?: string | null;
   onBack: () => void;
   onConfirmCheckIn: () => void;
   onTellClinic: () => void;
@@ -167,12 +168,18 @@ export function ClinicCheckInView(vm: ClinicCheckInViewModel) {
             <AppButton
               label={vm.t('clinicCheckInNowCta')}
               onPress={vm.onConfirmCheckIn}
+              loading={vm.checkInBusy}
               disabled={vm.checkInBusy}
               icon={
                 <Ionicons name="person-add-outline" size={18} color={colors.card} />
               }
               style={styles.checkBtnActive}
             />
+            {vm.checkInError ? (
+              <AppText variant="bodyMd" color={colors.error} raw style={styles.center}>
+                {vm.checkInError}
+              </AppText>
+            ) : null}
           </View>
         )}
 

@@ -11,7 +11,9 @@ import { sheetBottomPadding } from '../utilities/sheetInset';
 
 import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
-import { images } from '../config/images';
+import { EmptyState } from '../components/EmptyState';
+import { ErrorState } from '../components/ErrorState';
+import { LoadingState } from '../components/LoadingState';
 import type { PrescriptionViewModel } from '../controllers/usePrescriptionController';
 import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
@@ -69,162 +71,169 @@ export function PrescriptionView(vm: PrescriptionViewModel) {
           },
         ]}
       >
-        <View style={styles.statusBanner}>
-          <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-          <AppText variant="bodyMd" color={colors.success} style={styles.flex}>
-            {vm.t('rxStatusBanner')}
-          </AppText>
-        </View>
-
-        <View style={styles.pad}>
-          <View style={styles.docCard}>
-            <View style={styles.docHeader}>
-              <View style={styles.flex}>
-                <AppText variant="headlineMd" color={colors.ink}>
-                  HelloHomeo
-                </AppText>
-                <AppText variant="labelSm" color={colors.muted}>
-                  {vm.t('rxNumber')}
-                </AppText>
-              </View>
-              <AppText variant="bodyMd" color={colors.muted}>
-                {vm.t('rxDate')}
-              </AppText>
-            </View>
-
-            <View style={styles.doctorBox}>
-              <Image source={images.doctorPortrait} style={styles.avatar} />
-              <View style={styles.flex}>
-                <View style={styles.doctorNameRow}>
-                  <AppText variant="titleMd" color={colors.ink} style={styles.flex}>
-                    {vm.t('searchResultAnjaliName')}
-                  </AppText>
-                  <Ionicons name="checkmark-circle" size={18} color={colors.success} />
-                </View>
-                <AppText variant="bodyMd" color={colors.muted}>
-                  {vm.t('rxDoctorCredentials')}
-                </AppText>
-                <AppText variant="labelSm" color={colors.muted}>
-                  {vm.t('rxDoctorCouncil')}
-                </AppText>
-              </View>
-            </View>
-
-            <View style={styles.patientGrid}>
-              <PatientField label={vm.t('rxPatientNameLabel')} value={vm.t('rxPatientName')} />
-              <PatientField label={vm.t('rxAgeGenderLabel')} value={vm.t('rxAgeGender')} />
-              <PatientField label={vm.t('rxWeightLabel')} value={vm.t('rxWeight')} />
-              <PatientField label={vm.t('rxDiagnosisLabel')} value={vm.t('rxDiagnosis')} />
-            </View>
-
-            <View style={styles.medsHeader}>
-              <Ionicons name="document-text-outline" size={22} color={colors.ink} />
-              <AppText variant="titleMd" color={colors.ink}>
-                {vm.t('rxMedicinesHeading')}
-              </AppText>
-            </View>
-
-            {vm.medicines.map((med) => (
-              <View key={med.nameKey} style={styles.medCard}>
-                <AppText variant="bodyLg" color={colors.ink} weightOverride="600">
-                  {vm.t(med.nameKey)}
-                </AppText>
-                <View style={styles.medGrid}>
-                  <MedField label={vm.t('rxDoseLabel')} value={vm.t(med.doseKey)} />
-                  <MedField label={vm.t('rxTimeLabel')} value={vm.t(med.timeKey)} />
-                  <MedField
-                    label={vm.t('rxDurationLabel')}
-                    value={vm.t(med.durationKey)}
-                  />
-                  <MedField
-                    label={vm.t('rxNoteLabel')}
-                    value={vm.t(med.noteKey)}
-                    alert={med.noteAlert}
-                  />
-                </View>
-              </View>
-            ))}
-
-            <View style={styles.adviceBox}>
-              <View style={styles.adviceHeader}>
-                <Ionicons name="bulb-outline" size={20} color={colors.ink} />
-                <AppText variant="bodyLg" color={colors.ink} weightOverride="600">
-                  {vm.t('rxAdviceHeading')}
-                </AppText>
-              </View>
-              {vm.adviceKeys.map((key) => (
-                <View key={key} style={styles.adviceRow}>
-                  <AppText variant="bodyMd" color={colors.muted}>
-                    {'\u2022  '}
-                    {vm.t(key)}
-                  </AppText>
-                </View>
-              ))}
-            </View>
-
-            <View style={styles.signatureBlock}>
-              <View style={styles.flex}>
-                <AppText variant="labelSm" color={colors.muted}>
-                  {vm.t('rxSignedAt')}
-                </AppText>
-                <Pressable
-                  accessibilityRole="link"
-                  onPress={vm.onVerify}
-                  style={styles.verifyRow}
-                >
-                  <AppText variant="labelSm" color={colors.primary} weightOverride="600">
-                    {vm.t('rxVerify')}
-                  </AppText>
-                  <Ionicons name="open-outline" size={14} color={colors.primary} />
-                </Pressable>
-              </View>
-              <View style={styles.signatureRight}>
-                <AppText variant="headlineMd" color={colors.primary} style={styles.signatureScript}>
-                  Dr. Anjali Deshmukh
-                </AppText>
-                <AppText variant="bodyMd" color={colors.ink} weightOverride="600">
-                  {vm.t('searchResultAnjaliName')}
-                </AppText>
-              </View>
-            </View>
+        {vm.loading ? (
+          <View style={styles.centerBox}>
+            <LoadingState label="Loading prescription..." />
           </View>
-
-          <AppButton
-            label={vm.t('rxOrder')}
-            onPress={vm.onOrder}
-            icon={<Ionicons name="cart-outline" size={20} color={colors.onButton} />}
-          />
-          <AppButton
-            label={vm.t('rxDownloadPdf')}
-            variant="secondary"
-            onPress={vm.onDownload}
-            icon={<Ionicons name="download-outline" size={20} color={colors.primaryOutline} />}
-          />
-          <AppButton
-            label={vm.t('rxShare')}
-            variant="secondary"
-            onPress={vm.onShare}
-            icon={<Ionicons name="share-outline" size={20} color={colors.primaryOutline} />}
-          />
-
-          <View style={styles.versionStrip}>
-            <View style={styles.versionLeft}>
-              <Ionicons name="time-outline" size={18} color={colors.muted} />
-              <AppText variant="bodyMd" color={colors.muted} style={styles.flex}>
-                {vm.t('rxVersionStrip')}
+        ) : vm.isError ? (
+          <View style={styles.centerBox}>
+            <ErrorState
+              message="Could not load prescription from server."
+              onRetry={vm.onRetry}
+            />
+          </View>
+        ) : vm.isEmpty ? (
+          <View style={styles.centerBox}>
+            <EmptyState
+              title="No Prescription Found"
+              body="No medicines or prescription details were found for this appointment."
+            />
+          </View>
+        ) : (
+          <>
+            <View style={styles.statusBanner}>
+              <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+              <AppText variant="bodyMd" color={colors.success} style={styles.flex}>
+                {vm.t('rxStatusBanner')}
               </AppText>
             </View>
-            <Pressable
-              accessibilityRole="button"
-              onPress={vm.onOpenVersionHistory}
-              style={styles.versionLink}
-            >
-              <AppText variant="labelMd" color={colors.primary} weightOverride="600">
-                {vm.t('rxVersionHistory')}
-              </AppText>
-            </Pressable>
-          </View>
-        </View>
+
+            <View style={styles.pad}>
+              <View style={styles.docCard}>
+                <View style={styles.docHeader}>
+                  <View style={styles.flex}>
+                    <AppText variant="headlineMd" color={colors.ink}>
+                      HelloHomeo
+                    </AppText>
+                    <AppText variant="labelSm" color={colors.muted} raw>
+                      {vm.rxNumber}
+                    </AppText>
+                  </View>
+                  <AppText variant="bodyMd" color={colors.muted} raw>
+                    {vm.rxDate}
+                  </AppText>
+                </View>
+
+                <View style={styles.doctorBox}>
+                  <View style={styles.avatar}>
+                    <AppText variant="titleMd" color={colors.primary} languageOverride="en">
+                      {vm.doctorInitials}
+                    </AppText>
+                  </View>
+                  <View style={styles.flex}>
+                    <View style={styles.doctorNameRow}>
+                      <AppText variant="titleMd" color={colors.ink} style={styles.flex} raw>
+                        {vm.doctorName}
+                      </AppText>
+                      <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+                    </View>
+                    {vm.doctorCredentials ? (
+                      <AppText variant="bodyMd" color={colors.muted} raw>
+                        {vm.doctorCredentials}
+                      </AppText>
+                    ) : null}
+                  </View>
+                </View>
+
+                {vm.patientName ? (
+                  <View style={styles.patientGrid}>
+                    <PatientField label={vm.t('rxPatientNameLabel')} value={vm.patientName} />
+                  </View>
+                ) : null}
+
+                <View style={styles.medsHeader}>
+                  <Ionicons name="document-text-outline" size={22} color={colors.ink} />
+                  <AppText variant="titleMd" color={colors.ink}>
+                    {vm.t('rxMedicinesHeading')}
+                  </AppText>
+                </View>
+
+                {vm.medicines.map((med, idx) => (
+                  <View key={`${med.name}-${idx}`} style={styles.medCard}>
+                    <AppText variant="bodyLg" color={colors.ink} weightOverride="600" raw>
+                      {med.name}
+                    </AppText>
+                    <View style={styles.medGrid}>
+                      <MedField label={vm.t('rxDoseLabel')} value={med.dose} />
+                      <MedField label={vm.t('rxTimeLabel')} value={med.time} />
+                      <MedField
+                        label={vm.t('rxDurationLabel')}
+                        value={med.duration}
+                      />
+                      <MedField
+                        label={vm.t('rxNoteLabel')}
+                        value={med.note}
+                        alert={med.noteAlert}
+                      />
+                    </View>
+                  </View>
+                ))}
+
+                <View style={styles.signatureBlock}>
+                  <View style={styles.flex}>
+                    <AppText variant="labelSm" color={colors.muted}>
+                      {vm.t('rxSignedAt')}
+                    </AppText>
+                    <Pressable
+                      accessibilityRole="link"
+                      onPress={vm.onVerify}
+                      style={styles.verifyRow}
+                    >
+                      <AppText variant="labelSm" color={colors.primary} weightOverride="600">
+                        {vm.t('rxVerify')}
+                      </AppText>
+                      <Ionicons name="open-outline" size={14} color={colors.primary} />
+                    </Pressable>
+                  </View>
+                  <View style={styles.signatureRight}>
+                    <AppText variant="headlineMd" color={colors.primary} style={styles.signatureScript} raw>
+                      {vm.doctorName}
+                    </AppText>
+                    <AppText variant="bodyMd" color={colors.ink} weightOverride="600" raw>
+                      {vm.doctorName}
+                    </AppText>
+                  </View>
+                </View>
+              </View>
+
+              <AppButton
+                label={vm.t('rxOrder')}
+                onPress={vm.onOrder}
+                icon={<Ionicons name="cart-outline" size={20} color={colors.onButton} />}
+              />
+              <AppButton
+                label={vm.t('rxDownloadPdf')}
+                variant="secondary"
+                onPress={vm.onDownload}
+                icon={<Ionicons name="download-outline" size={20} color={colors.primaryOutline} />}
+              />
+              <AppButton
+                label={vm.t('rxShare')}
+                variant="secondary"
+                onPress={vm.onShare}
+                icon={<Ionicons name="share-outline" size={20} color={colors.primaryOutline} />}
+              />
+            </View>
+
+            <View style={styles.versionStrip}>
+              <View style={styles.versionLeft}>
+                <Ionicons name="time-outline" size={18} color={colors.muted} />
+                <AppText variant="bodyMd" color={colors.muted} style={styles.flex}>
+                  {vm.t('rxVersionStrip')}
+                </AppText>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                onPress={vm.onOpenVersionHistory}
+                style={styles.versionLink}
+              >
+                <AppText variant="labelMd" color={colors.primary} weightOverride="600">
+                  {vm.t('rxVersionHistory')}
+                </AppText>
+              </Pressable>
+            </View>
+          </>
+        )}
       </ScrollView>
     </View>
   );
@@ -337,9 +346,17 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: radii.full,
-    backgroundColor: colors.outlineVariant,
+    backgroundColor: colors.surfaceContainerLow,
     borderWidth: 1,
     borderColor: colors.outlineVariant,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  centerBox: {
+    padding: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 280,
   },
   doctorNameRow: {
     flexDirection: 'row',

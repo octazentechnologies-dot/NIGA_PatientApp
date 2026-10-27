@@ -137,6 +137,7 @@ export function usePayment(options: UsePaymentOptions) {
     inFlight.current = false;
     setState('IDLE');
     setErrorMessage(null);
+    setPaymentOrderId(null);
   }, []);
 
   const pollUntilCaptured = useCallback(
@@ -159,7 +160,7 @@ export function usePayment(options: UsePaymentOptions) {
             razorpay_signature: checkout?.signature,
           }).unwrap();
           const status = (res.data?.status || '').toUpperCase();
-          if (status === 'CAPTURED') {
+          if (status === 'CAPTURED' || status === 'PAID' || status === 'SUCCESS') {
             await clearPendingPayment();
             setState('CONFIRMED');
             onConfirmedRef.current?.(res.data);
@@ -232,9 +233,14 @@ export function usePayment(options: UsePaymentOptions) {
       return;
     }
 
+    let orderPatientAppId: number | null = patientAppId ?? null;
     try {
       setState('CREATING_ORDER');
       const created = await createOrder();
+      orderPatientAppId =
+        (created.data as { patientAppId?: number | null })?.patientAppId ??
+        patientAppId ??
+        null;
       const mapped = toServerOrder(created, appConfigKeyId);
       if ('blocked' in mapped) {
         setState('BLOCKED');
@@ -246,7 +252,7 @@ export function usePayment(options: UsePaymentOptions) {
       await savePendingPayment({
         paymentOrderId: mapped.paymentOrderId,
         flow,
-        patientAppId: patientAppId ?? null,
+        patientAppId: orderPatientAppId,
         medicineOrderId: medicineOrderId ?? null,
         savedAt: new Date().toISOString(),
       });
@@ -269,6 +275,7 @@ export function usePayment(options: UsePaymentOptions) {
         return;
       }
       if (checkout.type === 'FAILED') {
+        await clearPendingPayment();
         setState('FAILED');
         setErrorMessage(checkout.description);
         return;
@@ -298,7 +305,7 @@ export function usePayment(options: UsePaymentOptions) {
         onConfirmedRef.current?.({
           paymentOrderId: mapped.paymentOrderId,
           stream: 'CONSULT',
-          patientAppId: patientAppId ?? 0,
+          patientAppId: orderPatientAppId ?? patientAppId ?? 0,
           medicineOrderId: medicineOrderId ?? null,
           doctorId: 0,
           patientId: 0,
@@ -318,12 +325,14 @@ export function usePayment(options: UsePaymentOptions) {
         signature: checkout.signature,
       });
     } catch (err) {
-      const e = err as { data?: { code?: string; message?: string }; status?: number };
+      const e = err as { data?: { code?: string; message?: string }; status?: number; message?: string };
       setState('FAILED');
-      setErrorMessage(
+      const mappedMsg =
         mapPaymentError(e?.data?.code, e?.data?.message) ||
-          'Payment could not be started.',
-      );
+        e?.message ||
+        'Payment could not be started.';
+      console.log('🚨 [usePayment] Payment error caught:', mappedMsg, err);
+      setErrorMessage(mappedMsg);
     } finally {
       inFlight.current = false;
     }

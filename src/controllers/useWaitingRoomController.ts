@@ -66,6 +66,10 @@ function shortDoctorName(fullName: string): string {
 export function useWaitingRoomController({
   appointment,
   consultMode: initialMode,
+  queuePosition,
+  waitMinutes,
+  lateMinutes,
+  documentCount = 0,
   onBack,
   onLeave,
   onReschedule,
@@ -73,6 +77,10 @@ export function useWaitingRoomController({
 }: {
   appointment: BookedAppointment | null;
   consultMode: ConsultModeChoice;
+  queuePosition?: number | null;
+  waitMinutes?: number | null;
+  lateMinutes?: number | null;
+  documentCount?: number;
   onBack: () => void;
   onLeave: () => void;
   onReschedule: () => void;
@@ -80,7 +88,7 @@ export function useWaitingRoomController({
 }): WaitingRoomViewModel {
   const { language, t } = useLocalization();
   const [forceLate, setForceLate] = useState(forceDoctorLate);
-  const [elapsedSec, setElapsedSec] = useState(88);
+  const [elapsedSec, setElapsedSec] = useState(0);
   const [muted, setMuted] = useState(false);
   const [cameraOff, setCameraOff] = useState(initialMode === 'audio');
   const [consultMode, setConsultMode] = useState<ConsultModeChoice>(initialMode);
@@ -107,14 +115,14 @@ export function useWaitingRoomController({
     return () => clearInterval(timer);
   }, []);
 
-  const doctorName = appointment
+  const doctorName = appointment?.doctorNameKey
     ? t(appointment.doctorNameKey)
-    : t('searchResultAnjaliName');
-  const doctorShortName = shortDoctorName(doctorName);
-  const doctorInitials = appointment?.doctorInitials ?? 'AD';
-  const credentialsLine = appointment
+    : '';
+  const doctorShortName = doctorName ? shortDoctorName(doctorName) : '';
+  const doctorInitials = appointment?.doctorInitials ?? '';
+  const credentialsLine = appointment?.credentialsKey
     ? t(appointment.credentialsKey)
-    : t('searchResultAnjaliCredentials');
+    : '';
   const experienceLine = appointment?.experienceKey
     ? t(appointment.experienceKey)
     : '';
@@ -126,14 +134,29 @@ export function useWaitingRoomController({
     language,
   );
 
-  const queuePositionLabel = localizeDigits(t('waitingRoomQueuePos'), language);
-  const etaLabel = localizeDigits(t('waitingRoomEta').replace('{minutes}', '3'), language);
-  const lateMinutesLabel = localizeDigits(
-    t('waitingRoomLateBanner')
-      .replace('{name}', doctorShortName)
-      .replace('{minutes}', '10'),
-    language,
-  );
+  const queuePositionLabel =
+    queuePosition != null
+      ? localizeDigits(
+          t('clinicCheckInQueue').replace('{n}', String(queuePosition)),
+          language,
+        )
+      : '';
+  const etaLabel =
+    waitMinutes != null
+      ? localizeDigits(
+          t('waitingRoomEta').replace('{minutes}', String(waitMinutes)),
+          language,
+        )
+      : '';
+  const lateMinutesLabel =
+    lateMinutes != null
+      ? localizeDigits(
+          t('waitingRoomLateBanner')
+            .replace('{name}', doctorShortName)
+            .replace('{minutes}', String(lateMinutes)),
+          language,
+        )
+      : '';
 
   const variant: WaitingRoomVariant = forceLate ? 'doctorLate' : 'standard';
 
@@ -154,7 +177,7 @@ export function useWaitingRoomController({
     muted,
     cameraOff,
     weakNetwork,
-    documentCount: 2,
+    documentCount: documentCount ?? 0,
     onBack,
     onLeave,
     onGetHelp: () => undefined,

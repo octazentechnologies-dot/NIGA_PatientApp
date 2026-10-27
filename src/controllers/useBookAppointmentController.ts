@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   DEFAULT_SLOT_ID,
@@ -21,7 +21,8 @@ import { formatBookedOn, slotStartIso } from '../config/bookedAppointments';
 import type { DoctorProfileSeed } from '../config/doctorProfiles';
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
-import { useAppSelector } from '../store/hooks';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { setSelectedMemberId } from '../store/slices/authSlice';
 import { useGetFamilyQuery } from '../store/api/new/familyApi';
 import { useGetHomeDashboardQuery } from '../store/api/new/homeApi';
 import {
@@ -32,11 +33,16 @@ import {
 import {
   useBookAsFamilyMutation,
   useCreateBookingMutation,
+  useGetTermsPolicyQuery,
+  type BookAsFamilyRequest,
+  type CreateBookingRequest,
 } from '../store/api/new/bookingApi';
+import { useCancelAppointmentMutation } from '../store/api/new/visitsApi';
 import { useCreateAppointmentRequestMutation } from '../store/api/new/appointmentRequestsApi';
 import { createIdempotencyKey } from '../utilities/idempotency';
 import { formatMoney } from '../utilities/formatters';
 import { extractErrorMessage } from '../store/api/new/newBaseApi';
+import { clearPendingPayment } from '../payments';
 
 export type PaymentStatus = 'success' | 'failed' | 'pending';
 
@@ -109,7 +115,8 @@ export type BookAppointmentViewModel = {
     holdExpiresAt?: string;
     consultFee?: number;
   }>;
-  onOpenPaymentStatus: (status: PaymentStatus) => void;
+  paymentFailureReason: string | null;
+  onOpenPaymentStatus: (status: PaymentStatus, reason?: string | null) => void;
   onClosePaymentStatus: () => void;
   onPaymentConfirmed: (paymentOrderId: number) => void;
   onPaymentPending: (paymentOrderId: number) => void;
@@ -126,6 +133,8 @@ export type BookAppointmentViewModel = {
   onContinue: () => void;
   onJoinWaitlist: () => void;
   onAddMember: () => void;
+  onResetBooking: () => void;
+  onCancelHold: (reasonText?: string) => Promise<void>;
 };
 
 function shortCredsFor(id: string): TranslationKey {
@@ -162,14 +171,18 @@ function formatDaySummary(
 
 export function useBookAppointmentController({
   doctorId,
+  initialMemberId,
   active = true,
   onBack,
   onAddMember,
+  onMemberChange,
 }: {
   doctorId: string;
+  initialMemberId?: string;
   active?: boolean;
   onBack: () => void;
   onAddMember?: () => void;
+  onMemberChange?: (memberId: string) => void;
 }): BookAppointmentViewModel {
   const { language, t } = useLocalization();
   const isNumeric = Boolean(doctorId) && /^\d+$/.test(doctorId);
@@ -247,14 +260,28 @@ export function useBookAppointmentController({
       onBack();
     }
   }, [active, isNumeric, onBack]);
-  const today = todayStart();
+  const today = useMemo(() => todayStart(), []);
   const monthOptions = useMemo(() => upcomingMonths(12), []);
-  const [memberId, setMemberId] = useState('self');
+  const dispatch = useAppDispatch();
+  const reduxSelectedMemberId = useAppSelector(
+    (state) => state.auth.selectedMemberId,
+  );
+  const effectiveInitialMemberId =
+    initialMemberId ?? reduxSelectedMemberId ?? 'self';
+  const [memberId, setMemberId] = useState(effectiveInitialMemberId);
+
+  useEffect(() => {
+    if (active) {
+      const targetId = initialMemberId ?? reduxSelectedMemberId ?? 'self';
+      setMemberId(targetId);
+    }
+  }, [active, initialMemberId, reduxSelectedMemberId]);
   const [memberPickerOpen, setMemberPickerOpen] = useState(false);
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | null>(null);
+  const [paymentFailureReason, setPaymentFailureReason] = useState<string | null>(null);
   const [mode, setMode] = useState<ConsultMode>('video');
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [holdExpiresAt, setHoldExpiresAt] = useState<string | null>(null);
@@ -264,10 +291,10 @@ export function useBookAppointmentController({
     null,
   );
   const [holdConsultFee, setHoldConsultFee] = useState<number | null>(null);
-  const [visibleMonth, setVisibleMonth] = useState<BookingMonthOption>({
+  const [visibleMonth, setVisibleMonth] = useState<BookingMonthOption>(() => ({
     year: today.getFullYear(),
     month: today.getMonth(),
-  });
+  }));
   const calendarDays = useMemo(
     () => buildDaysForMonth(visibleMonth.year, visibleMonth.month),
     [visibleMonth.month, visibleMonth.year],
@@ -277,35 +304,90 @@ export function useBookAppointmentController({
   );
   const [slotId, setSlotId] = useState<string | null>(null);
 
-  useEffect(() => {
-    setMemberId('self');
+  const [cancelAppointmentMutation] = useCancelAppointmentMutation();
+  const patientAppIdRef = useRef<number | null>(null);
+  patientAppIdRef.current = patientAppId;
+  const paymentStatusRef = useRef<PaymentStatus | null>(null);
+  paymentStatusRef.current = paymentStatus;
+
+  const onCancelHold = useCallback(
+    async (reasonText?: string) => {
+      const id = patientAppIdRef.current;
+      if (id != null && paymentStatusRef.current !== 'success') {
+        try {
+          await cancelAppointmentMutation({
+            patientAppId: id,
+            reasonCode: 'PatientRequest',
+            reasonText: reasonText || 'Payment cancelled by user',
+          }).unwrap();
+        } catch (err) {
+          console.warn('[BookAppointment] Cancel hold failed (soft fail):', err);
+        }
+      }
+      void clearPendingPayment();
+      setPaymentStatus(null);
+      setPaymentOpen(false);
+      setReviewOpen(false);
+      setPatientAppId(null);
+      setBookingToken(null);
+      setHoldExpiresAt(null);
+      setLastPaymentOrderId(null);
+      setHoldConsultFee(null);
+      setSlotId(null);
+    },
+    [cancelAppointmentMutation],
+  );
+
+  const onResetBooking = useCallback(() => {
+    const id = patientAppIdRef.current;
+    if (id != null && paymentStatusRef.current !== 'success') {
+      void cancelAppointmentMutation({
+        patientAppId: id,
+        reasonCode: 'PatientRequest',
+        reasonText: 'Booking reset',
+      });
+    }
+    void clearPendingPayment();
+    const targetMember = initialMemberId ?? reduxSelectedMemberId ?? 'self';
+    setMemberId(targetMember);
     setMode('video');
     setMemberPickerOpen(false);
     setMonthPickerOpen(false);
     setReviewOpen(false);
     setPaymentOpen(false);
     setPaymentStatus(null);
+    setPaymentFailureReason(null);
     setBookingError(null);
     setHoldExpiresAt(null);
     setPatientAppId(null);
     setBookingToken(null);
     setLastPaymentOrderId(null);
     setHoldConsultFee(null);
-    const nextMonth = { year: today.getFullYear(), month: today.getMonth() };
-    setVisibleMonth(nextMonth);
-    const nextDays = buildDaysForMonth(nextMonth.year, nextMonth.month);
-    const first = firstSelectableDay(nextDays);
-    setDayId(first?.id ?? '');
     setSlotId(null);
-  }, [doctorId]);
+    setWaitlistJoined(false);
+  }, [cancelAppointmentMutation, initialMemberId, reduxSelectedMemberId]);
 
+  const prevDoctorIdRef = useRef(doctorId);
   useEffect(() => {
-    if (!active) {
-      setReviewOpen(false);
-      setPaymentOpen(false);
-      setPaymentStatus(null);
+    if (prevDoctorIdRef.current !== doctorId) {
+      prevDoctorIdRef.current = doctorId;
+      onResetBooking();
+      const now = todayStart();
+      const nextMonth = { year: now.getFullYear(), month: now.getMonth() };
+      setVisibleMonth(nextMonth);
+      const nextDays = buildDaysForMonth(nextMonth.year, nextMonth.month);
+      const first = firstSelectableDay(nextDays);
+      setDayId(first?.id ?? '');
     }
-  }, [active]);
+  }, [doctorId, onResetBooking]);
+
+  const prevActiveRef = useRef(active);
+  useEffect(() => {
+    if (prevActiveRef.current && !active) {
+      onResetBooking();
+    }
+    prevActiveRef.current = active;
+  }, [active, onResetBooking]);
 
   const isNumericDoctorId = !isNaN(Number(doctorId));
   const { data: doctorFeesResponse } = useGetDoctorFeesQuery(doctorId, {
@@ -314,10 +396,14 @@ export function useBookAppointmentController({
 
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const authUser = useAppSelector((state) => state.auth.user);
+  const authPatientId = useAppSelector((state) => state.auth.patientId);
+  const authUserId = useAppSelector((state) => state.auth.userId);
   const authMobile = useAppSelector((state) => state.auth.mobile);
   const bookingSessionId = useAppSelector(
     (state) => state.auth.bookingSessionId,
   );
+  const { data: termsPolicyResponse } = useGetTermsPolicyQuery();
+  const consentPolicyVersion = termsPolicyResponse?.data?.version || '2026.1';
   const [createAppointmentRequest] = useCreateAppointmentRequestMutation();
   const [createBookingMutation, { isLoading: createBookingLoading }] =
     useCreateBookingMutation();
@@ -455,9 +541,10 @@ export function useBookAppointmentController({
   });
   const apiFamily = familyResponse?.data;
 
+  const selfPatientId = authPatientId ?? authUser?.patientId;
   const members = useMemo(
-    () => resolveBookingMembers(patientFullName, undefined, apiFamily),
-    [patientFullName, apiFamily],
+    () => resolveBookingMembers(patientFullName, undefined, apiFamily, selfPatientId),
+    [patientFullName, apiFamily, selfPatientId],
   );
 
   const selectedDay =
@@ -497,7 +584,7 @@ export function useBookAppointmentController({
       if (e?.data?.code === 'IDEMPOTENCY_CONFLICT') {
         setBookingError(
           e.data.message ||
-            'That request conflicted with a previous attempt. Please try again.',
+          'That request conflicted with a previous attempt. Please try again.',
         );
       } else {
         setBookingError(extractErrorMessage(err));
@@ -549,8 +636,8 @@ export function useBookAppointmentController({
   );
   const selectedSlot: TimeSlot | undefined = selectedDay
     ? [...selectedDay.morning, ...selectedDay.afternoon, ...selectedDay.evening].find(
-        (slot) => slot.id === slotId,
-      )
+      (slot) => slot.id === slotId,
+    )
     : undefined;
   const daySummary = selectedDay ? formatDaySummary(selectedDay, t, language) : '';
   const modeConsultLabel = t(
@@ -595,11 +682,10 @@ export function useBookAppointmentController({
   const bookedOnLabel = formatBookedOn(today, language, t(MONTH_KEYS[today.getMonth()]));
   const shortWhen =
     selectedDay && selectedSlot
-      ? `${weekdayLabel(selectedDay, t)} ${selectedDay.day} ${
-          language === 'en'
-            ? t(MONTH_KEYS[selectedDay.month]).slice(0, 3)
-            : t(MONTH_KEYS[selectedDay.month])
-        }, ${t(selectedSlot.labelKey)}`
+      ? `${weekdayLabel(selectedDay, t)} ${selectedDay.day} ${language === 'en'
+        ? t(MONTH_KEYS[selectedDay.month]).slice(0, 3)
+        : t(MONTH_KEYS[selectedDay.month])
+      }, ${t(selectedSlot.labelKey)}`
       : daySummary;
   const paymentSummaryLine = t('payConsultWith')
     .replace('{name}', t(profile.nameKey))
@@ -640,6 +726,7 @@ export function useBookAppointmentController({
     reviewOpen,
     paymentOpen,
     paymentStatus,
+    paymentFailureReason,
     whenLabel,
     dateLine: daySummary,
     timeLine,
@@ -664,6 +751,7 @@ export function useBookAppointmentController({
     onBack,
     onCloseReview: () => {
       setPaymentStatus(null);
+      setPaymentFailureReason(null);
       setPaymentOpen(false);
       setReviewOpen(false);
       setBookingError(null);
@@ -676,6 +764,7 @@ export function useBookAppointmentController({
       setBookingError(null);
       setLastPaymentOrderId(null);
       setPaymentStatus(null);
+      setPaymentFailureReason(null);
       setPaymentOpen(true);
     },
     onSubmitBooking: async (payment) => {
@@ -690,16 +779,25 @@ export function useBookAppointmentController({
       if (!phone) {
         throw new Error('Mobile number is required.');
       }
-      const patientName =
-        patientFullName ||
-        authUser?.patientName ||
-        [authUser?.firstName, authUser?.lastName].filter(Boolean).join(' ') ||
-        '';
-      const consultMode = mode === 'clinic' ? 'InClinic' : 'Tele';
+      const selectedPatientName = member.self
+        ? (patientFullName ||
+          authUser?.patientName ||
+          [authUser?.firstName, authUser?.lastName].filter(Boolean).join(' ') ||
+          member.name ||
+          'Patient')
+        : (member.name || patientFullName || 'Patient');
+      const consultMode: 'InClinic' | 'Tele' = mode === 'clinic' ? 'InClinic' : 'Tele';
+      const visitType: 'InClinic' | 'Tele' = consultMode;
+      const isTele = consultMode === 'Tele';
       const appointmentDate = selectedDay.id;
       const appointmentTime = selectedSlot.id;
-      const userId =
-        typeof authUser?.userId === 'number' ? authUser.userId : undefined;
+      const effectiveUserId =
+        typeof authUser?.userId === 'number'
+          ? authUser.userId
+          : typeof authUserId === 'number'
+            ? authUserId
+            : 0;
+      const email = authUser?.email || undefined;
       const razorpay_order_id = payment.razorpay_order_id ?? null;
       const razorpay_payment_id = payment.razorpay_payment_id ?? null;
 
@@ -717,9 +815,37 @@ export function useBookAppointmentController({
         );
       };
 
-      const memberPatientId = Number(member.id);
-      const isFamilyMember =
-        !member.self && Number.isFinite(memberPatientId) && memberPatientId > 0;
+      // Strict Self vs. Family Member routing
+      const isFamilyMember = !member.self;
+      const memberPatientId =
+        member.memberPatientId ??
+        member.patientId ??
+        (Number.isFinite(Number(member.id)) && Number(member.id) > 0 ? Number(member.id) : undefined);
+
+      const isDev =
+        typeof __DEV__ !== 'undefined'
+          ? __DEV__
+          : process.env.NODE_ENV !== 'production';
+
+      const maskSensitive = (obj: Record<string, unknown>) => {
+        const masked: Record<string, unknown> = { ...obj };
+        if (typeof masked.mobile === 'string') {
+          const m = masked.mobile;
+          masked.mobile = m.length > 4 ? `${m.slice(0, 2)}******${m.slice(-2)}` : '****';
+        }
+        if (typeof masked.email === 'string') {
+          const e = masked.email;
+          const at = e.indexOf('@');
+          masked.email = at > 2 ? `${e.slice(0, 2)}***${e.slice(at)}` : '***@***';
+        }
+        if (typeof masked.razorpay_order_id === 'string' && masked.razorpay_order_id) {
+          masked.razorpay_order_id = `${masked.razorpay_order_id.slice(0, 6)}*****`;
+        }
+        if (typeof masked.razorpay_payment_id === 'string' && masked.razorpay_payment_id) {
+          masked.razorpay_payment_id = `${masked.razorpay_payment_id.slice(0, 6)}*****`;
+        }
+        return masked;
+      };
 
       let data: {
         patientAppId?: number;
@@ -729,36 +855,73 @@ export function useBookAppointmentController({
       } | null | undefined;
 
       if (isFamilyMember) {
-        const booking = await bookAsFamilyMutation({
+        if (!memberPatientId || memberPatientId <= 0) {
+          throw new Error(
+            `Cannot book for family member "${member.name}": Missing valid memberPatientId.`,
+          );
+        }
+
+        const familyPayload: BookAsFamilyRequest = {
           memberPatientId,
           doctorId: docIdNum,
           appointmentDate,
           appointmentTime,
+          visitType,
           consultMode,
-          userId,
-          payAtClinic: payment.payAtClinic,
+          isTele,
+          userId: effectiveUserId,
+          payAtClinic: Boolean(payment.payAtClinic),
           razorpay_order_id,
           razorpay_payment_id,
-        }).unwrap();
+        };
+
+        if (isDev) {
+          console.log('================ [FAMILY BOOKING REQUEST] ================');
+          console.log('API Endpoint: POST /api/Family/BookAs');
+          console.log('HTTP Method:  POST');
+          console.log(
+            'Payload:',
+            JSON.stringify(maskSensitive(familyPayload as unknown as Record<string, unknown>), null, 2),
+          );
+          console.log('==========================================================');
+        }
+
+        const booking = await bookAsFamilyMutation(familyPayload).unwrap();
         data = booking.data;
       } else {
-        const booking = await createBookingMutation({
+        const selfPayload: CreateBookingRequest = {
           doctorId: docIdNum,
           mobile: phone,
-          patientName: patientName || 'Patient',
+          patientName: selectedPatientName,
+          email,
           appointmentDate,
           appointmentTime,
+          visitType,
           consultMode,
-          visitType: consultMode,
-          bookingSessionId: bookingSessionId ?? undefined,
-          userId,
-          payAtClinic: payment.payAtClinic,
+          isTele,
+          bookingSessionId: typeof bookingSessionId === 'number' ? bookingSessionId : 0,
+          consentPolicyVersion,
+          payAtClinic: Boolean(payment.payAtClinic),
+          userId: effectiveUserId,
           razorpay_order_id,
           razorpay_payment_id,
           idempotencyKey: createIdempotencyKey(
             `pa-${docIdNum}-${payment.payAtClinic ? 'clinic' : 'online'}`,
           ),
-        }).unwrap();
+        };
+
+        if (isDev) {
+          console.log('================ [SELF BOOKING REQUEST] ================');
+          console.log('API Endpoint: POST /api/Public/Doctors/' + docIdNum + '/Bookings');
+          console.log('HTTP Method:  POST');
+          console.log(
+            'Payload:',
+            JSON.stringify(maskSensitive(selfPayload as unknown as Record<string, unknown>), null, 2),
+          );
+          console.log('========================================================');
+        }
+
+        const booking = await createBookingMutation(selfPayload).unwrap();
         data = booking.data;
       }
 
@@ -777,11 +940,17 @@ export function useBookAppointmentController({
       };
     },
     onClosePayment: () => {
-      setPaymentStatus(null);
-      setPaymentOpen(false);
+      void onCancelHold('Payment cancelled by user');
     },
-    onOpenPaymentStatus: (status) => setPaymentStatus(status),
-    onClosePaymentStatus: () => setPaymentStatus(null),
+    onOpenPaymentStatus: (status, reason) => {
+      console.log('🚨 [BookAppointment] onOpenPaymentStatus called:', { status, reason });
+      setPaymentStatus(status);
+      setPaymentFailureReason(reason ?? null);
+    },
+    onClosePaymentStatus: () => {
+      setPaymentStatus(null);
+      setPaymentFailureReason(null);
+    },
     onPaymentConfirmed: (paymentOrderId) => {
       setLastPaymentOrderId(paymentOrderId);
       setPaymentStatus('success');
@@ -793,18 +962,23 @@ export function useBookAppointmentController({
       setPaymentStatus('pending');
     },
     onChooseOtherSlot: () => {
-      setPaymentStatus(null);
-      setPaymentOpen(false);
-      setReviewOpen(false);
-      setPatientAppId(null);
-      setBookingToken(null);
-      setHoldExpiresAt(null);
-      setLastPaymentOrderId(null);
+      void onCancelHold('User selected other slot');
     },
+    onCancelHold,
     onOpenMemberPicker: () => setMemberPickerOpen(true),
     onCloseMemberPicker: () => setMemberPickerOpen(false),
     onSelectMember: (id) => {
+      console.log(members)
+      const selected = members.find((item) => item.id === id);
+      console.log('📌 [BookAppointment] onSelectMember:', {
+        selectedId: id,
+        name: selected?.name,
+        self: Boolean(selected?.self),
+        relationship: selected?.relationshipName,
+      });
       setMemberId(id);
+      dispatch(setSelectedMemberId(id));
+      onMemberChange?.(id);
       setMemberPickerOpen(false);
     },
     onOpenMonthPicker: () => setMonthPickerOpen(true),
@@ -855,5 +1029,6 @@ export function useBookAppointmentController({
       setMemberPickerOpen(false);
       onAddMember?.();
     },
+    onResetBooking,
   };
 }

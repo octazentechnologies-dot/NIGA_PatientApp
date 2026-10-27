@@ -6,6 +6,7 @@ export type CreateConsultOrderRequest = {
   payAtClinic?: boolean;
   idempotencyKey?: string;
   amount?: number;
+  anonymous?: boolean;
 };
 
 export type ConsultPaymentOrderData = {
@@ -138,11 +139,31 @@ export const paymentsApi = newBaseApi.injectEndpoints({
       CreateConsultOrderResponse,
       CreateConsultOrderRequest
     >({
-      query: (body) => ({
-        url: 'api/Payments/ConsultOrders',
-        method: 'POST',
-        body,
-      }),
+      query: (body) => {
+        const { anonymous, ...rest } = body;
+        // When bookingToken is provided (fresh booking hold), call anonymously with bookingToken
+        // so backend verifies via bookingToken instead of strictly rejecting when booking for a
+        // family member ("This appointment belongs to another patient." - Q34 / §G12).
+        const isRealBookingToken = Boolean(
+          rest.bookingToken &&
+            rest.bookingToken.trim().length >= 20 &&
+            !rest.bookingToken.startsWith('APT-'),
+        );
+        const shouldBeAnonymous = anonymous ?? isRealBookingToken;
+
+        return {
+          url: 'api/Payments/ConsultOrders',
+          method: 'POST',
+          body: {
+            patientAppId: rest.patientAppId,
+            bookingToken: rest.bookingToken,
+            payAtClinic: rest.payAtClinic ?? false,
+            idempotencyKey: rest.idempotencyKey,
+            ...(rest.amount != null ? { amount: rest.amount } : {}),
+          },
+          headers: shouldBeAnonymous ? { 'X-Anonymous': 'true' } : undefined,
+        };
+      },
       invalidatesTags: ['Visits', 'Payments'],
     }),
     updateBookingPayment: build.mutation<
@@ -158,7 +179,7 @@ export const paymentsApi = newBaseApi.injectEndpoints({
         try {
           const { data } = await queryFulfilled;
           const status = (data?.data?.paymentStatus || '').toUpperCase();
-          if (status === 'PAID') {
+          if (status === 'PAID' || status === 'CAPTURED' || status === 'SUCCESS') {
             dispatch(
               newBaseApi.util.invalidateTags(['Visits', 'Payments', 'Orders']),
             );
@@ -179,7 +200,12 @@ export const paymentsApi = newBaseApi.injectEndpoints({
         try {
           const { data } = await queryFulfilled;
           const status = (data?.data?.status || '').toUpperCase();
-          if (status === 'CAPTURED' || status === 'FAILED') {
+          if (
+            status === 'CAPTURED' ||
+            status === 'PAID' ||
+            status === 'SUCCESS' ||
+            status === 'FAILED'
+          ) {
             dispatch(
               newBaseApi.util.invalidateTags(['Visits', 'Payments', 'Orders']),
             );

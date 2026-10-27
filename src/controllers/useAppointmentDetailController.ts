@@ -23,7 +23,10 @@ import type { AppLanguage, TranslationKey } from '../localization/types';
 import type { ConsultModeChoice, NetworkQuality } from './useDeviceCheckController';
 import { attemptJoinWaitingRoom } from './useJoinFailedController';
 import { useGetDoctorSlotsQuery } from '../store/api/new/doctorsApi';
-import { useGetDocumentsQuery } from '../store/api/new/recordsApi';
+import {
+  useGetDocumentsQuery,
+  useGetPrescriptionQuery,
+} from '../store/api/new/recordsApi';
 import { useReportRunningLateMutation } from '../store/api/new/teleApi';
 import {
   useCancelAppointmentMutation,
@@ -77,26 +80,36 @@ export const CANCEL_REASONS: {
   id: CancelReason;
   labelKey: TranslationKey;
 }[] = [
-  { id: 'found_another', labelKey: 'cancelReasonFoundAnother' },
-  { id: 'no_longer_needed', labelKey: 'cancelReasonNoLongerNeeded' },
-  { id: 'cost', labelKey: 'cancelReasonCost' },
-  { id: 'timing', labelKey: 'cancelReasonTiming' },
-  { id: 'mistake', labelKey: 'cancelReasonMistake' },
-  { id: 'other', labelKey: 'cancelReasonOther' },
-];
+    { id: 'found_another', labelKey: 'cancelReasonFoundAnother' },
+    { id: 'no_longer_needed', labelKey: 'cancelReasonNoLongerNeeded' },
+    { id: 'cost', labelKey: 'cancelReasonCost' },
+    { id: 'timing', labelKey: 'cancelReasonTiming' },
+    { id: 'mistake', labelKey: 'cancelReasonMistake' },
+    { id: 'other', labelKey: 'cancelReasonOther' },
+  ];
 
 export const RESCHEDULE_REASONS: {
   id: RescheduleReason;
   labelKey: TranslationKey;
 }[] = [
-  { id: 'not_available', labelKey: 'rescheduleReasonUnavailable' },
-  { id: 'feeling_better', labelKey: 'rescheduleReasonFeelingBetter' },
-  { id: 'network', labelKey: 'rescheduleReasonNetwork' },
-  { id: 'doctor_req', labelKey: 'rescheduleReasonDoctor' },
-  { id: 'other', labelKey: 'rescheduleReasonOther' },
-];
+    { id: 'not_available', labelKey: 'rescheduleReasonUnavailable' },
+    { id: 'feeling_better', labelKey: 'rescheduleReasonFeelingBetter' },
+    { id: 'network', labelKey: 'rescheduleReasonNetwork' },
+    { id: 'doctor_req', labelKey: 'rescheduleReasonDoctor' },
+    { id: 'other', labelKey: 'rescheduleReasonOther' },
+  ];
 
 export type AppointmentDetailViewModel = {
+  id: string;
+  isCompleted: boolean;
+  isCancelled: boolean;
+  hasPrescription: boolean;
+  erxSnapshotId: number | null;
+  prescriptionOpen: boolean;
+  onOpenPrescription: () => void;
+  onClosePrescription: () => void;
+  onAddPrescription: () => void;
+  onOrderMedicines?: () => void;
   language: AppLanguage;
   t: (key: TranslationKey) => string;
   doctorName: string;
@@ -217,6 +230,8 @@ export type AppointmentDetailViewModel = {
   onGetHelp: () => void;
   clinicCheckInOpen: boolean;
   clinicCheckInState: ClinicCheckInState;
+  isCheckedIn: boolean;
+  checkInError: string | null;
   clinicName: string;
   clinicAddress: string;
   clinicDistanceLabel: string;
@@ -372,12 +387,14 @@ export function useAppointmentDetailController({
   onRemoveAppointment,
   onUpdateAppointment,
   onBookAnotherConsultation,
+  onOrderMedicines,
 }: {
   appointment: BookedAppointment | null;
   onBack: () => void;
   onRemoveAppointment: (id: string) => void;
   onUpdateAppointment: (id: string, patch: Partial<BookedAppointment>) => void;
   onBookAnotherConsultation: () => void;
+  onOrderMedicines?: () => void;
 }): AppointmentDetailViewModel {
   const { language, t } = useLocalization();
   const appConfig = useAppConfig();
@@ -499,9 +516,13 @@ export function useAppointmentDetailController({
   useEffect(() => {
     setLocalPaidOverride(false);
     setPayNowError(null);
+    setCheckInError(null);
+    setCheckInWaitMinutes(null);
+    setPrescriptionOpen(false);
     payLater.reset();
     // Reset when switching appointments only.
   }, [item.id]);
+
 
   useEffect(() => {
     if (payLater.state === 'FAILED' && payLater.errorMessage) {
@@ -558,6 +579,9 @@ export function useAppointmentDetailController({
   const [checkInQueuePosition, setCheckInQueuePosition] = useState<number | null>(
     null,
   );
+  const [checkInWaitMinutes, setCheckInWaitMinutes] = useState<number | null>(null);
+  const [checkInError, setCheckInError] = useState<string | null>(null);
+  const [prescriptionOpen, setPrescriptionOpen] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -569,13 +593,10 @@ export function useAppointmentDetailController({
     const status = (visitDetail.status || '').toUpperCase();
     if (status === 'WAITING' || status === 'WALK-IN') {
       setClinicCheckInState('waiting');
-      if (!checkedInAtLabel) {
-        setCheckedInAtLabel(clockLabel(new Date()));
-      }
     } else if (status === 'NOT ARRIVED' || status === 'REMAINING') {
       setClinicCheckInState('ready');
     }
-  }, [checkedInAtLabel, visitDetail]);
+  }, [visitDetail]);
 
   useEffect(() => {
     if (!waitingRoomOpen || videoCallOpen) {
@@ -592,17 +613,42 @@ export function useAppointmentDetailController({
   const isClinic = item.mode === 'clinic';
   const isChat = item.mode === 'chat';
   const isRemoteConsult = item.mode === 'video' || item.mode === 'audio';
-  const phase: AppointmentPhase = isClinic || isChat
-    ? remainingMs <= -JOIN_GRACE_MS
+  const rawStatus = (visitDetail?.status || item.visitStatus || '').trim();
+  const visitStatus = rawStatus.toUpperCase();
+  const isCompleted = visitStatus === 'COMPLETED';
+  const isCancelled = visitStatus === 'CANCELLED';
+
+  const { data: prescriptionResponse } = useGetPrescriptionQuery(item.id, {
+    skip: !isNumericId || !isCompleted,
+  });
+  const prescriptionData = prescriptionResponse?.data;
+  const erxSnapshotId =
+    visitDetail?.erxSnapshotId ?? prescriptionData?.erxSnapshotId ?? null;
+  const hasPrescription =
+    isCompleted &&
+    Boolean(
+      (erxSnapshotId != null && Number(erxSnapshotId) > 0) ||
+      visitDetail?.erxSigned ||
+      Boolean(visitDetail?.erxPdfUrl) ||
+      (Array.isArray(prescriptionData?.items) && prescriptionData.items.length > 0),
+    );
+  const isCheckedIn =
+    !isCompleted &&
+    !isCancelled &&
+    isClinic &&
+    (clinicCheckInState === 'waiting' ||
+      visitStatus === 'WAITING' ||
+      visitStatus === 'WALK-IN');
+  const phase: AppointmentPhase =
+    isCompleted || isCancelled || remainingMs <= -JOIN_GRACE_MS
       ? 'ended'
-      : 'confirmed'
-    : remainingMs <= -JOIN_GRACE_MS
-      ? 'ended'
-      : remainingMs <= 0
-        ? 'live'
-        : remainingMs <= NEAR_START_MS
-          ? 'upcoming'
-          : 'confirmed';
+      : isClinic || isChat
+        ? 'confirmed'
+        : remainingMs <= 0
+          ? 'live'
+          : remainingMs <= NEAR_START_MS
+            ? 'upcoming'
+            : 'confirmed';
 
   const bannerLabel =
     phase === 'upcoming'
@@ -631,6 +677,8 @@ export function useAppointmentDetailController({
   // Hide when paymentStatus / isPaid says already paid (Home or visit detail).
   const showPayNow =
     isClinic &&
+    !isCompleted &&
+    !isCancelled &&
     !visitIsPaid &&
     phase !== 'ended' &&
     fee != null &&
@@ -703,31 +751,30 @@ export function useAppointmentDetailController({
   const currentShortWhen = `${currentTime} ${t(weekdayKey(startDate))}`;
   const nextShortWhen = selectedRescheduleDay && selectedRescheduleSlot
     ? `${t(selectedRescheduleSlot.labelKey)} ${t(
-        WEEKDAY_KEYS[selectedRescheduleDay.weekdayIndex],
-      )}`
+      WEEKDAY_KEYS[selectedRescheduleDay.weekdayIndex],
+    )}`
     : '';
   const deadline = new Date(startMs - NEAR_START_MS);
-  const deadlineLabel = `${localizeDigits(clockLabel(deadline), language)}${
-    deadline.toDateString() === new Date().toDateString()
-      ? language === 'en'
-        ? ' today'
-        : ''
-      : `, ${compactDate(deadline, t, language)}`
-  }`;
+  const deadlineLabel = `${localizeDigits(clockLabel(deadline), language)}${deadline.toDateString() === new Date().toDateString()
+    ? language === 'en'
+      ? ' today'
+      : ''
+    : `, ${compactDate(deadline, t, language)}`
+    }`;
   const rescheduleReasonLabel = rescheduleReason
     ? t(
-        RESCHEDULE_REASONS.find((row) => row.id === rescheduleReason)?.labelKey ??
-          'rescheduleReasonPlaceholder',
-      )
+      RESCHEDULE_REASONS.find((row) => row.id === rescheduleReason)?.labelKey ??
+      'rescheduleReasonPlaceholder',
+    )
     : '';
   const canConfirmReschedule = Boolean(
     selectedRescheduleDay &&
-      selectedRescheduleDay.status === 'open' &&
-      selectedRescheduleSlot &&
-      !selectedRescheduleSlot.booked &&
-      rescheduleReason &&
-      (rescheduleReason !== 'other' || rescheduleNote.trim()) &&
-      !rescheduleSubmitting,
+    selectedRescheduleDay.status === 'open' &&
+    selectedRescheduleSlot &&
+    !selectedRescheduleSlot.booked &&
+    rescheduleReason &&
+    (rescheduleReason !== 'other' || rescheduleNote.trim()) &&
+    !rescheduleSubmitting,
   );
 
   const resetCancelForm = () => {
@@ -798,6 +845,22 @@ export function useAppointmentDetailController({
     (visitDetail?.queuePosition != null ? visitDetail.queuePosition : null);
 
   return {
+    id: item.id,
+    isCompleted,
+    isCancelled,
+    hasPrescription,
+    erxSnapshotId: erxSnapshotId != null ? Number(erxSnapshotId) : null,
+    prescriptionOpen,
+    onOpenPrescription: () => setPrescriptionOpen(true),
+    onClosePrescription: () => setPrescriptionOpen(false),
+    onOrderMedicines,
+    onAddPrescription: () => {
+      if (libraryDocuments.length > 0) {
+        setSelectSheetOpen(true);
+        return;
+      }
+      setUploadOpen(true);
+    },
     language,
     t,
     doctorName: visitDetail?.doctorName?.trim() || t(item.doctorNameKey),
@@ -830,7 +893,7 @@ export function useAppointmentDetailController({
     isClinic,
     isChat,
     showJoin: isRemoteConsult && phase !== 'ended',
-    showOpenChat: isChat,
+    showOpenChat: isChat && phase !== 'ended',
     canJoin: isRemoteConsult && phase !== 'ended',
     phase,
     bannerLabel,
@@ -1155,6 +1218,8 @@ export function useAppointmentDetailController({
     onGetHelp: () => undefined,
     clinicCheckInOpen,
     clinicCheckInState,
+    isCheckedIn,
+    checkInError,
     clinicName,
     clinicAddress,
     clinicDistanceLabel: '',
@@ -1166,7 +1231,7 @@ export function useAppointmentDetailController({
     addressCopied,
     checkedInAtLabel,
     queuePosition,
-    waitMinutes: null,
+    waitMinutes: checkInWaitMinutes,
     checkInBusy,
     showPayNow,
     payNowLabel,
@@ -1183,6 +1248,7 @@ export function useAppointmentDetailController({
       if (!isNumericId || checkInBusy) {
         return;
       }
+      setCheckInError(null);
       void checkInVisit({ patientAppId: Number(item.id), status: 'WAITING' })
         .unwrap()
         .then((res) => {
@@ -1191,9 +1257,14 @@ export function useAppointmentDetailController({
           if (res.data?.queuePosition != null) {
             setCheckInQueuePosition(res.data.queuePosition);
           }
+          if (res.data?.estimatedWaitMinutes != null) {
+            setCheckInWaitMinutes(res.data.estimatedWaitMinutes);
+          }
           setReadyAtLabel(res.data?.readyAt?.trim() || null);
         })
-        .catch(() => undefined);
+        .catch((err: unknown) => {
+          setCheckInError(messageFromUnknownError(err));
+        });
     },
     onTellClinicLate: () => {
       const teleSessionId = visitDetail?.teleSessionId;

@@ -53,20 +53,24 @@ function StandardWaitingRoom({ vm }: { vm: WaitingRoomViewModel }) {
           </AppText>
 
           <View style={styles.queueBox}>
-            <View style={styles.queueRow}>
-              <View style={styles.iconBubble}>
-                <Ionicons name="people" size={18} color={ICON_SOLID} />
+            {vm.queuePositionLabel ? (
+              <View style={styles.queueRow}>
+                <View style={styles.iconBubble}>
+                  <Ionicons name="people" size={18} color={ICON_SOLID} />
+                </View>
+                <AppText variant="bodyLg" color={colors.ink} style={styles.flex}>
+                  {vm.queuePositionLabel}
+                </AppText>
               </View>
-              <AppText variant="bodyLg" color={colors.ink} style={styles.flex}>
-                {vm.queuePositionLabel}
-              </AppText>
-            </View>
-            <View style={styles.etaRow}>
-              <Ionicons name="time-outline" size={16} color={colors.muted} />
-              <AppText variant="bodyMd" color={colors.muted}>
-                {vm.etaLabel}
-              </AppText>
-            </View>
+            ) : null}
+            {vm.etaLabel ? (
+              <View style={styles.etaRow}>
+                <Ionicons name="time-outline" size={16} color={colors.muted} />
+                <AppText variant="bodyMd" color={colors.muted}>
+                  {vm.etaLabel}
+                </AppText>
+              </View>
+            ) : null}
             <View style={styles.waitPill}>
               <View style={styles.waitDot} />
               <AppText variant="labelSm" color={WARN} weightOverride="600">
@@ -229,11 +233,13 @@ function DoctorLateWaitingRoom({ vm }: { vm: WaitingRoomViewModel }) {
           <View style={styles.lateClock}>
             <Ionicons name="time" size={32} color={WARN} />
           </View>
-          <View style={styles.lateBanner}>
-            <AppText variant="bodyMd" color={colors.ink} weightOverride="600" style={styles.center}>
-              {vm.lateMinutesLabel}
-            </AppText>
-          </View>
+          {vm.lateMinutesLabel ? (
+            <View style={styles.lateBanner}>
+              <AppText variant="bodyMd" color={colors.ink} weightOverride="600" style={styles.center}>
+                {vm.lateMinutesLabel}
+              </AppText>
+            </View>
+          ) : null}
           <AppText variant="bodyMd" color={colors.muted} style={styles.center}>
             {vm.t('waitingRoomLatePleaseWait')}
           </AppText>

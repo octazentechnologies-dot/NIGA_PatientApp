@@ -1,5 +1,5 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useState, type ComponentProps } from 'react';
+import { useMemo, useState, type ComponentProps } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -32,6 +32,7 @@ import {
   CONSULT_NOW_WAIT_MAX,
   CONSULT_NOW_WAIT_MIN,
 } from '../config/consultNow';
+import { JOIN_GRACE_MS } from '../config/bookedAppointments';
 import { images } from '../config/images';
 import type { HomeViewModel } from '../controllers/useHomeController';
 import type { TranslationKey } from '../localization/types';
@@ -339,6 +340,8 @@ export function HomeView({
   onCloseDoctorsDatePicker,
   onSelectDoctorsCustomDate,
   onOpenBookWithHelp,
+  isHomeRefreshing = false,
+  onRefreshHome,
   account,
   notificationCount,
 }: HomeViewModel & { notificationCount: number }) {
@@ -477,9 +480,17 @@ export function HomeView({
 
           <ScrollView
             style={styles.homeBody}
-            bounces={false}
+            bounces={true}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={isHomeRefreshing}
+                onRefresh={onRefreshHome}
+                colors={[colors.primary]}
+                tintColor={colors.primary}
+              />
+            }
             contentContainerStyle={{ paddingBottom: tabScrollInset }}
           >
             <View style={styles.body}>

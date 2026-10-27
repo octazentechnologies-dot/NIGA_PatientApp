@@ -9,6 +9,7 @@ import {
   clearAuthCredentials,
   getAccessToken,
   getAuthUserData,
+  getBookingSessionId,
   hasLanguageSelectionCompleted,
   hasOnboardingCompleted,
   saveAccessToken,
@@ -23,9 +24,11 @@ import {
   markAuthInitialized,
   setAuthenticated,
   setAuthUser,
+  setBookingSession,
   setSessionEndedMessage,
   type AuthUser,
 } from '../store/slices/authSlice';
+import type { TranslationKey } from '../localization/types';
 import { accountApi } from '../store/api/new/accountApi';
 import { patientProfileApi } from '../store/api/new/patientProfileApi';
 import { isJwtExpiringWithin, parseJwtClaims } from '../utilities/jwt';
@@ -347,9 +350,11 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
   });
   const booking = useBookAppointmentController({
     doctorId: profileDoctorId,
+    initialMemberId: home.selectedMemberId,
     active: home.bookingOpen && Boolean(profileDoctorId),
     onBack: home.onCloseBooking,
     onAddMember: home.onAddMember,
+    onMemberChange: home.onSelectMember,
   });
   const review = useBookingReviewController({
     active: home.bookingOpen,
@@ -374,9 +379,74 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
     bookingToken: booking.bookingToken,
     isInClinicMode: booking.isInClinicMode,
     onSubmitBooking: booking.onSubmitBooking,
-    onPaymentConfirmed: booking.onPaymentConfirmed,
-    onPaymentPending: booking.onPaymentPending,
-    onPaymentFailed: () => booking.onOpenPaymentStatus('failed'),
+    onPayAtClinicSuccess: (result) => {
+      const visitId = String(result.patientAppId);
+      home.onConfirmBooking({
+        id: visitId,
+        bookingId: `APT-${result.patientAppId}`,
+        doctorId: booking.profile.id,
+        doctorNameKey: '' as TranslationKey,
+        doctorInitials: booking.profile.initials,
+        credentialsKey: '' as TranslationKey,
+        experienceKey: booking.profile.experienceKey,
+        whenLabel: booking.whenLabel,
+        dateLine: booking.dateLine,
+        timeLine: booking.timeLine,
+        startsAt: booking.startsAt,
+        bookedOnLabel: booking.bookedOnLabel,
+        mode: booking.mode,
+        modeConsultLabel: booking.modeConsultLabel,
+        patientLabel: booking.patientLabel,
+        feeLabel: booking.feeLabel,
+        paymentId: '',
+        reasonKey: 'reasonGeneralFollowUp' as TranslationKey,
+        status: 'waiting_acceptance',
+      });
+      payment.reset();
+      booking.onResetBooking();
+      home.onFinishBookingFlow('home');
+    },
+    onPaymentConfirmed: (paymentOrderId, confirmedPatientAppId) => {
+      const pId = confirmedPatientAppId ?? booking.patientAppId;
+      const visitId =
+        pId != null
+          ? String(pId)
+          : `${booking.profile.id}-${booking.whenLabel}-${booking.patientLabel}`;
+      home.onConfirmBooking({
+        id: visitId,
+        bookingId:
+          pId != null
+            ? `APT-${pId}`
+            : `APT-${Date.now().toString(36).toUpperCase()}`,
+        doctorId: booking.profile.id,
+        doctorNameKey: '' as TranslationKey,
+        doctorInitials: booking.profile.initials,
+        credentialsKey: '' as TranslationKey,
+        experienceKey: booking.profile.experienceKey,
+        whenLabel: booking.whenLabel,
+        dateLine: booking.dateLine,
+        timeLine: booking.timeLine,
+        startsAt: booking.startsAt,
+        bookedOnLabel: booking.bookedOnLabel,
+        mode: booking.mode,
+        modeConsultLabel: booking.modeConsultLabel,
+        patientLabel: booking.patientLabel,
+        feeLabel: booking.feeLabel,
+        paymentId: paymentOrderId ? String(paymentOrderId) : '',
+        reasonKey: 'reasonGeneralFollowUp' as TranslationKey,
+        status: 'waiting_acceptance',
+      });
+      payment.reset();
+      booking.onResetBooking();
+      home.onFinishBookingFlow('home');
+    },
+    onPaymentPending: (paymentOrderId) => {
+      booking.onPaymentPending(paymentOrderId);
+    },
+    onPaymentFailed: (message) => {
+      console.log('🚨 [AppNavigator] Payment Failed callback with reason:', message);
+      booking.onOpenPaymentStatus('failed', message);
+    },
     draft: {
       paymentSummaryLine: booking.paymentSummaryLine,
       doctorFeeLabel: booking.doctorFeeLabel,
@@ -388,12 +458,27 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
   const paymentStatus = usePaymentStatusController({
     active: Boolean(home.bookingOpen && booking.paymentStatus),
     onConfirmBooking: home.onConfirmBooking,
-    onCloseSuccess: home.onFinishBookingFlow,
+    onCloseSuccess: () => {
+      booking.onResetBooking();
+      home.onFinishBookingFlow();
+    },
+    onCloseFailure: () => {
+      payment.reset();
+      booking.onResetBooking();
+      home.onFinishBookingFlow('home');
+    },
     onRetry: () => {
+      payment.reset();
       booking.onClosePaymentStatus();
     },
-    onChooseMethod: booking.onClosePaymentStatus,
-    onChooseSlot: booking.onChooseOtherSlot,
+    onChooseMethod: () => {
+      payment.reset();
+      booking.onClosePaymentStatus();
+    },
+    onChooseSlot: () => {
+      payment.reset();
+      booking.onChooseOtherSlot();
+    },
     // Re-poll Verify — never invent success from the client alone.
     onConfirmPending: () => {
       payment.resumePendingPayment(
@@ -419,16 +504,56 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
       holdSeconds: 0,
       paymentOrderId: booking.lastPaymentOrderId ?? payment.paymentOrderId,
       patientAppId: booking.patientAppId,
+      failReason: booking.paymentFailureReason ?? payment.payError ?? null,
+      errorMessage: booking.paymentFailureReason ?? payment.payError ?? null,
+    },
+  });
+  const myAppointments = useMyAppointmentsController({
+    onBack: home.onCloseMyAppointments,
+    onOpenAppointment: home.onOpenAppointment,
+    onOpenRequests: () => {
+      home.onCloseMyAppointments();
+      home.onOpenAppointmentRequests();
+    },
+    onBookNew: () => {
+      home.onCloseMyAppointments();
+      home.onSelectTab('doctors');
+      home.onOpenSearch();
     },
   });
   const selectedAppointment =
-    home.appointments.find((item) => item.id === home.selectedAppointmentId) ?? null;
+    home.appointments.find((item) => item.id === home.selectedAppointmentId) ??
+    myAppointments.appointments.find((item) => item.id === home.selectedAppointmentId) ??
+    (home.selectedAppointmentId
+      ? {
+          id: home.selectedAppointmentId,
+          bookingId: `APT-${home.selectedAppointmentId}`,
+          doctorId: '',
+          doctorNameKey: '' as TranslationKey,
+          doctorInitials: 'DR',
+          credentialsKey: '' as TranslationKey,
+          experienceKey: '' as TranslationKey,
+          whenLabel: '',
+          dateLine: '',
+          timeLine: '',
+          startsAt: new Date().toISOString(),
+          bookedOnLabel: '',
+          mode: 'clinic' as const,
+          modeConsultLabel: 'Clinic',
+          patientLabel: '',
+          feeLabel: '',
+          paymentId: '',
+          reasonKey: '' as TranslationKey,
+          status: 'confirmed' as const,
+        }
+      : null);
   const appointmentDetail = useAppointmentDetailController({
     appointment: selectedAppointment,
     onBack: home.onCloseAppointment,
     onRemoveAppointment: home.onRemoveAppointment,
     onUpdateAppointment: home.onUpdateAppointment,
     onBookAnotherConsultation: home.onBookAnotherConsultation,
+    onOrderMedicines: home.onOpenOrderMedicines,
   });
   const deviceCheck = useDeviceCheckController({
     appointment: selectedAppointment,
@@ -459,6 +584,9 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
   const waitingRoom = useWaitingRoomController({
     appointment: selectedAppointment,
     consultMode: appointmentDetail.waitingRoomMode,
+    queuePosition: appointmentDetail.queuePosition,
+    waitMinutes: appointmentDetail.waitMinutes,
+    documentCount: appointmentDetail.attachedDocuments.length,
     onBack: appointmentDetail.onCloseWaitingRoom,
     onLeave: appointmentDetail.onCloseWaitingRoom,
     onReschedule: () => {
@@ -540,19 +668,6 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
       home.onCloseAppointmentRequests();
       home.onCloseMyAppointments();
       home.onOpenAppointment(String(patientAppId));
-    },
-  });
-  const myAppointments = useMyAppointmentsController({
-    onBack: home.onCloseMyAppointments,
-    onOpenAppointment: home.onOpenAppointment,
-    onOpenRequests: () => {
-      home.onCloseMyAppointments();
-      home.onOpenAppointmentRequests();
-    },
-    onBookNew: () => {
-      home.onCloseMyAppointments();
-      home.onSelectTab('doctors');
-      home.onOpenSearch();
     },
   });
   const editProfile = useCompleteProfileController({
@@ -669,9 +784,22 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
     onConfirmBooking: (item) =>
       home.onConfirmBooking({ ...item, status: 'confirmed' }),
     onCloseSuccess: consultNow.onFinishInstantPay,
-    onRetry: consultNow.onClosePaymentStatus,
-    onChooseMethod: consultNow.onClosePaymentStatus,
-    onChooseSlot: consultNow.onClosePayment,
+    onCloseFailure: () => {
+      consultPayment.reset();
+      consultNow.onFinishInstantPay();
+    },
+    onRetry: () => {
+      consultPayment.reset();
+      consultNow.onClosePaymentStatus();
+    },
+    onChooseMethod: () => {
+      consultPayment.reset();
+      consultNow.onClosePaymentStatus();
+    },
+    onChooseSlot: () => {
+      consultPayment.reset();
+      consultNow.onClosePayment();
+    },
     onConfirmPending: () => {
       consultPayment.resumePendingPayment(consultPayment.paymentOrderId ?? undefined);
     },
@@ -710,6 +838,10 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
     }
 
     if (home.selectedAppointmentId && selectedAppointment) {
+      if (appointmentDetail.prescriptionOpen) {
+        appointmentDetail.onClosePrescription();
+        return true;
+      }
       if (appointmentDetail.rateConsultationOpen) {
         appointmentDetail.onCloseRateConsultation();
         return true;
@@ -886,6 +1018,15 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
     }
 
     if (home.consultNowOpen) {
+      if (consultNow.paymentStatus === 'failed') {
+        consultPayment.reset();
+        consultNow.onFinishInstantPay();
+        return true;
+      }
+      if (consultNow.paymentStatus === 'success') {
+        consultNow.onFinishInstantPay();
+        return true;
+      }
       if (consultNow.paymentStatus) {
         consultNow.onClosePaymentStatus();
         return true;
@@ -928,6 +1069,17 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
     }
 
     if (home.bookingOpen && home.profileDoctorId) {
+      if (booking.paymentStatus === 'failed') {
+        payment.reset();
+        booking.onResetBooking();
+        home.onFinishBookingFlow('home');
+        return true;
+      }
+      if (booking.paymentStatus === 'success') {
+        booking.onResetBooking();
+        home.onFinishBookingFlow();
+        return true;
+      }
       if (booking.paymentStatus) {
         booking.onClosePaymentStatus();
         return true;
@@ -1091,6 +1243,7 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
             readyAtLabel={appointmentDetail.readyAtLabel}
             doctorName={appointmentDetail.doctorName}
             checkInBusy={appointmentDetail.checkInBusy}
+            checkInError={appointmentDetail.checkInError}
             onBack={appointmentDetail.onCloseCheckIn}
             onConfirmCheckIn={appointmentDetail.onConfirmCheckIn}
             onTellClinic={appointmentDetail.onTellClinicLate}
@@ -1340,6 +1493,15 @@ export function AppNavigator() {
                   mobile: p.mobileNo,
                 }),
               );
+              const savedSessionId = await getBookingSessionId();
+              if (savedSessionId) {
+                dispatch(
+                  setBookingSession({
+                    bookingSessionId: savedSessionId,
+                    mobile: p.mobileNo,
+                  }),
+                );
+              }
               dispatch(setAuthenticated(true));
               dispatch(markAuthInitialized());
               if (isMounted) {
