@@ -55,4 +55,7 @@ export type PendingPaymentRecord = {
   patientAppId?: number | null;
   medicineOrderId?: number | null;
   savedAt: string;
+  /** After Checkout SUCCESS — used to resume Verify without re-opening Razorpay. */
+  gatewayOrderId?: string | null;
+  gatewayPaymentId?: string | null;
 };

@@ -14,6 +14,7 @@ import { isZeroAmountOrder } from './amount';
 import {
   clearPendingPayment,
   maskPaymentId,
+  readPendingPayment,
   savePendingPayment,
 } from './pendingPaymentStore';
 import { useRazorpayCheckout } from './useRazorpayCheckout';
@@ -23,8 +24,9 @@ import type {
   ServerCheckoutOrder,
 } from './types';
 
-const POLL_MS = 3000;
-const POLL_MAX_MS = 60_000;
+const POLL_MS = 1500;
+const POLL_MAX_MS = 45_000;
+const UPDATE_PAYMENT_RETRIES = 3;
 
 export type CreateOrderResult = {
   gatewayReady?: boolean | null;
@@ -210,7 +212,15 @@ export function usePayment(options: UsePaymentOptions) {
       setState('VERIFYING');
       setErrorMessage(null);
       try {
-        await pollUntilCaptured(id);
+        const pending = await readPendingPayment();
+        const checkout =
+          pending && pending.paymentOrderId === id
+            ? {
+                paymentId: pending.gatewayPaymentId || undefined,
+                orderId: pending.gatewayOrderId || undefined,
+              }
+            : undefined;
+        await pollUntilCaptured(id, checkout);
       } finally {
         inFlight.current = false;
       }
@@ -287,17 +297,35 @@ export function usePayment(options: UsePaymentOptions) {
         paymentOrderId: maskPaymentId(mapped.paymentOrderId),
         paymentId: maskPaymentId(checkout.paymentId),
       });
+      await savePendingPayment({
+        paymentOrderId: mapped.paymentOrderId,
+        flow,
+        patientAppId: orderPatientAppId,
+        medicineOrderId: medicineOrderId ?? null,
+        savedAt: new Date().toISOString(),
+        gatewayOrderId: checkout.orderId,
+        gatewayPaymentId: checkout.paymentId,
+      });
+
       let alreadyPaid = false;
       let paidMethod: string | null | undefined;
       if (onCheckoutSuccessRef.current) {
-        const attachResult = await onCheckoutSuccessRef.current({
-          paymentId: checkout.paymentId,
-          orderId: checkout.orderId,
-          signature: checkout.signature,
-          paymentOrderId: mapped.paymentOrderId,
-        });
-        alreadyPaid = Boolean(attachResult?.paid);
-        paidMethod = attachResult?.method;
+        for (let attempt = 0; attempt < UPDATE_PAYMENT_RETRIES; attempt++) {
+          const attachResult = await onCheckoutSuccessRef.current({
+            paymentId: checkout.paymentId,
+            orderId: checkout.orderId,
+            signature: checkout.signature,
+            paymentOrderId: mapped.paymentOrderId,
+          });
+          alreadyPaid = Boolean(attachResult?.paid);
+          paidMethod = attachResult?.method;
+          if (alreadyPaid) {
+            break;
+          }
+          if (attempt < UPDATE_PAYMENT_RETRIES - 1) {
+            await sleep(500);
+          }
+        }
       }
       if (alreadyPaid) {
         await clearPendingPayment();
