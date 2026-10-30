@@ -52,4 +52,7 @@ yarn-error.*
 # apk files
 *.apk
 
+# markdown files
+*.md
+
 Notes.txt
