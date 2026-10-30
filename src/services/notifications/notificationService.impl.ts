@@ -206,6 +206,21 @@ export function attachNotificationListeners(): NotificationListenerCleanup {
     },
   );
 
+  const tokenSub = Notifications.addPushTokenListener((token) => {
+    const value = typeof token?.data === 'string' ? token.data.trim() : '';
+    if (!value) return;
+    logNotifications('Native push token refreshed');
+    lastRegisteredToken = null;
+    void registerAuthenticatedDeviceForPush().then((result) => {
+      if (!result.ok) {
+        logNotifications(
+          'Token-refresh re-register failed',
+          result.reason ?? result.status,
+        );
+      }
+    });
+  });
+
   try {
     const last = Notifications.getLastNotificationResponse();
     if (last?.notification) {
@@ -223,5 +238,6 @@ export function attachNotificationListeners(): NotificationListenerCleanup {
   return () => {
     received.remove();
     response.remove();
+    tokenSub.remove();
   };
 }

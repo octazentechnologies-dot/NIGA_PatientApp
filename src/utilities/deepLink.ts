@@ -3,6 +3,7 @@
  * Unknown / absolute http(s) outside our app schemes → ignore (stay on list).
  */
 const ALLOWED_PREFIXES = [
+  'nigapatient://',
   'homeo://',
   'hellohomeo://',
   '/appointments',
@@ -51,7 +52,9 @@ export function resolveNotificationDeepLink(
   if (!allowed && !raw.startsWith('/')) {
     return { kind: 'unknown' };
   }
-  const path = raw.replace(/^(homeo|hellohomeo):\/\//i, '/').replace(/^\//, '');
+  const path = raw
+    .replace(/^(nigapatient|homeo|hellohomeo):\/\//i, '/')
+    .replace(/^\//, '');
   const [head, idPart] = path.split(/[/?]/);
   const id = idPart && /^\d+$/.test(idPart) ? Number(idPart) : undefined;
   switch (head.toLowerCase()) {
