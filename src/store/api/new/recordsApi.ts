@@ -1,3 +1,5 @@
+import type { FetchBaseQueryError } from '@reduxjs/toolkit/query';
+
 import { API_BASE_URL } from '../../../config/apiConfig';
 import { newBaseApi } from './newBaseApi';
 
@@ -166,11 +168,117 @@ export type ErxPdfMetaResponse = {
   code?: string;
 };
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
+}
+
+function pickStr(row: Record<string, unknown>, ...keys: string[]): string {
+  for (const key of keys) {
+    const value = row[key];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+    if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  }
+  return '';
+}
+
+function pickNum(row: Record<string, unknown>, ...keys: string[]): number {
+  for (const key of keys) {
+    const value = Number(row[key]);
+    if (Number.isFinite(value) && value > 0) return value;
+  }
+  return 0;
+}
+
+function unwrapRows(payload: unknown): unknown[] {
+  if (Array.isArray(payload)) return payload;
+  const root = asRecord(payload);
+  if (!root) return [];
+  if (Array.isArray(root.data)) return root.data;
+  const data = asRecord(root.data);
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data?.Items)) return data.Items;
+  if (Array.isArray(root.items)) return root.items;
+  if (Array.isArray(root.Items)) return root.Items;
+  return [];
+}
+
+function normalizeErxItem(raw: unknown): ErxItem | null {
+  const row = asRecord(raw);
+  if (!row) return null;
+  const remedyCode = pickStr(row, 'remedyCode', 'RemedyCode');
+  const remedyName = pickStr(row, 'remedyName', 'RemedyName', 'name', 'Name');
+  const potencyCode = pickStr(row, 'potencyCode', 'PotencyCode', 'potency', 'Potency');
+  const dose = pickStr(row, 'dose', 'Dose');
+  const frequency = pickStr(row, 'frequency', 'Frequency');
+  const duration = pickStr(row, 'duration', 'Duration');
+  const instructions = pickStr(row, 'instructions', 'Instructions');
+  if (!remedyName && !remedyCode && !potencyCode && !dose && !frequency) return null;
+  return {
+    remedyCode,
+    remedyName: remedyName || remedyCode,
+    potencyCode,
+    dose,
+    frequency,
+    duration,
+    instructions,
+  };
+}
+
+function normalizePrescription(raw: unknown): GetPrescriptionResponse {
+  const root = asRecord(raw) ?? {};
+  const data = asRecord(root.data) ?? root;
+  const itemSource = data.items ?? data.Items ?? data.remedies ?? data.Remedies ?? [];
+  const items = (Array.isArray(itemSource) ? itemSource : [])
+    .map(normalizeErxItem)
+    .filter((item): item is ErxItem => item != null);
+  return {
+    success: root.success !== false,
+    message: pickStr(root, 'message', 'Message') || undefined,
+    code: pickStr(root, 'code', 'Code') || undefined,
+    data: {
+      erxSnapshotId: pickNum(data, 'erxSnapshotId', 'ErxSnapshotId'),
+      patientAppId: pickNum(data, 'patientAppId', 'PatientAppId'),
+      status: pickStr(data, 'status', 'Status'),
+      signedAt: pickStr(data, 'signedAt', 'SignedAt'),
+      items,
+      notesIncluded: Boolean(data.notesIncluded ?? data.NotesIncluded),
+    },
+  };
+}
+
+function normalizePrescriptionList(payload: unknown): GetPrescriptionsListResponse {
+  const data: ApiPrescriptionListItem[] = [];
+  for (const raw of unwrapRows(payload)) {
+    const row = asRecord(raw);
+    if (!row) continue;
+    const erxSnapshotId = pickNum(row, 'erxSnapshotId', 'ErxSnapshotId', 'erxId', 'ErxId');
+    if (!erxSnapshotId) continue;
+    const itemSource = row.items ?? row.Items ?? row.remedies ?? row.Remedies ?? [];
+    const doctorName = pickStr(row, 'doctorName', 'DoctorName');
+    const patientId = pickNum(row, 'patientId', 'PatientId');
+    const doctorId = pickNum(row, 'doctorId', 'DoctorId');
+    const item: ApiPrescriptionListItem = {
+      erxSnapshotId,
+      patientAppId: pickNum(row, 'patientAppId', 'PatientAppId'),
+      status: pickStr(row, 'status', 'Status'),
+      signedAt: pickStr(row, 'signedAt', 'SignedAt'),
+      items: (Array.isArray(itemSource) ? itemSource : [])
+        .map(normalizeErxItem)
+        .filter((entry): entry is ErxItem => entry != null),
+    };
+    if (patientId) item.patientId = patientId;
+    if (doctorId) item.doctorId = doctorId;
+    if (doctorName) item.doctorName = doctorName;
+    data.push(item);
+  }
+  return { success: true, data };
+}
+
 /**
  * Health Records & Documents API:
  * - J1: GET /api/Patient/Timeline
  * - J2: GET /api/Patient/Consultations/{patientAppId}/Note
- * - Prescriptions List: GET /api/Erx/Prescriptions
+ * - Prescriptions List: GET /api/Erx/History (fallback GET /api/Erx/Prescriptions)
  * - J3: GET /api/Erx/ByAppointment/{id} & GET /api/Erx/Patient/{patientAppId}
  * - J4: GET /api/Erx/{erxSnapshotId}/Pdf
  * - J5: GET /api/Patient/Documents
@@ -184,8 +292,14 @@ export type ErxPdfMetaResponse = {
 export const recordsApi = newBaseApi.injectEndpoints({
   overrideExisting: true,
   endpoints: (build) => ({
-    getTimeline: build.query<GetTimelineResponse, void>({
-      query: () => 'api/Patient/Timeline',
+    getTimeline: build.query<GetTimelineResponse, { patientId?: number } | void>({
+      query: (params) => ({
+        url: 'api/Patient/Timeline',
+        params:
+          params && params.patientId && params.patientId > 0
+            ? { patientId: params.patientId }
+            : undefined,
+      }),
       providesTags: ['Timeline'],
     }),
     getConsultationNote: build.query<
@@ -195,7 +309,17 @@ export const recordsApi = newBaseApi.injectEndpoints({
       query: (patientAppId) => `api/Patient/Consultations/${patientAppId}/Note`,
     }),
     getPrescriptionsList: build.query<GetPrescriptionsListResponse, void>({
-      query: () => 'api/Erx/Prescriptions',
+      async queryFn(_arg, _api, _extraOptions, baseQuery) {
+        const history = await baseQuery('api/Erx/History');
+        if (!history.error) {
+          return { data: normalizePrescriptionList(history.data) };
+        }
+        const legacy = await baseQuery('api/Erx/Prescriptions');
+        if (!legacy.error) {
+          return { data: normalizePrescriptionList(legacy.data) };
+        }
+        return { error: history.error as FetchBaseQueryError };
+      },
       providesTags: ['Prescriptions'],
     }),
     getPrescriptionByAppointment: build.query<
@@ -203,14 +327,22 @@ export const recordsApi = newBaseApi.injectEndpoints({
       number | string
     >({
       query: (appointmentId) => `api/Erx/ByAppointment/${appointmentId}`,
+      transformResponse: (response: unknown) => normalizePrescription(response),
       providesTags: ['Prescriptions'],
     }),
     getPrescription: build.query<GetPrescriptionResponse, number | string>({
       query: (patientAppId) => `api/Erx/Patient/${patientAppId}`,
+      transformResponse: (response: unknown) => normalizePrescription(response),
       providesTags: ['Prescriptions'],
     }),
-    getDocuments: build.query<GetDocumentsResponse, void>({
-      query: () => 'api/Patient/Documents',
+    getDocuments: build.query<GetDocumentsResponse, { patientId?: number } | void>({
+      query: (params) => ({
+        url: 'api/Patient/Documents',
+        params:
+          params && params.patientId && params.patientId > 0
+            ? { patientId: params.patientId }
+            : undefined,
+      }),
       providesTags: ['Documents'],
     }),
     getDocumentById: build.query<GetDocumentByIdResponse, number | string>({

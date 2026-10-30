@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Keyboard } from 'react-native';
+import { Keyboard } from 'react-native';
 
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
@@ -15,6 +15,7 @@ import {
   type CreateFamilyMemberRequest,
   type UpdateFamilyMemberRequest,
 } from '../store/api/new/familyApi';
+import { getApiBodyMessage, getApiErrorMessage, showAppToast } from '../utilities/toast';
 import {
   useGetGendersQuery,
   type GenderMaster,
@@ -666,11 +667,9 @@ export function useFamilyMembersController({
             body: updatePayload,
           }).unwrap();
           if (res && res.success === false) {
-            const msg =
-              res.errorMessage ||
-              res.message ||
-              t('genericError');
-            Alert.alert(language === 'mr' ? 'त्रुटी' : 'Error', msg);
+            if (!getApiBodyMessage(res)) {
+              showAppToast({ type: 'error', message: t('genericError') });
+            }
             return;
           }
 
@@ -681,23 +680,9 @@ export function useFamilyMembersController({
           resetForm();
         } catch (err: unknown) {
           console.error('[UpdateFamilyMember] Error:', err);
-          let errorMsg = t('genericError');
-          if (
-            typeof err === 'object' &&
-            err !== null &&
-            'data' in err &&
-            typeof (err as { data?: unknown }).data === 'object' &&
-            (err as { data?: Record<string, unknown> }).data !== null
-          ) {
-            const data = (err as { data: Record<string, unknown> }).data;
-            errorMsg =
-              (typeof data.errorMessage === 'string' && data.errorMessage) ||
-              (typeof data.message === 'string' && data.message) ||
-              errorMsg;
-          } else if (err instanceof Error && err.message) {
-            errorMsg = err.message;
+          if (!getApiErrorMessage(err)) {
+            showAppToast({ type: 'error', message: t('genericError') });
           }
-          Alert.alert(language === 'mr' ? 'त्रुटी' : 'Error', errorMsg);
         }
       } else {
         const authPatientId = authUser?.patientId;
@@ -720,11 +705,9 @@ export function useFamilyMembersController({
         try {
           const res = await createFamilyMember(payload).unwrap();
           if (res && res.success === false) {
-            const msg =
-              res.errorMessage ||
-              res.message ||
-              t('genericError');
-            Alert.alert(language === 'mr' ? 'त्रुटी' : 'Error', msg);
+            if (!getApiBodyMessage(res)) {
+              showAppToast({ type: 'error', message: t('genericError') });
+            }
             return;
           }
 
@@ -735,23 +718,9 @@ export function useFamilyMembersController({
           resetForm();
         } catch (err: unknown) {
           console.error('[CreateFamilyMember] Error:', err);
-          let errorMsg = t('genericError');
-          if (
-            typeof err === 'object' &&
-            err !== null &&
-            'data' in err &&
-            typeof (err as { data?: unknown }).data === 'object' &&
-            (err as { data?: Record<string, unknown> }).data !== null
-          ) {
-            const data = (err as { data: Record<string, unknown> }).data;
-            errorMsg =
-              (typeof data.errorMessage === 'string' && data.errorMessage) ||
-              (typeof data.message === 'string' && data.message) ||
-              errorMsg;
-          } else if (err instanceof Error && err.message) {
-            errorMsg = err.message;
+          if (!getApiErrorMessage(err)) {
+            showAppToast({ type: 'error', message: t('genericError') });
           }
-          Alert.alert(language === 'mr' ? 'त्रुटी' : 'Error', errorMsg);
         }
       }
     },
@@ -847,11 +816,9 @@ export function useFamilyMembersController({
       try {
         const res = await deleteFamilyMember(targetId).unwrap();
         if (res && typeof res === 'object' && res.success === false) {
-          const msg =
-            res.errorMessage ||
-            res.message ||
-            t('genericError');
-          Alert.alert(language === 'mr' ? 'त्रुटी' : 'Error', msg);
+          if (!getApiBodyMessage(res)) {
+            showAppToast({ type: 'error', message: t('genericError') });
+          }
           return;
         }
         setMembers((current) =>
@@ -860,23 +827,9 @@ export function useFamilyMembersController({
         refetchFamily();
       } catch (err: unknown) {
         console.error('[DeleteFamilyMember] Error:', err);
-        let errorMsg = t('genericError');
-        if (
-          typeof err === 'object' &&
-          err !== null &&
-          'data' in err &&
-          typeof (err as { data?: unknown }).data === 'object' &&
-          (err as { data?: Record<string, unknown> }).data !== null
-        ) {
-          const data = (err as { data: Record<string, unknown> }).data;
-          errorMsg =
-            (typeof data.errorMessage === 'string' && data.errorMessage) ||
-            (typeof data.message === 'string' && data.message) ||
-            errorMsg;
-        } else if (err instanceof Error && err.message) {
-          errorMsg = err.message;
+        if (!getApiErrorMessage(err)) {
+          showAppToast({ type: 'error', message: t('genericError') });
         }
-        Alert.alert(language === 'mr' ? 'त्रुटी' : 'Error', errorMsg);
       } finally {
         isDeletingRef.current = false;
       }

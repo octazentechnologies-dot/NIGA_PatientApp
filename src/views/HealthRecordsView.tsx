@@ -29,12 +29,34 @@ import { useUploadDocumentController } from '../controllers/useUploadDocumentCon
 import type { TranslationKey } from '../localization/types';
 import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
-import { spacing } from '../theme/spacing';
+import { layout, spacing } from '../theme/spacing';
 import { ConsultationRecordView } from './ConsultationRecordView';
 import { PrescriptionView } from './PrescriptionView';
 import { UploadDocumentView } from './UploadDocumentView';
 
 const WARN = colors.warning;
+
+function timelineMonthGroups(
+  items: RecordsTimelineItem[],
+  language: 'en' | 'mr',
+): { label: string; items: RecordsTimelineItem[] }[] {
+  const locale = language === 'mr' ? 'mr-IN' : 'en-IN';
+  const groups: { label: string; items: RecordsTimelineItem[] }[] = [];
+  for (const item of items) {
+    const parsed = item.occurredAt ? new Date(item.occurredAt) : null;
+    const label =
+      parsed && !Number.isNaN(parsed.getTime())
+        ? parsed.toLocaleDateString(locale, { month: 'long', year: 'numeric' })
+        : '';
+    const current = groups[groups.length - 1];
+    if (current && current.label === label) {
+      current.items.push(item);
+    } else {
+      groups.push({ label, items: [item] });
+    }
+  }
+  return groups;
+}
 const WARN_FILL = colors.warningContainer;
 export function HealthRecordsView({
   onOpenFollowUpPlan,
@@ -47,7 +69,7 @@ export function HealthRecordsView({
   titleKey,
 }: {
   onOpenFollowUpPlan?: () => void;
-  onOpenOrderMedicines?: () => void;
+  onOpenOrderMedicines?: (launch?: import('../utilities/medicineOrderStage').OrderMedicinesLaunch) => void;
   onOpenNotifications?: () => void;
   onAddMember?: () => void;
   notificationCount?: number;
@@ -59,6 +81,7 @@ export function HealthRecordsView({
     onOpenFollowUpPlan,
     onOpenNotifications,
     onAddMember,
+    onOpenOrderMedicines,
     initialFilter,
   });
   const insets = useSafeAreaInsets();
@@ -73,9 +96,9 @@ export function HealthRecordsView({
     patientAppId: vm.activePatientAppId,
     appointmentId: vm.activePatientAppId,
     onBack: vm.onClosePrescription,
-    onOrder: () => {
+    onOrder: (launch) => {
       vm.onClosePrescription();
-      onOpenOrderMedicines?.();
+      onOpenOrderMedicines?.(launch);
     },
   });
   const uploadDocument = useUploadDocumentController({
@@ -292,11 +315,19 @@ export function HealthRecordsView({
         ) : (
           <View style={styles.timeline}>
             <View style={styles.timelineLine} />
-            <AppText variant="titleMd" color={colors.ink} style={styles.monthLabel}>
-              {vm.monthLabel}
-            </AppText>
-            {vm.items.map((item) => (
-              <TimelineCard key={item.id} item={item} vm={vm} />
+            {timelineMonthGroups(vm.items, vm.language).map((group) => (
+              <View key={group.label || 'undated'} style={styles.monthGroup}>
+                {group.label ? (
+                  <AppText variant="titleMd" color={colors.ink} style={styles.monthLabel}>
+                    {group.label}
+                  </AppText>
+                ) : null}
+                <View style={styles.monthCards}>
+                  {group.items.map((item) => (
+                    <TimelineCard key={item.id} item={item} vm={vm} />
+                  ))}
+                </View>
+              </View>
             ))}
           </View>
         )}
@@ -467,12 +498,12 @@ function TimelineCard({
                 <AppButton
                   label={vm.t('recordsView')}
                   variant="secondary"
-                  onPress={vm.onViewPrescription}
+                  onPress={() => vm.onViewLatestPrescription(item.id)}
                   style={styles.rxBtn}
                 />
                 <AppButton
                   label={vm.t('recordsOrder')}
-                  onPress={vm.onOrderPrescription}
+                  onPress={() => vm.onOrderPrescription(item.id)}
                   style={styles.rxBtn}
                 />
               </View>
@@ -868,8 +899,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   filterChipOn: {
-    backgroundColor: colors.ink,
-    borderColor: colors.ink,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   calendarBtn: {
     width: 40,
@@ -894,9 +925,14 @@ const styles = StyleSheet.create({
     width: 2,
     backgroundColor: colors.outlineVariant,
   },
+  monthGroup: {
+    gap: spacing.sm,
+  },
+  monthCards: {
+    gap: layout.cardGap,
+  },
   monthLabel: {
     marginLeft: -4,
-    marginBottom: spacing.xs,
   },
   timelineItem: {
     position: 'relative',

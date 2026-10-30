@@ -23,6 +23,7 @@ import {
 import { registerAuthenticatedDeviceForPush } from '../services/notifications';
 import { saveAccessToken, saveAuthUserData } from '../services/secureStorage';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { getApiBodyMessage, getApiErrorMessage } from '../utilities/toast';
 import {
   type DetectedGeoLocation,
   setAuthenticated,
@@ -453,7 +454,9 @@ export function useCompleteProfileController({
         if (d.message) errorMsg = d.message;
         else if (d.errorMessage) errorMsg = d.errorMessage;
       }
-      showToast(errorMsg, 'error');
+      if (!getApiErrorMessage(profileQueryError)) {
+        showToast(errorMsg, 'error');
+      }
     }
   }, [isEdit, profileQueryError, language]);
   const { data: gendersResponse, isLoading: isGendersLoading } =
@@ -870,6 +873,7 @@ export function useCompleteProfileController({
                 : profileData?.preferredLanguageId ?? null,
         welcomeVersionSeen: profileData?.welcomeVersionSeen ?? '1.0',
         patientId: reqPatientId,
+        addressLine1: address.trim(),
       };
 
       try {
@@ -889,6 +893,7 @@ export function useCompleteProfileController({
             email: resData.email,
             dateOfBirth: resData.dateOfBirth,
             gender: resData.gender,
+            addressLine1: address.trim() || authUser?.addressLine1,
           };
           await saveAuthUserData(updatedUser);
           dispatch(
@@ -901,12 +906,14 @@ export function useCompleteProfileController({
           );
         }
 
-        showToast(
-          language === 'mr'
-            ? 'प्रोफाइल यशस्वीरित्या अपडेट केली'
-            : 'Profile updated successfully',
-          'success',
-        );
+        if (!getApiBodyMessage(updateRes)) {
+          showToast(
+            language === 'mr'
+              ? 'प्रोफाइल यशस्वीरित्या अपडेट केली'
+              : 'Profile updated successfully',
+            'success',
+          );
+        }
 
         setTimeout(() => {
           onContinue();
@@ -930,7 +937,9 @@ export function useCompleteProfileController({
             errorMsg = dataObj.errorMessage;
           }
         }
-        showToast(errorMsg, 'error');
+        if (!getApiErrorMessage(err)) {
+          showToast(errorMsg, 'error');
+        }
       }
       return;
     }
@@ -1022,12 +1031,14 @@ export function useCompleteProfileController({
       onContinue();
     } catch (error) {
       console.error('[api/patient] Error:', error);
-      showToast(
-        language === 'mr'
-          ? 'नोंदणी करण्यात अयशस्वी. कृपया पुन्हा प्रयत्न करा.'
-          : 'Failed to create patient profile. Please try again.',
-        'error',
-      );
+      if (!getApiErrorMessage(error)) {
+        showToast(
+          language === 'mr'
+            ? 'नोंदणी करण्यात अयशस्वी. कृपया पुन्हा प्रयत्न करा.'
+            : 'Failed to create patient profile. Please try again.',
+          'error',
+        );
+      }
     }
   };
 

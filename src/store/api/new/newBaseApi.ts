@@ -17,6 +17,7 @@ import {
   setAuthUser,
   setSessionEndedMessage,
 } from '../../slices/authSlice';
+import { notifyApiResult } from '../../../utilities/toast';
 import { prepareAuthHeaders } from '../prepareAuthHeaders';
 
 /**
@@ -126,6 +127,7 @@ export const baseQueryWithReauth: BaseQueryFn<
     }
   }
 
+  notifyApiResult(args, result);
   return result;
 };
 

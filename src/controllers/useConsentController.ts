@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert } from 'react-native';
 
 import { useLocalization } from '../localization/i18n';
+import { getApiErrorMessage, showAppToast } from '../utilities/toast';
 import type { AppLanguage, TranslationKey } from '../localization/types';
 import { useAppSelector } from '../store/hooks';
 import {
@@ -143,16 +144,19 @@ export function useConsentController({
             status?: number;
             data?: { code?: string; message?: string };
           };
-          const message =
-            err?.data?.message ||
-            (err?.status === 409
-              ? 'This consent must be managed from the Caregiver page.'
-              : 'Could not update consent.');
           console.error(
             `[POST Grant Consent] Error for consentTypeId ${consentTypeId}:`,
             error,
           );
-          Alert.alert('Consent', message);
+          if (!getApiErrorMessage(error)) {
+            showAppToast({
+              type: 'error',
+              message:
+                err?.status === 409
+                  ? 'This consent must be managed from the Caregiver page.'
+                  : 'Could not update consent.',
+            });
+          }
         } finally {
           setTogglingConsentId(null);
         }

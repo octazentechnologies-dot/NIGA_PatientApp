@@ -2,7 +2,13 @@ import { useMemo, useState } from 'react';
 
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
-import { useGetMedicineOrderTrackingQuery } from '../store/api/new/medicinesApi';
+import {
+  useCreateMedicineOrderMutation,
+  useGetMedicineOrderTrackingQuery,
+  useGetMedicineOrdersQuery,
+  useGrantMedicineConsentMutation,
+  useRequestRefillMutation,
+} from '../store/api/new/medicinesApi';
 import { useAppSelector } from '../store/hooks';
 export type RefillFeeling = 'improved' | 'same' | 'worse' | 'returned';
 
@@ -46,6 +52,7 @@ export type OrderDetailsViewModel = {
   onChangeRefillReason: (value: string) => void;
   onSelectFeeling: (id: RefillFeeling) => void;
   onSendRefill: () => void;
+  refillMessage: string | null;
   onHelpWrongItem: () => void;
   onHelpMissingItem: () => void;
   onHelpRefund: () => void;
@@ -102,8 +109,14 @@ export function useOrderDetailsController({
   const [refillFeeling, setRefillFeeling] = useState<RefillFeeling | null>(
     'improved',
   );
-
+  const [refillMessage, setRefillMessage] = useState<string | null>(null);
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+  const { data: ordersResponse } = useGetMedicineOrdersQuery(undefined, {
+    skip: !isAuthenticated,
+  });
+  const [requestRefill] = useRequestRefillMutation();
+  const [createOrder] = useCreateMedicineOrderMutation();
+  const [grantConsent] = useGrantMedicineConsentMutation();
   const numericOrderId = Number(String(orderId).replace(/\D/g, ''));
   const hasValidId = Number.isFinite(numericOrderId) && numericOrderId > 0;
   const canRefill = hasValidId;
@@ -168,13 +181,48 @@ export function useOrderDetailsController({
     },
     onChangeRefillReason: setRefillReason,
     onSelectFeeling: setRefillFeeling,
-    onSendRefill: async () => {
-      setRefillOpen(false);
-      // blocked: B-023 — refill requires erxSnapshotId from order payload
+    refillMessage,
+    onSendRefill: () => {
+      const match = (ordersResponse?.data ?? []).find(
+        (row) => row.medicineOrderId === numericOrderId,
+      );
+      const erxSnapshotId = Number(match?.erxSnapshotId);
+      if (!Number.isFinite(erxSnapshotId) || erxSnapshotId <= 0) {
+        setRefillMessage(t('orderDetailRefillMissingRx'));
+        return;
+      }
+      void requestRefill({ erxSnapshotId })
+        .unwrap()
+        .then(() => {
+          setRefillMessage(t('orderDetailRefillSent'));
+        })
+        .catch(() => {
+          setRefillMessage(t('orderDetailRefillMissingRx'));
+        });
     },
     onHelpWrongItem: () => undefined,
     onHelpMissingItem: () => undefined,
     onHelpRefund: () => undefined,
-    onReorder: () => onReorder?.(),
+    onReorder: () => {
+      const match = (ordersResponse?.data ?? []).find(
+        (row) => row.medicineOrderId === numericOrderId,
+      );
+      const erxSnapshotId = Number(match?.erxSnapshotId);
+      if (!Number.isFinite(erxSnapshotId) || erxSnapshotId <= 0) {
+        setRefillMessage(t('orderDetailRefillMissingRx'));
+        return;
+      }
+      void createOrder({ erxSnapshotId })
+        .unwrap()
+        .then(async (res) => {
+          const createdId = res.data?.medicineOrderId;
+          if (!createdId) return;
+          await grantConsent(createdId).unwrap();
+          onReorder?.();
+        })
+        .catch(() => {
+          setRefillMessage(t('orderMedsMissingSnapshot'));
+        });
+    },
   };
 }

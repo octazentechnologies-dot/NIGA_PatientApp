@@ -1,4 +1,4 @@
-import { Text, TextInput } from 'react-native';
+import { PixelRatio, Text, TextInput } from 'react-native';
 
 type ScalableDefaults = {
   allowFontScaling?: boolean;
@@ -14,6 +14,10 @@ type ComponentWithDefaults = {
  * does not enlarge/shrink text or text inputs.
  *
  * Call once at app entry (before the root component mounts).
+ *
+ * Note: `Text.defaultProps` is unreliable on New Architecture / Fabric —
+ * AppText still sets allowFontScaling={false} explicitly.
+ * Android also uses `plugins/withLockSystemFontScale.js` to force fontScale=1.
  */
 export function disableSystemFontScaling(): void {
   const text = Text as unknown as ComponentWithDefaults;
@@ -30,4 +34,20 @@ export function disableSystemFontScaling(): void {
     allowFontScaling: false,
     maxFontSizeMultiplier: 1,
   };
+
+  // Code paths that read fontScale (layouts, some libs) stay at 1×.
+  try {
+    Object.defineProperty(PixelRatio, 'getFontScale', {
+      configurable: true,
+      enumerable: false,
+      writable: true,
+      value: () => 1,
+    });
+  } catch {
+    try {
+      (PixelRatio as { getFontScale: () => number }).getFontScale = () => 1;
+    } catch {
+      // ignore
+    }
+  }
 }

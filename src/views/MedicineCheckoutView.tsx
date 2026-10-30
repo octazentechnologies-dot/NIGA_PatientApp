@@ -1,6 +1,8 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  FlatList,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,7 +14,9 @@ import { sheetBottomPadding } from '../utilities/sheetInset';
 
 import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
+import { SafeAreaModal } from '../components/SafeAreaModal';
 import type {
+  LocationOption,
   MedicineCheckoutViewModel,
 } from '../controllers/useMedicineCheckoutController';
 import { colors } from '../theme/colors';
@@ -23,6 +27,7 @@ const WARN = colors.warning;
 const WARN_FILL = colors.warningContainer;
 export function MedicineCheckoutView(vm: MedicineCheckoutViewModel) {
   const insets = useSafeAreaInsets();
+  const [locationPicker, setLocationPicker] = useState<'state' | 'city' | null>(null);
 
   return (
     <View style={styles.root}>
@@ -127,6 +132,18 @@ export function MedicineCheckoutView(vm: MedicineCheckoutViewModel) {
           {vm.addressFormOpen ? (
             <View style={styles.form}>
               <AddressField
+                label={vm.t('checkoutAddrLabel')}
+                value={vm.addressForm.label}
+                placeholder={vm.t('checkoutAddrLabelHint')}
+                onChangeText={(label) => vm.onAddressFormChange({ label })}
+              />
+              <AddressField
+                label={vm.t('checkoutAddrPhone')}
+                value={vm.addressForm.phone}
+                onChangeText={(phone) => vm.onAddressFormChange({ phone })}
+                keyboardType="phone-pad"
+              />
+              <AddressField
                 label="Line 1"
                 value={vm.addressForm.line1}
                 onChangeText={(line1) => vm.onAddressFormChange({ line1 })}
@@ -136,18 +153,24 @@ export function MedicineCheckoutView(vm: MedicineCheckoutViewModel) {
                 value={vm.addressForm.line2}
                 onChangeText={(line2) => vm.onAddressFormChange({ line2 })}
               />
-              <AddressField
-                label="City"
-                value={vm.addressForm.city}
-                onChangeText={(city) => vm.onAddressFormChange({ city })}
-              />
-              <AddressField
-                label="State"
+              <SelectField
+                label={vm.t('state')}
                 value={vm.addressForm.state}
-                onChangeText={(state) => vm.onAddressFormChange({ state })}
+                placeholder={vm.t('statePlaceholder')}
+                onPress={() => setLocationPicker('state')}
+              />
+              <SelectField
+                label={vm.t('city')}
+                value={vm.addressForm.city}
+                placeholder={
+                  vm.selectedStateId ? vm.t('cityPlaceholder') : vm.t('checkoutPickStateFirst')
+                }
+                onPress={() => {
+                  if (vm.selectedStateId) setLocationPicker('city');
+                }}
               />
               <AddressField
-                label="Pincode"
+                label={vm.t('pincode')}
                 value={vm.addressForm.pincode}
                 onChangeText={(pincode) => vm.onAddressFormChange({ pincode })}
                 keyboardType="number-pad"
@@ -210,16 +233,20 @@ export function MedicineCheckoutView(vm: MedicineCheckoutViewModel) {
                 />
               </View>
               <View style={styles.flex}>
-                <AppText variant="bodyLg" color={colors.ink} weightOverride="600">
+                <AppText variant="bodyLg" color={colors.ink} weightOverride="600" raw>
                   {vm.t(item.nameKey)}
                 </AppText>
-                <AppText variant="bodyMd" color={colors.muted}>
-                  {vm.t(item.metaKey)}
-                </AppText>
+                {item.metaKey ? (
+                  <AppText variant="bodyMd" color={colors.muted} raw>
+                    {vm.t(item.metaKey)}
+                  </AppText>
+                ) : null}
               </View>
-              <AppText variant="bodyLg" color={colors.ink} weightOverride="600">
-                {item.priceLabel}
-              </AppText>
+              {item.priceLabel ? (
+                <AppText variant="bodyLg" color={colors.ink} weightOverride="600" raw>
+                  {item.priceLabel}
+                </AppText>
+              ) : null}
             </View>
           ))}
         </View>
@@ -228,21 +255,29 @@ export function MedicineCheckoutView(vm: MedicineCheckoutViewModel) {
           <AppText variant="headlineMd" color={colors.ink}>
             {vm.t('checkoutPaymentDetails')}
           </AppText>
-          <PayRow label={vm.t('checkoutSubtotal')} value={vm.subtotalLabel} muted />
-          <PayRow label={vm.t('checkoutTaxesFees')} value={vm.taxesLabel} muted />
-          <PayRow
-            label={vm.t('checkoutShipping')}
-            value={vm.shippingLabel}
-            muted
-            valueColor={vm.shippingFree ? colors.primaryOutline : colors.muted}
-            valueWeight={vm.shippingFree ? '600' : '400'}
-          />
-          <View style={styles.totalDivider} />
-          <PayRow
-            label={vm.t('checkoutTotal')}
-            value={vm.totalLabel}
-            large
-          />
+          {vm.subtotalLabel ? (
+            <PayRow label={vm.t('checkoutSubtotal')} value={vm.subtotalLabel} muted />
+          ) : null}
+          {vm.taxesLabel ? (
+            <PayRow label={vm.t('checkoutTaxesFees')} value={vm.taxesLabel} muted />
+          ) : null}
+          {vm.shippingLabel ? (
+            <PayRow
+              label={vm.t('checkoutShipping')}
+              value={vm.shippingLabel}
+              muted
+              valueColor={vm.shippingFree ? colors.primaryOutline : colors.muted}
+              valueWeight={vm.shippingFree ? '600' : '400'}
+            />
+          ) : null}
+          {vm.totalLabel ? <View style={styles.totalDivider} /> : null}
+          {vm.totalLabel ? (
+            <PayRow label={vm.t('checkoutTotal')} value={vm.totalLabel} large />
+          ) : (
+            <AppText variant="bodyMd" color={colors.muted}>
+              {vm.t('checkoutWaitingQuote')}
+            </AppText>
+          )}
 
           <AppText
             variant="labelSm"
@@ -253,10 +288,16 @@ export function MedicineCheckoutView(vm: MedicineCheckoutViewModel) {
             {vm.t('checkoutPayWith')}
           </AppText>
           <MethodRow
-            selected={vm.method === 'online' || vm.method === 'card'}
+            selected={vm.method === 'online'}
             icon="card-outline"
-            label="Pay online (Razorpay Checkout)"
+            label={vm.t('checkoutPayOnline')}
             onPress={() => vm.onSelectMethod('online')}
+          />
+          <MethodRow
+            selected={vm.method === 'cod'}
+            icon="cash-outline"
+            label={vm.t('checkoutPayCod')}
+            onPress={() => vm.onSelectMethod('cod')}
           />
 
           {vm.placeOrderNote ? (
@@ -273,7 +314,7 @@ export function MedicineCheckoutView(vm: MedicineCheckoutViewModel) {
                   : vm.t('checkoutPlaceOrder').replace('{total}', '').trim()
             }
             onPress={vm.onPlaceOrder}
-            disabled={vm.payBusy || !vm.medicineOrderId}
+            disabled={vm.payBusy || !vm.medicineOrderId || !vm.totalLabel}
             icon={<Ionicons name="lock-closed" size={18} color={colors.onButton} />}
             style={styles.placeBtn}
           />
@@ -282,6 +323,34 @@ export function MedicineCheckoutView(vm: MedicineCheckoutViewModel) {
           </AppText>
         </View>
       </ScrollView>
+      <SearchablePicker
+        visible={locationPicker === 'state'}
+        title={vm.t('state')}
+        searchLabel={vm.t('checkoutLocationSearch')}
+        emptyLabel={vm.t('checkoutNoLocationMatches')}
+        loading={vm.statesLoading}
+        options={vm.stateOptions}
+        selectedId={vm.selectedStateId}
+        onClose={() => setLocationPicker(null)}
+        onSelect={(id) => {
+          vm.onSelectState(id);
+          setLocationPicker(null);
+        }}
+      />
+      <SearchablePicker
+        visible={locationPicker === 'city'}
+        title={vm.t('city')}
+        searchLabel={vm.t('checkoutLocationSearch')}
+        emptyLabel={vm.t('checkoutNoLocationMatches')}
+        loading={vm.citiesLoading}
+        options={vm.cityOptions}
+        selectedId={vm.selectedCityId}
+        onClose={() => setLocationPicker(null)}
+        onSelect={(id) => {
+          vm.onSelectCity(id);
+          setLocationPicker(null);
+        }}
+      />
     </View>
   );
 }
@@ -291,11 +360,13 @@ function AddressField({
   value,
   onChangeText,
   keyboardType,
+  placeholder,
 }: {
   label: string;
   value: string;
   onChangeText: (text: string) => void;
-  keyboardType?: 'default' | 'number-pad';
+  keyboardType?: 'default' | 'number-pad' | 'phone-pad';
+  placeholder?: string;
 }) {
   return (
     <View style={styles.field}>
@@ -306,10 +377,144 @@ function AddressField({
         value={value}
         onChangeText={onChangeText}
         style={styles.fieldInput}
+        placeholder={placeholder}
         placeholderTextColor={colors.muted}
         keyboardType={keyboardType}
       />
     </View>
+  );
+}
+
+function SelectField({
+  label,
+  value,
+  placeholder,
+  onPress,
+}: {
+  label: string;
+  value: string;
+  placeholder: string;
+  onPress: () => void;
+}) {
+  return (
+    <View style={styles.field}>
+      <AppText variant="labelSm" color={colors.muted} weightOverride="600">
+        {label}
+      </AppText>
+      <Pressable
+        accessibilityRole="button"
+        onPress={onPress}
+        style={styles.selectField}
+      >
+        <AppText
+          variant="bodyMd"
+          color={value ? colors.ink : colors.muted}
+          style={styles.flex}
+          raw
+          numberOfLines={1}
+        >
+          {value || placeholder}
+        </AppText>
+        <Ionicons name="chevron-down" size={18} color={colors.ink} />
+      </Pressable>
+    </View>
+  );
+}
+
+function SearchablePicker({
+  visible,
+  title,
+  searchLabel,
+  emptyLabel,
+  loading,
+  options,
+  selectedId,
+  onClose,
+  onSelect,
+}: {
+  visible: boolean;
+  title: string;
+  searchLabel: string;
+  emptyLabel: string;
+  loading: boolean;
+  options: LocationOption[];
+  selectedId: number | null;
+  onClose: () => void;
+  onSelect: (id: number) => void;
+}) {
+  const insets = useSafeAreaInsets();
+  const [query, setQuery] = useState('');
+  useEffect(() => {
+    if (!visible) setQuery('');
+  }, [visible]);
+  const needle = query.trim().toLowerCase();
+  const filtered = needle
+    ? options.filter((row) => row.name.toLowerCase().includes(needle))
+    : options;
+
+  return (
+    <SafeAreaModal transparent animationType="fade" visible={visible} onRequestClose={onClose}>
+      <View style={styles.modalRoot}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={title}
+          onPress={onClose}
+          style={styles.modalScrim}
+        />
+        <View
+          style={[
+            styles.modalCard,
+            { paddingBottom: sheetBottomPadding(insets, spacing.lg) },
+          ]}
+        >
+          <AppText variant="titleMd" color={colors.ink} weightOverride="600">
+            {title}
+          </AppText>
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder={searchLabel}
+            placeholderTextColor={colors.muted}
+            style={styles.fieldInput}
+            autoCorrect={false}
+          />
+          {loading ? (
+            <ActivityIndicator color={colors.primary} style={styles.modalStatus} />
+          ) : (
+            <FlatList
+              data={filtered}
+              keyExtractor={(item) => String(item.id)}
+              keyboardShouldPersistTaps="handled"
+              style={styles.modalList}
+              ListEmptyComponent={
+                <AppText variant="bodyMd" color={colors.muted} style={styles.modalStatus}>
+                  {emptyLabel}
+                </AppText>
+              }
+              renderItem={({ item }) => {
+                const selected = item.id === selectedId;
+                return (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    onPress={() => onSelect(item.id)}
+                    style={[styles.modalRow, selected && styles.modalRowOn]}
+                  >
+                    <AppText
+                      variant="bodyMd"
+                      color={selected ? colors.primary : colors.ink}
+                      raw
+                    >
+                      {item.name}
+                    </AppText>
+                  </Pressable>
+                );
+              }}
+            />
+          )}
+        </View>
+      </View>
+    </SafeAreaModal>
   );
 }
 
@@ -547,6 +752,53 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     color: colors.ink,
     backgroundColor: colors.page,
+  },
+  selectField: {
+    minHeight: layout.buttonHeight,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.sm,
+    backgroundColor: colors.page,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  modalRoot: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  modalScrim: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: colors.inverseSurface,
+    opacity: 0.4,
+  },
+  modalCard: {
+    height: '72%',
+    backgroundColor: colors.card,
+    borderTopLeftRadius: radii.lg,
+    borderTopRightRadius: radii.lg,
+    padding: spacing.lg,
+    gap: spacing.sm,
+  },
+  modalList: {
+    flex: 1,
+  },
+  modalRow: {
+    minHeight: layout.buttonHeight,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.sm,
+  },
+  modalRowOn: {
+    backgroundColor: colors.primaryContainer,
+  },
+  modalStatus: {
+    marginVertical: spacing.lg,
   },
   formActions: {
     flexDirection: 'row',

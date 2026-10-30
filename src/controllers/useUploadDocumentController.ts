@@ -15,6 +15,7 @@ import { useGetFamilyQuery } from '../store/api/new/familyApi';
 import { useGetHomeDashboardQuery } from '../store/api/new/homeApi';
 import { useUploadDocumentMutation } from '../store/api/new/recordsApi';
 import { useAppSelector } from '../store/hooks';
+import { getApiErrorMessage } from '../utilities/toast';
 
 function formatDocDate(date: Date): string {
   const day = String(date.getDate()).padStart(2, '0');
@@ -363,12 +364,10 @@ export function useUploadDocumentController({
           uploaded.push(file);
         } catch (err: unknown) {
           console.warn('[uploadDocumentApi] Failed:', err);
-          const errMsg =
-            err && typeof err === 'object' && 'data' in err
-              ? (err as { data?: { message?: string } }).data?.message
-              : undefined;
-          setToastMessage(errMsg || 'Upload failed. Please try again.');
-          setToastVariant('error');
+          if (!getApiErrorMessage(err)) {
+            setToastMessage('Upload failed. Please try again.');
+            setToastVariant('error');
+          }
           return;
         }
       }

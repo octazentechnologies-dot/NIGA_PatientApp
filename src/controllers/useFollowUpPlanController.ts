@@ -12,6 +12,7 @@ import {
   useGetPatientVisitsQuery,
 } from '../store/api/new/visitsApi';
 import { useAppSelector } from '../store/hooks';
+import { getApiBodyMessage, getApiErrorMessage } from '../utilities/toast';
 
 export type FeelingId = 'improved' | 'same' | 'worse' | 'returned';
 
@@ -202,24 +203,25 @@ export function useFollowUpPlanController({
       }).unwrap();
 
       if (res.success) {
-        setToastMessage('Follow-up task created successfully.');
-        setToastVariant('success');
+        if (!getApiBodyMessage(res)) {
+          setToastMessage('Follow-up task created successfully.');
+          setToastVariant('success');
+        }
         setNewTaskTitle('');
         setAddTaskModalOpen(false);
         return true;
-      } else {
-        setToastMessage(res.message || 'Could not create task.');
-        setToastVariant('error');
-        return false;
       }
+      if (!getApiBodyMessage(res)) {
+        setToastMessage('Could not create task.');
+        setToastVariant('error');
+      }
+      return false;
     } catch (err: unknown) {
       console.warn('[createFollowUp] Failed:', err);
-      const errMsg =
-        err && typeof err === 'object' && 'data' in err
-          ? (err as { data?: { message?: string } }).data?.message
-          : undefined;
-      setToastMessage(errMsg || 'Could not create follow-up task.');
-      setToastVariant('error');
+      if (!getApiErrorMessage(err)) {
+        setToastMessage('Could not create follow-up task.');
+        setToastVariant('error');
+      }
       return false;
     }
   };
@@ -279,17 +281,17 @@ export function useFollowUpPlanController({
         return;
       }
       try {
-        await completeFollowUp(numId).unwrap();
-        setToastMessage('Follow-up task marked as complete.');
-        setToastVariant('success');
+        const completed = await completeFollowUp(numId).unwrap();
+        if (!getApiBodyMessage(completed)) {
+          setToastMessage('Follow-up task marked as complete.');
+          setToastVariant('success');
+        }
       } catch (e: unknown) {
         console.warn('[completeFollowUp] Failed:', e);
-        const errMsg =
-          e && typeof e === 'object' && 'data' in e
-            ? (e as { data?: { message?: string } }).data?.message
-            : undefined;
-        setToastMessage(errMsg || 'Could not complete follow-up task.');
-        setToastVariant('error');
+        if (!getApiErrorMessage(e)) {
+          setToastMessage('Could not complete follow-up task.');
+          setToastVariant('error');
+        }
       }
     },
     onUploadPhoto: () => onUploadPhoto?.(),

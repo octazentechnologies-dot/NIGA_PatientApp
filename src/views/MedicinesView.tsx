@@ -1,5 +1,5 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppButton } from '../components/AppButton';
@@ -12,6 +12,7 @@ import {
   type PastOrder,
   type PastOrderStatus,
 } from '../controllers/useMedicinesController';
+import type { OrderMedicinesLaunch } from '../utilities/medicineOrderStage';
 import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
 import { layout, spacing } from '../theme/spacing';
@@ -23,15 +24,19 @@ export function MedicinesView({
   onOrderRx,
   onOpenPastOrder,
   onOpenNotifications,
+  onPayOrder,
+  onStartRefillOrder,
   notificationCount = 0,
   forceHasOrders,
 }: {
   onBookFollowUp?: () => void;
   onSeePrescriptions?: () => void;
-  onTrackOrder?: () => void;
-  onOrderRx?: (id: string) => void;
+  onTrackOrder?: (orderId?: string) => void;
+  onOrderRx?: (launch: OrderMedicinesLaunch) => void;
   onOpenPastOrder?: (id: string) => void;
   onOpenNotifications?: () => void;
+  onPayOrder?: (orderId: number) => void;
+  onStartRefillOrder?: (launch: OrderMedicinesLaunch) => void;
   notificationCount?: number;
   forceHasOrders?: boolean;
 } = {}) {
@@ -42,6 +47,8 @@ export function MedicinesView({
     onOrderRx,
     onOpenPastOrder,
     onOpenNotifications,
+    onPayOrder,
+    onStartRefillOrder,
     forceHasOrders,
   });
   const insets = useSafeAreaInsets();
@@ -60,12 +67,26 @@ export function MedicinesView({
       {vm.hasOrders ? (
         <ScrollView
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={vm.isRefreshing}
+              onRefresh={vm.onRefresh}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
+            />
+          }
           contentContainerStyle={[
             styles.body,
             { paddingBottom: tabScrollInset },
           ]}
         >
           <MemberChips vm={vm} />
+          {vm.actionNote ? (
+            <AppText variant="bodyMd" color={colors.ink}>
+              {vm.actionNote}
+            </AppText>
+          ) : null}
+          <RefillSection vm={vm} />
           <ActiveOrderCard vm={vm} />
           <PrescriptionsSection vm={vm} />
           <PastOrdersSection vm={vm} />
@@ -86,12 +107,26 @@ export function MedicinesView({
           </Pressable>
         </ScrollView>
       ) : (
-        <View style={styles.emptyWrap}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={vm.isRefreshing}
+              onRefresh={vm.onRefresh}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
+            />
+          }
+          contentContainerStyle={[
+            styles.emptyWrap,
+            { flexGrow: 1, paddingBottom: tabScrollInset },
+          ]}
+        >
           <MemberChips vm={vm} />
           <View style={styles.emptyCenter}>
             <EmptyState vm={vm} />
           </View>
-        </View>
+        </ScrollView>
       )}
     </View>
   );
@@ -214,67 +249,127 @@ function MemberChips({ vm }: { vm: MedicinesViewModel }) {
   );
 }
 
-function ActiveOrderCard({ vm }: { vm: MedicinesViewModel }) {
-  if (!vm.activeOrderId) return null;
+function RefillSection({ vm }: { vm: MedicinesViewModel }) {
+  if (vm.pendingRefills.length === 0 && vm.approvedRefills.length === 0) return null;
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={vm.t('medsTrackOrder')}
-      onPress={vm.onTrackOrder}
-      style={styles.card}
-    >
-      <View style={styles.activeHead}>
-        <View style={styles.flex}>
-          <AppText
-            variant="labelSm"
-            color={colors.primary}
-            weightOverride="600"
-            style={styles.uppercase}
-          >
-            {vm.t('medsActiveOrder')}
-          </AppText>
+    <View style={styles.section}>
+      {vm.pendingRefills.length > 0 ? (
+        <View style={styles.card}>
           <AppText variant="labelMd" color={colors.ink} weightOverride="600">
-            {vm
-              .t('medsActiveOrderLine')
-              .replace('{id}', vm.activeOrderId)
-              .replace('{status}', vm.activeStatusLine)}
+            {vm.t('medsRefillPendingTitle')}
           </AppText>
+          <AppText variant="bodyMd" color={colors.muted}>
+            {vm.t('medsRefillPendingBody')}
+          </AppText>
+          {vm.pendingRefills.map((row) => (
+            <AppText key={row.id} variant="bodyMd" color={colors.ink} raw>
+              {row.title}
+              {row.subtitle ? ` · ${row.subtitle}` : ''}
+            </AppText>
+          ))}
         </View>
-        <Ionicons name="car-outline" size={24} color={colors.primary} />
-      </View>
+      ) : null}
+      {vm.approvedRefills.map((row) => (
+        <View key={row.id} style={styles.card}>
+          <AppText variant="labelMd" color={colors.ink} weightOverride="600">
+            {vm.t('medsRefillApprovedTitle')}
+          </AppText>
+          <AppText variant="bodyMd" color={colors.ink} raw>
+            {row.title}
+            {row.subtitle ? ` · ${row.subtitle}` : ''}
+          </AppText>
+          <AppButton
+            label={vm.t('medsStartRefill')}
+            onPress={() => vm.onStartRefill(row)}
+          />
+        </View>
+      ))}
+    </View>
+  );
+}
 
-      <View style={styles.progressRow}>
-        {Array.from({ length: vm.activeProgressTotal }).map((_, index) => {
-          const filled = index < vm.activeProgressFilled;
-          const isLastFilled = index === vm.activeProgressFilled - 1;
-          return (
-            <View
-              key={`step-${index}`}
-              style={[
-                styles.progressSeg,
-                index === 0 && styles.progressSegFirst,
-                index === vm.activeProgressTotal - 1 && styles.progressSegLast,
-                filled ? styles.progressSegOn : styles.progressSegOff,
-              ]}
-            >
-              {isLastFilled ? <View style={styles.progressDot} /> : null}
+function ActiveOrderCard({ vm }: { vm: MedicinesViewModel }) {
+  if (vm.openOrders.length === 0) return null;
+  return (
+    <>
+      {vm.openOrders.map((order) => (
+        <View key={order.id} style={styles.card}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={vm.t('medsTrackOrder')}
+            onPress={() => vm.onTrackOrder(order.id)}
+          >
+            <View style={styles.activeHead}>
+              <View style={styles.flex}>
+                <AppText
+                  variant="labelSm"
+                  color={colors.primary}
+                  weightOverride="600"
+                  style={styles.uppercase}
+                >
+                  {vm.t('medsActiveOrder')}
+                </AppText>
+                <AppText variant="labelMd" color={colors.ink} weightOverride="600" raw>
+                  {vm
+                    .t('medsActiveOrderLine')
+                    .replace('{id}', order.orderLabel)
+                    .replace('{status}', vm.t(order.statusKey))}
+                </AppText>
+              </View>
+              <View style={styles.badge}>
+                <AppText variant="labelSm" color={colors.primary} weightOverride="600">
+                  {vm.t(order.statusKey)}
+                </AppText>
+              </View>
             </View>
-          );
-        })}
-      </View>
-
-      <AppText variant="headlineMd" color={colors.ink}>
-        {vm.arrivingBy}
-      </AppText>
-      <AppText variant="bodyMd" color={colors.muted}>
-        {vm.fulfilledBy}
-      </AppText>
-      <AppButton
-        label={vm.t('medsTrackOrder')}
-        onPress={vm.onTrackOrder}
-        style={styles.trackBtn}
-      />
-    </Pressable>
+            <View style={styles.progressRow}>
+              {Array.from({ length: order.progressTotal }).map((_, index) => {
+                const filled = index < order.progressFilled;
+                return (
+                  <View
+                    key={`${order.id}-step-${index}`}
+                    style={[
+                      styles.progressSeg,
+                      index === 0 && styles.progressSegFirst,
+                      index === order.progressTotal - 1 && styles.progressSegLast,
+                      filled ? styles.progressSegOn : styles.progressSegOff,
+                    ]}
+                  />
+                );
+              })}
+            </View>
+            <AppText variant="headlineMd" color={colors.ink}>
+              {vm.t(order.statusKey)}
+            </AppText>
+            <AppText variant="bodyMd" color={colors.muted}>
+              {order.pharmacy}
+            </AppText>
+            {order.quoteLabel ? (
+              <AppText variant="labelMd" color={colors.ink} weightOverride="600" raw>
+                {order.quoteLabel}
+              </AppText>
+            ) : null}
+          </Pressable>
+          {order.action === 'accept' ? (
+            <AppButton
+              label={vm.t('medsAcceptQuote')}
+              onPress={() => vm.onAcceptQuote(order.id)}
+            />
+          ) : null}
+          {order.action === 'pay' && order.quoteLabel ? (
+            <AppButton
+              label={vm.t('medsPayNow')}
+              onPress={() => vm.onPayOrder(order.id)}
+            />
+          ) : null}
+          <AppButton
+            label={vm.t('medsTrackOrder')}
+            variant="secondary"
+            onPress={() => vm.onTrackOrder(order.id)}
+          />
+        </View>
+      ))}
+    </>
   );
 }
 
@@ -321,27 +416,20 @@ function PrescriptionsSection({ vm }: { vm: MedicinesViewModel }) {
               {vm.t(rx.badgeKey)}
             </AppText>
           </View>
-          {rx.expired ? (
+          {rx.canOrder ? (
             <Pressable
               accessibilityRole="button"
-              onPress={vm.onBookFollowUp}
-              style={styles.followLink}
-            >
-              <AppText variant="labelMd" color={colors.primaryOutline} weightOverride="600">
-                {vm.t('medsBookFollowUp')}
-              </AppText>
-              <Ionicons name="arrow-forward" size={16} color={colors.primaryOutline} />
-            </Pressable>
-          ) : (
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => vm.onOrderRx(rx.id)}
+              onPress={() => vm.onOrderRx(rx)}
               style={styles.outlineBtn}
             >
               <AppText variant="labelMd" color={colors.primaryOutline} weightOverride="600">
                 {vm.t('medsOrder')}
               </AppText>
             </Pressable>
+          ) : (
+            <AppText variant="bodyMd" color={colors.error}>
+              {vm.t('rxMustSign')}
+            </AppText>
           )}
         </View>
       ))}
@@ -443,20 +531,27 @@ function PastOrderRow({
           <AppText variant="bodyMd" color={colors.muted}>
             {order.pharmacy}
           </AppText>
-          <AppText
-            variant="labelMd"
-            color={mutedRow ? colors.muted : colors.ink}
-            weightOverride="600"
-            style={order.priceStruck ? styles.struck : undefined}
-          >
-            {order.refundNote
-              ? `${order.priceLabel} ${t('medsRefundedNote')}`
-              : order.priceLabel}
-          </AppText>
+          {order.priceLabel ? (
+            <AppText
+              variant="labelMd"
+              color={mutedRow ? colors.muted : colors.ink}
+              weightOverride="600"
+              raw
+              style={order.priceStruck ? styles.struck : undefined}
+            >
+              {order.refundNote
+                ? `${order.priceLabel} ${t('medsRefundedNote')}`
+                : order.priceLabel}
+            </AppText>
+          ) : null}
         </View>
         <View style={styles.pastActions}>
           {order.canReorder ? (
-            <Pressable accessibilityRole="button" onPress={onReorder} hitSlop={8}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={onReorder}
+              style={styles.reorderHit}
+            >
               <AppText variant="labelSm" color={colors.primary} weightOverride="600">
                 {t('medsReorder')}
               </AppText>
@@ -774,6 +869,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
+  },
+  reorderHit: {
+    minHeight: 48,
+    minWidth: 48,
+    justifyContent: 'center',
   },
   struck: {
     textDecorationLine: 'line-through',

@@ -99,6 +99,7 @@
       "@react-native-firebase/app",
       "@react-native-firebase/crashlytics",
       "./plugins/withCrashlyticsMainThread",
+      "./plugins/withLockSystemFontScale",
       [
         "expo-build-properties",
         {

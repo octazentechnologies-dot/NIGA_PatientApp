@@ -21,6 +21,7 @@ import { AppText } from '../components/AppText';
 import { DoctorFiltersSheet } from '../components/DoctorFiltersSheet';
 import { EmptyDoctorsIllustration } from '../components/EmptyDoctorsIllustration';
 import { NotificationBell } from '../components/NotificationBell';
+import { PatientHomeDashboard } from '../components/PatientHomeDashboard';
 import { PatientTabBar, usePatientTabScrollInset } from '../components/PatientTabBar';
 import { Screen } from '../components/Screen';
 import { StatusBarBleed } from '../components/StatusBarBleed';
@@ -35,6 +36,7 @@ import {
 import { JOIN_GRACE_MS } from '../config/bookedAppointments';
 import { images } from '../config/images';
 import type { HomeViewModel } from '../controllers/useHomeController';
+import { usePatientDashboard } from '../controllers/usePatientDashboard';
 import type { TranslationKey } from '../localization/types';
 import type { PublicDoctor } from '../store/api/new/doctorsApi';
 import { colors } from '../theme/colors';
@@ -298,6 +300,7 @@ export function HomeView({
   followUpPlanAvailable,
   onOpenFollowUpPlan,
   onOpenOrderMedicines,
+  onPayMedicineOrder,
   medicineOrderPlaced,
   onOpenOrderDetails,
   onOpenAccountRecords,
@@ -342,9 +345,13 @@ export function HomeView({
   onOpenBookWithHelp,
   isHomeRefreshing = false,
   onRefreshHome,
+  onOpenMyAppointments,
+  onOpenPayments,
   account,
   notificationCount,
 }: HomeViewModel & { notificationCount: number }) {
+  const dashboard = usePatientDashboard();
+  const [dashboardRefreshing, setDashboardRefreshing] = useState(false);
   const insets = useSafeAreaInsets();
   const tabScrollInset = usePatientTabScrollInset();
   const [doctorFilter, setDoctorFilter] = useState<'all' | 'online'>('all');
@@ -354,11 +361,12 @@ export function HomeView({
       ? publicDoctors.filter((doc) => doc.isOnline)
       : publicDoctors;
 
-  const bookedAppointments = appointments.filter(
-    (a) =>
-      a.id !== 'seed-followup-chat' &&
-      (a.status === 'confirmed' || a.status === 'waiting_acceptance'),
-  );
+  const bookedAppointments = appointments.filter((a) => {
+    if (a.id === 'seed-followup-chat') return false;
+    if (a.status !== 'confirmed' && a.status !== 'waiting_acceptance') return false;
+    const visit = (a.visitStatus || '').toUpperCase();
+    return !/COMPLETE|DONE|CLOSED/.test(visit);
+  });
 
   useAndroidStatusBarBackground(colors.card);
 
@@ -485,8 +493,15 @@ export function HomeView({
             showsVerticalScrollIndicator={false}
             refreshControl={
               <RefreshControl
-                refreshing={isHomeRefreshing}
-                onRefresh={onRefreshHome}
+                refreshing={isHomeRefreshing || dashboardRefreshing}
+                onRefresh={() => {
+                  void onRefreshHome();
+                  if (!dashboard.active) return;
+                  setDashboardRefreshing(true);
+                  void Promise.resolve(dashboard.refresh()).finally(() =>
+                    setDashboardRefreshing(false),
+                  );
+                }}
                 colors={[colors.primary]}
                 tintColor={colors.primary}
               />
@@ -494,12 +509,40 @@ export function HomeView({
             contentContainerStyle={{ paddingBottom: tabScrollInset }}
           >
             <View style={styles.body}>
-              {bookedAppointments.length > 0 ? (
-                <View style={styles.bookingsSection}>
-                  <AppText variant="headlineMd" color={colors.ink}>
-                    {t('homeMyBookings')}
-                  </AppText>
-                  {bookedAppointments.map((appointment) => {
+              {dashboard.active ? (
+                <PatientHomeDashboard
+                  model={dashboard.model}
+                  isLoading={dashboard.isLoading}
+                  t={t}
+                  onOpenCard={(id) => {
+                    if (id === 'today' || id === 'upcoming') {
+                      onOpenMyAppointments();
+                      return;
+                    }
+                    if (id === 'payments') {
+                      onOpenPayments();
+                      return;
+                    }
+                    if (id === 'prescriptions') {
+                      onOpenAccountRecords('prescriptions');
+                      return;
+                    }
+                    onSelectTab('medicines');
+                  }}
+                />
+              ) : null}
+              <View style={styles.bookingsSection}>
+                <AppText variant="headlineMd" color={colors.ink}>
+                  {t('homeMyBookings')}
+                </AppText>
+                {bookedAppointments.length === 0 ? (
+                  <View style={styles.emptyBookings}>
+                    <AppText variant="bodyMd" color={colors.onSurfaceVariant}>
+                      {t('homeNoBookings')}
+                    </AppText>
+                  </View>
+                ) : (
+                  bookedAppointments.map((appointment) => {
                     const canJoin =
                       appointment.mode === 'video' ||
                       appointment.mode === 'audio';
@@ -717,9 +760,9 @@ export function HomeView({
                         ) : null}
                       </Pressable>
                     );
-                  })}
-                </View>
-              ) : null}
+                  })
+                )}
+              </View>
 
               {followUpPlanAvailable ? (
                 <Pressable
@@ -815,7 +858,7 @@ export function HomeView({
                           : action.labelKey === 'homeMyPrescriptions'
                             ? () => onOpenAccountRecords('prescriptions')
                             : action.labelKey === 'homeOrderMedicines'
-                              ? onOpenOrderMedicines
+                              ? () => onOpenOrderMedicines()
                               : undefined
                     }
                     style={styles.quickCard}
@@ -1254,7 +1297,9 @@ export function HomeView({
           onBookFollowUp={onOpenSearch}
           onSeePrescriptions={() => onSelectTab('records')}
           onTrackOrder={onTrackOrder}
-          onOrderRx={() => onOpenOrderMedicines()}
+          onOrderRx={(launch) => onOpenOrderMedicines(launch)}
+          onPayOrder={onPayMedicineOrder}
+          onStartRefillOrder={(launch) => onOpenOrderMedicines(launch)}
           onOpenPastOrder={onOpenOrderDetails}
           onOpenNotifications={onOpenNotifications}
           notificationCount={notificationCount}
@@ -1522,6 +1567,15 @@ const styles = StyleSheet.create({
   bookingsSection: {
     gap: spacing.sm,
     marginTop: spacing.md,
+  },
+  emptyBookings: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
+    borderRadius: radii.default,
+    padding: spacing.md,
+    minHeight: 48,
+    justifyContent: 'center',
   },
   consultCard: {
     backgroundColor: colors.card,

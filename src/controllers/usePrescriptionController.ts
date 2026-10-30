@@ -3,12 +3,15 @@ import { Linking, Share } from 'react-native';
 
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import { useRequestRefillMutation } from '../store/api/new/medicinesApi';
 import {
   resolveErxPdfUrl,
   useGetPrescriptionByAppointmentQuery,
   useGetPrescriptionQuery,
   useLazyGetErxPdfMetaQuery,
 } from '../store/api/new/recordsApi';
+import type { OrderMedicinesLaunch } from '../utilities/medicineOrderStage';
+import { getApiBodyMessage, getApiErrorMessage } from '../utilities/toast';
 
 export type PrescriptionMedicine = {
   name: string;
@@ -45,7 +48,10 @@ export type PrescriptionViewModel = {
   onBack: () => void;
   onShare: () => void;
   onDownload: () => void;
+  canOrder: boolean;
   onOrder: () => void;
+  refillBusy: boolean;
+  onRequestRefill: () => void;
   onVerify: () => void;
   onOpenVersionHistory: () => void;
   onRetry: () => void;
@@ -95,11 +101,12 @@ export function usePrescriptionController({
   diagnosis?: string | null;
   appointmentDate?: string | null;
   onBack: () => void;
-  onOrder?: () => void;
+  onOrder?: (launch: OrderMedicinesLaunch) => void;
 }): PrescriptionViewModel {
   const { language, t } = useLocalization();
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastVariant, setToastVariant] = useState<'error' | 'success'>('error');
+  const [requestRefill, { isLoading: refillBusy }] = useRequestRefillMutation();
 
   const resolvedAptId =
     appointmentId != null && String(appointmentId).length > 0
@@ -288,7 +295,12 @@ export function usePrescriptionController({
           .toUpperCase()
       : 'DR');
   const patientName = patientNameProp || '';
-  const status = data?.data?.status || 'SIGNED';
+  const remoteStatus = data?.data?.status || '';
+  const signed =
+    erxSnapshotId != null &&
+    Number(erxSnapshotId) > 0 &&
+    (Boolean(data?.data?.signedAt) || /signed|locked/i.test(remoteStatus));
+  const status = signed ? 'SIGNED' : 'UNSIGNED';
 
   return {
     language,
@@ -315,7 +327,43 @@ export function usePrescriptionController({
     onDownload: () => {
       void openPdf('open');
     },
-    onOrder: () => onOrder?.(),
+    canOrder: signed,
+    onOrder: () => {
+      if (!signed || erxSnapshotId == null) {
+        setToastVariant('error');
+        setToastMessage(t('rxMustSign'));
+        return;
+      }
+      onOrder?.({
+        erxSnapshotId: Number(erxSnapshotId),
+        patientAppId:
+          patientAppId != null && Number(patientAppId) > 0
+            ? Number(patientAppId)
+            : data?.data?.patientAppId ?? null,
+      });
+    },
+    refillBusy,
+    onRequestRefill: () => {
+      if (!signed || erxSnapshotId == null) {
+        setToastVariant('error');
+        setToastMessage(t('rxMustSign'));
+        return;
+      }
+      void requestRefill({ erxSnapshotId: Number(erxSnapshotId) })
+        .unwrap()
+        .then((payload) => {
+          if (!getApiBodyMessage(payload)) {
+            setToastVariant('success');
+            setToastMessage(t('rxRefillSent'));
+          }
+        })
+        .catch((err: unknown) => {
+          if (!getApiErrorMessage(err)) {
+            setToastVariant('error');
+            setToastMessage(t('orderDetailRefillMissingRx'));
+          }
+        });
+    },
     onVerify: () => undefined,
     onOpenVersionHistory: () => undefined,
     onRetry: () => {

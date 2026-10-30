@@ -42,9 +42,9 @@ export function AppointmentDetailView(vm: AppointmentDetailViewModel) {
     diagnosis: vm.reason,
     appointmentDate: vm.dateLine,
     onBack: vm.onClosePrescription,
-    onOrder: () => {
+    onOrder: (launch) => {
       vm.onClosePrescription();
-      vm.onOrderMedicines?.();
+      vm.onOrderMedicines?.(launch);
     },
   });
 

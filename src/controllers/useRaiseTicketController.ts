@@ -7,6 +7,7 @@ import type { HelpTopicId } from './useHelpCentreController';
 import { useCreateTicketMutation } from '../store/api/new/supportApi';
 import { useGetMedicineOrdersQuery } from '../store/api/new/medicinesApi';
 import { useAppSelector } from '../store/hooks';
+import { getApiErrorMessage, showAppToast } from '../utilities/toast';
 
 export type TicketIssueId =
   | 'wrongItem'
@@ -153,7 +154,9 @@ export function useRaiseTicketController({
       onBack();
     } catch (err) {
       console.warn('[POST api/Support/Tickets] Failed to create support ticket:', err);
-      Alert.alert(t('ticketSubmit'), t('ticketIssueOther'));
+      if (!getApiErrorMessage(err)) {
+        showAppToast({ type: 'error', message: t('ticketIssueOther') });
+      }
     }
   }, [
     canSubmit,

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
@@ -10,14 +10,21 @@ import {
   type PatientAddress,
 } from '../store/api/new/addressesApi';
 import {
+  useGetMedicineOrderTrackingQuery,
   usePayMedicineOrderMutation,
   type PayMedicineOrderResponse,
 } from '../store/api/new/medicinesApi';
+import { formatQuoteAmount } from '../utilities/medicineOrderStage';
+import {
+  useGetCitiesByStateQuery,
+  useGetCountriesQuery,
+  useGetStatesByCountryQuery,
+} from '../store/api/new/completeProfileApi';
 import { useGetPatientProfileQuery } from '../store/api/new/patientProfileApi';
 import { useAppSelector } from '../store/hooks';
 import { messageFromUnknownError } from '../utilities/apiResponse';
 
-export type CheckoutPayMethod = 'card' | 'wallet' | 'online';
+export type CheckoutPayMethod = 'online' | 'cod';
 
 export type CheckoutOrderItem = {
   id: string;
@@ -25,6 +32,11 @@ export type CheckoutOrderItem = {
   metaKey: TranslationKey;
   priceLabel: string;
   icon: 'med' | 'vial';
+};
+
+export type LocationOption = {
+  id: number;
+  name: string;
 };
 
 export type AddressFormDraft = {
@@ -72,6 +84,14 @@ export type MedicineCheckoutViewModel = {
   onCloseAddressForm: () => void;
   onSaveAddress: () => void;
   addressSaveBusy: boolean;
+  stateOptions: LocationOption[];
+  cityOptions: LocationOption[];
+  statesLoading: boolean;
+  citiesLoading: boolean;
+  selectedStateId: number | null;
+  selectedCityId: number | null;
+  onSelectState: (id: number) => void;
+  onSelectCity: (id: number) => void;
 };
 
 const EMPTY_FORM: AddressFormDraft = {
@@ -101,6 +121,13 @@ export function formatAddressLines(address: PatientAddress | null | undefined): 
     lines.unshift(address.label.trim());
   }
   return lines;
+}
+
+function localMobile(value: string | null | undefined): string {
+  const digits = String(value ?? '').replace(/\D/g, '');
+  if (digits.length === 12 && digits.startsWith('91')) return digits.slice(2);
+  if (digits.length === 11 && digits.startsWith('0')) return digits.slice(1);
+  return digits;
 }
 
 function validateAddressForm(form: AddressFormDraft): string | null {
@@ -134,10 +161,34 @@ export function useMedicineCheckoutController({
   const [addressFormOpen, setAddressFormOpen] = useState(false);
   const [addressForm, setAddressForm] = useState<AddressFormDraft>(EMPTY_FORM);
   const [addressFormError, setAddressFormError] = useState<string | null>(null);
+  const [selectedStateId, setSelectedStateId] = useState<number | null>(null);
+  const [selectedCityId, setSelectedCityId] = useState<number | null>(null);
+  const phoneSeeded = useRef(false);
   const [internalAddressId, setInternalAddressId] = useState<number | null>(null);
   const appConfig = useAppConfig();
 
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+  const { data: trackingResponse } = useGetMedicineOrderTrackingQuery(
+    medicineOrderId ?? 0,
+    { skip: !isAuthenticated || !medicineOrderId },
+  );
+  const quoteLabel =
+    formatQuoteAmount(
+      trackingResponse?.data?.quoteAmount,
+      trackingResponse?.data?.currency,
+    ) ?? '';
+  const quotedItems = useMemo<CheckoutOrderItem[]>(() => {
+    const rows = trackingResponse?.data?.items ?? trackingResponse?.data?.lines ?? [];
+    if (!Array.isArray(rows) || rows.length === 0) return items;
+    return rows.map((row, index) => ({
+      id: `line-${index}`,
+      nameKey: (row.remedyName || 'Medicine') as TranslationKey,
+      metaKey: ([row.potencyCode, row.quantityLabel].filter(Boolean).join(' · ') ||
+        '') as TranslationKey,
+      priceLabel: '',
+      icon: 'med' as const,
+    }));
+  }, [items, trackingResponse?.data?.items, trackingResponse?.data?.lines]);
   const authUser = useAppSelector((state) => state.auth.user);
   const authMobile = useAppSelector((state) => state.auth.mobile);
   const { data: profileResponse } = useGetPatientProfileQuery(undefined, {
@@ -172,8 +223,56 @@ export function useMedicineCheckoutController({
     profile?.patientName ||
     authUser?.patientName ||
     [authUser?.firstName, authUser?.lastName].filter(Boolean).join(' ');
-  const userPhone =
-    profile?.mobileNo || authUser?.mobile || authUser?.mobileNo || authMobile;
+  const userPhone = localMobile(
+    profile?.mobileNo || authUser?.mobile || authUser?.mobileNo || authMobile,
+  );
+  const { data: countriesResponse } = useGetCountriesQuery();
+  const countryId = useMemo(() => {
+    const countries = countriesResponse?.data ?? [];
+    const saved =
+      authUser?.countryId != null && Number(authUser.countryId) > 0
+        ? Number(authUser.countryId)
+        : null;
+    if (saved) return saved;
+    const india = countries.find(
+      (country) =>
+        country.iso2Code?.trim().toUpperCase() === 'IN' ||
+        /india/i.test(country.countryName || ''),
+    );
+    return india?.countryId ?? (countries.length === 1 ? countries[0].countryId : null);
+  }, [authUser?.countryId, countriesResponse?.data]);
+  const { data: statesResponse, isLoading: statesLoading } = useGetStatesByCountryQuery(
+    countryId ?? 0,
+    { skip: !countryId },
+  );
+  const { data: citiesResponse, isFetching: citiesLoading } = useGetCitiesByStateQuery(
+    selectedStateId ?? 0,
+    { skip: !selectedStateId },
+  );
+  const stateOptions = useMemo<LocationOption[]>(
+    () =>
+      (statesResponse?.data ?? []).map((row) => ({
+        id: row.stateId,
+        name: row.stateName?.trim() || '',
+      })).filter((row) => row.name),
+    [statesResponse?.data],
+  );
+  const cityOptions = useMemo<LocationOption[]>(
+    () =>
+      (citiesResponse?.data ?? []).map((row) => ({
+        id: row.cityId,
+        name: row.cityName?.trim() || '',
+      })).filter((row) => row.name),
+    [citiesResponse?.data],
+  );
+
+  useEffect(() => {
+    if (!addressFormOpen || phoneSeeded.current || !userPhone) return;
+    phoneSeeded.current = true;
+    setAddressForm((current) =>
+      current.phone.trim() ? current : { ...current, phone: userPhone },
+    );
+  }, [addressFormOpen, userPhone]);
   const phoneLabel = selectedAddress?.phone?.trim()
     ? selectedAddress.phone.trim()
     : userPhone
@@ -245,18 +344,45 @@ export function useMedicineCheckoutController({
   const onPlaceOrder = useCallback(() => {
     setPlaceOrderNote(null);
     if (!medicineOrderId) {
-      setPlaceOrderNote(
-        'No medicine order to pay. Go back and choose a pharmacy.',
-      );
+      setPlaceOrderNote(t('checkoutWaitingQuote'));
+      return;
+    }
+    if (!quoteLabel) {
+      setPlaceOrderNote(t('checkoutWaitingQuote'));
       return;
     }
     if (!selectedAddressId) {
-      setPlaceOrderNote('Add a delivery address before paying.');
+      setPlaceOrderNote(t('orderMedsAddAddressHint'));
       setAddressPickerOpen(true);
       return;
     }
+    if (method === 'cod') {
+      const idempotencyKey = `mo-${medicineOrderId}-cod-${Date.now()}`;
+      void payMedicineOrder({
+        medicineOrderId,
+        payMode: 'COD',
+        idempotencyKey,
+      })
+        .unwrap()
+        .then((res) => {
+          onPaid?.(res.data?.paymentOrderId ?? medicineOrderId);
+        })
+        .catch((err: unknown) => {
+          setPlaceOrderNote(messageFromUnknownError(err));
+        });
+      return;
+    }
     void payment.startPayment();
-  }, [medicineOrderId, payment, selectedAddressId]);
+  }, [
+    medicineOrderId,
+    method,
+    onPaid,
+    payMedicineOrder,
+    payment,
+    quoteLabel,
+    selectedAddressId,
+    t,
+  ]);
 
   const onSaveAddress = useCallback(() => {
     const err = validateAddressForm(addressForm);
@@ -296,12 +422,12 @@ export function useMedicineCheckoutController({
     recipientName,
     addressLines: formatAddressLines(selectedAddress),
     phoneLabel,
-    items,
-    subtotalLabel: '',
+    items: quotedItems,
+    subtotalLabel: quoteLabel,
     taxesLabel: '',
     shippingLabel: '',
     shippingFree: false,
-    totalLabel: '',
+    totalLabel: quoteLabel,
     method,
     onBack,
     onToggleLanguage: () => setLanguage(language === 'en' ? 'mr' : 'en'),
@@ -328,15 +454,43 @@ export function useMedicineCheckoutController({
       setAddressFormError(null);
     },
     onOpenAddressForm: () => {
+      setAddressForm((current) =>
+        current.phone.trim()
+          ? current
+          : { ...current, phone: userPhone },
+      );
+      if (userPhone) phoneSeeded.current = true;
       setAddressFormOpen(true);
       setAddressFormError(null);
     },
     onCloseAddressForm: () => {
       setAddressFormOpen(false);
       setAddressForm(EMPTY_FORM);
+      setSelectedStateId(null);
+      setSelectedCityId(null);
+      phoneSeeded.current = false;
       setAddressFormError(null);
     },
     onSaveAddress,
     addressSaveBusy,
+    stateOptions,
+    cityOptions,
+    statesLoading,
+    citiesLoading,
+    selectedStateId,
+    selectedCityId,
+    onSelectState: (id) => {
+      const name = stateOptions.find((row) => row.id === id)?.name ?? '';
+      setSelectedStateId(id);
+      setSelectedCityId(null);
+      setAddressForm((current) => ({ ...current, state: name, city: '' }));
+      setAddressFormError(null);
+    },
+    onSelectCity: (id) => {
+      const name = cityOptions.find((row) => row.id === id)?.name ?? '';
+      setSelectedCityId(id);
+      setAddressForm((current) => ({ ...current, city: name }));
+      setAddressFormError(null);
+    },
   };
 }

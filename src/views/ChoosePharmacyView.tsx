@@ -74,10 +74,14 @@ function DeliveryList({
         <View style={styles.banner}>
           <Ionicons name="location-outline" size={18} color={colors.primary} />
           <AppText variant="bodyMd" color={colors.ink} style={styles.flex}>
-            {vm
-              .t('pharmacyBanner')
-              .replace('{count}', String(vm.pharmacyCount))
-              .replace('{pin}', vm.pincode)}
+            {vm.pincode
+              ? vm
+                  .t('pharmacyBanner')
+                  .replace('{count}', String(vm.pharmacyCount))
+                  .replace('{pin}', vm.pincode)
+              : vm
+                  .t('pharmacyBannerNoPin')
+                  .replace('{count}', String(vm.pharmacyCount))}
           </AppText>
         </View>
 
@@ -98,6 +102,23 @@ function DeliveryList({
         {!vm.isLoading && !vm.isError && vm.pharmacies.length === 0 ? (
           <EmptyState title="No pharmacies yet" />
         ) : null}
+        <PharmacyCard
+          key="auto"
+          pharmacy={{
+            id: 'auto',
+            nameKey: 'pharmacyAutoRoute',
+            licenceKey: '' as PharmacyOption['licenceKey'],
+            metaKey: 'pharmacyAutoRouteHint',
+            tone: 'full',
+            fulfilKey: '' as PharmacyOption['fulfilKey'],
+            etaKey: '' as PharmacyOption['etaKey'],
+            priceLabel: '',
+          }}
+          selected={vm.selectedPharmacyId === 'auto'}
+          t={vm.t}
+          onSelect={() => vm.onSelectPharmacy('auto')}
+          onBreakdown={() => undefined}
+        />
         {vm.pharmacies.map((pharmacy) => (
           <PharmacyCard
             key={pharmacy.id}
@@ -127,9 +148,11 @@ function DeliveryList({
             numberOfLines={1}
             raw={Boolean(vm.selectedPharmacy)}
           >
-            {vm.selectedPharmacy
-              ? vm.t(vm.selectedPharmacy.nameKey)
-              : vm.t('pharmacyNoneSelected')}
+            {vm.selectedPharmacyId === 'auto'
+              ? vm.t('pharmacyAutoRoute')
+              : vm.selectedPharmacy
+                ? vm.t(vm.selectedPharmacy.nameKey)
+                : vm.t('pharmacyNoneSelected')}
           </AppText>
           {vm.selectedPharmacy?.priceLabel ? (
             <AppText variant="titleMd" color={colors.ink} raw>
@@ -138,7 +161,7 @@ function DeliveryList({
           ) : null}
         </View>
         <AppButton
-          label={vm.t('pharmacyContinue')}
+          label={vm.t('pharmacyPlaceOrder')}
           onPress={vm.onContinue}
           disabled={!vm.canContinue}
           style={styles.continueBtn}
@@ -209,7 +232,7 @@ function EmptyDelivery({
         ]}
       >
         <AppButton
-          label={vm.t('pharmacyContinue')}
+          label={vm.t('pharmacyPlaceOrder')}
           onPress={vm.onContinue}
           disabled={!vm.canContinue}
         />

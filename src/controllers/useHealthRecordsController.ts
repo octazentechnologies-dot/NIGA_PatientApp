@@ -8,15 +8,11 @@ import {
   useDeleteDocumentMutation,
   useGetDocumentsQuery,
   useGetFollowUpsQuery,
-  useGetPrescriptionsListQuery,
   useGetTimelineQuery,
 } from '../store/api/new/recordsApi';
-import {
-  type PatientVisitItem,
-  useGetPatientVisitsQuery,
-} from '../store/api/new/visitsApi';
 import { useGetFamilyQuery } from '../store/api/new/familyApi';
 import { useAppSelector } from '../store/hooks';
+import { getApiBodyMessage, getApiErrorMessage } from '../utilities/toast';
 
 export type RecordsMemberId = string;
 
@@ -58,6 +54,10 @@ export type RecordsTimelineItem = {
   noteKey?: TranslationKey;
   /** Visit id for Erx / consultation note APIs. */
   patientAppId?: number | null;
+  /** Signed prescription snapshot used to start a medicine order. */
+  erxSnapshotId?: number | null;
+  /** Source timestamp used to group the timeline by month. */
+  occurredAt?: string | null;
   /** Present for document rows from GET /api/Patient/Documents. */
   documentId?: number | null;
   rxStatus?: PrescriptionLifecycleStatus;
@@ -102,7 +102,7 @@ export type HealthRecordsViewModel = {
   onAddDiary: () => void;
   onViewPrescription: () => void;
   onClosePrescription: () => void;
-  onOrderPrescription: () => void;
+  onOrderPrescription: (itemId: string) => void;
   onOpenCalendar: () => void;
   onOpenNotifications: () => void;
   onSelectLanguage: (language: AppLanguage) => void;
@@ -176,11 +176,16 @@ export function useHealthRecordsController({
   onOpenFollowUpPlan,
   onOpenNotifications,
   onAddMember,
+  onOpenOrderMedicines,
   initialFilter = 'all',
 }: {
   onOpenFollowUpPlan?: () => void;
   onOpenNotifications?: () => void;
   onAddMember?: () => void;
+  onOpenOrderMedicines?: (launch: {
+    erxSnapshotId: number;
+    patientAppId: number | null;
+  }) => void;
   initialFilter?: RecordsFilterId;
 } = {}): HealthRecordsViewModel {
   const { language, t, setLanguage } = useLocalization();
@@ -202,17 +207,14 @@ export function useHealthRecordsController({
 
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const authUser = useAppSelector((state) => state.auth.user);
+  const patientId = useAppSelector((state) => state.auth.patientId);
+  const scopedPatient =
+    patientId != null && patientId > 0 ? { patientId } : undefined;
 
-  const { data: timelineResponse } = useGetTimelineQuery(undefined, {
+  const { data: timelineResponse } = useGetTimelineQuery(scopedPatient, {
     skip: !isAuthenticated,
   });
-  const { data: prescriptionsListResponse } = useGetPrescriptionsListQuery(undefined, {
-    skip: !isAuthenticated,
-  });
-  const { data: visitsResponse } = useGetPatientVisitsQuery(undefined, {
-    skip: !isAuthenticated,
-  });
-  const { data: documentsResponse } = useGetDocumentsQuery(undefined, {
+  const { data: documentsResponse } = useGetDocumentsQuery(scopedPatient, {
     skip: !isAuthenticated,
   });
   const { data: followUpsResponse } = useGetFollowUpsQuery(undefined, {
@@ -272,87 +274,49 @@ export function useHealthRecordsController({
     }
 
     const serverItems: RecordsTimelineItem[] = [];
+    const locale = language === 'mr' ? 'mr-IN' : 'en-IN';
+    const formatWhen = (value: string | null | undefined) => {
+      if (!value) return '';
+      const parsed = new Date(value);
+      if (Number.isNaN(parsed.getTime())) return '';
+      return parsed.toLocaleDateString(locale, {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      });
+    };
 
-    // 1. Consultations: Prefer visitsApi for rich details; fall back to timeline
-    const rawVisits = visitsResponse?.data;
-    const visitsList: PatientVisitItem[] = Array.isArray(rawVisits)
-      ? rawVisits
-      : rawVisits && typeof rawVisits === 'object' && 'data' in rawVisits && Array.isArray(rawVisits.data)
-        ? rawVisits.data
-        : [];
-
-    if (Array.isArray(visitsList) && visitsList.length > 0) {
-      for (const visit of visitsList) {
-        const isCompleted = visit.status === 'COMPLETED';
-        const docName = (visit.doctorName || '').trim();
-        const title = docName ? `Dr. ${docName}` : 'Consultation';
-        const dateStr = visit.appointmentDate
-          ? new Date(visit.appointmentDate).toLocaleDateString(
-              language === 'mr' ? 'mr-IN' : 'en-IN',
-              { day: 'numeric', month: 'short', year: 'numeric' },
-            )
-          : '';
-        const mode = visit.consultMode || (visit.isTele ? 'Tele' : 'In-Clinic');
-        const meta = [dateStr, visit.appointmentTime, mode]
-          .filter(Boolean)
-          .join(' · ');
-
+    const appointments = timelineResponse?.data?.appointments;
+    if (Array.isArray(appointments)) {
+      for (const app of appointments) {
+        const dateStr = formatWhen(app.at);
         serverItems.push({
-          id: `visit-${visit.patientAppId}`,
+          id: `app-${app.refId}`,
           kind: 'consultation',
-          titleKey: title as TranslationKey,
-          metaKey: (meta || 'Consultation Record') as TranslationKey,
-          badgeKey: isCompleted ? 'recordsNoteSigned' : undefined,
-          patientAppId: visit.patientAppId,
+          titleKey: 'recordsConsultation',
+          metaKey: (dateStr || 'recordsConsultMeta') as TranslationKey,
+          badgeKey: app.title === 'COMPLETED' ? 'recordsNoteSigned' : undefined,
+          patientAppId: app.refId,
+          occurredAt: app.at || null,
         });
-      }
-    } else {
-      const appointments = timelineResponse?.data?.appointments;
-      if (Array.isArray(appointments)) {
-        for (const app of appointments) {
-          const dateStr = app.at
-            ? new Date(app.at).toLocaleDateString(
-                language === 'mr' ? 'mr-IN' : 'en-IN',
-                { day: 'numeric', month: 'short', year: 'numeric' },
-              )
-            : '';
-          serverItems.push({
-            id: `app-${app.refId}`,
-            kind: 'consultation',
-            titleKey: 'recordsConsultTitle',
-            metaKey: (dateStr || 'recordsConsultMeta') as TranslationKey,
-            badgeKey: app.title === 'COMPLETED' ? 'recordsNoteSigned' : undefined,
-            patientAppId: app.refId,
-          });
-        }
       }
     }
 
-    // 2. Prescriptions (GET /api/Erx/Prescriptions with fallback to timeline prescriptions)
-    const rxList =
-      prescriptionsListResponse?.data &&
-      Array.isArray(prescriptionsListResponse.data) &&
-      prescriptionsListResponse.data.length > 0
-        ? prescriptionsListResponse.data
-        : timelineResponse?.data?.prescriptions;
-
+    const rxList = timelineResponse?.data?.prescriptions;
     if (Array.isArray(rxList)) {
       for (const rx of rxList) {
-        const isSigned = rx.status === 'SIGNED';
-        const dateStr = rx.signedAt
-          ? new Date(rx.signedAt).toLocaleDateString(
-              language === 'mr' ? 'mr-IN' : 'en-IN',
-              { day: 'numeric', month: 'short', year: 'numeric' },
-            )
-          : '';
+        const isSigned = String(rx.status || '').toUpperCase() === 'SIGNED';
+        const dateStr = formatWhen(rx.signedAt);
         serverItems.push({
           id: `erx-${rx.erxSnapshotId}`,
           kind: 'prescription',
-          titleKey: 'recordsRxTitle',
+          titleKey: 'recordsPrescription',
           metaKey: (`eRx #${rx.erxSnapshotId}${dateStr ? ` · ${dateStr}` : ''}`) as TranslationKey,
           badgeKey: isSigned ? 'recordsRxActive' : undefined,
           rxStatus: isSigned ? 'active' : 'expired',
           patientAppId: rx.patientAppId,
+          erxSnapshotId: rx.erxSnapshotId,
+          occurredAt: rx.signedAt || null,
         });
       }
     }
@@ -375,6 +339,7 @@ export function useHealthRecordsController({
           titleKey: (title || 'recordsDocTitle') as TranslationKey,
           metaKey: (meta || 'Document') as TranslationKey,
           documentId: doc.documentId,
+          occurredAt: doc.createdAt || null,
         });
       }
     }
@@ -396,15 +361,21 @@ export function useHealthRecordsController({
           titleKey: (task.title || 'Follow-Up Task') as TranslationKey,
           metaKey: (dateStr ? `Due: ${dateStr}` : 'recordsFollowUpMeta') as TranslationKey,
           badgeKey: isDone ? 'followUpBadgeOnTrack' : 'followUpBadgePending',
+          occurredAt: task.dueDate || null,
         });
       }
     }
+
+    serverItems.sort((a, b) => {
+      const aTime = a.occurredAt ? new Date(a.occurredAt).getTime() : 0;
+      const bTime = b.occurredAt ? new Date(b.occurredAt).getTime() : 0;
+      return (Number.isNaN(bTime) ? 0 : bTime) - (Number.isNaN(aTime) ? 0 : aTime);
+    });
 
     return serverItems;
   }, [
     isAuthenticated,
     selectedMemberId,
-    visitsResponse?.data,
     timelineResponse?.data,
     documentsResponse?.data,
     followUpsResponse?.data,
@@ -424,19 +395,19 @@ export function useHealthRecordsController({
   const onConfirmDeleteDocument = async () => {
     if (confirmDeleteDocId == null) return;
     try {
-      await deleteDocument(confirmDeleteDocId).unwrap();
-      setToastMessage('Document deleted successfully.');
-      setToastVariant('success');
+      const deleted = await deleteDocument(confirmDeleteDocId).unwrap();
+      if (!getApiBodyMessage(deleted)) {
+        setToastMessage('Document deleted successfully.');
+        setToastVariant('success');
+      }
       setConfirmDeleteDocId(null);
       setConfirmDeleteDocName('');
     } catch (err: unknown) {
       console.warn('[deleteDocument] Failed:', err);
-      const errMsg =
-        err && typeof err === 'object' && 'data' in err
-          ? (err as { data?: { message?: string } }).data?.message
-          : undefined;
-      setToastMessage(errMsg || 'Could not delete document.');
-      setToastVariant('error');
+      if (!getApiErrorMessage(err)) {
+        setToastMessage('Could not delete document.');
+        setToastVariant('error');
+      }
     }
   };
 
@@ -504,7 +475,18 @@ export function useHealthRecordsController({
       setPrescriptionOpen(false);
       setActivePatientAppId(null);
     },
-    onOrderPrescription: () => undefined,
+    onOrderPrescription: (itemId) => {
+      const row = items.find((i) => i.id === itemId);
+      const erxSnapshotId = Number(row?.erxSnapshotId);
+      if (!Number.isFinite(erxSnapshotId) || erxSnapshotId <= 0) return;
+      onOpenOrderMedicines?.({
+        erxSnapshotId,
+        patientAppId:
+          row?.patientAppId != null && row.patientAppId > 0
+            ? row.patientAppId
+            : null,
+      });
+    },
     onOpenCalendar: () => undefined,
     onOpenNotifications: () => onOpenNotifications?.(),
     onSelectLanguage: setLanguage,

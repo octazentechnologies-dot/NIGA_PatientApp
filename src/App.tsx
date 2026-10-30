@@ -28,6 +28,7 @@ import {
   Poppins_700Bold,
 } from '@expo-google-fonts/poppins';
 
+import { ApiResponseToast } from './components/ApiResponseToast';
 import { KeyboardStableInsets } from './components/KeyboardStableInsets';
 import { OfflineModeGate } from './components/OfflineModeGate';
 import { LocalizationProvider } from './localization/i18n';
@@ -85,6 +86,7 @@ export default function App() {
               <OfflineModeGate>
                 <CrashErrorBoundary>
                   {fontsLoaded || fontError ? <AppNavigator /> : null}
+                  <ApiResponseToast />
                 </CrashErrorBoundary>
               </OfflineModeGate>
             </AppConfigProvider>

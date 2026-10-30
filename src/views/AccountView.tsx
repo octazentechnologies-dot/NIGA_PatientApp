@@ -461,7 +461,7 @@ function Section({
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
-        <AppText variant="labelMd" color={colors.onSurfaceVariant} style={styles.sectionTitle}>
+        <AppText variant="labelSm" color={colors.onSurfaceVariant} style={styles.sectionTitle}>
           {title}
         </AppText>
         {headerRight}
@@ -497,7 +497,7 @@ function AccountRow({
       <Ionicons name={icon} size={22} color={colors.primary} />
       <View style={styles.rowCopy}>
         <View style={styles.rowTop}>
-          <AppText variant="titleMd" color={colors.onSurface} style={styles.flex}>
+          <AppText variant="labelLg" color={colors.onSurface} style={styles.flex}>
             {label}
           </AppText>
           {badge ? <Badge label={badge} tone={badgeTone} /> : null}
@@ -512,7 +512,7 @@ function AccountRow({
           ) : null}
         </View>
         {helper ? (
-          <AppText variant="labelSm" color={colors.onSurfaceVariant}>
+          <AppText variant="bodyMd" color={colors.onSurfaceVariant}>
             {helper}
           </AppText>
         ) : null}
@@ -612,7 +612,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   sectionTitle: {
-    letterSpacing: 0.8,
+    letterSpacing: 0.6,
     textTransform: 'uppercase',
   },
   sectionCard: {

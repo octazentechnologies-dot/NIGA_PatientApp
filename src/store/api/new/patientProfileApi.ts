@@ -13,6 +13,9 @@ export interface PatientProfileData {
   age: number;
   preferredLanguageId: number | null;
   welcomeVersionSeen: string | null;
+  addressLine1?: string | null;
+  address?: string | null;
+  pinCodeId?: number | string | null;
 }
 
 export interface PatientProfileResponse {
@@ -34,6 +37,7 @@ export interface UpdatePatientProfileRequest {
   preferredLanguageId?: number | null;
   welcomeVersionSeen?: string | null;
   patientId?: number;
+  addressLine1?: string;
 }
 
 export interface UpdatePatientProfileResponse {

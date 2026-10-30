@@ -212,6 +212,11 @@ export function OrderDetailsView(vm: OrderDetailsViewModel) {
             <AppText variant="labelSm" color={colors.muted}>
               {vm.t('orderDetailRefillNote')}
             </AppText>
+            {vm.refillMessage ? (
+              <AppText variant="bodyMd" color={colors.ink}>
+                {vm.refillMessage}
+              </AppText>
+            ) : null}
           </View>
         ) : null}
 
@@ -399,10 +404,14 @@ function RefillRequestSheet({ vm }: { vm: OrderDetailsViewModel }) {
               </AppText>
             </View>
 
+            {vm.refillMessage ? (
+              <AppText variant="bodyMd" color={colors.ink}>
+                {vm.refillMessage}
+              </AppText>
+            ) : null}
             <AppButton
               label={vm.t('refillSendToDoctor')}
               onPress={vm.onSendRefill}
-              disabled={!vm.refillMedicines.some((m) => m.selected)}
             />
           </ScrollView>
         </View>

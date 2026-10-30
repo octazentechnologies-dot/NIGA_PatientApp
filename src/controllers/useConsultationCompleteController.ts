@@ -25,7 +25,7 @@ export type ConsultationCompleteViewModel = {
   onViewPrescription: () => void;
   onOpenPrescription: () => void;
   onClosePrescription: () => void;
-  onOrderMedicines: () => void;
+  onOrderMedicines: (launch?: import('../utilities/medicineOrderStage').OrderMedicinesLaunch) => void;
   onViewFollowUpTasks: () => void;
   onWriteReview: () => void;
   onReportProblem: () => void;
@@ -55,7 +55,7 @@ export function useConsultationCompleteController({
   durationMinutes: number;
   onBackHome: () => void;
   onViewFollowUpTasks?: () => void;
-  onOrderMedicines?: () => void;
+  onOrderMedicines?: (launch?: import('../utilities/medicineOrderStage').OrderMedicinesLaunch) => void;
   onWriteReview?: () => void;
 }): ConsultationCompleteViewModel {
   const { language, t } = useLocalization();
@@ -117,7 +117,7 @@ export function useConsultationCompleteController({
     onViewPrescription: openPrescription,
     onOpenPrescription: openPrescription,
     onClosePrescription: () => setPrescriptionOpen(false),
-    onOrderMedicines: () => onOrderMedicines?.(),
+    onOrderMedicines: (launch) => onOrderMedicines?.(launch),
     onViewFollowUpTasks: () => onViewFollowUpTasks?.(),
     onWriteReview: () => onWriteReview?.(),
     onReportProblem: () => undefined,

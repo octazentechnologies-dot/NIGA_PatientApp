@@ -1,5 +1,5 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sheetBottomPadding } from '../utilities/sheetInset';
 import { colors } from '../theme/colors';
@@ -11,7 +11,7 @@ import type {
   OrderTrackingStatus,
   OrderTrackingViewModel,
 } from '../controllers/useOrderTrackingController';
-import { trackingStepIndex } from '../controllers/useOrderTrackingController';
+import { trackingEventIcon } from '../controllers/useOrderTrackingController';
 import { radii } from '../theme/radii';
 import { spacing } from '../theme/spacing';
 
@@ -87,27 +87,55 @@ export function OrderTrackingView(vm: OrderTrackingViewModel) {
             <AppText variant="headlineMd" color={colors.ink}>
               {vm.t('trackHistory')}
             </AppText>
-            {vm.timeline.map((ev) => (
-              <View key={ev.id} style={styles.priceRow}>
-                <View style={styles.flex}>
-                  <AppText variant="labelMd" color={colors.ink} raw>
-                    {ev.label || ev.status}
-                  </AppText>
-                  {ev.at ? (
-                    <AppText variant="labelSm" color={colors.muted} raw>
-                      {ev.at}
+            {vm.timeline.map((ev, index) => {
+              const current = index === vm.timeline.length - 1;
+              return (
+                <View key={ev.id} style={styles.vStep}>
+                  <View style={styles.vRail}>
+                    <View style={[styles.vDot, current && styles.vDotCurrent]}>
+                      <Ionicons
+                        name={trackingEventIcon(ev.status)}
+                        size={current ? 16 : 13}
+                        color={colors.card}
+                      />
+                    </View>
+                    {index < vm.timeline.length - 1 ? <View style={styles.vLine} /> : null}
+                  </View>
+                  <View style={styles.flex}>
+                    <AppText
+                      variant="labelMd"
+                      color={colors.ink}
+                      weightOverride={current ? '600' : '400'}
+                      raw
+                    >
+                      {ev.label || ev.status}
                     </AppText>
-                  ) : null}
+                    {ev.at ? (
+                      <AppText variant="labelSm" color={colors.muted} raw>
+                        {ev.at}
+                      </AppText>
+                    ) : null}
+                  </View>
                 </View>
-              </View>
-            ))}
+              );
+            })}
           </View>
         ) : null}
         {vm.lines.length > 0 ? (
-          <View style={styles.card}>
-            <AppText variant="headlineMd" color={colors.ink}>
-              {vm.t('trackOrderDetails')}
-            </AppText>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={vm.t('trackOrderDetails')}
+            onPress={vm.onOpenDetails}
+            style={styles.card}
+          >
+            <View style={styles.cardHead}>
+              <AppText variant="headlineMd" color={colors.ink} style={styles.flex}>
+                {vm.t('trackOrderDetails')}
+              </AppText>
+              <View style={styles.arrowHit}>
+                <Ionicons name="chevron-forward" size={22} color={colors.ink} />
+              </View>
+            </View>
             {vm.lines.map((line) => (
               <View key={line.id} style={styles.priceRow}>
                 <AppText variant="bodyMd" color={colors.ink} style={styles.flex} raw>
@@ -130,12 +158,24 @@ export function OrderTrackingView(vm: OrderTrackingViewModel) {
                 </View>
               </>
             ) : null}
-          </View>
+          </Pressable>
+        ) : null}
+        {vm.nextAction === 'accept' ? (
+          <AppButton
+            label={vm.t('trackAcceptQuote')}
+            onPress={vm.onAcceptQuote}
+            disabled={vm.actionBusy}
+          />
+        ) : null}
+        {vm.nextAction === 'pay' && vm.quoteLabel ? (
+          <AppButton
+            label={`${vm.t('trackPayNow')} · ${vm.quoteLabel}`}
+            onPress={vm.onPay}
+            disabled={vm.actionBusy}
+          />
         ) : null}
         {vm.status === 'verifying' ? <VerifyingBlock vm={vm} onCycle={cycleStatus} /> : null}
-        {vm.status === 'out_for_delivery' ? (
-          <OutForDeliveryBlock vm={vm} onCycle={cycleStatus} />
-        ) : null}
+        {vm.status === 'out_for_delivery' ? <OutForDeliveryBlock vm={vm} /> : null}
         {vm.status === 'failed' ? <FailedBlock vm={vm} onCycle={cycleStatus} /> : null}
         {vm.status === 'delivered' ? (
           <DeliveredBlock vm={vm} onCycle={cycleStatus} />
@@ -161,10 +201,14 @@ function VerifyingBlock({
           </View>
           <View style={styles.flex}>
             <AppText variant="headlineMd" color={colors.ink}>
-              {vm.t('trackVerifyingTitle')}
+              {vm.stageLabel || vm.t('trackVerifyingTitle')}
             </AppText>
             <AppText variant="bodyMd" color={colors.muted} style={styles.mtXs}>
-              {vm.t('trackVerifyingBody')}
+              {vm.nextAction === 'accept'
+                ? vm.t('trackQuoteReceivedTitle')
+                : vm.nextAction === 'pay'
+                  ? vm.t('trackAwaitingPayTitle')
+                  : vm.t('trackAwaitingQuoteBody')}
             </AppText>
           </View>
         </View>
@@ -202,32 +246,9 @@ function VerifyingBlock({
   );
 }
 
-function OutForDeliveryBlock({
-  vm,
-  onCycle,
-}: {
-  vm: OrderTrackingViewModel;
-  onCycle: () => void;
-}) {
-  const active = trackingStepIndex(vm.status);
-
+function OutForDeliveryBlock({ vm }: { vm: OrderTrackingViewModel }) {
   return (
     <>
-      <Pressable accessibilityRole="button" onPress={onCycle} style={styles.card}>
-        <View style={styles.statusHead}>
-          <View style={styles.flex}>
-            <AppText variant="headlineMd" color={colors.ink}>
-              {vm.t('trackOutForDelivery')}
-            </AppText>
-            <AppText variant="bodyMd" color={colors.muted} style={styles.mtXs}>
-              {vm.arrivingBy}
-            </AppText>
-          </View>
-          <View style={styles.statusDot} />
-        </View>
-        <MilestoneProgress activeIndex={active} />
-      </Pressable>
-
       <View style={styles.mapCard}>
         <View style={styles.mapFrame}>
           <Image source={{ uri: MAP_URI }} style={styles.mapImage} />
@@ -481,27 +502,19 @@ function DeliveredBlock({
         <AppText variant="labelSm" color={colors.muted} style={styles.center}>
           {vm.t('trackRateHint')}
         </AppText>
-      </View>
-
-      <View style={styles.card}>
-        <AppText variant="labelSm" color={colors.muted} weightOverride="600">
-          {vm.t('trackOrderRef')}
-        </AppText>
-        <AppText variant="labelMd" color={colors.ink} weightOverride="600">
-          {vm.orderId}
-        </AppText>
-        <View style={styles.divider} />
-        <AppText variant="headlineMd" color={colors.ink}>
-          {vm.t('trackHistory')}
-        </AppText>
-        <TimelineItem
-          title={vm.t('trackDelivered')}
-          time={vm.deliveredAt}
-          success
-          active
+        <TextInput
+          value={vm.reviewComment}
+          onChangeText={vm.onChangeReviewComment}
+          placeholder={vm.t('trackReviewComment')}
+          placeholderTextColor={colors.muted}
+          multiline
+          style={styles.reviewInput}
         />
-        <TimelineItem title={vm.t('trackHistOut')} time={vm.t('trackHistOutTime')} />
-        <TimelineItem title={vm.t('trackHistPacked')} time={vm.t('trackHistPackedTime')} />
+        <AppButton
+          label={vm.t('trackSubmitReview')}
+          onPress={vm.onSubmitReview}
+          disabled={vm.actionBusy || vm.rating < 1}
+        />
       </View>
     </>
   );
@@ -539,50 +552,6 @@ function SegmentProgress({
           />
         );
       })}
-    </View>
-  );
-}
-
-function MilestoneProgress({ activeIndex }: { activeIndex: number }) {
-  const icons: Array<keyof typeof Ionicons.glyphMap> = [
-    'checkmark',
-    'cube-outline',
-    'checkmark-done-outline',
-    'bicycle-outline',
-    'home-outline',
-  ];
-
-  return (
-    <View style={styles.milestoneWrap}>
-      <View style={styles.milestoneTrack} />
-      <View
-        style={[
-          styles.milestoneFill,
-          { width: `${Math.min(100, (activeIndex / 4) * 100)}%` },
-        ]}
-      />
-      <View style={styles.milestoneRow}>
-        {icons.map((name, index) => {
-          const done = index <= activeIndex;
-          const current = index === activeIndex;
-          return (
-            <View
-              key={name}
-              style={[
-                styles.milestoneDot,
-                current && styles.milestoneDotLg,
-                done ? styles.milestoneOn : styles.milestoneOff,
-              ]}
-            >
-              <Ionicons
-                name={name}
-                size={current ? 16 : 12}
-                color={done ? colors.card : colors.muted}
-              />
-            </View>
-          );
-        })}
-      </View>
     </View>
   );
 }
@@ -709,6 +678,46 @@ const styles = StyleSheet.create({
     borderRadius: radii.default,
     padding: spacing.md,
     gap: spacing.sm,
+  },
+  cardHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  arrowHit: {
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  vStep: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: spacing.sm,
+  },
+  vRail: {
+    width: 32,
+    alignItems: 'center',
+  },
+  vDot: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.secondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  vDotCurrent: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+  },
+  vLine: {
+    width: 2,
+    flex: 1,
+    minHeight: 16,
+    marginTop: 2,
+    backgroundColor: colors.secondary,
   },
   flex: {
     flex: 1,
@@ -985,6 +994,15 @@ const styles = StyleSheet.create({
   },
   center: {
     textAlign: 'center',
+  },
+  reviewInput: {
+    minHeight: 96,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
+    borderRadius: radii.default,
+    padding: spacing.md,
+    color: colors.ink,
+    backgroundColor: colors.card,
   },
   stars: {
     flexDirection: 'row',

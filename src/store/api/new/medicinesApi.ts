@@ -29,8 +29,9 @@ export type GetMedicineOrdersResponse = {
 
 export type CreateMedicineOrderRequest = {
   erxSnapshotId: number;
-  pharmacyPartnerId: number;
-  /** BE-023 — optional delivery address from the address book. */
+  /** Omit when the patient chose auto-route. */
+  pharmacyPartnerId?: number;
+  /** Optional delivery address. Not required to create the order. */
   addressId?: number | null;
 };
 
@@ -155,6 +156,22 @@ export type RequestRefillResponse = {
   message?: string;
 };
 
+export type RefillMedicineOrderRequest = {
+  refillRequestId: number;
+  pharmacyPartnerId?: number;
+};
+
+export type ReviewMedicineOrderRequest = {
+  medicineOrderId: number;
+  rating: number;
+  comment?: string | null;
+};
+
+export type ReviewMedicineOrderResponse = {
+  success: boolean;
+  message?: string;
+};
+
 /**
  * Medicines & Pharmacy API:
  * - K1: GET /api/Patient/MedicineOrders
@@ -234,11 +251,23 @@ export const medicinesApi = newBaseApi.injectEndpoints({
     }),
     refillMedicineOrder: build.mutation<
       CreateMedicineOrderResponse,
-      number | string
+      RefillMedicineOrderRequest
     >({
-      query: (refillRequestId) => ({
+      query: ({ refillRequestId, pharmacyPartnerId }) => ({
         url: `api/MedicineOrders/Refill/${refillRequestId}`,
         method: 'POST',
+        body: pharmacyPartnerId ? { pharmacyPartnerId } : {},
+      }),
+      invalidatesTags: ['Orders'],
+    }),
+    reviewMedicineOrder: build.mutation<
+      ReviewMedicineOrderResponse,
+      ReviewMedicineOrderRequest
+    >({
+      query: ({ medicineOrderId, rating, comment }) => ({
+        url: `api/MedicineOrders/${medicineOrderId}/Review`,
+        method: 'POST',
+        body: { rating, comment: comment ?? null },
       }),
       invalidatesTags: ['Orders'],
     }),
@@ -270,6 +299,7 @@ export const {
   usePayMedicineOrderMutation,
   useGetMedicineOrderTrackingQuery,
   useRefillMedicineOrderMutation,
+  useReviewMedicineOrderMutation,
   useGetRefillsQuery,
   useRequestRefillMutation,
 } = medicinesApi;

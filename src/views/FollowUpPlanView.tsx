@@ -76,13 +76,15 @@ const FEELINGS: {
 export function FollowUpPlanView({
   onOrderMedicines,
   ...vm
-}: FollowUpPlanViewModel & { onOrderMedicines?: () => void }) {
+}: FollowUpPlanViewModel & {
+  onOrderMedicines?: (launch?: import('../utilities/medicineOrderStage').OrderMedicinesLaunch) => void;
+}) {
   const insets = useSafeAreaInsets();
   const prescription = usePrescriptionController({
     onBack: vm.onClosePrescription,
-    onOrder: () => {
+    onOrder: (launch) => {
       vm.onClosePrescription();
-      onOrderMedicines?.();
+      onOrderMedicines?.(launch);
     },
   });
   const consultationRecord = useConsultationRecordController({

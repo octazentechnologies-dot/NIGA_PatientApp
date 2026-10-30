@@ -270,7 +270,7 @@ export type HomeViewModel = {
   onSelectLanguage: (language: AppLanguage) => void;
   onJoinConsultation: (appointmentId?: string) => void;
   onFillSymptomDiary: () => void;
-  onTrackOrder: () => void;
+  onTrackOrder: (orderId?: string) => void;
   orderTrackingOpen: boolean;
   onOpenOrderTracking: () => void;
   onCloseOrderTracking: () => void;
@@ -369,11 +369,18 @@ export type HomeViewModel = {
   onOpenNotificationSettings: () => void;
   onCloseNotificationSettings: () => void;
   orderMedicinesOpen: boolean;
-  onOpenOrderMedicines: () => void;
+  orderLaunch: import('../utilities/medicineOrderStage').OrderMedicinesLaunch | null;
+  onOpenOrderMedicines: (
+    launch?: import('../utilities/medicineOrderStage').OrderMedicinesLaunch,
+  ) => void;
   onCloseOrderMedicines: () => void;
+  payMedicineOrderId: number | null;
+  onPayMedicineOrder: (orderId: number) => void;
+  onCloseMedicinePay: () => void;
   orderDetailsOpen: boolean;
   orderDetailsId: string | null;
   onOpenOrderDetails: (orderId: string) => void;
+  onOpenTrackedOrderDetails: () => void;
   onCloseOrderDetails: () => void;
   publicDoctors: PublicDoctor[];
   isDoctorsLoading: boolean;
@@ -477,7 +484,12 @@ export function useHomeController({
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notificationSettingsOpen, setNotificationSettingsOpen] = useState(false);
   const [orderMedicinesOpen, setOrderMedicinesOpen] = useState(false);
+  const [orderLaunch, setOrderLaunch] = useState<
+    import('../utilities/medicineOrderStage').OrderMedicinesLaunch | null
+  >(null);
+  const [payMedicineOrderId, setPayMedicineOrderId] = useState<number | null>(null);
   const [orderTrackingOpen, setOrderTrackingOpen] = useState(false);
+  const [orderDetailsVisible, setOrderDetailsVisible] = useState(false);
   const [medicineOrderPlaced, setMedicineOrderPlaced] = useState(false);
   const [orderDetailsId, setOrderDetailsId] = useState<string | null>(null);
 
@@ -982,6 +994,7 @@ export function useHomeController({
         currency: a.currency ?? null,
         teleSessionId: a.teleSessionId ?? null,
         patientAppId: a.patientAppId ?? null,
+        visitStatus: a.status,
       };
     });
 
@@ -1380,21 +1393,31 @@ export function useHomeController({
       setProfileDoctorId(null);
       setHealthTipId(null);
     },
-    onTrackOrder: () => {
+    onTrackOrder: (orderId) => {
+      if (orderId) setOrderDetailsId(orderId);
       setOrderTrackingOpen(true);
+      setOrderDetailsVisible(false);
       setOrderMedicinesOpen(false);
+      setPayMedicineOrderId(null);
     },
     orderTrackingOpen,
     onOpenOrderTracking: () => {
       setOrderTrackingOpen(true);
       setOrderMedicinesOpen(false);
     },
-    onCloseOrderTracking: () => setOrderTrackingOpen(false),
+    onCloseOrderTracking: () => {
+      setOrderTrackingOpen(false);
+      setOrderDetailsId(null);
+    },
     medicineOrderPlaced,
     onPlaceMedicineOrder: () => {
       setMedicineOrderPlaced(true);
       setOrderMedicinesOpen(false);
+      setOrderLaunch(null);
       setOrderTrackingOpen(false);
+      setOrderDetailsVisible(false);
+      setOrderDetailsId(null);
+      setPayMedicineOrderId(null);
       setSelectedTab('medicines');
       setSelectedMemberId('self');
       dispatch(setReduxSelectedMemberId('self'));
@@ -1625,23 +1648,43 @@ export function useHomeController({
     },
     onCloseNotificationSettings: () => setNotificationSettingsOpen(false),
     orderMedicinesOpen,
-    onOpenOrderMedicines: () => {
+    orderLaunch,
+    onOpenOrderMedicines: (launch) => {
+      setOrderLaunch(launch ?? null);
       setOrderMedicinesOpen(true);
+      setPayMedicineOrderId(null);
       setSymptomDiaryOpen(false);
       setHealthInsightsOpen(false);
       setRemindersOpen(false);
       setCliniSightProgressOpen(false);
       setFollowUpPlanOpen(false);
     },
-    onCloseOrderMedicines: () => setOrderMedicinesOpen(false),
-    orderDetailsOpen: Boolean(orderDetailsId),
+    onCloseOrderMedicines: () => {
+      setOrderMedicinesOpen(false);
+      setOrderLaunch(null);
+    },
+    payMedicineOrderId,
+    onPayMedicineOrder: (orderId) => {
+      setPayMedicineOrderId(orderId);
+      setOrderTrackingOpen(false);
+    },
+    onCloseMedicinePay: () => setPayMedicineOrderId(null),
+    orderDetailsOpen: orderDetailsVisible,
     orderDetailsId,
     onOpenOrderDetails: (orderId) => {
       setOrderDetailsId(orderId);
+      setOrderDetailsVisible(true);
       setOrderMedicinesOpen(false);
       setOrderTrackingOpen(false);
     },
-    onCloseOrderDetails: () => setOrderDetailsId(null),
+    onOpenTrackedOrderDetails: () => {
+      if (!orderDetailsId) return;
+      setOrderDetailsVisible(true);
+    },
+    onCloseOrderDetails: () => {
+      setOrderDetailsVisible(false);
+      if (!orderTrackingOpen) setOrderDetailsId(null);
+    },
     onBookAnotherConsultation: () => {
       setSelectedAppointmentId(null);
       setSelectedTab('doctors');

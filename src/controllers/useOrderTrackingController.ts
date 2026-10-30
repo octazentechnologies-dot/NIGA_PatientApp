@@ -1,10 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { useLocalization } from '../localization/i18n';
+import { showAppToast } from '../utilities/toast';
 import type { AppLanguage, TranslationKey } from '../localization/types';
-import { useGetMedicineOrderTrackingQuery } from '../store/api/new/medicinesApi';
+import {
+  useAcceptMedicineQuoteMutation,
+  useGetMedicineOrderTrackingQuery,
+  useReviewMedicineOrderMutation,
+} from '../store/api/new/medicinesApi';
 import { useAppSelector } from '../store/hooks';
-import { formatMoney } from '../utilities/formatters';
+import {
+  formatQuoteAmount,
+  medicineOrderStage,
+  type MedicineOrderNextAction,
+} from '../utilities/medicineOrderStage';
 
 export type OrderTrackingStatus =
   | 'verifying'
@@ -56,6 +65,7 @@ export type OrderTrackingViewModel = {
   notFound: boolean;
   onRetry: () => void;
   onBack: () => void;
+  onOpenDetails: () => void;
   onSupport: () => void;
   onCallPartner: () => void;
   onChatPartner: () => void;
@@ -64,25 +74,57 @@ export type OrderTrackingViewModel = {
   onDownloadInvoice: () => void;
   onSelectRating: (value: number) => void;
   onSetStatus: (status: OrderTrackingStatus) => void;
+  stageLabel: string;
+  nextAction: MedicineOrderNextAction;
+  quoteLabel: string;
+  reviewComment: string;
+  actionBusy: boolean;
+  onChangeReviewComment: (value: string) => void;
+  onAcceptQuote: () => void;
+  onPay: () => void;
+  onSubmitReview: () => void;
 };
 
-function mapStatus(serverStatus: string | undefined): OrderTrackingStatus {
-  if (serverStatus === 'DELIVERED') return 'delivered';
-  if (serverStatus === 'DISPATCHED') return 'out_for_delivery';
-  if (serverStatus === 'REJECTED') return 'failed';
-  return 'verifying';
+const STAGE_LABEL_KEY = {
+  awaiting_quote: 'trackAwaitingQuoteTitle',
+  quote_received: 'trackQuoteReceivedTitle',
+  awaiting_payment: 'trackAwaitingPayTitle',
+  in_process: 'medsInProcess',
+  out_for_delivery: 'medsOutForDelivery',
+  delivered: 'medsStatusDelivered',
+  cancelled: 'medsCancelled',
+} as const;
+
+export function trackingEventIcon(
+  status: string,
+): 'checkmark' | 'cube-outline' | 'checkmark-done-outline' | 'bicycle-outline' | 'home-outline' | 'cash-outline' | 'close' {
+  const value = status.toUpperCase();
+  if (/CANCEL|REJECT/.test(value)) return 'close';
+  if (/DELIVER|COMPLETE/.test(value)) return 'home-outline';
+  if (/DISPATCH|OUT_FOR/.test(value)) return 'bicycle-outline';
+  if (/READY|PACK/.test(value)) return 'cube-outline';
+  if (/QUOTED_ACCEPTED|ACCEPT|OTP|VERIFY|CONSENT/.test(value)) return 'checkmark-done-outline';
+  if (/QUOTE|COD|PAID|PAY/.test(value)) return 'cash-outline';
+  return 'checkmark';
 }
 
 export function useOrderTrackingController({
   orderId,
   onBack,
+  onOpenDetails,
+  onPayOrder,
 }: {
   orderId: string;
   onBack: () => void;
+  onOpenDetails?: () => void;
+  onPayOrder?: (orderId: number) => void;
 }): OrderTrackingViewModel {
   const { language, t } = useLocalization();
   const [status, setStatus] = useState<OrderTrackingStatus>('verifying');
   const [rating, setRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState('');
+  const [acceptQuote, { isLoading: acceptBusy }] = useAcceptMedicineQuoteMutation();
+  const [submitReview, { isLoading: reviewBusy }] = useReviewMedicineOrderMutation();
 
   const numericOrderId = Number(String(orderId).replace(/\D/g, ''));
   const hasValidId = Number.isFinite(numericOrderId) && numericOrderId > 0;
@@ -101,9 +143,12 @@ export function useOrderTrackingController({
   const data = trackingResponse?.data;
 
   useEffect(() => {
-    if (data?.status) {
-      setStatus(mapStatus(data.status));
-    }
+    if (!data?.status) return;
+    const next = medicineOrderStage(data.status);
+    if (next.key === 'delivered') setStatus('delivered');
+    else if (next.key === 'out_for_delivery') setStatus('out_for_delivery');
+    else if (next.key === 'cancelled') setStatus('failed');
+    else setStatus('verifying');
   }, [data?.status]);
 
   const timeline = useMemo<TrackingTimelineEvent[]>(() => {
@@ -140,7 +185,9 @@ export function useOrderTrackingController({
     .join('; ');
 
   const currency = data?.currency ?? 'INR';
-  const totalLabel = formatMoney(data?.quoteAmount ?? null, currency) ?? '';
+  const quoteLabel = formatQuoteAmount(data?.quoteAmount, currency) ?? '';
+  const totalLabel = quoteLabel;
+  const stage = medicineOrderStage(data?.status);
 
   const apiOrderId = data?.medicineOrderId;
   const displayOrderId =
@@ -175,12 +222,13 @@ export function useOrderTrackingController({
     timeline,
     lines,
     isLoading: hasValidId && isLoading,
-    isError: hasValidId && isError && !notFound,
-    notFound: !hasValidId || notFound,
+    isError: hasValidId && isError && !notFound && !data,
+    notFound: !data && (!hasValidId || notFound),
     onRetry: () => {
       void refetch();
     },
     onBack,
+    onOpenDetails: () => onOpenDetails?.(),
     onSupport: () => undefined,
     onCallPartner: () => undefined,
     onChatPartner: () => undefined,
@@ -189,6 +237,36 @@ export function useOrderTrackingController({
     onDownloadInvoice: () => undefined,
     onSelectRating: setRating,
     onSetStatus: setStatus,
+    stageLabel: t(STAGE_LABEL_KEY[stage.key]),
+    nextAction: stage.action,
+    quoteLabel,
+    reviewComment,
+    actionBusy: acceptBusy || reviewBusy,
+    onChangeReviewComment: setReviewComment,
+    onAcceptQuote: () => {
+      if (!hasValidId) return;
+      void acceptQuote(numericOrderId).unwrap().catch(() => undefined);
+    },
+    onPay: () => {
+      if (!hasValidId || !quoteLabel) return;
+      onPayOrder?.(numericOrderId);
+    },
+    onSubmitReview: () => {
+      if (!hasValidId || rating < 1) return;
+      void submitReview({
+        medicineOrderId: numericOrderId,
+        rating,
+        comment: reviewComment.trim() || null,
+      })
+        .unwrap()
+        .then((payload) => {
+          const message = payload?.message?.trim();
+          if (!message) {
+            showAppToast({ type: 'success', message: t('trackReviewSaved') });
+          }
+        })
+        .catch(() => undefined);
+    },
   };
 }
 

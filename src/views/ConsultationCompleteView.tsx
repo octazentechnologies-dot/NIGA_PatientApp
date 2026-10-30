@@ -29,9 +29,9 @@ export function ConsultationCompleteView(vm: ConsultationCompleteViewModel) {
   const insets = useSafeAreaInsets();
   const prescription = usePrescriptionController({
     onBack: vm.onClosePrescription,
-    onOrder: () => {
+    onOrder: (launch) => {
       vm.onClosePrescription();
-      vm.onOrderMedicines();
+      vm.onOrderMedicines(launch);
     },
   });
 
@@ -139,7 +139,7 @@ export function ConsultationCompleteView(vm: ConsultationCompleteViewModel) {
           body={vm.t('completeNextOrderBody')}
           note={vm.t('completeNextOrderNote')}
           action={vm.t('completeOrderNow')}
-          onPress={vm.onOrderMedicines}
+          onPress={() => vm.onOrderMedicines()}
         />
         <NextCard
           icon="calendar-outline"

@@ -64,6 +64,7 @@ import { useSymptomDiaryController } from '../controllers/useSymptomDiaryControl
 import { useCliniSightProgressController } from '../controllers/useCliniSightProgressController';
 import { useHealthInsightsController } from '../controllers/useHealthInsightsController';
 import { useRemindersCentreController } from '../controllers/useRemindersCentreController';
+import { useMedicineCheckoutController } from '../controllers/useMedicineCheckoutController';
 import { useOrderMedicinesController } from '../controllers/useOrderMedicinesController';
 import { useOrderTrackingController } from '../controllers/useOrderTrackingController';
 import { useOrderDetailsController } from '../controllers/useOrderDetailsController';
@@ -94,6 +95,7 @@ import { AppointmentRequestsView } from '../views/AppointmentRequestsView';
 import { useAppointmentRequestsController } from '../controllers/useAppointmentRequestsController';
 import { useMyAppointmentsController } from '../controllers/useMyAppointmentsController';
 import { RemindersCentreView } from '../views/RemindersCentreView';
+import { MedicineCheckoutView } from '../views/MedicineCheckoutView';
 import { OrderMedicinesView } from '../views/OrderMedicinesView';
 import { OrderTrackingView } from '../views/OrderTrackingView';
 import { OrderDetailsView } from '../views/OrderDetailsView';
@@ -733,18 +735,28 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
   });
   const orderMedicines = useOrderMedicinesController({
     onBack: home.onCloseOrderMedicines,
-    onPlaceOrder: home.onPlaceMedicineOrder,
+    onPlaced: home.onPlaceMedicineOrder,
+    erxSnapshotId: home.orderLaunch?.erxSnapshotId ?? null,
+    patientAppId: home.orderLaunch?.patientAppId ?? null,
+    refillRequestId: home.orderLaunch?.refillRequestId ?? null,
   });
   const orderTracking = useOrderTrackingController({
     orderId: home.orderDetailsId ?? '',
     onBack: home.onCloseOrderTracking,
+    onOpenDetails: home.onOpenTrackedOrderDetails,
+    onPayOrder: home.onPayMedicineOrder,
+  });
+  const medicinePay = useMedicineCheckoutController({
+    medicineOrderId: home.payMedicineOrderId,
+    onBack: home.onCloseMedicinePay,
+    onPaid: () => home.onPlaceMedicineOrder(),
   });
   const orderDetails = useOrderDetailsController({
     orderId: home.orderDetailsId ?? '',
     onBack: home.onCloseOrderDetails,
     onReorder: () => {
       home.onCloseOrderDetails();
-      home.onOpenOrderMedicines();
+      home.onPlaceMedicineOrder();
     },
   });
   const consultNow = useConsultNowController({
@@ -897,6 +909,10 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
       return true;
     }
 
+    if (home.payMedicineOrderId) {
+      medicinePay.onBack();
+      return true;
+    }
     if (home.orderDetailsOpen) {
       orderDetails.onBack();
       return true;
@@ -1254,6 +1270,9 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
     return <AppointmentDetailView {...appointmentDetail} />;
   }
 
+  if (home.payMedicineOrderId) {
+    return <MedicineCheckoutView {...medicinePay} />;
+  }
   if (home.orderDetailsOpen) {
     return <OrderDetailsView {...orderDetails} />;
   }

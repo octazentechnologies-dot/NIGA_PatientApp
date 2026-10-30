@@ -136,6 +136,9 @@ export const completeProfileApi = newBaseApi.injectEndpoints({
     getCitiesByDistrict: build.query<LocationApiResponse<City[]>, number>({
       query: (districtId) => `api/UserAddressLocation/Cities/ByDistrict/${districtId}`,
     }),
+    getCitiesByState: build.query<LocationApiResponse<City[]>, number>({
+      query: (stateId) => `api/UserAddressLocation/Cities/ByState/${stateId}`,
+    }),
     createPatient: build.mutation<CreatePatientResponse, CreatePatientRequest>({
       query: (body) => ({
         url: 'api/patient/',
@@ -152,5 +155,6 @@ export const {
   useGetStatesByCountryQuery,
   useGetDistrictsByStateQuery,
   useGetCitiesByDistrictQuery,
+  useGetCitiesByStateQuery,
   useCreatePatientMutation,
 } = completeProfileApi;

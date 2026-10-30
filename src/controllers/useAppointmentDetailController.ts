@@ -110,7 +110,7 @@ export type AppointmentDetailViewModel = {
   onOpenPrescription: () => void;
   onClosePrescription: () => void;
   onAddPrescription: () => void;
-  onOrderMedicines?: () => void;
+  onOrderMedicines?: (launch?: import('../utilities/medicineOrderStage').OrderMedicinesLaunch) => void;
   language: AppLanguage;
   t: (key: TranslationKey) => string;
   doctorName: string;
@@ -395,7 +395,7 @@ export function useAppointmentDetailController({
   onRemoveAppointment: (id: string) => void;
   onUpdateAppointment: (id: string, patch: Partial<BookedAppointment>) => void;
   onBookAnotherConsultation: () => void;
-  onOrderMedicines?: () => void;
+  onOrderMedicines?: (launch?: import('../utilities/medicineOrderStage').OrderMedicinesLaunch) => void;
 }): AppointmentDetailViewModel {
   const { language, t } = useLocalization();
   const appConfig = useAppConfig();

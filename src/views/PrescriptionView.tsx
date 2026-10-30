@@ -202,10 +202,22 @@ export function PrescriptionView(vm: PrescriptionViewModel) {
                 </View>
               </View>
 
+              {!vm.canOrder ? (
+                <AppText variant="bodyMd" color={colors.error}>
+                  {vm.t('rxMustSign')}
+                </AppText>
+              ) : null}
               <AppButton
                 label={vm.t('rxOrder')}
                 onPress={vm.onOrder}
+                disabled={!vm.canOrder}
                 icon={<Ionicons name="cart-outline" size={20} color={colors.onButton} />}
+              />
+              <AppButton
+                label={vm.refillBusy ? vm.t('rxRequestRefill') : vm.t('rxRequestRefill')}
+                variant="secondary"
+                onPress={vm.onRequestRefill}
+                disabled={!vm.canOrder || vm.refillBusy}
               />
               <AppButton
                 label={vm.t('rxDownloadPdf')}

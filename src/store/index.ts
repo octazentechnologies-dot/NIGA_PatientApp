@@ -13,6 +13,7 @@ import './api/new/patientProfileApi';
 import './api/new/accountApi';
 import './api/new/privacyConsentApi';
 import './api/new/homeApi';
+import './api/new/patientDashboardApi';
 import './api/new/bookingApi';
 import './api/new/paymentsApi';
 import './api/new/visitsApi';

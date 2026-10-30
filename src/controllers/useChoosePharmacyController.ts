@@ -28,6 +28,8 @@ export type PharmacyOption = {
 
 export type EmptyAltId = 'pickup' | 'download';
 
+export const AUTO_ROUTE_PHARMACY_ID = 'auto';
+
 export type ChoosePharmacyViewModel = {
   language: AppLanguage;
   t: (key: TranslationKey) => string;
@@ -73,7 +75,7 @@ export function useChoosePharmacyController({
 }): ChoosePharmacyViewModel {
   const { language, setLanguage, t } = useLocalization();
   const [selectedPharmacyId, setSelectedPharmacyId] = useState<string | null>(
-    null,
+    AUTO_ROUTE_PHARMACY_ID,
   );
   const [emptyAltId, setEmptyAltId] = useState<EmptyAltId | null>(null);
 
@@ -113,9 +115,10 @@ export function useChoosePharmacyController({
   useEffect(() => {
     if (
       selectedPharmacyId &&
+      selectedPharmacyId !== AUTO_ROUTE_PHARMACY_ID &&
       !pharmacies.some((p) => p.id === selectedPharmacyId)
     ) {
-      setSelectedPharmacyId(null);
+      setSelectedPharmacyId(AUTO_ROUTE_PHARMACY_ID);
     }
   }, [pharmacies, selectedPharmacyId]);
 
@@ -137,7 +140,7 @@ export function useChoosePharmacyController({
     canContinue: continueBusy
       ? false
       : hasDelivery
-        ? Boolean(selectedPharmacyId)
+        ? selectedPharmacyId === AUTO_ROUTE_PHARMACY_ID || Boolean(selectedPharmacy)
         : Boolean(emptyAltId),
     isLoading,
     isError,

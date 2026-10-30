@@ -3,13 +3,14 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  TextInput,
   View,
+  type KeyboardTypeOptions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sheetBottomPadding } from '../utilities/sheetInset';
 
 import { AppButton } from '../components/AppButton';
-import { AppSwitch } from '../components/AppSwitch';
 import { AppText } from '../components/AppText';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
@@ -19,22 +20,45 @@ import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
 import { layout, spacing } from '../theme/spacing';
 import { ChoosePharmacyView } from './ChoosePharmacyView';
-import { MedicineCheckoutView } from './MedicineCheckoutView';
-import { ReviewOrderView } from './ReviewOrderView';
 
 export function OrderMedicinesView(vm: OrderMedicinesViewModel) {
   const insets = useSafeAreaInsets();
 
-  if (vm.checkoutOpen) {
-    return <MedicineCheckoutView {...vm.checkout} />;
-  }
-
-  if (vm.reviewOpen) {
-    return <ReviewOrderView {...vm.review} />;
-  }
-
   if (vm.pharmacyOpen) {
     return <ChoosePharmacyView {...vm.pharmacy} />;
+  }
+
+  if (vm.quotePlaced) {
+    return (
+      <View style={styles.root}>
+        <View style={[styles.header, { paddingTop: Math.max(insets.top, spacing.sm) }]}>
+          <View style={styles.headerRow}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={vm.t('back')}
+              onPress={vm.onViewOrders}
+              style={styles.iconHit}
+            >
+              <Ionicons name="arrow-back" size={24} color={colors.ink} />
+            </Pressable>
+            <AppText variant="headlineMd" color={colors.ink} style={styles.flex}>
+              {vm.t('orderMedsTitle')}
+            </AppText>
+          </View>
+        </View>
+        <View style={[styles.body, styles.quoteBody]}>
+          <View style={styles.card}>
+            <AppText variant="headlineMd" color={colors.ink}>
+              {vm.t('orderMedsQuoteTitle')}
+            </AppText>
+            <AppText variant="bodyMd" color={colors.muted}>
+              {vm.t('orderMedsQuoteBody')}
+            </AppText>
+            <AppButton label={vm.t('orderMedsViewOrders')} onPress={vm.onViewOrders} />
+          </View>
+        </View>
+      </View>
+    );
   }
 
   return (
@@ -77,84 +101,79 @@ export function OrderMedicinesView(vm: OrderMedicinesViewModel) {
           {vm.t('orderMedsTitle')}
         </AppText>
 
-        <View style={styles.card}>
-          <View style={styles.rxTop}>
-            <View style={styles.signedBadge}>
-              <Ionicons name="checkmark-circle" size={14} color={colors.success} />
-              <AppText variant="labelSm" color={colors.success} weightOverride="600">
-                {vm.t('orderMedsSigned')}
-              </AppText>
-            </View>
-            {vm.rxId ? (
+        {vm.signed && vm.rxId ? (
+          <View style={styles.card}>
+            <View style={styles.rxTop}>
+              <View style={styles.signedBadge}>
+                <Ionicons name="checkmark-circle" size={14} color={colors.success} />
+                <AppText variant="labelSm" color={colors.success} weightOverride="600">
+                  {vm.t('orderMedsSigned')}
+                </AppText>
+              </View>
               <AppText variant="headlineMd" color={colors.ink} raw>
                 {vm.rxId}
               </AppText>
+            </View>
+            {vm.doctorLine ? (
+              <AppText variant="bodyMd" color={colors.muted} raw>
+                {vm.doctorLine}
+              </AppText>
+            ) : null}
+            {vm.patientLine ? (
+              <AppText variant="bodyMd" color={colors.muted} raw>
+                {vm.patientLine}
+              </AppText>
             ) : null}
           </View>
-          {vm.doctorLine ? (
-            <AppText variant="bodyMd" color={colors.muted} raw>
-              {vm.doctorLine}
+        ) : null}
+
+        {vm.unsignedMessage ? (
+          <AppText variant="bodyMd" color={colors.error}>
+            {vm.unsignedMessage}
+          </AppText>
+        ) : null}
+        {vm.orderError && !vm.pharmacyOpen ? (
+          <AppText variant="bodyMd" color={colors.error}>
+            {vm.orderError}
+          </AppText>
+        ) : null}
+
+        {vm.choices.length > 0 ? (
+          <View style={styles.card}>
+            <AppText variant="headlineMd" color={colors.ink}>
+              {vm.t('orderMedsPickRx')}
             </AppText>
-          ) : null}
-          {vm.patientLine ? (
-            <AppText variant="bodyMd" color={colors.muted} raw>
-              {vm.patientLine}
-            </AppText>
-          ) : null}
-          <View style={styles.rxFooter}>
-            <Pressable
-              accessibilityRole="button"
-              onPress={vm.onViewPrescription}
-              style={styles.viewRx}
-            >
-              <Ionicons name="eye-outline" size={18} color={colors.primaryOutline} />
-              <AppText
-                variant="labelMd"
-                color={colors.primaryOutline}
-                weightOverride="600"
+            {vm.choices.map((choice) => (
+              <Pressable
+                key={choice.erxSnapshotId}
+                accessibilityRole="button"
+                onPress={() => vm.onSelectRx(choice.erxSnapshotId)}
+                style={styles.addrPick}
               >
-                {vm.t('orderMedsViewRx')}
-              </AppText>
-            </Pressable>
-            {vm.validTill ? (
-              <AppText variant="labelSm" color={colors.muted} raw>
-                {vm.validTill}
-              </AppText>
-            ) : null}
+                <AppText variant="labelMd" color={colors.ink} weightOverride="600" raw>
+                  {choice.title}
+                </AppText>
+                {choice.doctorLine ? (
+                  <AppText variant="bodyMd" color={colors.muted} raw>
+                    {choice.doctorLine}
+                  </AppText>
+                ) : null}
+                <AppText
+                  variant="labelSm"
+                  color={choice.signed ? colors.success : colors.error}
+                  weightOverride="600"
+                >
+                  {choice.signed ? vm.t('medsSignedRx') : vm.t('rxMustSign')}
+                </AppText>
+              </Pressable>
+            ))}
           </View>
-        </View>
+        ) : null}
 
         <View style={styles.card}>
-          <View style={styles.choiceHead}>
-            <View style={styles.shield}>
-              <Ionicons name="shield-checkmark" size={22} color={colors.primary} />
-            </View>
-            <View style={styles.flex}>
-              <AppText variant="headlineMd" color={colors.ink}>
-                {vm.t('orderMedsChoiceTitle')}
-              </AppText>
-              <AppText variant="bodyMd" color={colors.muted}>
-                {vm.t('orderMedsChoiceBody')}
-              </AppText>
-            </View>
-          </View>
-          <AppButton
-            label={vm.t('orderMedsOrderHomeo')}
-            onPress={vm.onOrderHomeoMeds}
-          />
-          <Pressable
-            accessibilityRole="button"
-            onPress={vm.onDownloadInstead}
-            style={styles.outlineBtn}
-          >
-            <AppText
-              variant="labelMd"
-              color={colors.primaryOutline}
-              weightOverride="600"
-            >
-              {vm.t('orderMedsDownloadInstead')}
-            </AppText>
-          </Pressable>
+          <AppText variant="bodyMd" color={colors.muted}>
+            {vm.t('orderMedsNoPaymentYet')}
+          </AppText>
         </View>
 
         <AppText variant="headlineMd" color={colors.ink}>
@@ -162,7 +181,7 @@ export function OrderMedicinesView(vm: OrderMedicinesViewModel) {
         </AppText>
         {vm.isLoading ? <LoadingState /> : null}
         {vm.isError ? (
-          <ErrorState message="Could not load the prescription." onRetry={vm.onRetry} />
+          <ErrorState message={vm.t('orderMedsLoadFailed')} onRetry={vm.onRetry} />
         ) : null}
         {!vm.isLoading && !vm.isError && vm.medicines.length === 0 ? (
           <EmptyState title="No medicines on this prescription" />
@@ -177,19 +196,17 @@ export function OrderMedicinesView(vm: OrderMedicinesViewModel) {
                   color={colors.primaryOutline}
                 />
               </View>
-              <View>
-                <AppText variant="labelMd" color={colors.ink} weightOverride="600">
-                  {vm.t(med.nameKey)}
+              <View style={styles.flex}>
+                <AppText variant="labelMd" color={colors.ink} weightOverride="600" raw>
+                  {med.name}
                 </AppText>
-                <AppText variant="labelSm" color={colors.muted}>
-                  {vm.t(med.qtyKey)}
-                </AppText>
+                {med.detail ? (
+                  <AppText variant="labelSm" color={colors.muted} raw>
+                    {med.detail}
+                  </AppText>
+                ) : null}
               </View>
             </View>
-            <AppSwitch
-              value={med.selected}
-              onValueChange={() => vm.onToggleMedicine(med.id)}
-            />
           </View>
         ))}
         <AppText variant="bodyMd" color={colors.muted} style={styles.italic}>
@@ -204,58 +221,74 @@ export function OrderMedicinesView(vm: OrderMedicinesViewModel) {
                 {vm.t('orderMedsDeliveryTitle')}
               </AppText>
             </View>
-            <Pressable accessibilityRole="button" onPress={vm.onChangeAddress}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={vm.onChangeAddress}
+              style={styles.changeHit}
+            >
               <AppText variant="labelMd" color={colors.primary} weightOverride="600">
-                {vm.t('orderMedsChange')}
+                {vm.addressPickerOpen ? vm.t('done') : vm.t('orderMedsChange')}
               </AppText>
             </Pressable>
           </View>
-          <AppText variant="bodyMd" color={colors.muted} raw>
-            {vm.addressLine || 'Add an address for delivery.'}
+          <AppText variant="bodyMd" color={colors.ink} raw>
+            {vm.addressLine || vm.t('orderMedsAddAddressHint')}
           </AppText>
-          {vm.addressLine ? (
-            <AppText variant="labelSm" color={colors.primaryOutline} weightOverride="600">
-              {vm.t('orderMedsDeliveryToday')}
-            </AppText>
+          {vm.addressPickerOpen ? (
+            <View style={styles.picker}>
+              {vm.addresses.map((addr) => {
+                const selected = addr.addressId === vm.selectedAddressId;
+                return (
+                  <Pressable
+                    key={addr.addressId}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected }}
+                    onPress={() => vm.onSelectAddress(addr.addressId)}
+                    style={[styles.addrPick, selected && styles.addrPickOn]}
+                  >
+                    <AppText variant="bodyMd" color={colors.ink} raw>
+                      {addr.line1}
+                      {addr.city ? `, ${addr.city}` : ''}
+                      {addr.pincode ? ` ${addr.pincode}` : ''}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+              <AddressField
+                label={vm.t('address')}
+                value={vm.addressForm.line1}
+                onChangeText={(line1) => vm.onAddressFormChange({ line1 })}
+              />
+              <AddressField
+                label={vm.t('city')}
+                value={vm.addressForm.city}
+                onChangeText={(city) => vm.onAddressFormChange({ city })}
+              />
+              <AddressField
+                label={vm.t('state')}
+                value={vm.addressForm.state}
+                onChangeText={(state) => vm.onAddressFormChange({ state })}
+              />
+              <AddressField
+                label={vm.t('pincode')}
+                value={vm.addressForm.pincode}
+                onChangeText={(pincode) => vm.onAddressFormChange({ pincode })}
+                keyboardType="number-pad"
+              />
+              {vm.addressFormError ? (
+                <AppText variant="bodyMd" color={colors.error} raw>
+                  {vm.addressFormError}
+                </AppText>
+              ) : null}
+              <AppButton
+                label={vm.addressSaveBusy ? vm.t('orderMedsSavingAddress') : vm.t('orderMedsSaveAddress')}
+                onPress={vm.onSaveAddress}
+                disabled={vm.addressSaveBusy}
+              />
+            </View>
           ) : null}
         </View>
       </ScrollView>
-
-      {vm.addressPickerOpen ? (
-        <View style={styles.pickerSheet}>
-          <AppText variant="titleMd" color={colors.ink} weightOverride="600">
-            Delivery address
-          </AppText>
-          {vm.addresses.length === 0 ? (
-            <AppText variant="bodyMd" color={colors.muted} raw>
-              No saved addresses. Add one at checkout.
-            </AppText>
-          ) : (
-            vm.addresses.map((addr) => {
-              const selected = addr.addressId === vm.selectedAddressId;
-              return (
-                <Pressable
-                  key={addr.addressId}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected }}
-                  onPress={() => vm.onSelectAddress(addr.addressId)}
-                  style={[styles.addrPick, selected && styles.addrPickOn]}
-                >
-                  <AppText variant="bodyMd" color={colors.ink} raw>
-                    {addr.line1}
-                    {addr.city ? `, ${addr.city}` : ''}
-                  </AppText>
-                </Pressable>
-              );
-            })
-          )}
-          <AppButton
-            variant="secondary"
-            label="Done"
-            onPress={vm.onCloseAddressPicker}
-          />
-        </View>
-      ) : null}
 
       <View
         style={[
@@ -266,8 +299,36 @@ export function OrderMedicinesView(vm: OrderMedicinesViewModel) {
         <AppButton
           label={vm.t('orderMedsSeePharmacies')}
           onPress={vm.onSeePharmacies}
+          disabled={!vm.signed}
         />
       </View>
+    </View>
+  );
+}
+
+function AddressField({
+  label,
+  value,
+  onChangeText,
+  keyboardType,
+}: {
+  label: string;
+  value: string;
+  onChangeText: (text: string) => void;
+  keyboardType?: KeyboardTypeOptions;
+}) {
+  return (
+    <View style={styles.field}>
+      <AppText variant="labelSm" color={colors.muted} weightOverride="600">
+        {label}
+      </AppText>
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        style={styles.fieldInput}
+        placeholderTextColor={colors.muted}
+        keyboardType={keyboardType}
+      />
     </View>
   );
 }
@@ -311,6 +372,10 @@ const styles = StyleSheet.create({
   body: {
     padding: spacing.lg,
     gap: spacing.md,
+  },
+  quoteBody: {
+    flex: 1,
+    justifyContent: 'center',
   },
   card: {
     backgroundColor: colors.card,
@@ -412,6 +477,27 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     flex: 1,
   },
+  changeHit: {
+    minHeight: layout.buttonHeight,
+    minWidth: layout.buttonHeight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  picker: {
+    gap: spacing.sm,
+  },
+  field: {
+    gap: 4,
+  },
+  fieldInput: {
+    minHeight: layout.buttonHeight,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.sm,
+    color: colors.ink,
+    backgroundColor: colors.page,
+  },
   footer: {
     position: 'absolute',
     left: 0,
@@ -425,18 +511,6 @@ const styles = StyleSheet.create({
   },
   flex: {
     flex: 1,
-  },
-  pickerSheet: {
-    position: 'absolute',
-    left: spacing.lg,
-    right: spacing.lg,
-    bottom: 100,
-    backgroundColor: colors.card,
-    borderRadius: radii.default,
-    borderWidth: 1,
-    borderColor: colors.outlineVariant,
-    padding: spacing.lg,
-    gap: spacing.sm,
   },
   addrPick: {
     minHeight: layout.buttonHeight,
