@@ -1,9 +1,11 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, Linking, Share } from 'react-native';
+import { Linking, Share } from 'react-native';
 
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
 import {
+  resolveErxPdfUrl,
+  useGetPrescriptionByAppointmentQuery,
   useGetPrescriptionQuery,
   useLazyGetErxPdfMetaQuery,
 } from '../store/api/new/recordsApi';
@@ -37,6 +39,9 @@ export type PrescriptionViewModel = {
   loading: boolean;
   isError: boolean;
   isEmpty: boolean;
+  toastMessage: string | null;
+  toastVariant: 'error' | 'success';
+  onDismissToast: () => void;
   onBack: () => void;
   onShare: () => void;
   onDownload: () => void;
@@ -66,6 +71,7 @@ function messageForPdfError(err: unknown): string {
 
 export function usePrescriptionController({
   patientAppId,
+  appointmentId,
   erxSnapshotId: erxSnapshotIdProp,
   doctorName: doctorNameProp,
   doctorCredentials: doctorCredentialsProp,
@@ -78,6 +84,8 @@ export function usePrescriptionController({
 }: {
   /** Visit id for Erx lookup — skip query when null. */
   patientAppId?: number | string | null;
+  /** Appointment id for GET /api/Erx/ByAppointment/{id} */
+  appointmentId?: number | string | null;
   /** Prefer explicit snapshot id from visit detail when available. */
   erxSnapshotId?: number | string | null;
   doctorName?: string | null;
@@ -90,14 +98,42 @@ export function usePrescriptionController({
   onOrder?: () => void;
 }): PrescriptionViewModel {
   const { language, t } = useLocalization();
-  const id =
-    patientAppId != null && String(patientAppId).length > 0
-      ? patientAppId
-      : null;
-  const { data, isLoading, isError, isFetching, refetch } =
-    useGetPrescriptionQuery(id as number | string, {
-      skip: id == null,
-    });
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastVariant, setToastVariant] = useState<'error' | 'success'>('error');
+
+  const resolvedAptId =
+    appointmentId != null && String(appointmentId).length > 0
+      ? appointmentId
+      : patientAppId != null && String(patientAppId).length > 0
+        ? patientAppId
+        : null;
+
+  const aptQuery = useGetPrescriptionByAppointmentQuery(
+    resolvedAptId as number | string,
+    {
+      skip: resolvedAptId == null,
+    },
+  );
+
+  const patientQuery = useGetPrescriptionQuery(
+    resolvedAptId as number | string,
+    {
+      skip: resolvedAptId == null || Boolean(aptQuery.data?.data),
+    },
+  );
+
+  const data = aptQuery.data?.data ? aptQuery.data : patientQuery.data;
+  const isLoading =
+    (aptQuery.isLoading && !patientQuery.data?.data) ||
+    (aptQuery.isError && patientQuery.isLoading);
+  const isFetching = aptQuery.isFetching || patientQuery.isFetching;
+  const isError =
+    aptQuery.isError && (patientQuery.isError || patientQuery.data == null);
+  const refetch = useCallback(() => {
+    aptQuery.refetch();
+    patientQuery.refetch();
+  }, [aptQuery, patientQuery]);
+
   const [fetchPdfMeta] = useLazyGetErxPdfMetaQuery();
   const [pdfBusy, setPdfBusy] = useState(false);
 
@@ -111,14 +147,15 @@ export function usePrescriptionController({
   const openPdf = useCallback(
     async (mode: 'share' | 'open') => {
       if (erxSnapshotId == null || !Number.isFinite(erxSnapshotId)) {
-        Alert.alert('Prescription', 'No prescription PDF is available yet.');
+        setToastMessage('No prescription PDF is available yet.');
+        setToastVariant('error');
         return;
       }
       if (pdfBusy) return;
       setPdfBusy(true);
       try {
         const res = await fetchPdfMeta(erxSnapshotId).unwrap();
-        const pdfUrl = res.data?.pdfUrl?.trim();
+        const pdfUrl = res.data?.pdfUrl?.trim() || resolveErxPdfUrl(erxSnapshotId);
         const expiresAt = res.data?.expiresAt;
         if (
           expiresAt &&
@@ -126,9 +163,10 @@ export function usePrescriptionController({
           Date.parse(expiresAt) < Date.now()
         ) {
           const refreshed = await fetchPdfMeta(erxSnapshotId).unwrap();
-          const url = refreshed.data?.pdfUrl?.trim();
+          const url = refreshed.data?.pdfUrl?.trim() || resolveErxPdfUrl(erxSnapshotId);
           if (!url) {
-            Alert.alert('Prescription', 'PDF link is not available.');
+            setToastMessage('PDF link is not available.');
+            setToastVariant('error');
             return;
           }
           if (mode === 'share') {
@@ -139,7 +177,8 @@ export function usePrescriptionController({
           return;
         }
         if (!pdfUrl) {
-          Alert.alert('Prescription', 'PDF link is not available.');
+          setToastMessage('PDF link is not available.');
+          setToastVariant('error');
           return;
         }
         if (mode === 'share') {
@@ -148,7 +187,21 @@ export function usePrescriptionController({
           await Linking.openURL(pdfUrl);
         }
       } catch (err) {
-        Alert.alert('Prescription', messageForPdfError(err));
+        const fallbackUrl = resolveErxPdfUrl(erxSnapshotId);
+        if (fallbackUrl) {
+          try {
+            if (mode === 'share') {
+              await Share.share({ url: fallbackUrl, message: fallbackUrl });
+            } else {
+              await Linking.openURL(fallbackUrl);
+            }
+            return;
+          } catch {
+            // fallback attempt failed, show error message below
+          }
+        }
+        setToastMessage(messageForPdfError(err));
+        setToastVariant('error');
       } finally {
         setPdfBusy(false);
       }
@@ -204,11 +257,11 @@ export function usePrescriptionController({
     if (erxSnapshotId) {
       return `RX-${erxSnapshotId}`;
     }
-    if (id) {
-      return `RX-${id}`;
+    if (resolvedAptId) {
+      return `RX-${resolvedAptId}`;
     }
     return t('rxNumber');
-  }, [data?.data?.erxSnapshotId, erxSnapshotId, id, t]);
+  }, [data?.data?.erxSnapshotId, erxSnapshotId, resolvedAptId, t]);
 
   const rxDate = useMemo(() => {
     const raw = data?.data?.signedAt;
@@ -249,9 +302,12 @@ export function usePrescriptionController({
     rxNumber,
     rxDate,
     status,
-    loading: id != null && (isLoading || isFetching),
-    isError: id != null && isError,
-    isEmpty: id != null && !isLoading && !isFetching && !isError && medicines.length === 0,
+    loading: resolvedAptId != null && (isLoading || isFetching),
+    isError: resolvedAptId != null && isError,
+    isEmpty: resolvedAptId != null && !isLoading && !isFetching && !isError && medicines.length === 0,
+    toastMessage,
+    toastVariant,
+    onDismissToast: () => setToastMessage(null),
     onBack,
     onShare: () => {
       void openPdf('share');

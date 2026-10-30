@@ -8,6 +8,7 @@ import type {
 import { mapVisitStatus } from '../constants/statusMaps';
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import { useGetHomeDashboardQuery } from '../store/api/new/homeApi';
 import { useAppSelector } from '../store/hooks';
 import {
   useGetPatientVisitsQuery,
@@ -78,7 +79,7 @@ function consultModeFromVisit(item: PatientVisitItem): ConsultMode {
 
 function mapVisitToRow(
   item: PatientVisitItem,
-  patientLabel: string,
+  defaultPatientLabel: string,
 ): MyAppointmentRow {
   const mode = consultModeFromVisit(item);
   const docName = item.doctorName || 'Doctor';
@@ -106,6 +107,13 @@ function mapVisitToRow(
       ? 'confirmed'
       : 'waiting_acceptance';
 
+  const itemPatientName =
+    item.patientName ||
+    item.patientFullName ||
+    (item as { patient?: string }).patient ||
+    '';
+  const resolvedPatientLabel = itemPatientName || defaultPatientLabel;
+
   return {
     id: String(item.patientAppId),
     bookingId: `APT-${item.patientAppId}`,
@@ -128,7 +136,7 @@ function mapVisitToRow(
           : mode === 'audio'
             ? 'Audio Consultation'
             : 'In Clinic',
-    patientLabel,
+    patientLabel: resolvedPatientLabel,
     feeLabel: '',
     paymentId: '',
     reasonKey: '' as TranslationKey,
@@ -160,7 +168,12 @@ export function useMyAppointmentsController({
 
   const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
   const authUser = useAppSelector((s) => s.auth.user);
+  const { data: homeDashboardResponse } = useGetHomeDashboardQuery(undefined, {
+    skip: !isAuthenticated,
+  });
+  const homePatientName = homeDashboardResponse?.data?.patientName;
   const patientLabel =
+    homePatientName ||
     authUser?.patientName ||
     [authUser?.firstName, authUser?.lastName].filter(Boolean).join(' ') ||
     '';
@@ -205,8 +218,8 @@ export function useMyAppointmentsController({
       const isOnlineTele = Boolean(item.isTele || item.consultMode === 'Tele');
       const isPayAtClinic = Boolean(
         !isOnlineTele &&
-          ((item as { payAtClinicAllowed?: boolean }).payAtClinicAllowed === true ||
-            payStatus === 'PAY_AT_CLINIC'),
+        ((item as { payAtClinicAllowed?: boolean }).payAtClinicAllowed === true ||
+          payStatus === 'PAY_AT_CLINIC'),
       );
       if (payStatus === 'PENDING' && !isPayAtClinic) {
         return false;
@@ -222,7 +235,8 @@ export function useMyAppointmentsController({
             (row, index) =>
               row.id === mapped[index]?.id &&
               row.visitStatusLabel === mapped[index]?.visitStatusLabel &&
-              row.whenLabel === mapped[index]?.whenLabel,
+              row.whenLabel === mapped[index]?.whenLabel &&
+              row.patientLabel === mapped[index]?.patientLabel,
           )
         ) {
           return prev;

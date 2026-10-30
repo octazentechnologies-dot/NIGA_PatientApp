@@ -4,8 +4,13 @@ import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
 import {
   useCompleteFollowUpMutation,
+  useCreateFollowUpMutation,
   useGetFollowUpsQuery,
 } from '../store/api/new/recordsApi';
+import {
+  type PatientVisitItem,
+  useGetPatientVisitsQuery,
+} from '../store/api/new/visitsApi';
 import { useAppSelector } from '../store/hooks';
 
 export type FeelingId = 'improved' | 'same' | 'worse' | 'returned';
@@ -47,6 +52,16 @@ export type FollowUpPlanViewModel = {
   responseRecorded: boolean;
   remindersOn: boolean;
   tasks: FollowUpTask[];
+  toastMessage: string | null;
+  toastVariant: 'error' | 'success';
+  onDismissToast: () => void;
+  addTaskModalOpen: boolean;
+  isCreatingTask: boolean;
+  newTaskTitle: string;
+  setNewTaskTitle: (title: string) => void;
+  onOpenAddTaskModal: () => void;
+  onCloseAddTaskModal: () => void;
+  onCreateTask: () => Promise<boolean>;
   onBack: () => void;
   onToggleReminders: () => void;
   onBookFollowUp: () => void;
@@ -83,7 +98,14 @@ export function useFollowUpPlanController({
   const [remindersOn, setRemindersOn] = useState(true);
   const [prescriptionOpen, setPrescriptionOpen] = useState(false);
   const [consultationNoteOpen, setConsultationNoteOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastVariant, setToastVariant] = useState<'error' | 'success'>('error');
+  const [addTaskModalOpen, setAddTaskModalOpen] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+  const authUser = useAppSelector((state) => state.auth.user);
+
   const {
     data: followUpsResponse,
     isLoading,
@@ -92,7 +114,26 @@ export function useFollowUpPlanController({
   } = useGetFollowUpsQuery(undefined, {
     skip: !isAuthenticated,
   });
+
+  const { data: visitsResponse } = useGetPatientVisitsQuery(undefined, {
+    skip: !isAuthenticated,
+  });
+
   const [completeFollowUp] = useCompleteFollowUpMutation();
+  const [createFollowUp, { isLoading: isCreatingTask }] = useCreateFollowUpMutation();
+
+  const latestVisit = useMemo(() => {
+    const raw = visitsResponse?.data;
+    const list: PatientVisitItem[] = Array.isArray(raw)
+      ? raw
+      : raw && typeof raw === 'object' && 'data' in raw && Array.isArray(raw.data)
+        ? raw.data
+        : [];
+    if (list.length > 0) {
+      return list[0];
+    }
+    return null;
+  }, [visitsResponse?.data]);
 
   const tasks = useMemo<FollowUpTask[]>(() => {
     const rows = followUpsResponse?.data;
@@ -102,13 +143,18 @@ export function useFollowUpPlanController({
     return rows.map((item) => ({
       id: String(item.followUpTaskId),
       title: item.title?.trim() || '',
-      dueLabel: item.dueDate?.trim() || null,
+      dueLabel: item.dueDate
+        ? new Date(item.dueDate).toLocaleDateString(
+            language === 'mr' ? 'mr-IN' : 'en-IN',
+            { day: 'numeric', month: 'short', year: 'numeric' },
+          )
+        : null,
       badgeKey:
         item.status === 'DONE' ? 'followUpBadgeOnTrack' : 'followUpBadgePending',
       badgeTone: item.status === 'DONE' ? 'success' : 'warn',
       done: item.status === 'DONE',
     }));
-  }, [followUpsResponse?.data]);
+  }, [followUpsResponse?.data, language]);
 
   const nextDue = useMemo(() => {
     const dates = tasks
@@ -124,12 +170,66 @@ export function useFollowUpPlanController({
   );
   const totalCount = tasks.length;
 
+  const doctorPlanLine = latestVisit?.doctorName
+    ? `Plan by Dr. ${latestVisit.doctorName.replace(/^Dr\.?\s*/i, '')}`
+    : '';
+  const createdLine = latestVisit?.appointmentDate
+    ? `Created ${new Date(latestVisit.appointmentDate).toLocaleDateString(
+        language === 'mr' ? 'mr-IN' : 'en-IN',
+        { day: 'numeric', month: 'short', year: 'numeric' },
+      )}`
+    : '';
+  const patientLine =
+    authUser?.patientName ||
+    [authUser?.firstName, authUser?.lastName].filter(Boolean).join(' ') ||
+    '';
+
+  const onCreateTask = async (): Promise<boolean> => {
+    const title = newTaskTitle.trim();
+    if (!title) {
+      setToastMessage('Task title is required.');
+      setToastVariant('error');
+      return false;
+    }
+
+    const patientAppId = latestVisit?.patientAppId ?? 1;
+    try {
+      const res = await createFollowUp({
+        patientAppId,
+        title,
+        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        doctorId: latestVisit?.doctorId,
+      }).unwrap();
+
+      if (res.success) {
+        setToastMessage('Follow-up task created successfully.');
+        setToastVariant('success');
+        setNewTaskTitle('');
+        setAddTaskModalOpen(false);
+        return true;
+      } else {
+        setToastMessage(res.message || 'Could not create task.');
+        setToastVariant('error');
+        return false;
+      }
+    } catch (err: unknown) {
+      console.warn('[createFollowUp] Failed:', err);
+      const errMsg =
+        err && typeof err === 'object' && 'data' in err
+          ? (err as { data?: { message?: string } }).data?.message
+          : undefined;
+      setToastMessage(errMsg || 'Could not create follow-up task.');
+      setToastVariant('error');
+      return false;
+    }
+  };
+
   return {
     language,
     t,
-    doctorPlanLine: '',
-    createdLine: '',
-    patientLine: '',
+    doctorPlanLine,
+    createdLine,
+    patientLine,
     isLoading,
     isError,
     onRetry: () => {
@@ -145,13 +245,30 @@ export function useFollowUpPlanController({
     responseRecorded,
     remindersOn,
     tasks,
+    toastMessage,
+    toastVariant,
+    onDismissToast: () => setToastMessage(null),
+    addTaskModalOpen,
+    isCreatingTask,
+    newTaskTitle,
+    setNewTaskTitle,
+    onOpenAddTaskModal: () => {
+      setNewTaskTitle('');
+      setAddTaskModalOpen(true);
+    },
+    onCloseAddTaskModal: () => setAddTaskModalOpen(false),
+    onCreateTask,
     onBack,
     onToggleReminders: () => setRemindersOn((prev) => !prev),
     onBookFollowUp: () => onBookFollowUp?.(),
     onRescheduleReminder: () => undefined,
     onSelectFeeling: setFeeling,
     onChangeNotes: setNotes,
-    onRecordResponse: () => setResponseRecorded(true),
+    onRecordResponse: () => {
+      setResponseRecorded(true);
+      setToastMessage('Response recorded successfully.');
+      setToastVariant('success');
+    },
     onToggleTask: async (id) => {
       const task = tasks.find((row) => row.id === id);
       if (!task || task.done || !isAuthenticated) {
@@ -163,8 +280,16 @@ export function useFollowUpPlanController({
       }
       try {
         await completeFollowUp(numId).unwrap();
-      } catch (e) {
+        setToastMessage('Follow-up task marked as complete.');
+        setToastVariant('success');
+      } catch (e: unknown) {
         console.warn('[completeFollowUp] Failed:', e);
+        const errMsg =
+          e && typeof e === 'object' && 'data' in e
+            ? (e as { data?: { message?: string } }).data?.message
+            : undefined;
+        setToastMessage(errMsg || 'Could not complete follow-up task.');
+        setToastVariant('error');
       }
     },
     onUploadPhoto: () => onUploadPhoto?.(),

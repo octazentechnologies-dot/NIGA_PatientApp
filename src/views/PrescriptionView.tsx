@@ -18,12 +18,18 @@ import type { PrescriptionViewModel } from '../controllers/usePrescriptionContro
 import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
 import { layout, spacing } from '../theme/spacing';
+import { AppToast } from '../components/AppToast';
 
 export function PrescriptionView(vm: PrescriptionViewModel) {
   const insets = useSafeAreaInsets();
 
   return (
     <View style={styles.root}>
+      <AppToast
+        message={vm.toastMessage}
+        variant={vm.toastVariant}
+        onDismiss={vm.onDismissToast}
+      />
       <View style={[styles.header, { paddingTop: Math.max(insets.top, spacing.sm) }]}>
         <View style={styles.headerRow}>
           <Pressable

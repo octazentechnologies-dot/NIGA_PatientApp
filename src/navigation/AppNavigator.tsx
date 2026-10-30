@@ -444,7 +444,6 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
       booking.onPaymentPending(paymentOrderId);
     },
     onPaymentFailed: (message) => {
-      console.log('🚨 [AppNavigator] Payment Failed callback with reason:', message);
       booking.onOpenPaymentStatus('failed', message);
     },
     draft: {
@@ -526,26 +525,26 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
     myAppointments.appointments.find((item) => item.id === home.selectedAppointmentId) ??
     (home.selectedAppointmentId
       ? {
-          id: home.selectedAppointmentId,
-          bookingId: `APT-${home.selectedAppointmentId}`,
-          doctorId: '',
-          doctorNameKey: '' as TranslationKey,
-          doctorInitials: 'DR',
-          credentialsKey: '' as TranslationKey,
-          experienceKey: '' as TranslationKey,
-          whenLabel: '',
-          dateLine: '',
-          timeLine: '',
-          startsAt: new Date().toISOString(),
-          bookedOnLabel: '',
-          mode: 'clinic' as const,
-          modeConsultLabel: 'Clinic',
-          patientLabel: '',
-          feeLabel: '',
-          paymentId: '',
-          reasonKey: '' as TranslationKey,
-          status: 'confirmed' as const,
-        }
+        id: home.selectedAppointmentId,
+        bookingId: `APT-${home.selectedAppointmentId}`,
+        doctorId: '',
+        doctorNameKey: '' as TranslationKey,
+        doctorInitials: 'DR',
+        credentialsKey: '' as TranslationKey,
+        experienceKey: '' as TranslationKey,
+        whenLabel: '',
+        dateLine: '',
+        timeLine: '',
+        startsAt: new Date().toISOString(),
+        bookedOnLabel: '',
+        mode: 'clinic' as const,
+        modeConsultLabel: 'Clinic',
+        patientLabel: '',
+        feeLabel: '',
+        paymentId: '',
+        reasonKey: '' as TranslationKey,
+        status: 'confirmed' as const,
+      }
       : null);
   const appointmentDetail = useAppointmentDetailController({
     appointment: selectedAppointment,
@@ -1435,6 +1434,7 @@ export function AppNavigator() {
     async function checkAuthAndFlow() {
       try {
         const token = await getAccessToken();
+        console.log(token)
         if (token) {
           let activeToken = token;
 
@@ -1546,10 +1546,10 @@ export function AppNavigator() {
               const claims = parseJwtClaims(activeToken);
               const fallbackUser: AuthUser = claims?.mobile
                 ? {
-                    mobile: claims.mobile,
-                    mobileNo: claims.mobile,
-                    userId: claims.userId,
-                  }
+                  mobile: claims.mobile,
+                  mobileNo: claims.mobile,
+                  userId: claims.userId,
+                }
                 : null;
               dispatch(
                 setAuthUser({
@@ -1717,9 +1717,9 @@ export function AppNavigator() {
   useHardwareBackHandler(
     onAuthHardwareBack,
     step !== 'splash' &&
-      step !== 'home' &&
-      step !== 'firstLaunch' &&
-      step !== 'onboarding',
+    step !== 'home' &&
+    step !== 'firstLaunch' &&
+    step !== 'onboarding',
   );
 
   if (step === 'splash') {

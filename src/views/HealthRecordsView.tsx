@@ -13,6 +13,8 @@ import { sheetBottomPadding } from '../utilities/sheetInset';
 
 import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
+import { AppToast } from '../components/AppToast';
+import { ConfirmationModal } from '../components/ConfirmationModal';
 import { NotificationBell } from '../components/NotificationBell';
 import { images } from '../config/images';
 import { usePatientTabScrollInset } from '../components/PatientTabBar';
@@ -69,6 +71,7 @@ export function HealthRecordsView({
   });
   const prescription = usePrescriptionController({
     patientAppId: vm.activePatientAppId,
+    appointmentId: vm.activePatientAppId,
     onBack: vm.onClosePrescription,
     onOrder: () => {
       vm.onClosePrescription();
@@ -83,6 +86,22 @@ export function HealthRecordsView({
 
   return (
     <View style={styles.root}>
+      <AppToast
+        message={vm.toastMessage}
+        variant={vm.toastVariant}
+        onDismiss={vm.onDismissToast}
+      />
+      <ConfirmationModal
+        visible={vm.confirmDeleteDocId != null}
+        title="Delete Document"
+        message={`Are you sure you want to delete "${vm.confirmDeleteDocName}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        loading={vm.isDeletingDocument}
+        onConfirm={vm.onConfirmDeleteDocument}
+        onCancel={vm.onCancelDeleteDocument}
+      />
       <SafeAreaModal
         visible={vm.consultationRecordOpen}
         animationType="slide"
@@ -463,7 +482,15 @@ function TimelineCard({
 
         {item.kind === 'document' ? (
           <>
-            <View style={styles.row}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => {
+                if (item.documentId != null) {
+                  vm.onViewDocument(item.documentId);
+                }
+              }}
+              style={styles.row}
+            >
               <View style={styles.docThumb}>
                 <Ionicons name="document-text-outline" size={22} color={colors.muted} />
               </View>
@@ -479,14 +506,19 @@ function TimelineCard({
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={vm.t('notifActionDelete')}
-                  onPress={() => vm.onDeleteDocument(item.id)}
+                  onPress={() =>
+                    vm.onPromptDeleteDocument(
+                      item.documentId!,
+                      vm.t(item.titleKey),
+                    )
+                  }
                   hitSlop={8}
                   style={{ minWidth: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center' }}
                 >
                   <Ionicons name="trash-outline" size={22} color={colors.muted} />
                 </Pressable>
               ) : null}
-            </View>
+            </Pressable>
             {item.noteKey ? (
               <AppText variant="labelSm" color={colors.muted} style={styles.docNote}>
                 {vm.t(item.noteKey)}

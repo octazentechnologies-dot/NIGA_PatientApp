@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
+import { AppToast } from '../components/AppToast';
 import { DatePickerSheet } from '../components/DatePickerSheet';
 import { WhoForMemberSheet } from '../components/WhoForMemberSheet';
 import {
@@ -36,6 +37,11 @@ export function UploadDocumentView(vm: UploadDocumentViewModel) {
 
   return (
     <View style={styles.root}>
+      <AppToast
+        message={vm.toastMessage}
+        variant={vm.toastVariant}
+        onDismiss={vm.onDismissToast}
+      />
       <View style={[styles.header, { paddingTop: Math.max(insets.top, spacing.sm) }]}>
         <View style={styles.headerRow}>
           <Pressable

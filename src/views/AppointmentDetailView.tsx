@@ -33,6 +33,7 @@ export function AppointmentDetailView(vm: AppointmentDetailViewModel) {
   });
   const prescription = usePrescriptionController({
     patientAppId: vm.id,
+    appointmentId: vm.id,
     erxSnapshotId: vm.erxSnapshotId,
     doctorName: vm.doctorName,
     doctorCredentials: vm.credentials,

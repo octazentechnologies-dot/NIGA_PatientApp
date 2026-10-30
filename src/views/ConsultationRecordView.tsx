@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
+import { AppToast } from '../components/AppToast';
 import { images } from '../config/images';
 import type { ConsultationRecordViewModel } from '../controllers/useConsultationRecordController';
 import { colors } from '../theme/colors';
@@ -26,6 +27,11 @@ export function ConsultationRecordView(vm: ConsultationRecordViewModel) {
 
   return (
     <View style={styles.root}>
+      <AppToast
+        message={vm.toastMessage}
+        variant={vm.toastVariant}
+        onDismiss={vm.onDismissToast}
+      />
       <View style={[styles.header, { paddingTop: Math.max(insets.top, spacing.sm) }]}>
         <View style={styles.headerRow}>
           <Pressable

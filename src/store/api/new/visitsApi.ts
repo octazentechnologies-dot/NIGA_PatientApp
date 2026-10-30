@@ -9,6 +9,9 @@ export type PatientVisitItem = {
   isTele: boolean;
   doctorId: number;
   doctorName: string;
+  patientId?: number;
+  patientName?: string;
+  patientFullName?: string;
   /** BE-008 — number for open tele visits; else null. */
   teleSessionId?: number | null;
   sessionStatus?: string | null;

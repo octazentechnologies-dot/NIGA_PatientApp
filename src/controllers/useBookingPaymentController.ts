@@ -352,7 +352,6 @@ export function useBookingPaymentController({
   useEffect(() => {
     if (payment.state === 'FAILED') {
       const reason = payment.errorMessage || 'Payment failed';
-      console.log('🚨 [useBookingPaymentController] payment.state is FAILED. Reason:', reason);
       if (!failedNotifiedRef.current) {
         failedNotifiedRef.current = true;
         onPaymentFailed?.(reason);

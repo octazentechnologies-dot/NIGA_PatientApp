@@ -875,17 +875,6 @@ export function useBookAppointmentController({
           razorpay_payment_id,
         };
 
-        if (isDev) {
-          console.log('================ [FAMILY BOOKING REQUEST] ================');
-          console.log('API Endpoint: POST /api/Family/BookAs');
-          console.log('HTTP Method:  POST');
-          console.log(
-            'Payload:',
-            JSON.stringify(maskSensitive(familyPayload as unknown as Record<string, unknown>), null, 2),
-          );
-          console.log('==========================================================');
-        }
-
         const booking = await bookAsFamilyMutation(familyPayload).unwrap();
         data = booking.data;
       } else {
@@ -909,18 +898,6 @@ export function useBookAppointmentController({
             `pa-${docIdNum}-${payment.payAtClinic ? 'clinic' : 'online'}`,
           ),
         };
-
-        if (isDev) {
-          console.log('================ [SELF BOOKING REQUEST] ================');
-          console.log('API Endpoint: POST /api/Public/Doctors/' + docIdNum + '/Bookings');
-          console.log('HTTP Method:  POST');
-          console.log(
-            'Payload:',
-            JSON.stringify(maskSensitive(selfPayload as unknown as Record<string, unknown>), null, 2),
-          );
-          console.log('========================================================');
-        }
-
         const booking = await createBookingMutation(selfPayload).unwrap();
         data = booking.data;
       }
@@ -943,7 +920,6 @@ export function useBookAppointmentController({
       void onCancelHold('Payment cancelled by user');
     },
     onOpenPaymentStatus: (status, reason) => {
-      console.log('🚨 [BookAppointment] onOpenPaymentStatus called:', { status, reason });
       setPaymentStatus(status);
       setPaymentFailureReason(reason ?? null);
     },
@@ -968,14 +944,6 @@ export function useBookAppointmentController({
     onOpenMemberPicker: () => setMemberPickerOpen(true),
     onCloseMemberPicker: () => setMemberPickerOpen(false),
     onSelectMember: (id) => {
-      console.log(members)
-      const selected = members.find((item) => item.id === id);
-      console.log('📌 [BookAppointment] onSelectMember:', {
-        selectedId: id,
-        name: selected?.name,
-        self: Boolean(selected?.self),
-        relationship: selected?.relationshipName,
-      });
       setMemberId(id);
       dispatch(setSelectedMemberId(id));
       onMemberChange?.(id);

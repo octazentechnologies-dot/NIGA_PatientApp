@@ -291,8 +291,8 @@ export function useCompleteProfileController({
 
   const initialFullName = isEdit
     ? authUser?.patientName ||
-      [authUser?.firstName, authUser?.lastName].filter(Boolean).join(' ') ||
-      ''
+    [authUser?.firstName, authUser?.lastName].filter(Boolean).join(' ') ||
+    ''
     : '';
 
   const [fullName, setFullName] = useState(initialFullName);
@@ -949,12 +949,8 @@ export function useCompleteProfileController({
       isWhatsAppOptIn: false,
     };
 
-    console.log('[api/patient] Request Payload:', JSON.stringify(patientPayload, null, 2));
-
     try {
       const response = await createPatient(patientPayload).unwrap();
-      console.log('[api/patient] Response:', JSON.stringify(response, null, 2));
-
       const userToSave = {
         patientId: response.patientID,
         userId: response.userId,

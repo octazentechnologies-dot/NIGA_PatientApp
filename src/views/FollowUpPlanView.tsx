@@ -14,6 +14,7 @@ import { sheetBottomPadding } from '../utilities/sheetInset';
 
 import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
+import { AppToast } from '../components/AppToast';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { LoadingState } from '../components/LoadingState';
@@ -95,6 +96,65 @@ export function FollowUpPlanView({
 
   return (
     <View style={styles.root}>
+      <AppToast
+        message={vm.toastMessage}
+        variant={vm.toastVariant}
+        onDismiss={vm.onDismissToast}
+      />
+      <SafeAreaModal
+        visible={vm.addTaskModalOpen}
+        animationType="fade"
+        transparent
+        onRequestClose={vm.onCloseAddTaskModal}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={vm.onCloseAddTaskModal}>
+          <Pressable style={styles.modalCard} onPress={() => undefined}>
+            <View style={styles.modalHeader}>
+              <AppText variant="titleMd" color={colors.ink} weightOverride="600">
+                New Follow-Up Task
+              </AppText>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={vm.t('close')}
+                onPress={vm.onCloseAddTaskModal}
+                hitSlop={8}
+              >
+                <Ionicons name="close" size={22} color={colors.muted} />
+              </Pressable>
+            </View>
+            <AppText variant="labelSm" color={colors.muted}>
+              Add a follow-up action or monitoring item for your care plan.
+            </AppText>
+            <TextInput
+              value={vm.newTaskTitle}
+              onChangeText={vm.setNewTaskTitle}
+              placeholder="e.g. Check temperature daily"
+              placeholderTextColor={PLACEHOLDER}
+              style={[
+                styles.taskInput,
+                { fontFamily: fontFamilyFor('400', vm.language, 'sans') },
+              ]}
+              autoFocus
+            />
+            <View style={styles.modalActions}>
+              <AppButton
+                label="Cancel"
+                variant="secondary"
+                onPress={vm.onCloseAddTaskModal}
+                style={styles.modalBtn}
+              />
+              <AppButton
+                label={vm.isCreatingTask ? 'Creating...' : 'Create Task'}
+                onPress={() => {
+                  void vm.onCreateTask();
+                }}
+                disabled={vm.isCreatingTask || !vm.newTaskTitle.trim()}
+                style={styles.modalBtn}
+              />
+            </View>
+          </Pressable>
+        </Pressable>
+      </SafeAreaModal>
       <SafeAreaModal
         visible={vm.prescriptionOpen}
         animationType="slide"
@@ -295,9 +355,21 @@ export function FollowUpPlanView({
         </View>
 
         <View style={styles.card}>
-          <AppText variant="titleMd" color={colors.ink}>
-            {vm.t('followUpTasks')}
-          </AppText>
+          <View style={styles.taskCardHeader}>
+            <AppText variant="titleMd" color={colors.ink}>
+              {vm.t('followUpTasks')}
+            </AppText>
+            <Pressable
+              accessibilityRole="button"
+              onPress={vm.onOpenAddTaskModal}
+              style={styles.addTaskBtn}
+            >
+              <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
+              <AppText variant="labelSm" color={colors.primary} weightOverride="600">
+                Add Task
+              </AppText>
+            </Pressable>
+          </View>
           {vm.isLoading ? <LoadingState /> : null}
           {vm.isError ? (
             <ErrorState message="Could not load follow-up tasks." onRetry={vm.onRetry} />
@@ -706,5 +778,66 @@ const styles = StyleSheet.create({
   },
   center: {
     textAlign: 'center',
+  },
+  taskCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.xs,
+  },
+  addTaskBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: radii.sm,
+    backgroundColor: colors.surfaceContainerLow,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(24, 28, 27, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: colors.card,
+    borderRadius: radii.lg,
+    padding: spacing.xl,
+    gap: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
+    shadowColor: colors.ink,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  taskInput: {
+    minHeight: 48,
+    borderWidth: 1,
+    borderColor: colors.outline,
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    fontSize: 15,
+    color: colors.ink,
+    backgroundColor: colors.page,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  modalBtn: {
+    flex: 1,
   },
 });

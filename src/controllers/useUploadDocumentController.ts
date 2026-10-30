@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
@@ -71,6 +70,9 @@ export type UploadDocumentViewModel = {
   datePickerValue: Date;
   notes: string;
   visibility: UploadVisibility;
+  toastMessage: string | null;
+  toastVariant: 'error' | 'success';
+  onDismissToast: () => void;
   onClose: () => void;
   onHelp: () => void;
   onOpenMemberPicker: () => void;
@@ -149,6 +151,8 @@ export function useUploadDocumentController({
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [notes, setNotes] = useState('');
   const [visibility, setVisibility] = useState<UploadVisibility>('doctors');
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastVariant, setToastVariant] = useState<'error' | 'success'>('error');
 
   useEffect(() => {
     if (!active) {
@@ -161,6 +165,7 @@ export function useUploadDocumentController({
       setDatePickerOpen(false);
       setNotes('');
       setVisibility('doctors');
+      setToastMessage(null);
     }
   }, [active]);
 
@@ -206,7 +211,8 @@ export function useUploadDocumentController({
   const onTakePhoto = async () => {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert(t('genericError'), 'Camera permission is required.');
+      setToastMessage('Camera permission is required.');
+      setToastVariant('error');
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
@@ -229,7 +235,8 @@ export function useUploadDocumentController({
   const onPickGallery = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert(t('genericError'), 'Photo library permission is required.');
+      setToastMessage('Photo library permission is required.');
+      setToastVariant('error');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -290,6 +297,9 @@ export function useUploadDocumentController({
     datePickerValue: parseDocDate(docDate) ?? new Date(),
     notes,
     visibility,
+    toastMessage,
+    toastVariant,
+    onDismissToast: () => setToastMessage(null),
     onClose,
     onHelp: () => undefined,
     onOpenMemberPicker: () => setMemberPickerOpen(true),
@@ -337,7 +347,8 @@ export function useUploadDocumentController({
         return;
       }
       if (!isAuthenticated) {
-        Alert.alert(t('genericError'), 'Sign in to upload documents.');
+        setToastMessage('Sign in to upload documents.');
+        setToastVariant('error');
         return;
       }
       const uploaded: PatientDocument[] = [];
@@ -350,9 +361,14 @@ export function useUploadDocumentController({
           formData.append('file', fsFile as unknown as Blob, file.name);
           await uploadDocumentApi(formData).unwrap();
           uploaded.push(file);
-        } catch (err) {
+        } catch (err: unknown) {
           console.warn('[uploadDocumentApi] Failed:', err);
-          Alert.alert(t('genericError'), 'Upload failed. Please try again.');
+          const errMsg =
+            err && typeof err === 'object' && 'data' in err
+              ? (err as { data?: { message?: string } }).data?.message
+              : undefined;
+          setToastMessage(errMsg || 'Upload failed. Please try again.');
+          setToastVariant('error');
           return;
         }
       }

@@ -25,6 +25,7 @@ import { attemptJoinWaitingRoom } from './useJoinFailedController';
 import { useGetDoctorSlotsQuery } from '../store/api/new/doctorsApi';
 import {
   useGetDocumentsQuery,
+  useGetPrescriptionByAppointmentQuery,
   useGetPrescriptionQuery,
 } from '../store/api/new/recordsApi';
 import { useReportRunningLateMutation } from '../store/api/new/teleApi';
@@ -618,10 +619,21 @@ export function useAppointmentDetailController({
   const isCompleted = visitStatus === 'COMPLETED';
   const isCancelled = visitStatus === 'CANCELLED';
 
-  const { data: prescriptionResponse } = useGetPrescriptionQuery(item.id, {
-    skip: !isNumericId || !isCompleted,
-  });
-  const prescriptionData = prescriptionResponse?.data;
+  const { data: prescriptionByAptResponse } =
+    useGetPrescriptionByAppointmentQuery(item.id, {
+      skip: !isNumericId || !isCompleted,
+    });
+  const { data: prescriptionPatientResponse } = useGetPrescriptionQuery(
+    item.id,
+    {
+      skip:
+        !isNumericId ||
+        !isCompleted ||
+        Boolean(prescriptionByAptResponse?.data),
+    },
+  );
+  const prescriptionData =
+    prescriptionByAptResponse?.data ?? prescriptionPatientResponse?.data;
   const erxSnapshotId =
     visitDetail?.erxSnapshotId ?? prescriptionData?.erxSnapshotId ?? null;
   const hasPrescription =

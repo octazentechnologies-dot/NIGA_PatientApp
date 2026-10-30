@@ -877,7 +877,6 @@ export function useHomeController({
       consultFee?: number | null;
       currency?: string | null;
     };
-    console.log('homeDashboardData?.nextAppointments', homeDashboardData?.nextAppointments)
     const dashboardApps = (homeDashboardData?.nextAppointments ??
       EMPTY_VISITS) as RawVisit[];
     const serverVisits = apiVisitsList as RawVisit[];
@@ -896,22 +895,6 @@ export function useHomeController({
         combinedMap.set(item.patientAppId, { ...existing, ...item });
       }
     }
-
-    console.log('📡 [useHomeController] Raw serverVisits & dashboardApps:', {
-      dashboardCount: dashboardApps.length,
-      visitsCount: serverVisits.length,
-      rawItems: Array.from(combinedMap.values()).map((v) => ({
-        patientAppId: v.patientAppId,
-        doctorName: v.doctorName,
-        date: v.appointmentDate,
-        time: v.appointmentTime,
-        status: v.status,
-        paymentStatus: v.paymentStatus,
-        visitType: v.visitType,
-        isTele: v.isTele,
-        payAtClinicAllowed: v.payAtClinicAllowed,
-      })),
-    });
 
     // Show homeDashboardData?.nextAppointments directly on Home with all filters removed
     const activeList = (
