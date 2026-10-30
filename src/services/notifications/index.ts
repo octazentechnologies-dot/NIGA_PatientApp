@@ -12,6 +12,8 @@ export {
   parseNotificationPayload,
   parsePushNotificationData,
   queueOrDispatchNotificationNavigation,
+  requestNotificationInboxRefresh,
+  setNotificationInboxRefreshHandler,
   setNotificationNavigationHandlers,
 } from './notificationNavigation';
 export {

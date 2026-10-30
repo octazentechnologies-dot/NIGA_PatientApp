@@ -30,6 +30,7 @@ import {
 } from '../store/slices/authSlice';
 import type { TranslationKey } from '../localization/types';
 import { accountApi } from '../store/api/new/accountApi';
+import { newBaseApi } from '../store/api/new/newBaseApi';
 import { patientProfileApi } from '../store/api/new/patientProfileApi';
 import { isJwtExpiringWithin, parseJwtClaims } from '../utilities/jwt';
 import { useCompleteProfileController } from '../controllers/useCompleteProfileController';
@@ -290,6 +291,7 @@ function FamilyMembersRoute({
 }
 
 function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
+  const dispatch = useAppDispatch();
   const home = useHomeController({ onLogOut });
   const homeRef = useRef(home);
   homeRef.current = home;
@@ -315,9 +317,14 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
 
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
 
+  const refreshNotificationInbox = useCallback(() => {
+    dispatch(newBaseApi.util.invalidateTags(['Notifications']));
+  }, [dispatch]);
+
   usePushNotificationLifecycle({
     authenticated: isAuthenticated,
     navigation: notificationNavigation,
+    onInboxRefresh: isAuthenticated ? refreshNotificationInbox : null,
   });
 
   const search = useSearchDoctorsController({

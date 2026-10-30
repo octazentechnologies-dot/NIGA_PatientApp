@@ -21,6 +21,11 @@ const KNOWN_TYPES: ReadonlySet<PushNotificationType> = new Set([
 let handlers: NotificationNavigationHandlers | null = null;
 let pending: PushNotificationData | null = null;
 
+/** Refetch inbox (bell + Notifications list) after OS push / foreground. */
+let inboxRefreshHandler: (() => void) | null = null;
+let inboxRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+const INBOX_REFRESH_DEBOUNCE_MS = 400;
+
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
 }
@@ -71,6 +76,30 @@ export function setNotificationNavigationHandlers(
     pending = null;
     dispatchNotificationNavigation(queued);
   }
+}
+
+export function setNotificationInboxRefreshHandler(
+  next: (() => void) | null,
+): void {
+  inboxRefreshHandler = next;
+}
+
+/**
+ * Ask the app to re-fetch Notifications + UnreadCount (debounced).
+ * No-op until Home registers a handler.
+ */
+export function requestNotificationInboxRefresh(reason?: string): void {
+  if (!inboxRefreshHandler) {
+    return;
+  }
+  if (inboxRefreshTimer != null) {
+    clearTimeout(inboxRefreshTimer);
+  }
+  inboxRefreshTimer = setTimeout(() => {
+    inboxRefreshTimer = null;
+    logNotifications('Refreshing notification inbox', reason ?? 'push');
+    inboxRefreshHandler?.();
+  }, INBOX_REFRESH_DEBOUNCE_MS);
 }
 
 export function queueOrDispatchNotificationNavigation(

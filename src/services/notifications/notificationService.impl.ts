@@ -12,6 +12,7 @@ import { logNotifications, maskPushToken } from './log';
 import {
   parseNotificationPayload,
   queueOrDispatchNotificationNavigation,
+  requestNotificationInboxRefresh,
 } from './notificationNavigation';
 import type { PushPlatform, PushRegistrationResult } from './types';
 import type { NotificationListenerCleanup } from './notificationService';
@@ -194,12 +195,15 @@ export function attachNotificationListeners(): NotificationListenerCleanup {
   const received = Notifications.addNotificationReceivedListener((notification) => {
     const data = parseNotificationPayload(notification);
     logNotifications('Notification received', data?.type ?? 'untyped');
+    // OS push ≠ inbox row; refetch so bell + Notifications list stay current.
+    requestNotificationInboxRefresh('notification-received');
   });
 
   const response = Notifications.addNotificationResponseReceivedListener(
     (event) => {
       const data = parseNotificationPayload(event.notification);
       logNotifications('Notification tapped', data?.type ?? 'untyped');
+      requestNotificationInboxRefresh('notification-tapped');
       if (data) {
         queueOrDispatchNotificationNavigation(data);
       }
@@ -225,6 +229,7 @@ export function attachNotificationListeners(): NotificationListenerCleanup {
     const last = Notifications.getLastNotificationResponse();
     if (last?.notification) {
       const data = parseNotificationPayload(last.notification);
+      requestNotificationInboxRefresh('cold-start-response');
       if (data) {
         logNotifications('Cold-start notification response', data.type);
         queueOrDispatchNotificationNavigation(data);
