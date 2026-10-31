@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AppState, type AppStateStatus } from 'react-native';
 
 import type { ConsultMode } from '../config/appointmentSlots';
-import type {
-  AppointmentRequestStatus,
-  BookedAppointment,
+import {
+  appointmentStartIso,
+  type AppointmentRequestStatus,
+  type BookedAppointment,
 } from '../config/bookedAppointments';
 import { mapVisitStatus } from '../constants/statusMaps';
 import { useLocalization } from '../localization/i18n';
@@ -14,7 +16,7 @@ import {
   useGetPatientVisitsQuery,
   type PatientVisitItem,
 } from '../store/api/new/visitsApi';
-import { formatDate, formatTime } from '../utilities/formatters';
+import { formatDate, formatTime, resolveApiUrl } from '../utilities/formatters';
 import { unwrapListOrPage } from '../utilities/paged';
 
 export type VisitStatusFilter =
@@ -29,6 +31,10 @@ export type MyAppointmentRow = BookedAppointment & {
   visitStatusLabel: string;
   visitStatusColor: string;
   visitStatusBg: string;
+  visitStatusBorder?: string;
+  visitBadgeType?: 'upcoming' | 'waiting' | 'completed' | 'cancelled' | 'neutral';
+  doctorPhotoUrl?: string | null;
+  doctorSpecialization?: string;
 };
 
 export type MyAppointmentsViewModel = {
@@ -125,7 +131,7 @@ function mapVisitToRow(
     whenLabel,
     dateLine: formattedDate,
     timeLine: formattedTime,
-    startsAt: item.appointmentDate || new Date().toISOString(),
+    startsAt: appointmentStartIso(item.appointmentDate, item.appointmentTime),
     bookedOnLabel: formattedDate,
     mode,
     modeConsultLabel:
@@ -145,15 +151,21 @@ function mapVisitToRow(
     visitStatusLabel: visual.label,
     visitStatusColor: visual.color,
     visitStatusBg: visual.background,
+    visitStatusBorder: visual.borderColor,
+    visitBadgeType: visual.badgeType,
+    doctorPhotoUrl: item.doctorPhotoUrl ? resolveApiUrl(item.doctorPhotoUrl) : null,
+    doctorSpecialization: item.doctorSpecialization || item.specialization || '',
   };
 }
 
 export function useMyAppointmentsController({
+  active = true,
   onBack,
   onOpenAppointment,
   onBookNew,
   onOpenRequests,
 }: {
+  active?: boolean;
   onBack: () => void;
   onOpenAppointment: (id: string) => void;
   onBookNew: () => void;
@@ -195,7 +207,38 @@ export function useMyAppointmentsController({
     isFetching,
     isError,
     refetch,
-  } = useGetPatientVisitsQuery(queryParams, { skip: !isAuthenticated });
+  } = useGetPatientVisitsQuery(queryParams, {
+    skip: !isAuthenticated,
+    refetchOnMountOrArgChange: true,
+  });
+
+  // Re-fetch immediately whenever screen becomes active (navigated to)
+  const wasActiveRef = useRef(active);
+  useEffect(() => {
+    if (active && !wasActiveRef.current && isAuthenticated) {
+      setPageNumber(1);
+      void refetch();
+    }
+    wasActiveRef.current = active;
+  }, [active, isAuthenticated, refetch]);
+
+  // Re-fetch when mobile app returns to foreground from background/web
+  useEffect(() => {
+    if (!active || !isAuthenticated) {
+      return;
+    }
+
+    const onAppStateChange = (state: AppStateStatus) => {
+      if (state === 'active') {
+        void refetch();
+      }
+    };
+
+    const sub = AppState.addEventListener('change', onAppStateChange);
+    return () => {
+      sub.remove();
+    };
+  }, [active, isAuthenticated, refetch]);
 
   const pageItems = useMemo(() => {
     const { items, page } = unwrapListOrPage<PatientVisitItem>(visitsResponse);
@@ -234,7 +277,9 @@ export function useMyAppointmentsController({
           prev.every(
             (row, index) =>
               row.id === mapped[index]?.id &&
+              row.visitStatus === mapped[index]?.visitStatus &&
               row.visitStatusLabel === mapped[index]?.visitStatusLabel &&
+              row.visitBadgeType === mapped[index]?.visitBadgeType &&
               row.whenLabel === mapped[index]?.whenLabel &&
               row.patientLabel === mapped[index]?.patientLabel,
           )

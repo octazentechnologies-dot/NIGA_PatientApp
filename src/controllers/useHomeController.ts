@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AppState, type AppStateStatus } from 'react-native';
 
 import { useAccountController, type AccountViewModel } from './useAccountController';
 import type { HelpTopicId } from './useHelpCentreController';
@@ -825,7 +826,20 @@ export function useHomeController({
     refetch: refetchVisits,
   } = useGetPatientVisitsQuery(undefined, {
     skip: !isAuthenticated,
+    refetchOnMountOrArgChange: true,
   });
+
+  // Re-fetch home dashboard & visits when app comes back to foreground
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const sub = AppState.addEventListener('change', (nextState: AppStateStatus) => {
+      if (nextState === 'active') {
+        void refetchVisits();
+        void refetchHomeDashboard();
+      }
+    });
+    return () => sub.remove();
+  }, [isAuthenticated, refetchVisits, refetchHomeDashboard]);
   const apiVisitsRaw = visitsResponse?.data;
   const apiVisitsList = Array.isArray(apiVisitsRaw)
     ? apiVisitsRaw

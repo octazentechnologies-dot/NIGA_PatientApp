@@ -58,6 +58,48 @@ export function slotStartIso(
   return new Date(year, month, day, hours || 0, minutes || 0, 0, 0).toISOString();
 }
 
+export function appointmentStartIso(
+  appointmentDate?: string,
+  appointmentTime?: string,
+): string {
+  const datePart = (appointmentDate || '').trim().slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+    return appointmentDate || new Date().toISOString();
+  }
+  let hour = 0;
+  let minute = 0;
+  const timeRaw = (appointmentTime || '').trim();
+  const match = timeRaw.match(/^(\d{1,2}):(\d{2})/);
+  if (match) {
+    hour = Number(match[1]);
+    minute = Number(match[2]);
+    const isPm = /pm/i.test(timeRaw);
+    const isAm = /am/i.test(timeRaw);
+    if (isPm && hour < 12) {
+      hour += 12;
+    } else if (isAm && hour === 12) {
+      hour = 0;
+    }
+  }
+  if (
+    !Number.isFinite(hour) ||
+    !Number.isFinite(minute) ||
+    hour < 0 ||
+    hour > 23 ||
+    minute < 0 ||
+    minute > 59
+  ) {
+    hour = 0;
+    minute = 0;
+  }
+  const dateObj = new Date(
+    `${datePart}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`,
+  );
+  return Number.isFinite(dateObj.getTime())
+    ? dateObj.toISOString()
+    : (appointmentDate || new Date().toISOString());
+}
+
 export function formatBookedOn(
   date: Date,
   language: 'en' | 'mr',

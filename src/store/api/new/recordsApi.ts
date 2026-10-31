@@ -73,6 +73,8 @@ export type ApiPrescriptionListItem = {
   patientId?: number;
   doctorId?: number;
   doctorName?: string;
+  patientName?: string;
+  itemCount?: number;
   status: string;
   signedAt: string;
   items?: ErxItem[];
@@ -195,10 +197,16 @@ function unwrapRows(payload: unknown): unknown[] {
   if (!root) return [];
   if (Array.isArray(root.data)) return root.data;
   const data = asRecord(root.data);
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.Data)) return data.Data;
   if (Array.isArray(data?.items)) return data.items;
   if (Array.isArray(data?.Items)) return data.Items;
+  if (Array.isArray(data?.prescriptions)) return data.prescriptions;
+  if (Array.isArray(data?.Prescriptions)) return data.Prescriptions;
   if (Array.isArray(root.items)) return root.items;
   if (Array.isArray(root.Items)) return root.Items;
+  if (Array.isArray(root.prescriptions)) return root.prescriptions;
+  if (Array.isArray(root.Prescriptions)) return root.Prescriptions;
   return [];
 }
 
@@ -248,20 +256,50 @@ function normalizePrescription(raw: unknown): GetPrescriptionResponse {
 
 function normalizePrescriptionList(payload: unknown): GetPrescriptionsListResponse {
   const data: ApiPrescriptionListItem[] = [];
-  for (const raw of unwrapRows(payload)) {
+  const rows = unwrapRows(payload);
+  console.log('💊 [normalizePrescriptionList] Unwrapped rows count:', rows.length, 'Payload:', JSON.stringify(payload));
+  for (const raw of rows) {
     const row = asRecord(raw);
     if (!row) continue;
-    const erxSnapshotId = pickNum(row, 'erxSnapshotId', 'ErxSnapshotId', 'erxId', 'ErxId');
+    const erxSnapshotId = pickNum(
+      row,
+      'erxSnapshotId',
+      'ErxSnapshotId',
+      'erxId',
+      'ErxId',
+      'snapshotId',
+      'SnapshotId',
+      'prescriptionId',
+      'PrescriptionId',
+      'id',
+      'Id',
+    );
     if (!erxSnapshotId) continue;
     const itemSource = row.items ?? row.Items ?? row.remedies ?? row.Remedies ?? [];
-    const doctorName = pickStr(row, 'doctorName', 'DoctorName');
+    const doctorName = pickStr(row, 'doctorName', 'DoctorName', 'doctor', 'Doctor');
     const patientId = pickNum(row, 'patientId', 'PatientId');
     const doctorId = pickNum(row, 'doctorId', 'DoctorId');
     const item: ApiPrescriptionListItem = {
       erxSnapshotId,
-      patientAppId: pickNum(row, 'patientAppId', 'PatientAppId'),
-      status: pickStr(row, 'status', 'Status'),
-      signedAt: pickStr(row, 'signedAt', 'SignedAt'),
+      patientAppId: pickNum(
+        row,
+        'patientAppId',
+        'PatientAppId',
+        'appointmentId',
+        'AppointmentId',
+      ),
+      status: pickStr(row, 'status', 'Status') || 'SIGNED',
+      signedAt: pickStr(
+        row,
+        'signedAt',
+        'SignedAt',
+        'createdAt',
+        'CreatedAt',
+        'date',
+        'Date',
+        'appointmentDate',
+        'AppointmentDate',
+      ),
       items: (Array.isArray(itemSource) ? itemSource : [])
         .map(normalizeErxItem)
         .filter((entry): entry is ErxItem => entry != null),
@@ -269,6 +307,10 @@ function normalizePrescriptionList(payload: unknown): GetPrescriptionsListRespon
     if (patientId) item.patientId = patientId;
     if (doctorId) item.doctorId = doctorId;
     if (doctorName) item.doctorName = doctorName;
+    const patientName = pickStr(row, 'patientName', 'PatientName');
+    if (patientName) item.patientName = patientName;
+    const itemCount = pickNum(row, 'itemCount', 'ItemCount');
+    if (itemCount) item.itemCount = itemCount;
     data.push(item);
   }
   return { success: true, data };
@@ -308,19 +350,30 @@ export const recordsApi = newBaseApi.injectEndpoints({
     >({
       query: (patientAppId) => `api/Patient/Consultations/${patientAppId}/Note`,
     }),
-    getPrescriptionsList: build.query<GetPrescriptionsListResponse, void>({
-      async queryFn(_arg, _api, _extraOptions, baseQuery) {
-        const history = await baseQuery('api/Erx/History');
-        if (!history.error) {
+    getPrescriptionsList: build.query<GetPrescriptionsListResponse, { patientId?: number } | void>({
+      async queryFn(arg, _api, _extraOptions, baseQuery) {
+        const params =
+          arg && 'patientId' in arg && arg.patientId != null && arg.patientId > 0
+            ? { patientId: arg.patientId }
+            : undefined;
+        const history = await baseQuery({ url: 'api/Erx/History', params });
+        console.log('💊 [api/Erx/History] response:', JSON.stringify(history, null, 2));
+        if (!history.error && history.data) {
           return { data: normalizePrescriptionList(history.data) };
         }
-        const legacy = await baseQuery('api/Erx/Prescriptions');
-        if (!legacy.error) {
+        const legacy = await baseQuery({ url: 'api/Erx/Prescriptions', params });
+        console.log('💊 [api/Erx/Prescriptions] response:', JSON.stringify(legacy, null, 2));
+        if (!legacy.error && legacy.data) {
           return { data: normalizePrescriptionList(legacy.data) };
         }
-        return { error: history.error as FetchBaseQueryError };
+        return { error: (history.error ?? legacy.error) as FetchBaseQueryError };
       },
-      providesTags: ['Prescriptions'],
+      providesTags: (_result, _err, arg) => {
+        const patientId = arg && 'patientId' in arg ? arg.patientId : undefined;
+        return patientId
+          ? [{ type: 'Prescriptions', id: `patient-${patientId}` }, 'Prescriptions']
+          : ['Prescriptions'];
+      },
     }),
     getPrescriptionByAppointment: build.query<
       GetPrescriptionResponse,

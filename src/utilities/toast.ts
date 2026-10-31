@@ -176,7 +176,8 @@ function isQuietRoute(url: string, method: string): boolean {
   return (
     /\/Tracking$/i.test(url) ||
     /api\/Tele\/Instant\/\d+$/i.test(url) ||
-    /api\/Tele\/Chat\/\d+$/i.test(url)
+    /api\/Tele\/Chat\/\d+$/i.test(url) ||
+    /api\/Erx\/(ByAppointment|Patient)/i.test(url)
   );
 }
 

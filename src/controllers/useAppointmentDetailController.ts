@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Linking, Share } from 'react-native';
+import { AppState, type AppStateStatus, Linking, Share } from 'react-native';
 
 import {
   MONTH_KEYS,
@@ -12,12 +12,14 @@ import {
 } from '../config/appointmentSlots';
 import type { BookedAppointment } from '../config/bookedAppointments';
 import {
+  appointmentStartIso,
   formatCountdown,
   JOIN_GRACE_MS,
   NEAR_START_MS,
   slotStartIso,
 } from '../config/bookedAppointments';
 import type { PatientDocument } from '../config/patientDocuments';
+import { API_BASE_URL } from '../config/apiConfig';
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
 import type { ConsultModeChoice, NetworkQuality } from './useDeviceCheckController';
@@ -27,6 +29,7 @@ import {
   useGetDocumentsQuery,
   useGetPrescriptionByAppointmentQuery,
   useGetPrescriptionQuery,
+  useGetPrescriptionsListQuery,
 } from '../store/api/new/recordsApi';
 import { useReportRunningLateMutation } from '../store/api/new/teleApi';
 import {
@@ -106,6 +109,8 @@ export type AppointmentDetailViewModel = {
   isCancelled: boolean;
   hasPrescription: boolean;
   erxSnapshotId: number | null;
+  /** Patient id of the visit — used to scope prescription fetches for family members. */
+  visitPatientId: number | null;
   prescriptionOpen: boolean;
   onOpenPrescription: () => void;
   onClosePrescription: () => void;
@@ -409,11 +414,53 @@ export function useAppointmentDetailController({
   const isNumericId = !isNaN(Number(item.id));
   const {
     data: serverVisitDetailResponse,
+    error: serverVisitDetailError,
     refetch: refetchVisitDetail,
   } = useGetVisitDetailQuery(item.id, {
     skip: !isNumericId,
+    refetchOnMountOrArgChange: true,
   });
-  const visitDetail = serverVisitDetailResponse?.data;
+  const rawVisitData = serverVisitDetailResponse?.data;
+  const visitDetail = useMemo(() => {
+    if (!rawVisitData) return undefined;
+    if (Array.isArray(rawVisitData)) {
+      return (
+        rawVisitData.find((v) => String(v.patientAppId) === String(item.id)) ??
+        rawVisitData[0]
+      );
+    }
+    if (String(rawVisitData.patientAppId) === String(item.id)) {
+      return rawVisitData;
+    }
+    return undefined;
+  }, [rawVisitData, item.id]);
+  useEffect(() => {
+    if (serverVisitDetailResponse) {
+      console.log('📋 [VisitDetail] API:', `GET ${API_BASE_URL}api/Patient/Visits/${item.id}`);
+      console.log('📋 [VisitDetail] Request Payload / Params:', { patientAppId: item.id });
+      console.log(
+        '📋 [VisitDetail] Server response for visit',
+        item.id,
+        ':',
+        JSON.stringify(serverVisitDetailResponse, null, 2),
+      );
+    } else if (serverVisitDetailError) {
+      console.log('❌ [VisitDetail] API:', `GET ${API_BASE_URL}api/Patient/Visits/${item.id}`);
+      console.log('❌ [VisitDetail] Request Payload / Params:', { patientAppId: item.id });
+      console.log('❌ [VisitDetail] Server error for visit', item.id, ':', serverVisitDetailError);
+    }
+  }, [serverVisitDetailResponse, serverVisitDetailError, item.id]);
+
+  // Re-fetch visit detail when returning to foreground
+  useEffect(() => {
+    if (!isAuthenticated || !isNumericId) return;
+    const sub = AppState.addEventListener('change', (nextState: AppStateStatus) => {
+      if (nextState === 'active') {
+        void refetchVisitDetail();
+      }
+    });
+    return () => sub.remove();
+  }, [isAuthenticated, isNumericId, refetchVisitDetail]);
   const [cancelAppointmentMutation] = useCancelAppointmentMutation();
   const [rescheduleAppointmentMutation] = useRescheduleAppointmentMutation();
   const [checkInVisit, { isLoading: checkInBusy }] = useCheckInVisitMutation();
@@ -514,26 +561,18 @@ export function useAppointmentDetailController({
     },
   });
 
-  useEffect(() => {
-    setLocalPaidOverride(false);
-    setPayNowError(null);
-    setCheckInError(null);
-    setCheckInWaitMinutes(null);
-    setPrescriptionOpen(false);
-    payLater.reset();
-    // Reset when switching appointments only.
-  }, [item.id]);
-
 
   useEffect(() => {
     if (payLater.state === 'FAILED' && payLater.errorMessage) {
       setPayNowError(payLater.errorMessage);
     }
   }, [payLater.errorMessage, payLater.state]);
-  const startMs = useMemo(
-    () => new Date(item.startsAt).getTime(),
-    [item.startsAt],
-  );
+  const startMs = useMemo(() => {
+    if (visitDetail?.appointmentDate && visitDetail?.appointmentTime) {
+      return new Date(appointmentStartIso(visitDetail.appointmentDate, visitDetail.appointmentTime)).getTime();
+    }
+    return new Date(item.startsAt).getTime();
+  }, [item.startsAt, visitDetail?.appointmentDate, visitDetail?.appointmentTime]);
   const [now, setNow] = useState(() => Date.now());
   const [cancelSheetOpen, setCancelSheetOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState<CancelReason | null>(null);
@@ -589,15 +628,58 @@ export function useAppointmentDetailController({
     return () => clearInterval(timer);
   }, []);
 
+  // Reset all appointment-specific states when switching appointments
   useEffect(() => {
-    if (!visitDetail) return;
-    const status = (visitDetail.status || '').toUpperCase();
-    if (status === 'WAITING' || status === 'WALK-IN') {
+    if (appointment?.id && cancelledSnapshot && cancelledSnapshot.id !== appointment.id) {
+      setCancelledSnapshot(null);
+    }
+    setLocalPaidOverride(false);
+    setPayNowError(null);
+    setCheckInError(null);
+    setClinicCheckInOpen(false);
+
+    const initialStatus = (item.visitStatus || '').toUpperCase();
+    if (initialStatus === 'WAITING' || initialStatus === 'WALK-IN') {
       setClinicCheckInState('waiting');
-    } else if (status === 'NOT ARRIVED' || status === 'REMAINING') {
+    } else {
       setClinicCheckInState('ready');
     }
-  }, [visitDetail]);
+
+    setCheckedInAtLabel('');
+    setCheckInQueuePosition(null);
+    setCheckInWaitMinutes(null);
+    setReadyAtLabel(null);
+    setPrescriptionOpen(false);
+    setCancelSheetOpen(false);
+    setCancelReason(null);
+    setCancelNote('');
+    setCancelledOpen(false);
+    setRescheduleOpen(false);
+    setRescheduleReasonOpen(false);
+    setRescheduleSlotId(null);
+    setRescheduleReason(null);
+    setRescheduleNote('');
+    setRescheduleError(null);
+    payLater.reset();
+  }, [item.id, item.visitStatus, appointment?.id]);
+
+  useEffect(() => {
+    if (!visitDetail) return;
+    if (String(visitDetail.patientAppId) !== String(item.id)) return;
+    const status = (visitDetail.status || '').toUpperCase();
+    console.log('🔍 [VisitDetail Sync] status:', status, 'patientAppId:', visitDetail.patientAppId);
+    if (status === 'WAITING' || status === 'WALK-IN') {
+      setClinicCheckInState('waiting');
+      if (visitDetail.queuePosition != null) {
+        setCheckInQueuePosition(Number(visitDetail.queuePosition));
+      }
+    } else {
+      setClinicCheckInState('ready');
+      setCheckInQueuePosition(null);
+      setCheckInWaitMinutes(null);
+      setCheckedInAtLabel('');
+    }
+  }, [visitDetail, item.id]);
 
   useEffect(() => {
     if (!waitingRoomOpen || videoCallOpen) {
@@ -611,7 +693,12 @@ export function useAppointmentDetailController({
   }, [waitingRoomOpen, videoCallOpen]);
 
   const remainingMs = startMs - now;
-  const isClinic = item.mode === 'clinic';
+  const isClinic =
+    visitDetail
+      ? !visitDetail.isTele &&
+      (visitDetail.consultMode || '').toLowerCase() !== 'chat' &&
+      (visitDetail.consultMode || '').toLowerCase() !== 'audio'
+      : item.mode === 'clinic';
   const isChat = item.mode === 'chat';
   const isRemoteConsult = item.mode === 'video' || item.mode === 'audio';
   const rawStatus = (visitDetail?.status || item.visitStatus || '').trim();
@@ -619,9 +706,40 @@ export function useAppointmentDetailController({
   const isCompleted = visitStatus === 'COMPLETED';
   const isCancelled = visitStatus === 'CANCELLED';
 
+  const authPatientId = useAppSelector(
+    (s) => s.auth.patientId ?? s.auth.user?.patientId,
+  );
+  const visitPatientId = visitDetail?.patientId;
+  const isFamilyMember = Boolean(
+    visitPatientId &&
+    authPatientId &&
+    Number(visitPatientId) !== Number(authPatientId),
+  );
+
+  const prescriptionListArg = useMemo(
+    () =>
+      isFamilyMember && visitPatientId != null && Number(visitPatientId) > 0
+        ? { patientId: Number(visitPatientId) }
+        : undefined,
+    [isFamilyMember, visitPatientId],
+  );
+  const { data: prescriptionListResponse } = useGetPrescriptionsListQuery(
+    prescriptionListArg,
+    {
+      skip: !isCompleted,
+    },
+  );
+  const historyRx = useMemo(() => {
+    const list = prescriptionListResponse?.data;
+    if (!Array.isArray(list) || !isNumericId) return null;
+    return (
+      list.find((p) => Number(p.patientAppId) === Number(item.id)) ?? null
+    );
+  }, [prescriptionListResponse?.data, isNumericId, item.id]);
+
   const { data: prescriptionByAptResponse } =
     useGetPrescriptionByAppointmentQuery(item.id, {
-      skip: !isNumericId || !isCompleted,
+      skip: !isNumericId || !isCompleted || isFamilyMember,
     });
   const { data: prescriptionPatientResponse } = useGetPrescriptionQuery(
     item.id,
@@ -629,20 +747,26 @@ export function useAppointmentDetailController({
       skip:
         !isNumericId ||
         !isCompleted ||
+        isFamilyMember ||
         Boolean(prescriptionByAptResponse?.data),
     },
   );
   const prescriptionData =
     prescriptionByAptResponse?.data ?? prescriptionPatientResponse?.data;
   const erxSnapshotId =
-    visitDetail?.erxSnapshotId ?? prescriptionData?.erxSnapshotId ?? null;
+    visitDetail?.erxSnapshotId ??
+    historyRx?.erxSnapshotId ??
+    prescriptionData?.erxSnapshotId ??
+    null;
   const hasPrescription =
     isCompleted &&
     Boolean(
       (erxSnapshotId != null && Number(erxSnapshotId) > 0) ||
       visitDetail?.erxSigned ||
       Boolean(visitDetail?.erxPdfUrl) ||
-      (Array.isArray(prescriptionData?.items) && prescriptionData.items.length > 0),
+      historyRx != null ||
+      (Array.isArray(prescriptionData?.items) &&
+        prescriptionData.items.length > 0),
     );
   const isCheckedIn =
     !isCompleted &&
@@ -652,15 +776,17 @@ export function useAppointmentDetailController({
       visitStatus === 'WAITING' ||
       visitStatus === 'WALK-IN');
   const phase: AppointmentPhase =
-    isCompleted || isCancelled || remainingMs <= -JOIN_GRACE_MS
+    isCompleted || isCancelled
       ? 'ended'
       : isClinic || isChat
         ? 'confirmed'
-        : remainingMs <= 0
-          ? 'live'
-          : remainingMs <= NEAR_START_MS
-            ? 'upcoming'
-            : 'confirmed';
+        : remainingMs <= -JOIN_GRACE_MS
+          ? 'ended'
+          : remainingMs <= 0
+            ? 'live'
+            : remainingMs <= NEAR_START_MS
+              ? 'upcoming'
+              : 'confirmed';
 
   const bannerLabel =
     phase === 'upcoming'
@@ -862,6 +988,7 @@ export function useAppointmentDetailController({
     isCancelled,
     hasPrescription,
     erxSnapshotId: erxSnapshotId != null ? Number(erxSnapshotId) : null,
+    visitPatientId: visitPatientId != null ? Number(visitPatientId) : null,
     prescriptionOpen,
     onOpenPrescription: () => setPrescriptionOpen(true),
     onClosePrescription: () => setPrescriptionOpen(false),
@@ -1257,13 +1384,20 @@ export function useAppointmentDetailController({
     },
     onCloseCheckIn: () => setClinicCheckInOpen(false),
     onConfirmCheckIn: () => {
+      console.log(' [Check-In] Request triggered:', {
+        patientAppId: Number(item.id),
+        status: 'WAITING',
+        url: `api/Patient/Visits/${item.id}/CheckIn`,
+      });
       if (!isNumericId || checkInBusy) {
+        console.warn(' [Check-In] Aborted: isNumericId =', isNumericId, 'checkInBusy =', checkInBusy);
         return;
       }
       setCheckInError(null);
       void checkInVisit({ patientAppId: Number(item.id), status: 'WAITING' })
         .unwrap()
         .then((res) => {
+          console.log(' [Check-In] API Success Response:', JSON.stringify(res, null, 2));
           setCheckedInAtLabel(clockLabel(new Date()));
           setClinicCheckInState('waiting');
           if (res.data?.queuePosition != null) {
@@ -1275,6 +1409,8 @@ export function useAppointmentDetailController({
           setReadyAtLabel(res.data?.readyAt?.trim() || null);
         })
         .catch((err: unknown) => {
+          console.log('❌ [Check-In] API Error Response:', JSON.stringify(err, null, 2));
+          console.error('❌ [Check-In] API Error Raw:', err);
           setCheckInError(messageFromUnknownError(err));
         });
     },

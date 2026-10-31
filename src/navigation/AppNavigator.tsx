@@ -517,6 +517,7 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
     },
   });
   const myAppointments = useMyAppointmentsController({
+    active: home.myAppointmentsOpen && !home.selectedAppointmentId,
     onBack: home.onCloseMyAppointments,
     onOpenAppointment: home.onOpenAppointment,
     onOpenRequests: () => {

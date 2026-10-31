@@ -4,20 +4,26 @@ export type StatusVisual = {
   label: string;
   color: string;
   background: string;
+  borderColor?: string;
+  badgeType?: 'upcoming' | 'waiting' | 'completed' | 'cancelled' | 'neutral';
 };
 
 const NEUTRAL: StatusVisual = {
   label: '',
   color: colors.onSurfaceVariant,
   background: colors.surfaceContainerHigh,
+  borderColor: colors.outlineVariant,
+  badgeType: 'neutral',
 };
 
 function chip(
   label: string,
   color: string,
   background: string,
+  borderColor?: string,
+  badgeType: StatusVisual['badgeType'] = 'neutral',
 ): StatusVisual {
-  return { label, color, background };
+  return { label, color, background, borderColor, badgeType };
 }
 
 /** Appointment / visit status → label + colours. Unknown → raw string, neutral. */
@@ -25,15 +31,19 @@ export function mapVisitStatus(status: string | null | undefined): StatusVisual 
   const raw = (status ?? '').trim();
   const key = raw.toUpperCase();
   const table: Record<string, StatusVisual> = {
-    CONFIRMED: chip('Confirmed', colors.primary, colors.primaryFixed),
-    'NOT ARRIVED': chip('Upcoming', colors.primary, colors.primaryFixed),
-    WAITING: chip('Waiting', '#276F93', colors.secondaryContainer),
-    'E-CONSULT': chip('E-consult', colors.primary, colors.primaryFixed),
-    COMPLETED: chip('Completed', colors.onSurfaceVariant, colors.surfaceContainerHigh),
-    CANCELLED: chip('Cancelled', colors.error, colors.errorContainer),
-    PENDING: chip('Pending', '#276F93', colors.secondaryContainer),
-    ACCEPTED: chip('Accepted', colors.primary, colors.primaryFixed),
-    DECLINED: chip('Declined', colors.error, colors.errorContainer),
+    CONFIRMED: chip('Confirmed', colors.primary, colors.primaryContainer, '#C5E7F9', 'upcoming'),
+    'NOT ARRIVED': chip('Upcoming', colors.primary, colors.primaryContainer, '#C5E7F9', 'upcoming'),
+    UPCOMING: chip('Upcoming', colors.primary, colors.primaryContainer, '#C5E7F9', 'upcoming'),
+    WAITING: chip('Waiting', colors.warning, colors.warningContainer, '#F6DCB1', 'waiting'),
+    'WALK-IN': chip('Waiting', colors.warning, colors.warningContainer, '#F6DCB1', 'waiting'),
+    'E-CONSULT': chip('E-consult', colors.primary, colors.primaryContainer, '#C5E7F9', 'upcoming'),
+    REMAINING: chip('Upcoming', colors.primary, colors.primaryContainer, '#C5E7F9', 'upcoming'),
+    COMPLETED: chip('Completed', colors.success, colors.successContainer, '#C6E7D6', 'completed'),
+    COMPLETE: chip('Completed', colors.success, colors.successContainer, '#C6E7D6', 'completed'),
+    CANCELLED: chip('Cancelled', colors.error, colors.errorContainer, '#F5D0CC', 'cancelled'),
+    PENDING: chip('Pending', colors.warning, colors.warningContainer, '#F6DCB1', 'waiting'),
+    ACCEPTED: chip('Accepted', colors.primary, colors.primaryContainer, '#C5E7F9', 'upcoming'),
+    DECLINED: chip('Declined', colors.error, colors.errorContainer, '#F5D0CC', 'cancelled'),
   };
   const mapped = table[key];
   if (mapped) {

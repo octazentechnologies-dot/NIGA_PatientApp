@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import {
   FlatList,
+  Image,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -319,79 +320,177 @@ function AppointmentCard({
   t: MyAppointmentsViewModel['t'];
   onPress: () => void;
 }) {
+  const [imgError, setImgError] = useState(false);
+  const statusUpper = (item.visitStatus || '').toUpperCase();
+  const isCompleted = statusUpper === 'COMPLETED' || statusUpper === 'COMPLETE';
+  const isCancelled = statusUpper === 'CANCELLED' || statusUpper === 'DECLINED';
+  const isEnded = isCompleted || isCancelled;
+
+  // Contextual action text based on status
+  const actionLabel = isEnded
+    ? t('myAptTapToViewDetails')
+    : t('myAptTapToManage');
+  const actionColor = isEnded ? colors.muted : colors.primary;
+
+  // Doctor specialization fallback
+  const doctorSpecialty =
+    item.doctorSpecialization?.trim() ||
+    (item.experienceKey
+      ? `${t('payStatusHomeopath')} · ${t(item.experienceKey)}`
+      : t('payStatusHomeopath'));
+
+  // Status badge styling
+  const statusBg = item.visitStatusBg || colors.surfaceContainerHigh;
+  const statusColor = item.visitStatusColor || colors.muted;
+  const statusBorder = item.visitStatusBorder || colors.outlineVariant;
+
+  const modeIcon: keyof typeof Ionicons.glyphMap =
+    item.mode === 'audio'
+      ? 'call-outline'
+      : item.mode === 'clinic'
+        ? 'business-outline'
+        : item.mode === 'chat'
+          ? 'chatbubble-outline'
+          : 'videocam-outline';
+
+  const hasPhoto = Boolean(item.doctorPhotoUrl) && !imgError;
+
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={`${String(item.doctorNameKey)}, ${item.visitStatusLabel}, ${item.whenLabel}`}
       onPress={onPress}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
+      {/* Card Header: Avatar (left) + Name & Specialization & Status Badge (below spec) + Right Chevron */}
       <View style={styles.cardHead}>
         <View style={styles.avatar}>
-          <AppText variant="titleMd" color={colors.primary} languageOverride="en">
-            {item.doctorInitials}
-          </AppText>
+          {hasPhoto ? (
+            <Image
+              source={{ uri: item.doctorPhotoUrl! }}
+              style={styles.avatarImg}
+              onError={() => setImgError(true)}
+            />
+          ) : (
+            <AppText
+              variant="titleMd"
+              color={colors.primary}
+              weightOverride="700"
+              languageOverride="en"
+            >
+              {item.doctorInitials || 'DR'}
+            </AppText>
+          )}
         </View>
-        <View style={styles.flex}>
-          <AppText variant="titleMd" color={colors.ink} raw>
-            {String(item.doctorNameKey)}
+
+        <View style={styles.headInfo}>
+          <AppText
+            variant="titleMd"
+            color={colors.ink}
+            weightOverride="700"
+            numberOfLines={1}
+            raw
+          >
+            {String(item.doctorNameKey) || 'Doctor'}
           </AppText>
-          <AppText variant="bodyMd" color={colors.muted}>
-            {item.experienceKey
-              ? `${t('payStatusHomeopath')} · ${t(item.experienceKey)}`
-              : t('payStatusHomeopath')}
+          <AppText
+            variant="bodyMd"
+            color={colors.muted}
+            numberOfLines={1}
+            style={styles.specText}
+          >
+            {doctorSpecialty}
           </AppText>
+
+          {/* Status badge placed below specialization */}
           <View
             style={[
               styles.badge,
-              { backgroundColor: item.visitStatusBg || colors.surfaceContainerHigh },
+              {
+                backgroundColor: statusBg,
+                borderColor: statusBorder,
+              },
             ]}
           >
             <AppText
               variant="labelSm"
-              color={item.visitStatusColor || colors.muted}
+              color={statusColor}
               weightOverride="600"
             >
-              {item.visitStatusLabel}
+              {item.visitStatusLabel || 'Unknown'}
             </AppText>
           </View>
         </View>
-        <Ionicons name="chevron-forward" size={20} color={colors.muted} />
-      </View>
-      <MetaRow icon="calendar-outline" text={item.whenLabel} />
-      <MetaRow
-        icon={
-          item.mode === 'audio'
-            ? 'call-outline'
-            : item.mode === 'clinic'
-              ? 'business-outline'
-              : item.mode === 'chat'
-                ? 'chatbubble-outline'
-                : 'videocam-outline'
-        }
-        text={item.modeConsultLabel}
-      />
-      <MetaRow icon="person-outline" text={item.patientLabel} />
-      <AppText variant="labelSm" color={colors.primary} weightOverride="600">
-        {t('myAptTapToManage')}
-      </AppText>
-    </Pressable>
-  );
-}
 
-function MetaRow({
-  icon,
-  text,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  text: string;
-}) {
-  return (
-    <View style={styles.meta}>
-      <Ionicons name={icon} size={16} color={colors.primary} />
-      <AppText variant="bodyMd" color={colors.ink} style={styles.flex}>
-        {text}
-      </AppText>
-    </View>
+        <View style={styles.chevronWrap}>
+          <Ionicons name="chevron-forward" size={18} color={colors.outline} />
+        </View>
+      </View>
+
+      <View style={styles.cardDivider} />
+
+      {/* Metadata Rows: Date/Time, Consultation Mode, Consulting For / Patient */}
+      <View style={styles.metaSection}>
+        <View style={styles.metaRow}>
+          <View style={styles.metaIconBubble}>
+            <Ionicons name="calendar-outline" size={15} color={colors.primary} />
+          </View>
+          <AppText
+            variant="bodyMd"
+            color={colors.ink}
+            weightOverride="500"
+            style={styles.flex}
+            numberOfLines={1}
+          >
+            {item.whenLabel}
+          </AppText>
+        </View>
+
+        <View style={styles.metaRow}>
+          <View style={styles.metaIconBubble}>
+            <Ionicons name={modeIcon} size={15} color={colors.primary} />
+          </View>
+          <AppText
+            variant="bodyMd"
+            color={colors.ink}
+            style={styles.flex}
+            numberOfLines={1}
+          >
+            {item.modeConsultLabel}
+          </AppText>
+        </View>
+
+        {item.patientLabel ? (
+          <View style={styles.metaRow}>
+            <View style={styles.metaIconBubble}>
+              <Ionicons name="person-outline" size={15} color={colors.primary} />
+            </View>
+            <AppText variant="bodyMd" color={colors.ink} style={styles.flex} numberOfLines={1}>
+              <AppText variant="bodyMd" color={colors.muted}>
+                {`${t('homeForPrefix')}: `}
+              </AppText>
+              <AppText variant="bodyMd" color={colors.ink} weightOverride="600" raw>
+                {item.patientLabel}
+              </AppText>
+            </AppText>
+          </View>
+        ) : null}
+      </View>
+
+      {/* Bottom Contextual Action Area */}
+      <View style={styles.actionArea}>
+        <AppText
+          variant="labelSm"
+          color={actionColor}
+          weightOverride="600"
+          style={styles.flex}
+          numberOfLines={1}
+        >
+          {actionLabel}
+        </AppText>
+        <Ionicons name="chevron-forward" size={14} color={actionColor} />
+      </View>
+    </Pressable>
   );
 }
 
@@ -493,38 +592,89 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: radii.default,
     borderWidth: 1,
-    borderColor: colors.outlineVariant,
+    borderColor: '#E8ECF0',
     backgroundColor: colors.card,
     padding: spacing.md,
-    gap: spacing.sm,
+    shadowColor: '#0F2B48',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
   },
   pressed: {
-    opacity: 0.92,
+    opacity: 0.88,
   },
   cardHead: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: spacing.sm,
+    gap: spacing.ms,
   },
   avatar: {
     width: 48,
     height: 48,
-    borderRadius: radii.full,
-    backgroundColor: colors.primaryFixed,
+    borderRadius: 24,
+    backgroundColor: '#F0F7FB',
+    borderWidth: 1,
+    borderColor: '#D9ECF6',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImg: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 24,
+  },
+  headInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  specText: {
+    marginTop: 1,
   },
   badge: {
     alignSelf: 'flex-start',
-    marginTop: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
+    marginTop: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
     borderRadius: radii.full,
+    borderWidth: 1,
   },
-  meta: {
+  chevronWrap: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  cardDivider: {
+    height: 1,
+    backgroundColor: '#F0F2F5',
+    marginVertical: spacing.sm + 2,
+  },
+  metaSection: {
+    gap: 8,
+  },
+  metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    minHeight: layout.buttonHeight / 2,
+    gap: 10,
+  },
+  metaIconBubble: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    backgroundColor: '#F0F7FB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionArea: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderTopWidth: 1,
+    borderTopColor: '#F0F2F5',
+    marginTop: 10,
+    paddingTop: 10,
   },
 });

@@ -8,6 +8,7 @@ import {
   resolveErxPdfUrl,
   useGetPrescriptionByAppointmentQuery,
   useGetPrescriptionQuery,
+  useGetPrescriptionsListQuery,
   useLazyGetErxPdfMetaQuery,
 } from '../store/api/new/recordsApi';
 import type { OrderMedicinesLaunch } from '../utilities/medicineOrderStage';
@@ -39,6 +40,8 @@ export type PrescriptionViewModel = {
   rxNumber: string;
   rxDate: string;
   status: string;
+  itemCount?: number;
+  pdfAvailable?: boolean;
   loading: boolean;
   isError: boolean;
   isEmpty: boolean;
@@ -85,6 +88,7 @@ export function usePrescriptionController({
   patientName: patientNameProp,
   diagnosis: _diagnosisProp,
   appointmentDate: appointmentDateProp,
+  patientId: patientIdProp,
   onBack,
   onOrder,
 }: {
@@ -100,6 +104,8 @@ export function usePrescriptionController({
   patientName?: string | null;
   diagnosis?: string | null;
   appointmentDate?: string | null;
+  /** Family member patient id — scopes the prescription list query. */
+  patientId?: number | null;
   onBack: () => void;
   onOrder?: (launch: OrderMedicinesLaunch) => void;
 }): PrescriptionViewModel {
@@ -114,6 +120,32 @@ export function usePrescriptionController({
       : patientAppId != null && String(patientAppId).length > 0
         ? patientAppId
         : null;
+
+  const prescriptionListArg = useMemo(
+    () =>
+      patientIdProp != null && Number(patientIdProp) > 0
+        ? { patientId: Number(patientIdProp) }
+        : undefined,
+    [patientIdProp],
+  );
+  const { data: prescriptionsListResponse } = useGetPrescriptionsListQuery(prescriptionListArg);
+  const prescriptionsList = prescriptionsListResponse?.data;
+  const rxFromList = useMemo(() => {
+    if (!Array.isArray(prescriptionsList) || prescriptionsList.length === 0) return null;
+    if (erxSnapshotIdProp != null && Number(erxSnapshotIdProp) > 0) {
+      const match = prescriptionsList.find(
+        (p) => Number(p.erxSnapshotId) === Number(erxSnapshotIdProp),
+      );
+      if (match) return match;
+    }
+    if (resolvedAptId != null && Number(resolvedAptId) > 0) {
+      const match = prescriptionsList.find(
+        (p) => Number(p.patientAppId) === Number(resolvedAptId),
+      );
+      if (match) return match;
+    }
+    return null;
+  }, [prescriptionsList, erxSnapshotIdProp, resolvedAptId]);
 
   const aptQuery = useGetPrescriptionByAppointmentQuery(
     resolvedAptId as number | string,
@@ -130,12 +162,32 @@ export function usePrescriptionController({
   );
 
   const data = aptQuery.data?.data ? aptQuery.data : patientQuery.data;
+
+  const erxSnapshotId =
+    erxSnapshotIdProp != null && String(erxSnapshotIdProp).length > 0
+      ? Number(erxSnapshotIdProp)
+      : data?.data?.erxSnapshotId != null
+        ? Number(data.data.erxSnapshotId)
+        : rxFromList?.erxSnapshotId != null
+          ? Number(rxFromList.erxSnapshotId)
+          : null;
+
+  const hasPrescriptionData = Boolean(
+    (erxSnapshotId != null && Number(erxSnapshotId) > 0) ||
+      data?.data?.erxSnapshotId ||
+      rxFromList != null,
+  );
+
   const isLoading =
-    (aptQuery.isLoading && !patientQuery.data?.data) ||
-    (aptQuery.isError && patientQuery.isLoading);
-  const isFetching = aptQuery.isFetching || patientQuery.isFetching;
+    !hasPrescriptionData &&
+    ((aptQuery.isLoading && !patientQuery.data?.data) ||
+      (aptQuery.isError && patientQuery.isLoading));
+  const isFetching = !hasPrescriptionData && (aptQuery.isFetching || patientQuery.isFetching);
   const isError =
-    aptQuery.isError && (patientQuery.isError || patientQuery.data == null);
+    !hasPrescriptionData &&
+    aptQuery.isError &&
+    (patientQuery.isError || patientQuery.data == null);
+
   const refetch = useCallback(() => {
     aptQuery.refetch();
     patientQuery.refetch();
@@ -143,13 +195,6 @@ export function usePrescriptionController({
 
   const [fetchPdfMeta] = useLazyGetErxPdfMetaQuery();
   const [pdfBusy, setPdfBusy] = useState(false);
-
-  const erxSnapshotId =
-    erxSnapshotIdProp != null && String(erxSnapshotIdProp).length > 0
-      ? Number(erxSnapshotIdProp)
-      : data?.data?.erxSnapshotId != null
-        ? Number(data.data.erxSnapshotId)
-        : null;
 
   const openPdf = useCallback(
     async (mode: 'share' | 'open') => {
@@ -161,33 +206,33 @@ export function usePrescriptionController({
       if (pdfBusy) return;
       setPdfBusy(true);
       try {
-        const res = await fetchPdfMeta(erxSnapshotId).unwrap();
-        const pdfUrl = res.data?.pdfUrl?.trim() || resolveErxPdfUrl(erxSnapshotId);
-        const expiresAt = res.data?.expiresAt;
-        if (
-          expiresAt &&
-          !Number.isNaN(Date.parse(expiresAt)) &&
-          Date.parse(expiresAt) < Date.now()
-        ) {
-          const refreshed = await fetchPdfMeta(erxSnapshotId).unwrap();
-          const url = refreshed.data?.pdfUrl?.trim() || resolveErxPdfUrl(erxSnapshotId);
-          if (!url) {
-            setToastMessage('PDF link is not available.');
-            setToastVariant('error');
-            return;
+        let pdfUrl: string | null = null;
+        try {
+          const res = await fetchPdfMeta(erxSnapshotId).unwrap();
+          pdfUrl = res.data?.pdfUrl?.trim() || null;
+          const expiresAt = res.data?.expiresAt;
+          if (
+            expiresAt &&
+            !Number.isNaN(Date.parse(expiresAt)) &&
+            Date.parse(expiresAt) < Date.now()
+          ) {
+            const refreshed = await fetchPdfMeta(erxSnapshotId).unwrap();
+            pdfUrl = refreshed.data?.pdfUrl?.trim() || null;
           }
-          if (mode === 'share') {
-            await Share.share({ url, message: url });
-          } else {
-            await Linking.openURL(url);
-          }
-          return;
+        } catch {
+          // If metadata endpoint fails, direct link fallback below
         }
+
+        if (!pdfUrl) {
+          pdfUrl = resolveErxPdfUrl(erxSnapshotId);
+        }
+
         if (!pdfUrl) {
           setToastMessage('PDF link is not available.');
           setToastVariant('error');
           return;
         }
+
         if (mode === 'share') {
           await Share.share({ url: pdfUrl, message: pdfUrl });
         } else {
@@ -217,7 +262,7 @@ export function usePrescriptionController({
   );
 
   const medicines = useMemo<PrescriptionMedicine[]>(() => {
-    const items = data?.data?.items;
+    const items = data?.data?.items ?? rxFromList?.items;
     if (Array.isArray(items) && items.length > 0) {
       return items.map((item) => {
         const remedyName = item.remedyName?.trim();
@@ -251,27 +296,30 @@ export function usePrescriptionController({
       });
     }
     return [];
-  }, [data?.data?.items]);
+  }, [data?.data?.items, rxFromList?.items]);
 
   const adviceKeys = useMemo<TranslationKey[]>(() => {
     return [];
   }, []);
 
   const rxNumber = useMemo(() => {
+    if (erxSnapshotId) {
+      return `RX-${erxSnapshotId}`;
+    }
     if (data?.data?.erxSnapshotId) {
       return `RX-${data.data.erxSnapshotId}`;
     }
-    if (erxSnapshotId) {
-      return `RX-${erxSnapshotId}`;
+    if (rxFromList?.erxSnapshotId) {
+      return `RX-${rxFromList.erxSnapshotId}`;
     }
     if (resolvedAptId) {
       return `RX-${resolvedAptId}`;
     }
     return t('rxNumber');
-  }, [data?.data?.erxSnapshotId, erxSnapshotId, resolvedAptId, t]);
+  }, [erxSnapshotId, data?.data?.erxSnapshotId, rxFromList?.erxSnapshotId, resolvedAptId, t]);
 
   const rxDate = useMemo(() => {
-    const raw = data?.data?.signedAt;
+    const raw = data?.data?.signedAt ?? rxFromList?.signedAt;
     if (raw && !isNaN(Date.parse(raw))) {
       return new Date(raw).toLocaleDateString(
         language === 'mr' ? 'mr-IN' : 'en-IN',
@@ -279,9 +327,9 @@ export function usePrescriptionController({
       );
     }
     return appointmentDateProp || t('rxDate');
-  }, [data?.data?.signedAt, appointmentDateProp, language, t]);
+  }, [data?.data?.signedAt, rxFromList?.signedAt, appointmentDateProp, language, t]);
 
-  const doctorName = doctorNameProp || '';
+  const doctorName = doctorNameProp || rxFromList?.doctorName || '';
   const doctorCredentials = doctorCredentialsProp || '';
   const doctorInitials =
     doctorInitialsProp ||
@@ -294,13 +342,19 @@ export function usePrescriptionController({
           .join('')
           .toUpperCase()
       : 'DR');
-  const patientName = patientNameProp || '';
-  const remoteStatus = data?.data?.status || '';
+  const patientName = patientNameProp || rxFromList?.patientName || '';
+  const remoteStatus = data?.data?.status || rxFromList?.status || '';
   const signed =
     erxSnapshotId != null &&
     Number(erxSnapshotId) > 0 &&
-    (Boolean(data?.data?.signedAt) || /signed|locked/i.test(remoteStatus));
+    (Boolean(data?.data?.signedAt) ||
+      Boolean(rxFromList?.signedAt) ||
+      /signed|locked/i.test(remoteStatus) ||
+      true);
   const status = signed ? 'SIGNED' : 'UNSIGNED';
+  const itemCount =
+    rxFromList?.itemCount ??
+    (Array.isArray(data?.data?.items) ? data.data.items.length : 0);
 
   return {
     language,
@@ -314,9 +368,17 @@ export function usePrescriptionController({
     rxNumber,
     rxDate,
     status,
+    itemCount,
+    pdfAvailable: Boolean(erxSnapshotId != null && Number(erxSnapshotId) > 0),
     loading: resolvedAptId != null && (isLoading || isFetching),
     isError: resolvedAptId != null && isError,
-    isEmpty: resolvedAptId != null && !isLoading && !isFetching && !isError && medicines.length === 0,
+    isEmpty:
+      resolvedAptId != null &&
+      !isLoading &&
+      !isFetching &&
+      !isError &&
+      medicines.length === 0 &&
+      !hasPrescriptionData,
     toastMessage,
     toastVariant,
     onDismissToast: () => setToastMessage(null),

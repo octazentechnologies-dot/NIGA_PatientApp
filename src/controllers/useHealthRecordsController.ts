@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Linking } from 'react-native';
 
 import { useLocalization } from '../localization/i18n';
@@ -8,7 +8,9 @@ import {
   useDeleteDocumentMutation,
   useGetDocumentsQuery,
   useGetFollowUpsQuery,
+  useGetPrescriptionsListQuery,
   useGetTimelineQuery,
+  type ApiPrescriptionListItem,
 } from '../store/api/new/recordsApi';
 import { useGetFamilyQuery } from '../store/api/new/familyApi';
 import { useAppSelector } from '../store/hooks';
@@ -86,6 +88,10 @@ export type HealthRecordsViewModel = {
   prescriptionOpen: boolean;
   /** Visit id for open prescription / note — null when unknown. */
   activePatientAppId: number | null;
+  /** Snapshot id for open prescription — null when unknown. */
+  activeErxSnapshotId: number | null;
+  /** Patient id of the selected family member — undefined for self/all. */
+  activePatientId: number | undefined;
   uploadDocumentOpen: boolean;
   confirmDeleteDocId: number | null;
   confirmDeleteDocName: string;
@@ -189,14 +195,18 @@ export function useHealthRecordsController({
   initialFilter?: RecordsFilterId;
 } = {}): HealthRecordsViewModel {
   const { language, t, setLanguage } = useLocalization();
-  const [selectedMemberId, setSelectedMemberId] =
-    useState<RecordsMemberId>('self');
+  const [selectedMemberId, setSelectedMemberId] = useState<RecordsMemberId>(
+    initialFilter === 'prescriptions' ? 'all' : 'self',
+  );
   const [selectedFilter, setSelectedFilter] =
     useState<RecordsFilterId>(initialFilter);
   const [fabOpen, setFabOpen] = useState(false);
   const [consultationRecordOpen, setConsultationRecordOpen] = useState(false);
   const [prescriptionOpen, setPrescriptionOpen] = useState(false);
   const [activePatientAppId, setActivePatientAppId] = useState<number | null>(
+    null,
+  );
+  const [activeErxSnapshotId, setActiveErxSnapshotId] = useState<number | null>(
     null,
   );
   const [uploadDocumentOpen, setUploadDocumentOpen] = useState(false);
@@ -208,19 +218,7 @@ export function useHealthRecordsController({
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const authUser = useAppSelector((state) => state.auth.user);
   const patientId = useAppSelector((state) => state.auth.patientId);
-  const scopedPatient =
-    patientId != null && patientId > 0 ? { patientId } : undefined;
 
-  const { data: timelineResponse } = useGetTimelineQuery(scopedPatient, {
-    skip: !isAuthenticated,
-  });
-  const { data: documentsResponse } = useGetDocumentsQuery(scopedPatient, {
-    skip: !isAuthenticated,
-  });
-  const { data: followUpsResponse } = useGetFollowUpsQuery(undefined, {
-    skip: !isAuthenticated,
-  });
-  const [deleteDocument, { isLoading: isDeletingDocument }] = useDeleteDocumentMutation();
   const { data: familyResponse } = useGetFamilyQuery(undefined, {
     skip: !isAuthenticated,
   });
@@ -235,13 +233,19 @@ export function useHealthRecordsController({
     const selfName =
       authUser?.patientName ||
       [authUser?.firstName, authUser?.lastName].filter(Boolean).join(' ');
-    const list: RecordsMember[] = [
-      {
-        id: 'self',
-        label: t('recordsMyself'),
-        initials: memberInitials(selfName, 'ME'),
-      },
-    ];
+    const list: RecordsMember[] = [];
+    if (familyResponse?.data && familyResponse.data.length > 0) {
+      list.push({
+        id: 'all',
+        label: t('recordsFilterAll') || 'All',
+        initials: 'ALL',
+      });
+    }
+    list.push({
+      id: 'self',
+      label: t('recordsMyself'),
+      initials: memberInitials(selfName, 'ME'),
+    });
     if (familyResponse?.data) {
       for (const m of familyResponse.data) {
         const fullName = (
@@ -254,8 +258,9 @@ export function useHealthRecordsController({
           memberDisplayName(fullName) ||
           (m.relation || m.relationName || m.relationship || '').trim() ||
           'Member';
+        const memberId = String(m.patientId ?? m.memberPatientId ?? m.familyMemberId ?? m.id);
         list.push({
-          id: String(m.familyMemberId ?? m.id ?? m.memberPatientId),
+          id: memberId,
           label,
           initials: memberInitials(fullName || label),
         });
@@ -266,10 +271,49 @@ export function useHealthRecordsController({
 
   const selectedMember =
     members.find((member) => member.id === selectedMemberId) ?? members[0];
-  const isPendingMember = Boolean(selectedMember.pending);
+  const isPendingMember = Boolean(selectedMember?.pending);
+
+  const targetPatientId = useMemo(() => {
+    if (selectedMemberId === 'all') return undefined;
+    if (selectedMemberId === 'self') {
+      return patientId != null && patientId > 0 ? patientId : undefined;
+    }
+    const num = Number(selectedMemberId);
+    return Number.isFinite(num) && num > 0 ? num : undefined;
+  }, [selectedMemberId, patientId]);
+
+  const scopedPatient =
+    targetPatientId != null && targetPatientId > 0 ? { patientId: targetPatientId } : undefined;
+
+  const { data: timelineResponse } = useGetTimelineQuery(scopedPatient, {
+    skip: !isAuthenticated,
+    refetchOnMountOrArgChange: true,
+  });
+  const { data: documentsResponse } = useGetDocumentsQuery(scopedPatient, {
+    skip: !isAuthenticated,
+    refetchOnMountOrArgChange: true,
+  });
+  const { data: followUpsResponse } = useGetFollowUpsQuery(undefined, {
+    skip: !isAuthenticated,
+    refetchOnMountOrArgChange: true,
+  });
+  const { data: prescriptionsListResponse } = useGetPrescriptionsListQuery(scopedPatient ?? undefined, {
+    skip: !isAuthenticated,
+    refetchOnMountOrArgChange: true,
+  });
+  const [deleteDocument, { isLoading: isDeletingDocument }] = useDeleteDocumentMutation();
+
+  useEffect(() => {
+    if (timelineResponse) {
+      console.log('📋 [HealthRecords] timelineResponse:', JSON.stringify(timelineResponse, null, 2));
+    }
+    if (prescriptionsListResponse) {
+      console.log('📋 [HealthRecords] prescriptionsListResponse:', JSON.stringify(prescriptionsListResponse, null, 2));
+    }
+  }, [timelineResponse, prescriptionsListResponse]);
 
   const rawItems = useMemo<RecordsTimelineItem[]>(() => {
-    if (!isAuthenticated || selectedMemberId !== 'self') {
+    if (!isAuthenticated) {
       return [];
     }
 
@@ -286,37 +330,113 @@ export function useHealthRecordsController({
       });
     };
 
-    const appointments = timelineResponse?.data?.appointments;
+    const matchesMember = (itemPatientId?: number | null, itemPatientName?: string | null) => {
+      if (selectedMemberId === 'all') return true;
+      if (selectedMemberId === 'self') {
+        if (targetPatientId && itemPatientId) {
+          return Number(itemPatientId) === Number(targetPatientId);
+        }
+        if (itemPatientName && authUser?.patientName) {
+          return itemPatientName.toLowerCase() === authUser.patientName.toLowerCase();
+        }
+        return true;
+      }
+      if (targetPatientId && itemPatientId) {
+        return Number(itemPatientId) === Number(targetPatientId);
+      }
+      if (itemPatientName && selectedMember?.label) {
+        return itemPatientName.toLowerCase().includes(selectedMember.label.toLowerCase());
+      }
+      return false;
+    };
+
+    // 1. Consultations
+    const timelineData = timelineResponse?.data as Record<string, unknown> | undefined;
+    const appointments = (timelineData?.appointments ?? timelineData?.Appointments) as unknown[];
     if (Array.isArray(appointments)) {
-      for (const app of appointments) {
-        const dateStr = formatWhen(app.at);
+      for (const rawApp of appointments) {
+        const app = rawApp as Record<string, unknown>;
+        const refId = Number(app.refId ?? app.RefId ?? app.patientAppId ?? app.PatientAppId);
+        const at = String(app.at ?? app.At ?? app.appointmentDate ?? app.AppointmentDate ?? '');
+        const title = String(app.title ?? app.Title ?? app.status ?? app.Status ?? '');
+        const dateStr = formatWhen(at);
         serverItems.push({
-          id: `app-${app.refId}`,
+          id: `app-${refId}`,
           kind: 'consultation',
           titleKey: 'recordsConsultation',
           metaKey: (dateStr || 'recordsConsultMeta') as TranslationKey,
-          badgeKey: app.title === 'COMPLETED' ? 'recordsNoteSigned' : undefined,
-          patientAppId: app.refId,
-          occurredAt: app.at || null,
+          badgeKey: title === 'COMPLETED' ? 'recordsNoteSigned' : undefined,
+          patientAppId: refId,
+          occurredAt: at || null,
         });
       }
     }
 
-    const rxList = timelineResponse?.data?.prescriptions;
-    if (Array.isArray(rxList)) {
-      for (const rx of rxList) {
+    // 2. Prescriptions (Deduplicated across sources)
+    const seenSnapshots = new Set<number>();
+    const seenAptIds = new Set<number>();
+
+    // Source A: prescriptionsListResponse (GET api/Erx/History)
+    const rxFromList = prescriptionsListResponse?.data ?? [];
+    if (Array.isArray(rxFromList)) {
+      for (const rx of rxFromList) {
+        if (!matchesMember(rx.patientId, null)) continue;
+        const snapshotId = Number(rx.erxSnapshotId);
+        const aptId = Number(rx.patientAppId);
+        if (snapshotId > 0 && seenSnapshots.has(snapshotId)) continue;
+        if (aptId > 0 && seenAptIds.has(aptId)) continue;
+        if (snapshotId > 0) seenSnapshots.add(snapshotId);
+        if (aptId > 0) seenAptIds.add(aptId);
+
         const isSigned = String(rx.status || '').toUpperCase() === 'SIGNED';
         const dateStr = formatWhen(rx.signedAt);
+        const doctorStr = rx.doctorName ? ` · ${rx.doctorName}` : '';
+        const meta = `eRx #${snapshotId || aptId}${dateStr ? ` · ${dateStr}` : ''}${doctorStr}`;
+
         serverItems.push({
-          id: `erx-${rx.erxSnapshotId}`,
+          id: `erx-${snapshotId || aptId}`,
           kind: 'prescription',
           titleKey: 'recordsPrescription',
-          metaKey: (`eRx #${rx.erxSnapshotId}${dateStr ? ` · ${dateStr}` : ''}`) as TranslationKey,
+          metaKey: meta as TranslationKey,
           badgeKey: isSigned ? 'recordsRxActive' : undefined,
           rxStatus: isSigned ? 'active' : 'expired',
-          patientAppId: rx.patientAppId,
-          erxSnapshotId: rx.erxSnapshotId,
+          patientAppId: aptId || null,
+          erxSnapshotId: snapshotId || null,
           occurredAt: rx.signedAt || null,
+        });
+      }
+    }
+
+    // Source B: timelineResponse prescriptions
+    const rxFromTimeline = (timelineData?.prescriptions ?? timelineData?.Prescriptions) as unknown[];
+    if (Array.isArray(rxFromTimeline)) {
+      for (const rawRx of rxFromTimeline) {
+        const rx = rawRx as Record<string, unknown>;
+        const snapshotId = Number(rx.erxSnapshotId ?? rx.ErxSnapshotId);
+        const aptId = Number(rx.patientAppId ?? rx.PatientAppId);
+        const pId = Number(rx.patientId ?? rx.PatientId);
+        if (!matchesMember(pId, null)) continue;
+        if (snapshotId > 0 && seenSnapshots.has(snapshotId)) continue;
+        if (aptId > 0 && seenAptIds.has(aptId)) continue;
+        if (snapshotId > 0) seenSnapshots.add(snapshotId);
+        if (aptId > 0) seenAptIds.add(aptId);
+
+        const status = String(rx.status ?? rx.Status ?? '');
+        const signedAt = String(rx.signedAt ?? rx.SignedAt ?? '');
+        const isSigned = status.toUpperCase() === 'SIGNED';
+        const dateStr = formatWhen(signedAt);
+        const meta = `eRx #${snapshotId || aptId}${dateStr ? ` · ${dateStr}` : ''}`;
+
+        serverItems.push({
+          id: `erx-${snapshotId || aptId}`,
+          kind: 'prescription',
+          titleKey: 'recordsPrescription',
+          metaKey: meta as TranslationKey,
+          badgeKey: isSigned ? 'recordsRxActive' : undefined,
+          rxStatus: isSigned ? 'active' : 'expired',
+          patientAppId: aptId || null,
+          erxSnapshotId: snapshotId || null,
+          occurredAt: signedAt || null,
         });
       }
     }
@@ -326,12 +446,7 @@ export function useHealthRecordsController({
     if (Array.isArray(docs)) {
       for (const doc of docs) {
         const title = (doc.fileName || '').trim();
-        const dateStr = doc.createdAt
-          ? new Date(doc.createdAt).toLocaleDateString(
-              language === 'mr' ? 'mr-IN' : 'en-IN',
-              { day: 'numeric', month: 'short', year: 'numeric' },
-            )
-          : '';
+        const dateStr = doc.createdAt ? formatWhen(doc.createdAt) : '';
         const meta = [doc.mime, dateStr].filter(Boolean).join(' · ');
         serverItems.push({
           id: `doc-${doc.documentId}`,
@@ -348,13 +463,9 @@ export function useHealthRecordsController({
     const followUps = followUpsResponse?.data;
     if (Array.isArray(followUps)) {
       for (const task of followUps) {
+        if (!matchesMember(task.patientId, null)) continue;
         const isDone = task.status === 'DONE';
-        const dateStr = task.dueDate
-          ? new Date(task.dueDate).toLocaleDateString(
-              language === 'mr' ? 'mr-IN' : 'en-IN',
-              { day: 'numeric', month: 'short', year: 'numeric' },
-            )
-          : '';
+        const dateStr = task.dueDate ? formatWhen(task.dueDate) : '';
         serverItems.push({
           id: `task-${task.followUpTaskId}`,
           kind: 'followup',
@@ -376,7 +487,11 @@ export function useHealthRecordsController({
   }, [
     isAuthenticated,
     selectedMemberId,
+    targetPatientId,
+    selectedMember?.label,
+    authUser?.patientName,
     timelineResponse?.data,
+    prescriptionsListResponse?.data,
     documentsResponse?.data,
     followUpsResponse?.data,
     language,
@@ -442,6 +557,8 @@ export function useHealthRecordsController({
     consultationRecordOpen,
     prescriptionOpen,
     activePatientAppId,
+    activeErxSnapshotId,
+    activePatientId: targetPatientId,
     uploadDocumentOpen,
     confirmDeleteDocId,
     confirmDeleteDocName,
@@ -467,13 +584,15 @@ export function useHealthRecordsController({
     onAddDiary: () => setFabOpen(false),
     onViewPrescription: () => {
       setFabOpen(false);
-      const firstRx = items.find((i) => i.kind === 'prescription' && i.patientAppId);
+      const firstRx = items.find((i) => i.kind === 'prescription' && (i.patientAppId || i.erxSnapshotId));
       setActivePatientAppId(firstRx?.patientAppId ?? null);
+      setActiveErxSnapshotId(firstRx?.erxSnapshotId ?? null);
       setPrescriptionOpen(true);
     },
     onClosePrescription: () => {
       setPrescriptionOpen(false);
       setActivePatientAppId(null);
+      setActiveErxSnapshotId(null);
     },
     onOrderPrescription: (itemId) => {
       const row = items.find((i) => i.id === itemId);
@@ -509,6 +628,7 @@ export function useHealthRecordsController({
       setFabOpen(false);
       const row = items.find((i) => i.id === itemId);
       setActivePatientAppId(row?.patientAppId ?? null);
+      setActiveErxSnapshotId(row?.erxSnapshotId ?? null);
       setPrescriptionOpen(true);
     },
     onViewDocument,

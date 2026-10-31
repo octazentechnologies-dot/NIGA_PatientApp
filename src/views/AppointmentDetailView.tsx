@@ -41,6 +41,7 @@ export function AppointmentDetailView(vm: AppointmentDetailViewModel) {
     patientName: vm.patientLabel,
     diagnosis: vm.reason,
     appointmentDate: vm.dateLine,
+    patientId: vm.visitPatientId,
     onBack: vm.onClosePrescription,
     onOrder: (launch) => {
       vm.onClosePrescription();

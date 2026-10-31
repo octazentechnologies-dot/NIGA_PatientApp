@@ -154,26 +154,63 @@ export function PrescriptionView(vm: PrescriptionViewModel) {
                   </AppText>
                 </View>
 
-                {vm.medicines.map((med, idx) => (
-                  <View key={`${med.name}-${idx}`} style={styles.medCard}>
-                    <AppText variant="bodyLg" color={colors.ink} weightOverride="600" raw>
-                      {med.name}
-                    </AppText>
-                    <View style={styles.medGrid}>
-                      <MedField label={vm.t('rxDoseLabel')} value={med.dose} />
-                      <MedField label={vm.t('rxTimeLabel')} value={med.time} />
-                      <MedField
-                        label={vm.t('rxDurationLabel')}
-                        value={med.duration}
-                      />
-                      <MedField
-                        label={vm.t('rxNoteLabel')}
-                        value={med.note}
-                        alert={med.noteAlert}
-                      />
+                {vm.medicines.length === 0 ? (
+                  <View style={styles.pdfOnlyCard}>
+                    <View style={styles.pdfOnlyIconWrap}>
+                      <Ionicons name="document-text" size={28} color={colors.primary} />
                     </View>
+                    <AppText
+                      variant="titleMd"
+                      color={colors.ink}
+                      style={styles.pdfOnlyTitle}
+                      raw
+                    >
+                      {vm.itemCount && vm.itemCount > 0
+                        ? `Prescription signed (${vm.itemCount} item${vm.itemCount > 1 ? 's' : ''})`
+                        : 'Official signed prescription'}
+                    </AppText>
+                    <AppText
+                      variant="bodyMd"
+                      color={colors.muted}
+                      style={styles.pdfOnlySubtitle}
+                    >
+                      View the complete signed prescription PDF below or download for pharmacy use.
+                    </AppText>
+                    <AppButton
+                      label="View Prescription PDF"
+                      variant="secondary"
+                      onPress={vm.onDownload}
+                      icon={
+                        <Ionicons
+                          name="eye-outline"
+                          size={18}
+                          color={colors.primary}
+                        />
+                      }
+                    />
                   </View>
-                ))}
+                ) : (
+                  vm.medicines.map((med, idx) => (
+                    <View key={`${med.name}-${idx}`} style={styles.medCard}>
+                      <AppText variant="bodyLg" color={colors.ink} weightOverride="600" raw>
+                        {med.name}
+                      </AppText>
+                      <View style={styles.medGrid}>
+                        <MedField label={vm.t('rxDoseLabel')} value={med.dose} />
+                        <MedField label={vm.t('rxTimeLabel')} value={med.time} />
+                        <MedField
+                          label={vm.t('rxDurationLabel')}
+                          value={med.duration}
+                        />
+                        <MedField
+                          label={vm.t('rxNoteLabel')}
+                          value={med.note}
+                          alert={med.noteAlert}
+                        />
+                      </View>
+                    </View>
+                  ))
+                )}
 
                 <View style={styles.signatureBlock}>
                   <View style={styles.flex}>
@@ -477,6 +514,32 @@ const styles = StyleSheet.create({
     minHeight: 48,
     justifyContent: 'center',
     paddingHorizontal: spacing.sm,
+  },
+  pdfOnlyCard: {
+    backgroundColor: colors.surfaceVariant ?? colors.surface,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
+    borderRadius: radii.lg,
+    padding: spacing.md,
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.md,
+  },
+  pdfOnlyIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.surfaceContainer,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xs,
+  },
+  pdfOnlyTitle: {
+    textAlign: 'center',
+  },
+  pdfOnlySubtitle: {
+    textAlign: 'center',
+    marginBottom: spacing.sm,
   },
   flex: {
     flex: 1,

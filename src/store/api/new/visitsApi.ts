@@ -9,6 +9,9 @@ export type PatientVisitItem = {
   isTele: boolean;
   doctorId: number;
   doctorName: string;
+  doctorSpecialization?: string;
+  specialization?: string;
+  doctorPhotoUrl?: string | null;
   patientId?: number;
   patientName?: string;
   patientFullName?: string;

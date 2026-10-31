@@ -543,6 +543,7 @@ export type TranslationKey =
   | 'accountFamilyMembersBadge'
   | 'accountAppointments'
   | 'myAptTapToManage'
+  | 'myAptTapToViewDetails'
   | 'accountPrescriptions'
   | 'accountHealthRecords'
   | 'accountHealthInsights'

@@ -604,6 +604,7 @@ export const mr: TranslationMap = {
   accountFamilyMembersBadge: '४ सदस्य',
   accountAppointments: 'माझ्या भेटी',
   myAptTapToManage: 'पाहण्यासाठी, फेरबदल किंवा रद्द करण्यासाठी टॅप करा',
+  myAptTapToViewDetails: 'तपशील पाहण्यासाठी टॅप करा',
   accountPrescriptions: 'माझी प्रिस्क्रिप्शन्स',
   accountHealthRecords: 'आरोग्य नोंदी',
   accountHealthInsights: 'आरोग्य अंतर्दृष्टी',

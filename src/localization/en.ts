@@ -606,6 +606,7 @@ export const en: TranslationMap = {
   accountFamilyMembersBadge: '4 Members',
   accountAppointments: 'My Appointments',
   myAptTapToManage: 'Tap to view, reschedule or cancel',
+  myAptTapToViewDetails: 'Tap to view details',
   accountPrescriptions: 'My Prescriptions',
   accountHealthRecords: 'Health Records',
   accountHealthInsights: 'Health Insights',

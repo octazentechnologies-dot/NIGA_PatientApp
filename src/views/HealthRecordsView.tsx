@@ -95,6 +95,8 @@ export function HealthRecordsView({
   const prescription = usePrescriptionController({
     patientAppId: vm.activePatientAppId,
     appointmentId: vm.activePatientAppId,
+    erxSnapshotId: vm.activeErxSnapshotId ?? undefined,
+    patientId: vm.activePatientId ?? null,
     onBack: vm.onClosePrescription,
     onOrder: (launch) => {
       vm.onClosePrescription();
