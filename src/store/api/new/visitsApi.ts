@@ -89,6 +89,8 @@ export type VisitDetailData = {
   /** BE-022 — hide when null. */
   followUpDate?: string | null;
   erxPdfUrl?: string | null;
+  /** UTC expiry for short-lived ticketed erxPdfUrl (browser open). */
+  erxPdfExpiresAt?: string | null;
   /** BE-014 — hide when null. */
   clinicAddressLine?: string | null;
   actions: VisitDetailActions;

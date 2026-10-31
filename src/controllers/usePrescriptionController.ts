@@ -5,7 +5,6 @@ import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
 import { useRequestRefillMutation } from '../store/api/new/medicinesApi';
 import {
-  resolveErxPdfUrl,
   useGetPrescriptionByAppointmentQuery,
   useGetPrescriptionQuery,
   useGetPrescriptionsListQuery,
@@ -206,29 +205,21 @@ export function usePrescriptionController({
       if (pdfBusy) return;
       setPdfBusy(true);
       try {
-        let pdfUrl: string | null = null;
-        try {
-          const res = await fetchPdfMeta(erxSnapshotId).unwrap();
-          pdfUrl = res.data?.pdfUrl?.trim() || null;
-          const expiresAt = res.data?.expiresAt;
-          if (
-            expiresAt &&
+        // Always mint a fresh short-lived ticketed URL (Bearer). Bare /Pdf URLs 401 in the system browser.
+        const res = await fetchPdfMeta(erxSnapshotId).unwrap();
+        let pdfUrl = res.data?.pdfUrl?.trim() || '';
+        const expiresAt = res.data?.expiresAt;
+        if (
+          !pdfUrl ||
+          (expiresAt &&
             !Number.isNaN(Date.parse(expiresAt)) &&
-            Date.parse(expiresAt) < Date.now()
-          ) {
-            const refreshed = await fetchPdfMeta(erxSnapshotId).unwrap();
-            pdfUrl = refreshed.data?.pdfUrl?.trim() || null;
-          }
-        } catch {
-          // If metadata endpoint fails, direct link fallback below
+            Date.parse(expiresAt) < Date.now())
+        ) {
+          const refreshed = await fetchPdfMeta(erxSnapshotId).unwrap();
+          pdfUrl = refreshed.data?.pdfUrl?.trim() || '';
         }
-
-        if (!pdfUrl) {
-          pdfUrl = resolveErxPdfUrl(erxSnapshotId);
-        }
-
-        if (!pdfUrl) {
-          setToastMessage('PDF link is not available.');
+        if (!pdfUrl || !pdfUrl.includes('ticket=')) {
+          setToastMessage('PDF link is not available. Please try again.');
           setToastVariant('error');
           return;
         }
@@ -239,19 +230,6 @@ export function usePrescriptionController({
           await Linking.openURL(pdfUrl);
         }
       } catch (err) {
-        const fallbackUrl = resolveErxPdfUrl(erxSnapshotId);
-        if (fallbackUrl) {
-          try {
-            if (mode === 'share') {
-              await Share.share({ url: fallbackUrl, message: fallbackUrl });
-            } else {
-              await Linking.openURL(fallbackUrl);
-            }
-            return;
-          } catch {
-            // fallback attempt failed, show error message below
-          }
-        }
         setToastMessage(messageForPdfError(err));
         setToastVariant('error');
       } finally {
