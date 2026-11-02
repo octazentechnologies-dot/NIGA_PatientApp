@@ -113,6 +113,7 @@ export function useOrderDetailsController({
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const { data: ordersResponse } = useGetMedicineOrdersQuery(undefined, {
     skip: !isAuthenticated,
+    refetchOnMountOrArgChange: true,
   });
   const [requestRefill] = useRequestRefillMutation();
   const [createOrder] = useCreateMedicineOrderMutation();
@@ -123,6 +124,7 @@ export function useOrderDetailsController({
 
   const { data: trackingResponse } = useGetMedicineOrderTrackingQuery(numericOrderId, {
     skip: !isAuthenticated || !hasValidId,
+    refetchOnMountOrArgChange: true,
   });
 
   const trackingData = trackingResponse?.data;

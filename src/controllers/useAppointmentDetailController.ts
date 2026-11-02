@@ -412,6 +412,11 @@ export function useAppointmentDetailController({
   );
   const item = cancelledSnapshot ?? appointment ?? FALLBACK_APPOINTMENT;
   const isNumericId = !isNaN(Number(item.id));
+  const [isTerminalVisit, setIsTerminalVisit] = useState(() => {
+    const s = (item.visitStatus || '').trim().toUpperCase();
+    return s === 'COMPLETED' || s === 'CANCELLED';
+  });
+
   const {
     data: serverVisitDetailResponse,
     error: serverVisitDetailError,
@@ -419,7 +424,20 @@ export function useAppointmentDetailController({
   } = useGetVisitDetailQuery(item.id, {
     skip: !isNumericId,
     refetchOnMountOrArgChange: true,
+    pollingInterval: isNumericId && !isTerminalVisit ? 10000 : 0,
   });
+
+  useEffect(() => {
+    const raw = serverVisitDetailResponse?.data;
+    const itemStatus = (
+      (Array.isArray(raw)
+        ? raw.find((v) => String(v.patientAppId) === String(item.id))?.status
+        : raw?.status) ||
+      item.visitStatus ||
+      ''
+    ).trim().toUpperCase();
+    setIsTerminalVisit(itemStatus === 'COMPLETED' || itemStatus === 'CANCELLED');
+  }, [serverVisitDetailResponse?.data, item.id, item.visitStatus]);
   const rawVisitData = serverVisitDetailResponse?.data;
   const visitDetail = useMemo(() => {
     if (!rawVisitData) return undefined;

@@ -801,6 +801,7 @@ export function useHomeController({
     refetch: refetchHomeDashboard,
   } = useGetHomeDashboardQuery(undefined, {
     skip: !isAuthenticated,
+    refetchOnMountOrArgChange: true,
   });
   const homeDashboardData = homeDashboardResponse?.data;
 
@@ -922,12 +923,12 @@ export function useHomeController({
       }
     }
 
-    // Show homeDashboardData?.nextAppointments directly on Home with all filters removed
+    // Prefer combinedMap so latest statuses from server visits update dashboard apps
     const activeList = (
-      homeDashboardData?.nextAppointments !== undefined
-        ? homeDashboardData.nextAppointments
-        : dashboardApps.length > 0
-          ? dashboardApps
+      combinedMap.size > 0
+        ? Array.from(combinedMap.values())
+        : homeDashboardData?.nextAppointments !== undefined
+          ? homeDashboardData.nextAppointments
           : serverVisits
     ) as RawVisit[];
 
@@ -1059,6 +1060,8 @@ export function useHomeController({
           (item, index) =>
             item.id === current[index]?.id &&
             item.status === current[index]?.status &&
+            item.visitStatus === current[index]?.visitStatus &&
+            item.paymentStatus === current[index]?.paymentStatus &&
             item.whenLabel === current[index]?.whenLabel &&
             item.patientLabel === current[index]?.patientLabel &&
             item.startsAt === current[index]?.startsAt,

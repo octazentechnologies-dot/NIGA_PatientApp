@@ -268,7 +268,11 @@ export const visitsApi = newBaseApi.injectEndpoints({
         method: 'POST',
         body,
       }),
-      invalidatesTags: ['Visits'],
+      invalidatesTags: (_result, _error, body) => [
+        { type: 'VisitDetail', id: String(body.patientAppId) },
+        'Visits',
+        'Timeline',
+      ],
     }),
     cancelAppointment: build.mutation<
       CancelAppointmentResponse,
@@ -279,7 +283,11 @@ export const visitsApi = newBaseApi.injectEndpoints({
         method: 'POST',
         body,
       }),
-      invalidatesTags: ['Visits'],
+      invalidatesTags: (_result, _error, body) => [
+        { type: 'VisitDetail', id: String(body.patientAppId) },
+        'Visits',
+        'Timeline',
+      ],
     }),
     getRefundPolicy: build.query<RefundPolicyResponse, number | string>({
       query: (paymentOrderId) => `api/Refunds/Policy/${paymentOrderId}`,

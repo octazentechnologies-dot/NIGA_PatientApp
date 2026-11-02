@@ -875,8 +875,16 @@ export function useBookAppointmentController({
           razorpay_payment_id,
         };
 
-        const booking = await bookAsFamilyMutation(familyPayload).unwrap();
-        data = booking.data;
+        console.log('🚀 [BookAppointment] API: POST api/Bookings/BookAs (Family Member)');
+        console.log('📦 [BookAppointment] Request Payload:', JSON.stringify(familyPayload, null, 2));
+        try {
+          const booking = await bookAsFamilyMutation(familyPayload).unwrap();
+          console.log('✅ [BookAppointment] Server Response:', JSON.stringify(booking, null, 2));
+          data = booking.data;
+        } catch (err) {
+          console.log('❌ [BookAppointment] Server Error:', JSON.stringify(err, null, 2));
+          throw err;
+        }
       } else {
         const selfPayload: CreateBookingRequest = {
           doctorId: docIdNum,
@@ -898,8 +906,17 @@ export function useBookAppointmentController({
             `pa-${docIdNum}-${payment.payAtClinic ? 'clinic' : 'online'}`,
           ),
         };
-        const booking = await createBookingMutation(selfPayload).unwrap();
-        data = booking.data;
+
+        console.log('🚀 [BookAppointment] API: POST api/Bookings (Self)');
+        console.log('📦 [BookAppointment] Request Payload:', JSON.stringify(selfPayload, null, 2));
+        try {
+          const booking = await createBookingMutation(selfPayload).unwrap();
+          console.log('✅ [BookAppointment] Server Response:', JSON.stringify(booking, null, 2));
+          data = booking.data;
+        } catch (err) {
+          console.log('❌ [BookAppointment] Server Error:', JSON.stringify(err, null, 2));
+          throw err;
+        }
       }
 
       applyHold(data);

@@ -192,18 +192,25 @@ export function useBookingPaymentController({
 
       const idempotencyKey = `pa-${patientAppId}-${Date.now()}`;
       const isRealToken = Boolean(bookingToken && bookingToken.trim().length >= 20);
-      if (__DEV__) {
-        console.log(
-          `💳 [useBookingPaymentController] Initiating ConsultOrders (patientAppId: ${patientAppId}, anonymous: ${isRealToken})`,
-        );
-      }
-      const res = await createConsultOrder({
+      const consultOrderPayload = {
         patientAppId,
         bookingToken: bookingToken || undefined,
         payAtClinic: false,
         idempotencyKey,
         anonymous: isRealToken,
-      }).unwrap();
+      };
+
+      console.log('🚀 [BookingPayment] API: POST api/Payments/ConsultOrders');
+      console.log('📦 [BookingPayment] ConsultOrders Payload:', JSON.stringify(consultOrderPayload, null, 2));
+
+      let res;
+      try {
+        res = await createConsultOrder(consultOrderPayload).unwrap();
+        console.log('✅ [BookingPayment] ConsultOrders Response:', JSON.stringify(res, null, 2));
+      } catch (err) {
+        console.log('❌ [BookingPayment] ConsultOrders Error:', JSON.stringify(err, null, 2));
+        throw err;
+      }
       return {
         gatewayReady: res.gatewayReady,
         keyId: res.keyId,
@@ -226,22 +233,26 @@ export function useBookingPaymentController({
         );
         return undefined;
       }
+
+      const updatePayload = {
+        userId,
+        patientAppId,
+        razorpay_order_id: checkout.orderId,
+        razorpay_payment_id: checkout.paymentId,
+        paymentOrderId: checkout.paymentOrderId,
+      };
+
+      console.log('🚀 [BookingPayment] API: POST api/Payments/Bookings/UpdatePayment');
+      console.log('📦 [BookingPayment] UpdatePayment Payload:', JSON.stringify(updatePayload, null, 2));
+
       try {
-        const res = await updateBookingPayment({
-          userId,
-          patientAppId,
-          razorpay_order_id: checkout.orderId,
-          razorpay_payment_id: checkout.paymentId,
-          paymentOrderId: checkout.paymentOrderId,
-        }).unwrap();
+        const res = await updateBookingPayment(updatePayload).unwrap();
+        console.log('✅ [BookingPayment] UpdatePayment Response:', JSON.stringify(res, null, 2));
         const status = (res.data?.paymentStatus || '').toUpperCase();
         const paid = status === 'PAID' || status === 'CAPTURED' || status === 'SUCCESS';
         return { paid, method: res.data?.method ?? null };
       } catch (attachErr) {
-        console.warn(
-          '[BookingPayment] UpdatePayment failed — Verify poll will continue:',
-          attachErr,
-        );
+        console.log('❌ [BookingPayment] UpdatePayment Error:', JSON.stringify(attachErr, null, 2));
         return undefined;
       }
     },

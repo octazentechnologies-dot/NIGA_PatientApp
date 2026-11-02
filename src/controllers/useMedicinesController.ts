@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { AppState, type AppStateStatus } from 'react-native';
 
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
@@ -160,19 +161,31 @@ export function useMedicinesController({
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const { data: ordersResponse, refetch: refetchOrders } = useGetMedicineOrdersQuery(
     undefined,
-    { skip: !isAuthenticated },
+    { skip: !isAuthenticated, refetchOnMountOrArgChange: true },
   );
   const { data: refillsResponse, refetch: refetchRefills } = useGetRefillsQuery(
     undefined,
-    { skip: !isAuthenticated },
+    { skip: !isAuthenticated, refetchOnMountOrArgChange: true },
   );
   const { data: rxList, refetch: refetchPrescriptions } = useGetPrescriptionsListQuery(
     undefined,
-    { skip: !isAuthenticated },
+    { skip: !isAuthenticated, refetchOnMountOrArgChange: true },
   );
   const { data: familyResponse, refetch: refetchFamily } = useGetFamilyQuery(undefined, {
     skip: !isAuthenticated,
   });
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const sub = AppState.addEventListener('change', (nextState: AppStateStatus) => {
+      if (nextState === 'active') {
+        void refetchOrders();
+        void refetchRefills();
+        void refetchPrescriptions();
+      }
+    });
+    return () => sub.remove();
+  }, [isAuthenticated, refetchOrders, refetchRefills, refetchPrescriptions]);
   const [acceptQuote] = useAcceptMedicineQuoteMutation();
   const [createOrder] = useCreateMedicineOrderMutation();
   const [grantConsent] = useGrantMedicineConsentMutation();

@@ -318,7 +318,17 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
 
   const refreshNotificationInbox = useCallback(() => {
-    dispatch(newBaseApi.util.invalidateTags(['Notifications']));
+    dispatch(
+      newBaseApi.util.invalidateTags([
+        'Notifications',
+        'Visits',
+        'VisitDetail',
+        'Prescriptions',
+        'Timeline',
+        'Orders',
+        'Tele',
+      ]),
+    );
   }, [dispatch]);
 
   usePushNotificationLifecycle({
