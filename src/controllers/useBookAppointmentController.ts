@@ -133,7 +133,11 @@ export type BookAppointmentViewModel = {
   onContinue: () => void;
   onJoinWaitlist: () => void;
   onAddMember: () => void;
-  onResetBooking: () => void;
+  /**
+   * Clears local booking UI state. Pass `{ skipCancel: true }` after a confirmed
+   * payment — otherwise an unpaid hold is cancelled with "Booking reset".
+   */
+  onResetBooking: (options?: { skipCancel?: boolean }) => void;
   onCancelHold: (reasonText?: string) => Promise<void>;
 };
 
@@ -338,9 +342,16 @@ export function useBookAppointmentController({
     [cancelAppointmentMutation],
   );
 
-  const onResetBooking = useCallback(() => {
+  const onResetBooking = useCallback((options?: { skipCancel?: boolean }) => {
     const id = patientAppIdRef.current;
-    if (id != null && paymentStatusRef.current !== 'success') {
+    // Success finishers must pass skipCancel — setState('success') does not
+    // update paymentStatusRef until the next render, so a same-tick reset
+    // would still cancel a just-paid visit ("Booking reset").
+    if (
+      !options?.skipCancel &&
+      id != null &&
+      paymentStatusRef.current !== 'success'
+    ) {
       void cancelAppointmentMutation({
         patientAppId: id,
         reasonCode: 'PatientRequest',
@@ -937,6 +948,7 @@ export function useBookAppointmentController({
       void onCancelHold('Payment cancelled by user');
     },
     onOpenPaymentStatus: (status, reason) => {
+      paymentStatusRef.current = status;
       setPaymentStatus(status);
       setPaymentFailureReason(reason ?? null);
     },
@@ -946,12 +958,15 @@ export function useBookAppointmentController({
     },
     onPaymentConfirmed: (paymentOrderId) => {
       setLastPaymentOrderId(paymentOrderId);
+      // Eager ref update so a same-tick onResetBooking sees success.
+      paymentStatusRef.current = 'success';
       setPaymentStatus('success');
     },
     onPaymentPending: (paymentOrderId) => {
       if (paymentOrderId > 0) {
         setLastPaymentOrderId(paymentOrderId);
       }
+      paymentStatusRef.current = 'pending';
       setPaymentStatus('pending');
     },
     onChooseOtherSlot: () => {

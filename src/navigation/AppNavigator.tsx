@@ -422,7 +422,8 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
         status: 'waiting_acceptance',
       });
       payment.reset();
-      booking.onResetBooking();
+      // Paid/held clinic visit — clear UI only; do not CancelAppointment.
+      booking.onResetBooking({ skipCancel: true });
       home.onFinishBookingFlow('home');
     },
     onPaymentConfirmed: (paymentOrderId, confirmedPatientAppId) => {
@@ -455,8 +456,10 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
         reasonKey: 'reasonGeneralFollowUp' as TranslationKey,
         status: 'waiting_acceptance',
       });
+      // Mark success on the booking controller before reset (eager ref + state).
+      booking.onPaymentConfirmed(paymentOrderId);
       payment.reset();
-      booking.onResetBooking();
+      booking.onResetBooking({ skipCancel: true });
       home.onFinishBookingFlow('home');
     },
     onPaymentPending: (paymentOrderId) => {
@@ -477,11 +480,12 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
     active: Boolean(home.bookingOpen && booking.paymentStatus),
     onConfirmBooking: home.onConfirmBooking,
     onCloseSuccess: () => {
-      booking.onResetBooking();
+      booking.onResetBooking({ skipCancel: true });
       home.onFinishBookingFlow();
     },
     onCloseFailure: () => {
       payment.reset();
+      // Failed / abandoned hold — release via "Booking reset" cancel.
       booking.onResetBooking();
       home.onFinishBookingFlow('home');
     },
@@ -1109,7 +1113,7 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
         return true;
       }
       if (booking.paymentStatus === 'success') {
-        booking.onResetBooking();
+        booking.onResetBooking({ skipCancel: true });
         home.onFinishBookingFlow();
         return true;
       }
