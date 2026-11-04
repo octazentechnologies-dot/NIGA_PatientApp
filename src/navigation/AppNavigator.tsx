@@ -327,6 +327,9 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
         'Timeline',
         'Orders',
         'Tele',
+        // Booking / schedule pushes (cancel, reschedule, new slot) need fresh pickers.
+        'Slots',
+        'DoctorProfile',
       ]),
     );
   }, [dispatch]);
@@ -364,6 +367,7 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
       : '';
   const profile = useDoctorProfileController({
     doctorId: profileDoctorId,
+    active: Boolean(profileDoctorId) && !home.bookingOpen,
     onBack: home.onCloseDoctorProfile,
     onBook: home.onOpenBooking,
   });
@@ -398,6 +402,7 @@ function HomeRoute({ onLogOut }: { onLogOut: () => void }) {
     bookingToken: booking.bookingToken,
     isInClinicMode: booking.isInClinicMode,
     onSubmitBooking: booking.onSubmitBooking,
+    onReleaseUnpaidHold: booking.onReleaseUnpaidHold,
     onPayAtClinicSuccess: (result) => {
       const visitId = String(result.patientAppId);
       home.onConfirmBooking({

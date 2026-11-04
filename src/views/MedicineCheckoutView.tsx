@@ -300,11 +300,6 @@ export function MedicineCheckoutView(vm: MedicineCheckoutViewModel) {
             onPress={() => vm.onSelectMethod('cod')}
           />
 
-          {vm.placeOrderNote ? (
-            <AppText variant="bodyMd" color={colors.error} raw>
-              {vm.placeOrderNote}
-            </AppText>
-          ) : null}
           <AppButton
             label={
               vm.payBusy

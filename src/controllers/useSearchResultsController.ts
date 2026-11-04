@@ -275,7 +275,7 @@ export function useSearchResultsController({
           pageSize: 20,
         }
       : undefined,
-    { skip: !active },
+    { skip: !active, refetchOnMountOrArgChange: true },
   );
 
   // BE-009 — cities / qualifications for chips (not hardcoded).

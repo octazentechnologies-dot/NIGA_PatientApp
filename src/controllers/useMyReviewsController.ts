@@ -69,6 +69,7 @@ export function useMyReviewsController({
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const { data, isLoading, isError, refetch } = useGetMyReviewsQuery(undefined, {
     skip: !isAuthenticated,
+    refetchOnMountOrArgChange: true,
   });
 
   const reviews = useMemo<MyReviewItem[]>(() => {

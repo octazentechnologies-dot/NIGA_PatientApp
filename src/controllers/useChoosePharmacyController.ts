@@ -87,6 +87,7 @@ export function useChoosePharmacyController({
     refetch,
   } = useGetPharmacySellersQuery(undefined, {
     skip: !isAuthenticated,
+    refetchOnMountOrArgChange: true,
   });
 
   const pharmacies = useMemo(() => {

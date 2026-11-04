@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
+import { AppToast } from '../components/AppToast';
 import type { BookingPaymentViewModel } from '../controllers/useBookingPaymentController';
 import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
@@ -64,6 +65,7 @@ export function BookingPaymentView({
   onAddCard,
   onPay,
   onPayAtClinic,
+  onDismissPayError,
 }: BookingPaymentViewModel) {
   const insets = useSafeAreaInsets();
   const footerReserve =
@@ -72,6 +74,11 @@ export function BookingPaymentView({
 
   return (
     <View style={styles.root}>
+      <AppToast
+        message={payError}
+        variant="error"
+        onDismiss={onDismissPayError}
+      />
       <View
         style={{
           paddingTop: Math.max(insets.top, spacing.sm),
@@ -151,11 +158,6 @@ export function BookingPaymentView({
                 Card, UPI, and netbanking open in the secure Razorpay Checkout. Amounts come from the
                 server order — the app never sets the price.
               </AppText>
-              {payError ? (
-                <AppText variant="bodyMd" color={colors.error} style={{ marginTop: spacing.sm }}>
-                  {payError}
-                </AppText>
-              ) : null}
             </View>
           </View>
         ) : (

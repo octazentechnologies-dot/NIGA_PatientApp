@@ -133,7 +133,10 @@ export function useRemindersCentreController({
 }): RemindersCentreViewModel {
   const { language, t } = useLocalization();
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
-  const { data } = useGetRemindersQuery(undefined, { skip: !isAuthenticated });
+  const { data } = useGetRemindersQuery(undefined, {
+    skip: !isAuthenticated,
+    refetchOnMountOrArgChange: true,
+  });
   const apiReminders = data ?? EMPTY_REMINDERS;
   const [createReminder] = useCreateReminderMutation();
   const [updateReminder] = useUpdateReminderMutation();

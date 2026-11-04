@@ -1,7 +1,13 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useMemo, useState, type ComponentProps } from 'react';
 import {
-  ActivityIndicator,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+  type ComponentProps,
+} from 'react';
+import {
   Image,
   Linking,
   Platform,
@@ -13,9 +19,6 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AccountView } from './AccountView';
-import { HealthRecordsView } from './HealthRecordsView';
-import { MedicinesView } from './MedicinesView';
 import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
 import { DoctorFiltersSheet } from '../components/DoctorFiltersSheet';
@@ -24,8 +27,13 @@ import { NotificationBell } from '../components/NotificationBell';
 import { PatientHomeDashboard } from '../components/PatientHomeDashboard';
 import { PatientTabBar, usePatientTabScrollInset } from '../components/PatientTabBar';
 import { Screen } from '../components/Screen';
+import { DoctorsTabSkeleton } from '../components/skeleton/TabSkeletons';
+import { KeepAliveTab } from '../components/tabs/MemoTabPane';
 import { StatusBarBleed } from '../components/StatusBarBleed';
 import { WhoForMemberSheet } from '../components/WhoForMemberSheet';
+import { AccountTabPane } from './tabs/AccountTabPane';
+import { MedicinesTabPane } from './tabs/MedicinesTabPane';
+import { RecordsTabPane } from './tabs/RecordsTabPane';
 import { DEFAULT_DOCTOR_FILTERS } from '../models/search';
 import { useAndroidStatusBarBackground } from '../utilities/useAndroidPageStatusBar';
 import {
@@ -35,7 +43,7 @@ import {
 } from '../config/consultNow';
 import { JOIN_GRACE_MS } from '../config/bookedAppointments';
 import { images } from '../config/images';
-import type { HomeViewModel } from '../controllers/useHomeController';
+import type { HomeTab, HomeViewModel } from '../controllers/useHomeController';
 import { usePatientDashboard } from '../controllers/usePatientDashboard';
 import type { TranslationKey } from '../localization/types';
 import type { PublicDoctor } from '../store/api/new/doctorsApi';
@@ -43,6 +51,7 @@ import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
 import { spacing } from '../theme/spacing';
 import { formatWeekday, resolveApiUrl } from '../utilities/formatters';
+import type { OrderMedicinesLaunch } from '../utilities/medicineOrderStage';
 import { scaleFont } from '../utilities/scale';
 
 function getDoctorPhotoUrl(photoPath: string | null | undefined): string | null {
@@ -308,6 +317,7 @@ export function HomeView({
   isDoctorsLoading = false,
   isDoctorsError = false,
   refetchDoctors,
+  onRefreshDoctors,
   onOpenDoctorProfile,
   onOpenBooking,
   healthArticles = [],
@@ -355,6 +365,65 @@ export function HomeView({
   const insets = useSafeAreaInsets();
   const tabScrollInset = usePatientTabScrollInset();
   const [doctorFilter, setDoctorFilter] = useState<'all' | 'online'>('all');
+  /**
+   * Tab host:
+   * 1. Selected pane mounts on THIS paint (no blank frame).
+   * 2. First visit shows skeleton; heavy body mounts next frames.
+   * 3. Visited tabs stay mounted; KeepAliveTab / *TabPane skip re-render while inactive.
+   * Data prefetch lives in useHomeController (not UI pre-mount thrash).
+   */
+  const [mountedTabs, setMountedTabs] = useState<Record<HomeTab, boolean>>({
+    home: true,
+    doctors: false,
+    records: false,
+    medicines: false,
+    account: false,
+  });
+  const [heavyTabs, setHeavyTabs] = useState<Record<HomeTab, boolean>>({
+    home: true,
+    doctors: false,
+    records: false,
+    medicines: false,
+    account: false,
+  });
+
+  useLayoutEffect(() => {
+    setMountedTabs((prev) =>
+      prev[selectedTab] ? prev : { ...prev, [selectedTab]: true },
+    );
+  }, [selectedTab]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const outer = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (cancelled) return;
+        setHeavyTabs((prev) =>
+          prev[selectedTab] ? prev : { ...prev, [selectedTab]: true },
+        );
+      });
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(outer);
+    };
+  }, [selectedTab]);
+
+  const shouldRenderTab = (tab: HomeTab) =>
+    mountedTabs[tab] || selectedTab === tab;
+
+  /** Initial empty fetch only — never flash full skeleton on background refetch. */
+  const showDoctorsSkeleton =
+    !heavyTabs.doctors ||
+    (publicDoctors.length === 0 && !isDoctorsError && isDoctorsLoading);
+
+  const onSeePrescriptions = useCallback(() => {
+    onSelectTab('records');
+  }, [onSelectTab]);
+  const onOrderRx = useCallback(
+    (launch?: OrderMedicinesLaunch) => onOpenOrderMedicines(launch),
+    [onOpenOrderMedicines],
+  );
 
   const displayedDoctors =
     doctorFilter === 'online'
@@ -365,6 +434,7 @@ export function HomeView({
     if (a.id === 'seed-followup-chat') return false;
     if (a.status !== 'confirmed' && a.status !== 'waiting_acceptance') return false;
     const visit = (a.visitStatus || '').toUpperCase();
+    if (/CANCEL|DECLINED/.test(visit)) return false;
     return !/COMPLETE|DONE|CLOSED/.test(visit);
   });
 
@@ -411,8 +481,8 @@ export function HomeView({
           </View>
         </View>
       ) : null}
-      {selectedTab === 'home' ? (
-        <View style={styles.homeTab}>
+      {shouldRenderTab('home') ? (
+        <KeepAliveTab active={selectedTab === 'home'} style={styles.homeTab}>
           <View
             style={[
               styles.header,
@@ -995,9 +1065,14 @@ export function HomeView({
               ) : null}
             </View>
           </ScrollView>
-        </View>
-      ) : selectedTab === 'doctors' ? (
-        <View style={styles.doctorsTab}>
+        </KeepAliveTab>
+      ) : null}
+      {shouldRenderTab('doctors') ? (
+        <KeepAliveTab active={selectedTab === 'doctors'} style={styles.doctorsTab}>
+          {showDoctorsSkeleton ? (
+            <DoctorsTabSkeleton />
+          ) : (
+          <>
           <View
             style={[
               styles.header,
@@ -1122,7 +1197,7 @@ export function HomeView({
             refreshControl={
               <RefreshControl
                 refreshing={isDoctorsLoading}
-                onRefresh={refetchDoctors}
+                onRefresh={onRefreshDoctors ?? refetchDoctors}
                 colors={[colors.primary]}
                 tintColor={colors.primary}
               />
@@ -1198,14 +1273,7 @@ export function HomeView({
               </View>
             ) : null}
 
-            {isDoctorsLoading && publicDoctors.length === 0 ? (
-              <View style={styles.doctorLoadingWrap}>
-                <ActivityIndicator size="large" color={colors.primary} />
-                <AppText variant="bodyMd" color={colors.onSurfaceVariant}>
-                  {t('loading')}
-                </AppText>
-              </View>
-            ) : isDoctorsError && publicDoctors.length === 0 ? (
+            {isDoctorsError && publicDoctors.length === 0 ? (
               <View style={styles.doctorErrorWrap}>
                 <Ionicons
                   name="alert-circle-outline"
@@ -1217,7 +1285,7 @@ export function HomeView({
                 </AppText>
                 <AppButton
                   label={t('doctorsRetry')}
-                  onPress={refetchDoctors}
+                  onPress={onRefreshDoctors ?? refetchDoctors}
                   variant="secondary"
                 />
               </View>
@@ -1283,50 +1351,44 @@ export function HomeView({
               ))
             )}
           </ScrollView>
-        </View>
-      ) : selectedTab === 'records' ? (
-        <HealthRecordsView
+          </>
+          )}
+        </KeepAliveTab>
+      ) : null}
+      {shouldRenderTab('records') ? (
+        <RecordsTabPane
+          active={selectedTab === 'records'}
+          ready={heavyTabs.records}
           onOpenFollowUpPlan={onOpenFollowUpPlan}
           onOpenOrderMedicines={onOpenOrderMedicines}
           onOpenNotifications={onOpenNotifications}
           onAddMember={onAddMember}
           notificationCount={notificationCount}
         />
-      ) : selectedTab === 'medicines' ? (
-        <MedicinesView
+      ) : null}
+      {shouldRenderTab('medicines') ? (
+        <MedicinesTabPane
+          active={selectedTab === 'medicines'}
+          ready={heavyTabs.medicines}
           onBookFollowUp={onOpenSearch}
-          onSeePrescriptions={() => onSelectTab('records')}
+          onSeePrescriptions={onSeePrescriptions}
           onTrackOrder={onTrackOrder}
-          onOrderRx={(launch) => onOpenOrderMedicines(launch)}
+          onOrderRx={onOrderRx}
           onPayOrder={onPayMedicineOrder}
-          onStartRefillOrder={(launch) => onOpenOrderMedicines(launch)}
+          onStartRefillOrder={onOrderRx}
           onOpenPastOrder={onOpenOrderDetails}
           onOpenNotifications={onOpenNotifications}
           notificationCount={notificationCount}
           forceHasOrders={medicineOrderPlaced}
         />
-      ) : selectedTab === 'account' ? (
-        <AccountView {...account} />
-      ) : (
-        <View
-          style={[
-            styles.placeholder,
-            { paddingTop: Math.max(insets.top, spacing.lg) },
-          ]}
-        >
-          <Ionicons
-            name="construct-outline"
-            size={40}
-            color={colors.onSurfaceVariant}
-          />
-          <AppText variant="titleMd" color={colors.onSurface}>
-            {t('homeTabAccount')}
-          </AppText>
-          <AppText variant="bodyMd" color={colors.onSurfaceVariant}>
-            {t('homeComingSoon')}
-          </AppText>
-        </View>
-      )}
+      ) : null}
+      {shouldRenderTab('account') ? (
+        <AccountTabPane
+          active={selectedTab === 'account'}
+          ready={heavyTabs.account}
+          account={account}
+        />
+      ) : null}
 
       <PatientTabBar
         selectedTab={selectedTab}

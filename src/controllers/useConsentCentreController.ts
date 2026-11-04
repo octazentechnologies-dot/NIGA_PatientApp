@@ -97,7 +97,10 @@ export function useConsentCentreController({
     isLoading,
     isError,
     refetch,
-  } = useGetConsentsQuery(undefined, { skip: !active || !isAuthenticated });
+  } = useGetConsentsQuery(undefined, {
+    skip: !active || !isAuthenticated,
+    refetchOnMountOrArgChange: true,
+  });
 
   const [grantConsentMutation] = useGrantConsentMutation();
   const [withdrawConsentMutation] = useWithdrawConsentMutation();

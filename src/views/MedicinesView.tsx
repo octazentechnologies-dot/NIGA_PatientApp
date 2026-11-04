@@ -6,6 +6,7 @@ import { AppButton } from '../components/AppButton';
 import { AppText } from '../components/AppText';
 import { NotificationBell } from '../components/NotificationBell';
 import { usePatientTabScrollInset } from '../components/PatientTabBar';
+import { MedicinesTabSkeleton } from '../components/skeleton/TabSkeletons';
 import {
   useMedicinesController,
   type MedicinesViewModel,
@@ -18,6 +19,7 @@ import { radii } from '../theme/radii';
 import { layout, spacing } from '../theme/spacing';
 
 export function MedicinesView({
+  active = true,
   onBookFollowUp,
   onSeePrescriptions,
   onTrackOrder,
@@ -29,6 +31,7 @@ export function MedicinesView({
   notificationCount = 0,
   forceHasOrders,
 }: {
+  active?: boolean;
   onBookFollowUp?: () => void;
   onSeePrescriptions?: () => void;
   onTrackOrder?: (orderId?: string) => void;
@@ -41,6 +44,7 @@ export function MedicinesView({
   forceHasOrders?: boolean;
 } = {}) {
   const vm = useMedicinesController({
+    active,
     onBookFollowUp,
     onSeePrescriptions,
     onTrackOrder,
@@ -53,6 +57,10 @@ export function MedicinesView({
   });
   const insets = useSafeAreaInsets();
   const tabScrollInset = usePatientTabScrollInset();
+
+  if (vm.isLoading) {
+    return <MedicinesTabSkeleton />;
+  }
 
   return (
     <View style={styles.root}>

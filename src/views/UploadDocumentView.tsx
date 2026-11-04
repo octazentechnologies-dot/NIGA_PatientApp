@@ -224,9 +224,10 @@ export function UploadDocumentView(vm: UploadDocumentViewModel) {
           <TextInput
             value={vm.notes}
             onChangeText={vm.onChangeNotes}
-            placeholder={vm.t('uploadDocNotes')}
+            placeholder={vm.t('uploadDocDescription')}
             placeholderTextColor={PLACEHOLDER}
             multiline
+            maxLength={500}
             textAlignVertical="top"
             style={[
               styles.notesInput,

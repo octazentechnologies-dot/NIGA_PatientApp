@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import {
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   View,
@@ -63,7 +64,8 @@ export function BookAppointmentView({
   canContinue,
   slotsEmpty,
   slotsLoading,
-  bookingError,
+  isSlotsRefreshing,
+  onRefreshSlots,
   onBack,
   onOpenMemberPicker,
   onCloseMemberPicker,
@@ -141,6 +143,14 @@ export function BookAppointmentView({
         style={styles.scroll}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.body, { paddingBottom: footerReserve }]}
+        refreshControl={
+          <RefreshControl
+            refreshing={Boolean(isSlotsRefreshing)}
+            onRefresh={onRefreshSlots}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
+          />
+        }
       >
         <Pressable
           accessibilityRole="button"
@@ -235,8 +245,17 @@ export function BookAppointmentView({
         {slotsEmpty ? (
           <View style={styles.waitlist}>
             <AppText variant="bodyMd" color={colors.muted} raw>
-              No slots available — ask the doctor for a time
+              No slots yet — pull to refresh, or ask the doctor for a time
             </AppText>
+            <Pressable
+              accessibilityRole="button"
+              onPress={onRefreshSlots}
+              style={({ pressed }) => [styles.waitButton, pressed && styles.pressed]}
+            >
+              <AppText variant="labelMd" color={ICON_BLUE} weightOverride="600">
+                {t('doctorsRetry')}
+              </AppText>
+            </Pressable>
             <Pressable
               accessibilityRole="button"
               onPress={onJoinWaitlist}
@@ -247,12 +266,6 @@ export function BookAppointmentView({
               </AppText>
             </Pressable>
           </View>
-        ) : null}
-
-        {bookingError ? (
-          <AppText variant="bodyMd" color={colors.error} raw>
-            {bookingError}
-          </AppText>
         ) : null}
 
         {slotsLoading ? (

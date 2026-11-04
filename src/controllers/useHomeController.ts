@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AppState, type AppStateStatus } from 'react-native';
+import { AppState, InteractionManager, type AppStateStatus } from 'react-native';
 
 import { useAccountController, type AccountViewModel } from './useAccountController';
 import type { HelpTopicId } from './useHelpCentreController';
@@ -39,12 +39,22 @@ import {
   useGetCareCategoriesQuery,
   useGetHomeDashboardQuery,
 } from '../store/api/new/homeApi';
+import { medicinesApi } from '../store/api/new/medicinesApi';
+import { newBaseApi } from '../store/api/new/newBaseApi';
+import { recordsApi } from '../store/api/new/recordsApi';
 import { useGetPatientVisitsQuery } from '../store/api/new/visitsApi';
+import {
+  useInvalidateOnActive,
+  type LiveQueryTag,
+} from '../utilities/rtkScreenFreshness';
 import {
   formatDate,
   formatTime,
   resolveApiUrl,
 } from '../utilities/formatters';
+
+const DOCTORS_TAB_LIVE_TAGS: readonly LiveQueryTag[] = ['Doctors'];
+const HOME_VISITS_LIVE_TAGS: readonly LiveQueryTag[] = ['Visits'];
 
 export type HomeCareCategoryItem = {
   id: string;
@@ -387,6 +397,7 @@ export type HomeViewModel = {
   isDoctorsLoading: boolean;
   isDoctorsError: boolean;
   refetchDoctors: () => void;
+  onRefreshDoctors: () => void;
   careCategories: HomeCareCategoryItem[];
   healthArticles: HomeArticleItem[];
   onSelectCareCategory: (name: string) => void;
@@ -436,16 +447,6 @@ export function useHomeController({
   }, [reduxSelectedMemberId, selectedMemberId]);
   const [appointments, setAppointments] = useState<BookedAppointment[]>([]);
 
-  useEffect(() => {
-    console.log(
-      '📋 [useHomeController] Current Bookings List (count: ' +
-      appointments.length +
-      '):',
-      JSON.stringify(
-        appointments
-      ),
-    );
-  }, [appointments]);
   const [completedMovedToastVisible, setCompletedMovedToastVisible] =
     useState(false);
   const previousDashboardIdsRef = useRef<Set<string> | null>(null);
@@ -548,11 +549,28 @@ export function useHomeController({
     isLoading: isDoctorsLoading,
     isError: isDoctorsError,
     refetch: refetchDoctors,
-  } = useGetDoctorsQuery(doctorsQueryArgs);
+  } = useGetDoctorsQuery(doctorsQueryArgs, {
+    // Mutable browse list — activate invalidation + remount refetch (see rtkScreenFreshness).
+    refetchOnMountOrArgChange: true,
+  });
+
+  useInvalidateOnActive(selectedTab === 'doctors', DOCTORS_TAB_LIVE_TAGS);
+
+  /** PTR on doctors tab — drop stale Slots / DoctorProfile so booking reopen is fresh. */
+  const onRefreshDoctors = useCallback(() => {
+    dispatch(
+      newBaseApi.util.invalidateTags(['Slots', 'DoctorProfile', 'Doctors']),
+    );
+    void refetchDoctors();
+  }, [dispatch, refetchDoctors]);
 
   const { data: doctorsFilterOptions } = useGetDoctorFilterOptionsQuery(
     undefined,
-    { skip: selectedTab !== 'doctors' && !doctorsFiltersOpen },
+    {
+      skip: selectedTab !== 'doctors' && !doctorsFiltersOpen,
+      // Semi-static filter catalog.
+      refetchOnMountOrArgChange: 60,
+    },
   );
 
   const doctorsCityOptions = useMemo(
@@ -801,7 +819,7 @@ export function useHomeController({
     refetch: refetchHomeDashboard,
   } = useGetHomeDashboardQuery(undefined, {
     skip: !isAuthenticated,
-    refetchOnMountOrArgChange: true,
+    refetchOnMountOrArgChange: 30,
   });
   const homeDashboardData = homeDashboardResponse?.data;
 
@@ -819,6 +837,7 @@ export function useHomeController({
     refetch: refetchFamily,
   } = useGetFamilyQuery(undefined, {
     skip: !isAuthenticated,
+    refetchOnMountOrArgChange: 30,
   });
   const apiFamily = familyResponse?.data;
 
@@ -829,6 +848,11 @@ export function useHomeController({
     skip: !isAuthenticated,
     refetchOnMountOrArgChange: true,
   });
+
+  useInvalidateOnActive(
+    isAuthenticated && selectedTab === 'home',
+    HOME_VISITS_LIVE_TAGS,
+  );
 
   // Re-fetch home dashboard & visits when app comes back to foreground
   useEffect(() => {
@@ -841,6 +865,39 @@ export function useHomeController({
     });
     return () => sub.remove();
   }, [isAuthenticated, refetchVisits, refetchHomeDashboard]);
+
+  /** Warm Records / Medicines caches so first tab open is not cold. */
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const prefetchOpts = { subscribe: false } as const;
+    const task = InteractionManager.runAfterInteractions(() => {
+      void dispatch(
+        recordsApi.endpoints.getTimeline.initiate(undefined, prefetchOpts),
+      );
+      void dispatch(
+        recordsApi.endpoints.getDocuments.initiate(undefined, prefetchOpts),
+      );
+      void dispatch(
+        recordsApi.endpoints.getPrescriptionsList.initiate(
+          undefined,
+          prefetchOpts,
+        ),
+      );
+      void dispatch(
+        recordsApi.endpoints.getFollowUps.initiate(undefined, prefetchOpts),
+      );
+      void dispatch(
+        medicinesApi.endpoints.getMedicineOrders.initiate(
+          undefined,
+          prefetchOpts,
+        ),
+      );
+      void dispatch(
+        medicinesApi.endpoints.getRefills.initiate(undefined, prefetchOpts),
+      );
+    });
+    return () => task.cancel();
+  }, [dispatch, isAuthenticated]);
   const apiVisitsRaw = visitsResponse?.data;
   const apiVisitsList = Array.isArray(apiVisitsRaw)
     ? apiVisitsRaw
@@ -855,6 +912,14 @@ export function useHomeController({
   const onRefreshHome = useCallback(async () => {
     setIsHomeRefreshing(true);
     try {
+      dispatch(
+        newBaseApi.util.invalidateTags([
+          'Slots',
+          'DoctorProfile',
+          'Doctors',
+          'Visits',
+        ]),
+      );
       const refetches: Promise<unknown>[] = [];
       if (isAuthenticated) {
         refetches.push(Promise.resolve(refetchHomeDashboard()));
@@ -863,6 +928,7 @@ export function useHomeController({
       }
       refetches.push(Promise.resolve(refetchArticles()));
       refetches.push(Promise.resolve(refetchCareCategories()));
+      refetches.push(Promise.resolve(refetchDoctors()));
       await Promise.allSettled(refetches);
     } catch {
       // Ignore network errors during pull-to-refresh
@@ -870,12 +936,14 @@ export function useHomeController({
       setIsHomeRefreshing(false);
     }
   }, [
+    dispatch,
     isAuthenticated,
     refetchHomeDashboard,
     refetchVisits,
     refetchFamily,
     refetchArticles,
     refetchCareCategories,
+    refetchDoctors,
   ]);
 
   useEffect(() => {
@@ -932,20 +1000,18 @@ export function useHomeController({
           : serverVisits
     ) as RawVisit[];
 
-    console.log(
-      '🔍 [useHomeController] Active list count (no filters):',
-      activeList.length,
-      activeList.map((a) => ({
-        patientAppId: a.patientAppId,
-        doctorName: a.doctorName,
-        status: a.status,
-        paymentStatus: a.paymentStatus,
-        visitType: a.visitType,
-      })),
-    );
-
     const locale = language === 'mr' ? 'mr-IN' : 'en-IN';
-    const mapped: BookedAppointment[] = activeList.map((a) => {
+    // Drop terminal cancelled visits from Home cards (My Appointments "Cancelled" filter keeps history).
+    const activeUpcoming = activeList.filter((a) => {
+      const status = (a.status || '').toUpperCase();
+      return (
+        status !== 'CANCELLED' &&
+        status !== 'CANCELED' &&
+        status !== 'DECLINED' &&
+        status !== 'COMPLETED'
+      );
+    });
+    const mapped: BookedAppointment[] = activeUpcoming.map((a) => {
       const mode: ConsultMode =
         a.isTele || a.visitType === 'Tele' || a.consultMode === 'Tele'
           ? 'video'
@@ -1102,6 +1168,19 @@ export function useHomeController({
   const greeting = patientFirstName
     ? `${t('homeHello')}, ${patientFirstName}`
     : t('homeHello');
+
+  /**
+   * Tab switches must stay cheap: only flip the selected tab (+ dismiss search
+   * overlays when leaving Doctors). Closing every Home overlay here was
+   * causing a multi-setState storm and a multi-second JS hitch.
+   */
+  const onSelectTab = useCallback((tab: HomeTab) => {
+    setSelectedTab(tab);
+    if (tab !== 'doctors') {
+      setResultsOpen(false);
+      setSearchOpen(false);
+    }
+  }, []);
 
   return {
     language,
@@ -1341,28 +1420,7 @@ export function useHomeController({
       setSearchOpen(true);
       setProfileDoctorId(null);
     },
-    onSelectTab: (tab) => {
-      setSelectedTab(tab);
-      setProfileDoctorId(null);
-      setBookingOpen(false);
-      setHealthTipId(null);
-      setSelectedAppointmentId(null);
-      setConsultNowOpen(false);
-      setFollowUpPlanOpen(false);
-      setSymptomDiaryOpen(false);
-      setHealthInsightsOpen(false);
-      setRemindersOpen(false);
-      setEditProfileOpen(false);
-      setAccountFamilyOpen(false);
-      setMyAppointmentsOpen(false);
-      setAccountRecordsOpen(false);
-      setCliniSightProgressOpen(false);
-      setOrderMedicinesOpen(false);
-      if (tab !== 'doctors') {
-        setResultsOpen(false);
-        setSearchOpen(false);
-      }
-    },
+    onSelectTab,
     onOpenMemberPicker: () => setMemberPickerOpen(true),
     onCloseMemberPicker: () => setMemberPickerOpen(false),
     onSelectMember: (memberId) => {
@@ -1725,6 +1783,7 @@ export function useHomeController({
     isDoctorsLoading,
     isDoctorsError,
     refetchDoctors,
+    onRefreshDoctors,
     isHomeRefreshing,
     onRefreshHome,
     account,

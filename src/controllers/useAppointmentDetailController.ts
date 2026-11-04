@@ -19,7 +19,6 @@ import {
   slotStartIso,
 } from '../config/bookedAppointments';
 import type { PatientDocument } from '../config/patientDocuments';
-import { API_BASE_URL } from '../config/apiConfig';
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
 import type { ConsultModeChoice, NetworkQuality } from './useDeviceCheckController';
@@ -45,10 +44,24 @@ import {
   useUpdateBookingPaymentMutation,
 } from '../store/api/new/paymentsApi';
 import { useGetPatientProfileQuery } from '../store/api/new/patientProfileApi';
-import { useAppSelector } from '../store/hooks';
+import { newBaseApi } from '../store/api/new/newBaseApi';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { usePayment } from '../payments';
 import { messageFromUnknownError } from '../utilities/apiResponse';
+import {
+  useInvalidateOnActive,
+  useRefetchOnActive,
+  type LiveQueryTag,
+} from '../utilities/rtkScreenFreshness';
+import { getApiErrorMessage, showAppToast } from '../utilities/toast';
+import {
+  clearClinicCheckInSuppress,
+  isClinicCheckInSuppressed,
+  markClinicCheckInSuppressed,
+} from '../utilities/clinicCheckInSuppress';
 import { formatMoney } from '../utilities/formatters';
+
+const RESCHEDULE_LIVE_TAGS: readonly LiveQueryTag[] = ['Slots'];
 
 function isPaymentSettled(
   paymentStatus?: string | null,
@@ -169,6 +182,8 @@ export type AppointmentDetailViewModel = {
   reschedulePolicy: string;
   rescheduleReasonLabel: string;
   rescheduleError: string | null;
+  rescheduleSlotsLoading: boolean;
+  rescheduleSlotsEmpty: boolean;
   canConfirmReschedule: boolean;
   onBack: () => void;
   onJoin: () => void;
@@ -325,25 +340,42 @@ function futureRescheduleDays(): BookingDay[] {
     .slice(0, 14)
     .map((day) => ({
       ...day,
-      status: 'open',
+      status: 'open' as const,
       morning: [],
       afternoon: [],
       evening: [],
     }));
 }
 
+/**
+ * Same rules as Book Appointment: hide breaks, show past/booked as disabled,
+ * mark the day full when nothing is selectable.
+ */
 function applyApiSlots(
   day: BookingDay,
   apiSlots: { time: string; label: string; status: string }[],
 ): BookingDay {
+  const now = new Date();
   const mapped: TimeSlot[] = apiSlots
-    .filter((slot) => slot.status !== 'break' && slot.status !== 'past')
+    .filter((slot) => slot.status !== 'break')
     .map((slot) => {
       const time = (slot.time || '').slice(0, 5);
+      const [hh, mm] = time.split(':').map(Number);
+      const slotStart = new Date(
+        day.year,
+        day.month,
+        day.day,
+        Number.isFinite(hh) ? hh : 0,
+        Number.isFinite(mm) ? mm : 0,
+        0,
+        0,
+      );
+      const isPastToday =
+        day.isToday && slotStart.getTime() <= now.getTime();
       return {
         id: time,
         labelKey: (slot.label || time) as TranslationKey,
-        booked: slot.status !== 'available',
+        booked: slot.status !== 'available' || isPastToday,
       };
     })
     .filter((slot) => /^\d{2}:\d{2}$/.test(slot.id));
@@ -353,7 +385,10 @@ function applyApiSlots(
     return hour >= 12 && hour < 17;
   });
   const evening = mapped.filter((slot) => Number(slot.id.split(':')[0]) >= 17);
-  return { ...day, status: 'open', morning, afternoon, evening };
+  const anyOpen = mapped.some((slot) => !slot.booked);
+  const status: BookingDay['status'] =
+    mapped.length === 0 ? 'open' : anyOpen ? 'open' : 'full';
+  return { ...day, status, morning, afternoon, evening };
 }
 
 function findSlot(day: BookingDay | undefined, slotId: string | null): TimeSlot | undefined {
@@ -403,6 +438,7 @@ export function useAppointmentDetailController({
   onOrderMedicines?: (launch?: import('../utilities/medicineOrderStage').OrderMedicinesLaunch) => void;
 }): AppointmentDetailViewModel {
   const { language, t } = useLocalization();
+  const dispatch = useAppDispatch();
   const appConfig = useAppConfig();
   const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
   const authUser = useAppSelector((s) => s.auth.user);
@@ -419,7 +455,7 @@ export function useAppointmentDetailController({
 
   const {
     data: serverVisitDetailResponse,
-    error: serverVisitDetailError,
+    error: _serverVisitDetailError,
     refetch: refetchVisitDetail,
   } = useGetVisitDetailQuery(item.id, {
     skip: !isNumericId,
@@ -452,23 +488,6 @@ export function useAppointmentDetailController({
     }
     return undefined;
   }, [rawVisitData, item.id]);
-  useEffect(() => {
-    if (serverVisitDetailResponse) {
-      console.log('📋 [VisitDetail] API:', `GET ${API_BASE_URL}api/Patient/Visits/${item.id}`);
-      console.log('📋 [VisitDetail] Request Payload / Params:', { patientAppId: item.id });
-      console.log(
-        '📋 [VisitDetail] Server response for visit',
-        item.id,
-        ':',
-        JSON.stringify(serverVisitDetailResponse, null, 2),
-      );
-    } else if (serverVisitDetailError) {
-      console.log('❌ [VisitDetail] API:', `GET ${API_BASE_URL}api/Patient/Visits/${item.id}`);
-      console.log('❌ [VisitDetail] Request Payload / Params:', { patientAppId: item.id });
-      console.log('❌ [VisitDetail] Server error for visit', item.id, ':', serverVisitDetailError);
-    }
-  }, [serverVisitDetailResponse, serverVisitDetailError, item.id]);
-
   // Re-fetch visit detail when returning to foreground
   useEffect(() => {
     if (!isAuthenticated || !isNumericId) return;
@@ -575,14 +594,16 @@ export function useAppointmentDetailController({
       void refetchVisitDetail();
     },
     onPendingConfirmation: () => {
-      setPayNowError(t('aptPayNowPending'));
+      showAppToast({ type: 'info', message: t('aptPayNowPending') });
+      setPayNowError(null);
     },
   });
 
 
   useEffect(() => {
     if (payLater.state === 'FAILED' && payLater.errorMessage) {
-      setPayNowError(payLater.errorMessage);
+      showAppToast({ type: 'error', message: payLater.errorMessage });
+      setPayNowError(null);
     }
   }, [payLater.errorMessage, payLater.state]);
   const startMs = useMemo(() => {
@@ -631,6 +652,14 @@ export function useAppointmentDetailController({
   const [clinicCheckInOpen, setClinicCheckInOpen] = useState(false);
   const [clinicCheckInState, setClinicCheckInState] =
     useState<ClinicCheckInState>('ready');
+  /** Ignore stale WAITING from VisitDetail after reschedule until explicit check-in. */
+  const [suppressClinicCheckIn, setSuppressClinicCheckIn] = useState(() =>
+    Boolean(
+      appointment?.id &&
+        (isClinicCheckInSuppressed(appointment.id) ||
+          appointment.suppressClinicCheckIn),
+    ),
+  );
   const [addressCopied, setAddressCopied] = useState(false);
   const [checkedInAtLabel, setCheckedInAtLabel] = useState('');
   const [readyAtLabel, setReadyAtLabel] = useState<string | null>(null);
@@ -656,8 +685,15 @@ export function useAppointmentDetailController({
     setCheckInError(null);
     setClinicCheckInOpen(false);
 
+    const suppress =
+      isClinicCheckInSuppressed(item.id) || Boolean(item.suppressClinicCheckIn);
+    setSuppressClinicCheckIn(suppress);
+
     const initialStatus = (item.visitStatus || '').toUpperCase();
-    if (initialStatus === 'WAITING' || initialStatus === 'WALK-IN') {
+    if (
+      !suppress &&
+      (initialStatus === 'WAITING' || initialStatus === 'WALK-IN')
+    ) {
       setClinicCheckInState('waiting');
     } else {
       setClinicCheckInState('ready');
@@ -679,7 +715,7 @@ export function useAppointmentDetailController({
     setRescheduleNote('');
     setRescheduleError(null);
     payLater.reset();
-  }, [item.id, item.visitStatus, appointment?.id]);
+  }, [item.id, item.visitStatus, item.suppressClinicCheckIn, appointment?.id]);
 
   useEffect(() => {
     if (!visitDetail) return;
@@ -687,6 +723,14 @@ export function useAppointmentDetailController({
     const status = (visitDetail.status || '').toUpperCase();
     console.log('🔍 [VisitDetail Sync] status:', status, 'patientAppId:', visitDetail.patientAppId);
     if (status === 'WAITING' || status === 'WALK-IN') {
+      if (suppressClinicCheckIn) {
+        // API kept pre-reschedule queue status — do not treat as checked in.
+        setClinicCheckInState('ready');
+        setCheckInQueuePosition(null);
+        setCheckInWaitMinutes(null);
+        setCheckedInAtLabel('');
+        return;
+      }
       setClinicCheckInState('waiting');
       if (visitDetail.queuePosition != null) {
         setCheckInQueuePosition(Number(visitDetail.queuePosition));
@@ -696,8 +740,12 @@ export function useAppointmentDetailController({
       setCheckInQueuePosition(null);
       setCheckInWaitMinutes(null);
       setCheckedInAtLabel('');
+      if (suppressClinicCheckIn) {
+        clearClinicCheckInSuppress(item.id);
+        setSuppressClinicCheckIn(false);
+      }
     }
-  }, [visitDetail, item.id]);
+  }, [visitDetail, item.id, suppressClinicCheckIn]);
 
   useEffect(() => {
     if (!waitingRoomOpen || videoCallOpen) {
@@ -786,13 +834,14 @@ export function useAppointmentDetailController({
       (Array.isArray(prescriptionData?.items) &&
         prescriptionData.items.length > 0),
     );
+  // Checked-in UI is driven only by local clinicCheckInState. Raw VisitDetail
+  // WAITING/WALK-IN is synced into that state except after reschedule
+  // (suppressClinicCheckIn), when the API still returns the old queue status.
   const isCheckedIn =
     !isCompleted &&
     !isCancelled &&
     isClinic &&
-    (clinicCheckInState === 'waiting' ||
-      visitStatus === 'WAITING' ||
-      visitStatus === 'WALK-IN');
+    clinicCheckInState === 'waiting';
   const phase: AppointmentPhase =
     isCompleted || isCancelled
       ? 'ended'
@@ -861,43 +910,122 @@ export function useAppointmentDetailController({
 
   const calendarRescheduleDays = useMemo(() => futureRescheduleDays(), []);
   const slotDoctorId = visitDetail?.doctorId;
-  const { data: rescheduleSlotsResponse } = useGetDoctorSlotsQuery(
+  const rescheduleSlotsArgsValid =
+    rescheduleOpen &&
+    slotDoctorId != null &&
+    slotDoctorId > 0 &&
+    /^\d{4}-\d{2}-\d{2}$/.test(rescheduleDayId);
+
+  const {
+    data: rescheduleSlotsResponse,
+    isLoading: rescheduleSlotsQueryLoading,
+    isFetching: rescheduleSlotsFetching,
+    refetch: refetchRescheduleSlots,
+  } = useGetDoctorSlotsQuery(
     { doctorId: slotDoctorId ?? 0, date: rescheduleDayId },
     {
-      skip:
-        !rescheduleOpen ||
-        slotDoctorId == null ||
-        slotDoctorId <= 0 ||
-        !/^\d{4}-\d{2}-\d{2}$/.test(rescheduleDayId),
+      skip: !rescheduleSlotsArgsValid,
+      refetchOnMountOrArgChange: true,
     },
   );
+  const rescheduleSlotsLoading =
+    rescheduleOpen &&
+    (rescheduleSlotsQueryLoading || rescheduleSlotsFetching) &&
+    rescheduleSlotsResponse?.data?.slots == null;
+
+  useInvalidateOnActive(Boolean(rescheduleSlotsArgsValid), RESCHEDULE_LIVE_TAGS);
+  useRefetchOnActive(
+    Boolean(rescheduleSlotsArgsValid),
+    refetchRescheduleSlots,
+    true,
+  );
+
+  const onRefreshRescheduleSlots = useCallback(() => {
+    if (!rescheduleSlotsArgsValid) {
+      return;
+    }
+    dispatch(newBaseApi.util.invalidateTags(['Slots']));
+    void Promise.resolve(refetchRescheduleSlots()).catch(() => undefined);
+  }, [dispatch, refetchRescheduleSlots, rescheduleSlotsArgsValid]);
+
   const rescheduleDays = useMemo(() => {
     const apiSlots = rescheduleSlotsResponse?.data?.slots;
-    return calendarRescheduleDays.map((day) =>
-      day.id === rescheduleDayId && apiSlots ? applyApiSlots(day, apiSlots) : day,
-    );
+    return calendarRescheduleDays.map((day) => {
+      if (day.id !== rescheduleDayId) {
+        return day;
+      }
+      if (!apiSlots) {
+        return day;
+      }
+      return applyApiSlots(day, apiSlots);
+    });
   }, [
     calendarRescheduleDays,
     rescheduleDayId,
     rescheduleSlotsResponse?.data?.slots,
   ]);
 
+  const currentSlotId = `${String(startDate.getHours()).padStart(2, '0')}:${String(
+    startDate.getMinutes(),
+  ).padStart(2, '0')}`;
+
   useEffect(() => {
     if (!rescheduleOpen) {
       return;
     }
-    const slots = rescheduleSlotsResponse?.data?.slots ?? [];
-    const available = slots.find((slot) => slot.status === 'available');
-    const time = available?.time?.slice(0, 5) ?? null;
-    setRescheduleSlotId(time && /^\d{2}:\d{2}$/.test(time) ? time : null);
-  }, [rescheduleDayId, rescheduleOpen, rescheduleSlotsResponse?.data?.slots]);
+    const apiSlots = rescheduleSlotsResponse?.data?.slots;
+    if (!apiSlots) {
+      return;
+    }
+    const selectedDayMeta = calendarRescheduleDays.find(
+      (day) => day.id === rescheduleDayId,
+    );
+    if (!selectedDayMeta) {
+      return;
+    }
+    const mapped = applyApiSlots(selectedDayMeta, apiSlots);
+    const allSlots = [
+      ...mapped.morning,
+      ...mapped.afternoon,
+      ...mapped.evening,
+    ];
+    // Keep current pick if it is still selectable (and not the busy current time).
+    if (rescheduleSlotId) {
+      const stillOk = allSlots.find(
+        (slot) =>
+          slot.id === rescheduleSlotId &&
+          !slot.booked &&
+          slot.id !== currentSlotId,
+      );
+      if (stillOk) {
+        return;
+      }
+    }
+    const available = allSlots.find(
+      (slot) => !slot.booked && slot.id !== currentSlotId,
+    );
+    setRescheduleSlotId(available?.id ?? null);
+  }, [
+    calendarRescheduleDays,
+    currentSlotId,
+    rescheduleDayId,
+    rescheduleOpen,
+    rescheduleSlotId,
+    rescheduleSlotsResponse?.data?.slots,
+  ]);
 
   const selectedRescheduleDay =
     rescheduleDays.find((day) => day.id === rescheduleDayId) ?? rescheduleDays[0];
   const selectedRescheduleSlot = findSlot(selectedRescheduleDay, rescheduleSlotId);
-  const currentSlotId = `${String(startDate.getHours()).padStart(2, '0')}:${String(
-    startDate.getMinutes(),
-  ).padStart(2, '0')}`;
+  const rescheduleSlotsEmpty = Boolean(
+    rescheduleOpen &&
+      !rescheduleSlotsLoading &&
+      rescheduleSlotsResponse != null &&
+      (selectedRescheduleDay?.morning.length ?? 0) +
+        (selectedRescheduleDay?.afternoon.length ?? 0) +
+        (selectedRescheduleDay?.evening.length ?? 0) ===
+        0,
+  );
   const currentTime = clockLabel(startDate);
   const currentAppointmentLine = `${t(weekdayKey(startDate))}, ${compactDate(
     startDate,
@@ -928,9 +1056,11 @@ export function useAppointmentDetailController({
     selectedRescheduleDay.status === 'open' &&
     selectedRescheduleSlot &&
     !selectedRescheduleSlot.booked &&
+    selectedRescheduleSlot.id !== currentSlotId &&
     rescheduleReason &&
     (rescheduleReason !== 'other' || rescheduleNote.trim()) &&
-    !rescheduleSubmitting,
+    !rescheduleSubmitting &&
+    !rescheduleSlotsLoading,
   );
 
   const resetCancelForm = () => {
@@ -1087,6 +1217,8 @@ export function useAppointmentDetailController({
     reschedulePolicy: t('reschedulePolicy').replace('{deadline}', deadlineLabel),
     rescheduleReasonLabel,
     rescheduleError,
+    rescheduleSlotsLoading,
+    rescheduleSlotsEmpty,
     canConfirmReschedule,
     onBack,
     onJoin: () => {
@@ -1264,6 +1396,11 @@ export function useAppointmentDetailController({
       setCancelledSnapshot(item);
       setCancelSheetOpen(false);
       setCancelledOpen(true);
+      // Remove from Home / active lists immediately so it cannot reappear while
+      // CancelAppointment is in flight.
+      if (item.id) {
+        onRemoveAppointment(item.id);
+      }
       if (isNumericId) {
         const reasonCode =
           cancelReason === 'other'
@@ -1276,9 +1413,6 @@ export function useAppointmentDetailController({
           reasonCode,
           reasonText: cancelNote.trim() || undefined,
         });
-      }
-      if (item.id) {
-        onRemoveAppointment(item.id);
       }
     },
     onCloseCancelled: () => {
@@ -1297,15 +1431,37 @@ export function useAppointmentDetailController({
       resetRescheduleForm();
     },
     onSelectRescheduleDay: (id) => {
-      const day = calendarRescheduleDays.find((row) => row.id === id);
-      if (!day || day.status === 'past') {
+      const day =
+        rescheduleDays.find((row) => row.id === id) ??
+        calendarRescheduleDays.find((row) => row.id === id);
+      if (
+        !day ||
+        day.status === 'past' ||
+        day.status === 'closed' ||
+        day.status === 'full'
+      ) {
         return;
       }
       setRescheduleError(null);
+      if (id === rescheduleDayId) {
+        onRefreshRescheduleSlots();
+        return;
+      }
       setRescheduleDayId(id);
       setRescheduleSlotId(null);
     },
-    onSelectRescheduleSlot: setRescheduleSlotId,
+    onSelectRescheduleSlot: (id) => {
+      if (id === currentSlotId) {
+        return;
+      }
+      const day = rescheduleDays.find((row) => row.id === rescheduleDayId);
+      const slot = findSlot(day, id);
+      if (!slot || slot.booked) {
+        return;
+      }
+      setRescheduleError(null);
+      setRescheduleSlotId(id);
+    },
     onOpenRescheduleReason: () => setRescheduleReasonOpen(true),
     onCloseRescheduleReason: () => setRescheduleReasonOpen(false),
     onSelectRescheduleReason: (value) => {
@@ -1328,7 +1484,10 @@ export function useAppointmentDetailController({
       }
       const appointmentTime = selectedRescheduleSlot.id.slice(0, 5);
       if (!/^\d{2}:\d{2}$/.test(appointmentTime) || !isNumericId) {
-        setRescheduleError('Choose an available time from the schedule.');
+        showAppToast({
+          type: 'error',
+          message: 'Choose an available time from the schedule.',
+        });
         return;
       }
       const weekday = t(WEEKDAY_KEYS[selectedRescheduleDay.weekdayIndex]);
@@ -1348,25 +1507,47 @@ export function useAppointmentDetailController({
 
       setRescheduleSubmitting(true);
       setRescheduleError(null);
-      void rescheduleAppointmentMutation({
+      const reschedulePayload = {
         patientAppId: Number(item.id),
         appointmentDate,
         appointmentTime,
         reason: rescheduleNote.trim() || undefined,
-      })
+      };
+      void rescheduleAppointmentMutation(reschedulePayload)
         .unwrap()
         .then(() => {
+          // Success toast from notifyApiResult.
+          // New slot must not inherit prior check-in / queue UI. API may still
+          // return WAITING; suppress until the patient checks in again.
+          markClinicCheckInSuppressed(item.id);
+          setSuppressClinicCheckIn(true);
+          setClinicCheckInState('ready');
+          setClinicCheckInOpen(false);
+          setCheckedInAtLabel('');
+          setCheckInQueuePosition(null);
+          setCheckInWaitMinutes(null);
+          setReadyAtLabel(null);
+          setCheckInError(null);
           onUpdateAppointment(item.id, {
             whenLabel,
             dateLine: daySummary,
             timeLine,
             startsAt: newStartsAt,
+            visitStatus: 'NOT ARRIVED',
+            suppressClinicCheckIn: true,
           });
           setRescheduleOpen(false);
           resetRescheduleForm();
         })
         .catch((err: unknown) => {
-          setRescheduleError(messageFromUnknownError(err));
+          // Prefer notifyApiResult; toast only if base query left no message.
+          if (!getApiErrorMessage(err)) {
+            showAppToast({
+              type: 'error',
+              message: messageFromUnknownError(err),
+            });
+          }
+          setRescheduleError(null);
         })
         .finally(() => {
           setRescheduleSubmitting(false);
@@ -1402,20 +1583,15 @@ export function useAppointmentDetailController({
     },
     onCloseCheckIn: () => setClinicCheckInOpen(false),
     onConfirmCheckIn: () => {
-      console.log(' [Check-In] Request triggered:', {
-        patientAppId: Number(item.id),
-        status: 'WAITING',
-        url: `api/Patient/Visits/${item.id}/CheckIn`,
-      });
       if (!isNumericId || checkInBusy) {
-        console.warn(' [Check-In] Aborted: isNumericId =', isNumericId, 'checkInBusy =', checkInBusy);
         return;
       }
       setCheckInError(null);
       void checkInVisit({ patientAppId: Number(item.id), status: 'WAITING' })
         .unwrap()
         .then((res) => {
-          console.log(' [Check-In] API Success Response:', JSON.stringify(res, null, 2));
+          clearClinicCheckInSuppress(item.id);
+          setSuppressClinicCheckIn(false);
           setCheckedInAtLabel(clockLabel(new Date()));
           setClinicCheckInState('waiting');
           if (res.data?.queuePosition != null) {
@@ -1425,11 +1601,19 @@ export function useAppointmentDetailController({
             setCheckInWaitMinutes(res.data.estimatedWaitMinutes);
           }
           setReadyAtLabel(res.data?.readyAt?.trim() || null);
+          onUpdateAppointment(item.id, {
+            visitStatus: 'WAITING',
+            suppressClinicCheckIn: false,
+          });
         })
         .catch((err: unknown) => {
-          console.log('❌ [Check-In] API Error Response:', JSON.stringify(err, null, 2));
-          console.error('❌ [Check-In] API Error Raw:', err);
-          setCheckInError(messageFromUnknownError(err));
+          if (!getApiErrorMessage(err)) {
+            showAppToast({
+              type: 'error',
+              message: messageFromUnknownError(err),
+            });
+          }
+          setCheckInError(null);
         });
     },
     onTellClinicLate: () => {

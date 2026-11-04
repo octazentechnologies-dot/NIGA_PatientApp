@@ -87,11 +87,6 @@ function DeliveryList({
 
         {/* BE-010 — no price/ETA/distance sort chips */}
 
-        {vm.notice ? (
-          <AppText variant="bodyMd" color={colors.error} raw>
-            {vm.notice}
-          </AppText>
-        ) : null}
         {vm.isLoading ? <LoadingState /> : null}
         {vm.isError ? (
           <ErrorState

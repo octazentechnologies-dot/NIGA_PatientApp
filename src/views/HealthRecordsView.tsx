@@ -18,6 +18,7 @@ import { ConfirmationModal } from '../components/ConfirmationModal';
 import { NotificationBell } from '../components/NotificationBell';
 import { images } from '../config/images';
 import { usePatientTabScrollInset } from '../components/PatientTabBar';
+import { RecordsTabSkeleton } from '../components/skeleton/TabSkeletons';
 import { useConsultationRecordController } from '../controllers/useConsultationRecordController';
 import {
   useHealthRecordsController,
@@ -67,6 +68,7 @@ export function HealthRecordsView({
   onBack,
   initialFilter = 'all',
   titleKey,
+  active = true,
 }: {
   onOpenFollowUpPlan?: () => void;
   onOpenOrderMedicines?: (launch?: import('../utilities/medicineOrderStage').OrderMedicinesLaunch) => void;
@@ -76,8 +78,10 @@ export function HealthRecordsView({
   onBack?: () => void;
   initialFilter?: RecordsFilterId;
   titleKey?: TranslationKey;
+  active?: boolean;
 } = {}) {
   const vm = useHealthRecordsController({
+    active,
     onOpenFollowUpPlan,
     onOpenNotifications,
     onAddMember,
@@ -107,7 +111,12 @@ export function HealthRecordsView({
     active: vm.uploadDocumentOpen,
     onClose: vm.onCloseUploadDocument,
     onSaved: () => vm.onUploadDocumentSaved(),
+    initialMemberId: vm.selectedMemberId,
   });
+
+  if (vm.isLoading) {
+    return <RecordsTabSkeleton />;
+  }
 
   return (
     <View style={styles.root}>
@@ -358,6 +367,7 @@ export function HealthRecordsView({
                 </AppText>
                 <Ionicons name="cloud-upload-outline" size={20} color={colors.muted} />
               </Pressable>
+              {/* TODO(records): Add diary entry — implement later (Symptom Diary from Records FAB).
               <Pressable
                 style={styles.fabMenuItem}
                 onPress={vm.onAddDiary}
@@ -368,6 +378,7 @@ export function HealthRecordsView({
                 </AppText>
                 <Ionicons name="create-outline" size={20} color={colors.muted} />
               </Pressable>
+              */}
             </View>
           ) : null}
           <Pressable
@@ -452,11 +463,20 @@ function TimelineCard({
           >
             <Image source={images.doctorPortrait} style={styles.doctorAvatar} />
             <View style={styles.flex}>
-              <AppText variant="bodyMd" color={colors.ink} weightOverride="600">
-                {vm.t(item.titleKey)}
+              <AppText
+                variant="bodyMd"
+                color={colors.ink}
+                weightOverride="600"
+                raw={Boolean(item.titleText)}
+              >
+                {item.titleText || vm.t(item.titleKey)}
               </AppText>
-              <AppText variant="labelSm" color={colors.muted}>
-                {vm.t(item.metaKey)}
+              <AppText
+                variant="labelSm"
+                color={colors.muted}
+                raw={Boolean(item.metaText)}
+              >
+                {item.metaText || vm.t(item.metaKey)}
               </AppText>
               {item.badgeKey ? (
                 <View style={styles.badge}>
@@ -481,15 +501,39 @@ function TimelineCard({
                   <Ionicons name="medical-outline" size={20} color={colors.primary} />
                 </View>
                 <View style={styles.flex}>
-                  <AppText variant="bodyMd" color={colors.ink} weightOverride="600">
-                    {vm.t(item.titleKey)}
+                  <AppText
+                    variant="bodyMd"
+                    color={colors.ink}
+                    weightOverride="600"
+                    raw={Boolean(item.titleText)}
+                  >
+                    {item.titleText || vm.t(item.titleKey)}
                   </AppText>
-                  <AppText variant="labelSm" color={colors.muted}>
-                    {vm.t(item.metaKey)}
+                  <AppText
+                    variant="labelSm"
+                    color={colors.muted}
+                    raw={Boolean(item.metaText)}
+                  >
+                    {item.metaText || vm.t(item.metaKey)}
                   </AppText>
                   {item.badgeKey ? (
-                    <View style={styles.badge}>
-                      <AppText variant="labelSm" color={colors.success} weightOverride="600">
+                    <View
+                      style={[
+                        styles.badge,
+                        item.badgeKey === 'recordsRxExpired'
+                          ? styles.badgeExpired
+                          : null,
+                      ]}
+                    >
+                      <AppText
+                        variant="labelSm"
+                        color={
+                          item.badgeKey === 'recordsRxExpired'
+                            ? colors.warning
+                            : colors.success
+                        }
+                        weightOverride="600"
+                      >
                         {vm.t(item.badgeKey)}
                       </AppText>
                     </View>
@@ -515,46 +559,70 @@ function TimelineCard({
 
         {item.kind === 'document' ? (
           <>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => {
-                if (item.documentId != null) {
-                  vm.onViewDocument(item.documentId);
-                }
-              }}
-              style={styles.row}
-            >
+            <View style={styles.row}>
               <View style={styles.docThumb}>
                 <Ionicons name="document-text-outline" size={22} color={colors.muted} />
               </View>
               <View style={styles.flex}>
                 <AppText variant="bodyMd" color={colors.ink} weightOverride="600" raw>
-                  {vm.t(item.titleKey)}
+                  {item.titleText?.trim() || vm.t(item.titleKey)}
                 </AppText>
                 <AppText variant="labelSm" color={colors.muted} raw>
-                  {vm.t(item.metaKey)}
+                  {item.metaText?.trim() || vm.t(item.metaKey)}
                 </AppText>
               </View>
               {item.documentId != null ? (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={vm.t('notifActionDelete')}
-                  onPress={() =>
-                    vm.onPromptDeleteDocument(
-                      item.documentId!,
-                      vm.t(item.titleKey),
-                    )
-                  }
-                  hitSlop={8}
-                  style={{ minWidth: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center' }}
-                >
-                  <Ionicons name="trash-outline" size={22} color={colors.muted} />
-                </Pressable>
+                <>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={vm.t('recordsDownload')}
+                    accessibilityState={{ busy: vm.isDownloadingDocument }}
+                    disabled={vm.isDownloadingDocument}
+                    onPress={() => vm.onViewDocument(item.documentId!)}
+                    hitSlop={8}
+                    style={styles.docActionHit}
+                  >
+                    <Ionicons
+                      name="download-outline"
+                      size={22}
+                      color={
+                        vm.isDownloadingDocument
+                          ? colors.muted
+                          : colors.primary
+                      }
+                    />
+                  </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={vm.t('notifActionDelete')}
+                    onPress={() =>
+                      vm.onPromptDeleteDocument(
+                        item.documentId!,
+                        item.titleText?.trim() || vm.t(item.titleKey),
+                      )
+                    }
+                    hitSlop={8}
+                    style={styles.docActionHit}
+                  >
+                    <Ionicons
+                      name="trash-outline"
+                      size={22}
+                      color={colors.error}
+                    />
+                  </Pressable>
+                </>
               ) : null}
-            </Pressable>
-            {item.noteKey ? (
-              <AppText variant="labelSm" color={colors.muted} style={styles.docNote}>
-                {vm.t(item.noteKey)}
+            </View>
+            {item.descriptionText?.trim() || item.noteKey ? (
+              <AppText
+                variant="labelSm"
+                color={colors.muted}
+                style={styles.docNote}
+                raw={Boolean(item.descriptionText?.trim())}
+              >
+                {item.descriptionText?.trim()
+                  ? item.descriptionText.trim()
+                  : vm.t(item.noteKey!)}
               </AppText>
             ) : null}
           </>
@@ -1059,6 +1127,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
   },
+  badgeExpired: {
+    backgroundColor: colors.warningContainer,
+  },
   iconBubble: {
     width: 40,
     height: 40,
@@ -1089,6 +1160,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.outlineVariant,
     backgroundColor: colors.page,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  docActionHit: {
+    minWidth: 48,
+    minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -59,13 +59,19 @@ export function useConsentController({
     isLoading: isConsentsLoading,
     isError: isConsentsError,
     refetch,
-  } = useGetConsentsQuery(undefined, { skip: !active || !isAuthenticated });
+  } = useGetConsentsQuery(undefined, {
+    skip: !active || !isAuthenticated,
+    refetchOnMountOrArgChange: true,
+  });
 
   const {
     data: privacyStatusResponse,
     isLoading: isPrivacyLoading,
     isError: isPrivacyError,
-  } = useGetPrivacyStatusQuery(undefined, { skip: !active || !isAuthenticated });
+  } = useGetPrivacyStatusQuery(undefined, {
+    skip: !active || !isAuthenticated,
+    refetchOnMountOrArgChange: true,
+  });
 
   const privacyData = privacyStatusResponse?.data;
 

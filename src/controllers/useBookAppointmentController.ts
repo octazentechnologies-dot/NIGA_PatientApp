@@ -41,8 +41,16 @@ import { useCancelAppointmentMutation } from '../store/api/new/visitsApi';
 import { useCreateAppointmentRequestMutation } from '../store/api/new/appointmentRequestsApi';
 import { createIdempotencyKey } from '../utilities/idempotency';
 import { formatMoney } from '../utilities/formatters';
-import { extractErrorMessage } from '../store/api/new/newBaseApi';
+import { extractErrorMessage, newBaseApi } from '../store/api/new/newBaseApi';
 import { clearPendingPayment } from '../payments';
+import {
+  useInvalidateOnActive,
+  useRefetchOnActive,
+  type LiveQueryTag,
+} from '../utilities/rtkScreenFreshness';
+import { showAppToast } from '../utilities/toast';
+
+const BOOKING_LIVE_TAGS: readonly LiveQueryTag[] = ['Slots'];
 
 export type PaymentStatus = 'success' | 'failed' | 'pending';
 
@@ -86,6 +94,9 @@ export type BookAppointmentViewModel = {
   taxesLabel: string;
   slotsLoading: boolean;
   slotsEmpty: boolean;
+  isSlotsRefreshing: boolean;
+  onRefreshSlots: () => void;
+  /** @deprecated Prefer toasts — kept null for callers that still destructure. */
   bookingError: string | null;
   holdExpiresAt: string | null;
   /** From booking create — required for ConsultOrders. */
@@ -115,6 +126,11 @@ export type BookAppointmentViewModel = {
     holdExpiresAt?: string;
     consultFee?: number;
   }>;
+  /**
+   * Release an unpaid online hold without leaving Payment or clearing the
+   * selected day/slot — used before "Pay at Clinic" after a cancelled Checkout.
+   */
+  onReleaseUnpaidHold: (reasonText?: string) => Promise<void>;
   paymentFailureReason: string | null;
   onOpenPaymentStatus: (status: PaymentStatus, reason?: string | null) => void;
   onClosePaymentStatus: () => void;
@@ -192,6 +208,7 @@ export function useBookAppointmentController({
   const isNumeric = Boolean(doctorId) && /^\d+$/.test(doctorId);
   const { data: doctorDetailResponse } = useGetDoctorByIdQuery(doctorId, {
     skip: !isNumeric || !active,
+    refetchOnMountOrArgChange: true,
   });
   const emptyShell = useMemo(
     (): DoctorProfileSeed => ({
@@ -287,7 +304,7 @@ export function useBookAppointmentController({
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | null>(null);
   const [paymentFailureReason, setPaymentFailureReason] = useState<string | null>(null);
   const [mode, setMode] = useState<ConsultMode>('video');
-  const [bookingError, setBookingError] = useState<string | null>(null);
+  const bookingError: string | null = null;
   const [holdExpiresAt, setHoldExpiresAt] = useState<string | null>(null);
   const [patientAppId, setPatientAppId] = useState<number | null>(null);
   const [bookingToken, setBookingToken] = useState<string | null>(null);
@@ -307,6 +324,11 @@ export function useBookAppointmentController({
     () => firstSelectableDay(buildDaysForMonth(today.getFullYear(), today.getMonth()))?.id ?? '',
   );
   const [slotId, setSlotId] = useState<string | null>(null);
+  /** Locked when entering Payment so Checkout cancel / slot refetch cannot wipe the choice. */
+  const bookingIntentRef = useRef<{
+    appointmentDate: string;
+    appointmentTime: string;
+  } | null>(null);
 
   const [cancelAppointmentMutation] = useCancelAppointmentMutation();
   const patientAppIdRef = useRef<number | null>(null);
@@ -314,7 +336,7 @@ export function useBookAppointmentController({
   const paymentStatusRef = useRef<PaymentStatus | null>(null);
   paymentStatusRef.current = paymentStatus;
 
-  const onCancelHold = useCallback(
+  const onReleaseUnpaidHold = useCallback(
     async (reasonText?: string) => {
       const id = patientAppIdRef.current;
       if (id != null && paymentStatusRef.current !== 'success') {
@@ -322,24 +344,31 @@ export function useBookAppointmentController({
           await cancelAppointmentMutation({
             patientAppId: id,
             reasonCode: 'PatientRequest',
-            reasonText: reasonText || 'Payment cancelled by user',
+            reasonText: reasonText || 'Switching to pay at clinic',
           }).unwrap();
         } catch (err) {
-          console.warn('[BookAppointment] Cancel hold failed (soft fail):', err);
+          console.warn('[BookAppointment] Release hold failed (soft fail):', err);
         }
       }
       void clearPendingPayment();
-      setPaymentStatus(null);
-      setPaymentOpen(false);
-      setReviewOpen(false);
       setPatientAppId(null);
       setBookingToken(null);
       setHoldExpiresAt(null);
       setLastPaymentOrderId(null);
       setHoldConsultFee(null);
-      setSlotId(null);
     },
     [cancelAppointmentMutation],
+  );
+
+  const onCancelHold = useCallback(
+    async (reasonText?: string) => {
+      await onReleaseUnpaidHold(reasonText || 'Payment cancelled by user');
+      setPaymentStatus(null);
+      setPaymentOpen(false);
+      setReviewOpen(false);
+      // Keep day/slot + bookingIntent — user may reopen Payment from review.
+    },
+    [onReleaseUnpaidHold],
   );
 
   const onResetBooking = useCallback((options?: { skipCancel?: boolean }) => {
@@ -368,13 +397,13 @@ export function useBookAppointmentController({
     setPaymentOpen(false);
     setPaymentStatus(null);
     setPaymentFailureReason(null);
-    setBookingError(null);
     setHoldExpiresAt(null);
     setPatientAppId(null);
     setBookingToken(null);
     setLastPaymentOrderId(null);
     setHoldConsultFee(null);
     setSlotId(null);
+    bookingIntentRef.current = null;
     setWaitlistJoined(false);
   }, [cancelAppointmentMutation, initialMemberId, reduxSelectedMemberId]);
 
@@ -403,6 +432,7 @@ export function useBookAppointmentController({
   const isNumericDoctorId = !isNaN(Number(doctorId));
   const { data: doctorFeesResponse } = useGetDoctorFeesQuery(doctorId, {
     skip: !isNumericDoctorId,
+    refetchOnMountOrArgChange: 60,
   });
 
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
@@ -422,14 +452,38 @@ export function useBookAppointmentController({
     useBookAsFamilyMutation();
   const bookingInFlight = createBookingLoading || bookAsFamilyLoading;
   const [waitlistJoined, setWaitlistJoined] = useState(false);
+  const [isSlotsRefreshing, setIsSlotsRefreshing] = useState(false);
 
   const {
     data: slotsResponse,
     isFetching: slotsLoading,
+    refetch: refetchSlots,
   } = useGetDoctorSlotsQuery(
     { doctorId, date: dayId },
-    { skip: !isNumericDoctorId || !dayId || !active },
+    {
+      skip: !isNumericDoctorId || !dayId || !active,
+      refetchOnMountOrArgChange: true,
+    },
   );
+
+  // Invalidate after subscribe; also refetch so empty-day cache cannot stick.
+  useInvalidateOnActive(active && isNumericDoctorId, BOOKING_LIVE_TAGS);
+  useRefetchOnActive(
+    active,
+    refetchSlots,
+    isNumericDoctorId && Boolean(dayId),
+  );
+
+  const onRefreshSlots = useCallback(() => {
+    if (!isNumericDoctorId || !dayId || !active) {
+      return;
+    }
+    setIsSlotsRefreshing(true);
+    dispatch(newBaseApi.util.invalidateTags(['Slots']));
+    void Promise.resolve(refetchSlots())
+      .catch(() => undefined)
+      .finally(() => setIsSlotsRefreshing(false));
+  }, [active, dayId, dispatch, isNumericDoctorId, refetchSlots]);
 
   const days = useMemo((): BookingDay[] => {
     if (!isNumericDoctorId) {
@@ -512,9 +566,23 @@ export function useBookAppointmentController({
     if (!slotsResponse?.data?.slots || !dayId) {
       return;
     }
+    // Never clobber the user's pick while Payment/Review is open — creating a
+    // hold invalidates Slots and would otherwise wipe slotId mid-checkout.
+    if (paymentOpen || reviewOpen) {
+      return;
+    }
+    const slots = slotsResponse.data.slots;
+    if (slotId) {
+      const stillPresent = slots.some(
+        (slot) => (slot.time || '').slice(0, 5) === slotId,
+      );
+      if (stillPresent) {
+        return;
+      }
+    }
     const selectedDayMeta = calendarDays.find((day) => day.id === dayId);
     const now = new Date();
-    const available = slotsResponse.data.slots.find((slot) => {
+    const available = slots.find((slot) => {
       if (slot.status !== 'available') {
         return false;
       }
@@ -535,7 +603,14 @@ export function useBookAppointmentController({
       return slotStart.getTime() > now.getTime();
     });
     setSlotId(available ? available.time.slice(0, 5) : null);
-  }, [calendarDays, dayId, slotsResponse?.data?.slots]);
+  }, [
+    calendarDays,
+    dayId,
+    paymentOpen,
+    reviewOpen,
+    slotId,
+    slotsResponse?.data?.slots,
+  ]);
 
   const { data: homeDashboardResponse } = useGetHomeDashboardQuery(undefined, {
     skip: !isAuthenticated,
@@ -565,12 +640,15 @@ export function useBookAppointmentController({
     if (waitlistJoined) return;
     const docIdNum = Number(profile.id);
     if (!docIdNum) {
-      setBookingError('Doctor id is required to ask for a time.');
+      showAppToast({
+        type: 'error',
+        message: 'Doctor id is required to ask for a time.',
+      });
       return;
     }
     const requestedDate = selectedDay?.id || dayId || '';
     if (!requestedDate) {
-      setBookingError('Select a date first.');
+      showAppToast({ type: 'error', message: 'Select a date first.' });
       return;
     }
     // Contract §7 — preferred time; use selected slot or midday placeholder.
@@ -589,16 +667,17 @@ export function useBookAppointmentController({
         idempotencyKey,
       }).unwrap();
       setWaitlistJoined(true);
-      setBookingError(null);
+      // Success toast comes from notifyApiResult on the write.
     } catch (err) {
+      // API failure toast already shown by notifyApiResult; only cover gaps.
       const e = err as { data?: { code?: string; message?: string } };
-      if (e?.data?.code === 'IDEMPOTENCY_CONFLICT') {
-        setBookingError(
-          e.data.message ||
-          'That request conflicted with a previous attempt. Please try again.',
-        );
-      } else {
-        setBookingError(extractErrorMessage(err));
+      if (e?.data?.code === 'IDEMPOTENCY_CONFLICT' && e.data.message) {
+        showAppToast({ type: 'error', message: e.data.message });
+      } else if (!e?.data?.message) {
+        showAppToast({
+          type: 'error',
+          message: extractErrorMessage(err),
+        });
       }
     }
   }, [
@@ -666,12 +745,16 @@ export function useBookAppointmentController({
     !isFull &&
     !slotsEmpty;
 
-  // Drop selection if it became past / unavailable after slot remap.
+  // Drop selection if it became past / unavailable — but not while we hold it
+  // for Payment (own hold looks "booked" after Slots refetch).
   useEffect(() => {
+    if (paymentOpen || reviewOpen || patientAppId != null) {
+      return;
+    }
     if (slotId && selectedSlot?.booked) {
       setSlotId(null);
     }
-  }, [selectedSlot?.booked, slotId]);
+  }, [patientAppId, paymentOpen, reviewOpen, selectedSlot?.booked, slotId]);
   const doctorFeeLabel = feeLabel;
   // Contract: platformFee only from visit/payment — never invent 90.
   const platformFeeLabel = '';
@@ -752,6 +835,8 @@ export function useBookAppointmentController({
     taxesLabel,
     slotsLoading,
     slotsEmpty,
+    isSlotsRefreshing,
+    onRefreshSlots,
     bookingError,
     holdExpiresAt,
     patientAppId,
@@ -765,21 +850,33 @@ export function useBookAppointmentController({
       setPaymentFailureReason(null);
       setPaymentOpen(false);
       setReviewOpen(false);
-      setBookingError(null);
     },
     onOpenPayment: () => {
       // Proceed To Pay — navigate only; Bookings / BookAs run from Payment buttons.
       if (!selectedDay || !selectedSlot) {
         return;
       }
-      setBookingError(null);
+      bookingIntentRef.current = {
+        appointmentDate: selectedDay.id,
+        appointmentTime: selectedSlot.id,
+      };
       setLastPaymentOrderId(null);
       setPaymentStatus(null);
       setPaymentFailureReason(null);
       setPaymentOpen(true);
     },
     onSubmitBooking: async (payment) => {
-      if (!selectedDay || !selectedSlot) {
+      if (selectedDay && selectedSlot) {
+        bookingIntentRef.current = {
+          appointmentDate: selectedDay.id,
+          appointmentTime: selectedSlot.id,
+        };
+      }
+      const appointmentDate =
+        bookingIntentRef.current?.appointmentDate ?? selectedDay?.id;
+      const appointmentTime =
+        bookingIntentRef.current?.appointmentTime ?? selectedSlot?.id;
+      if (!appointmentDate || !appointmentTime) {
         throw new Error('Select a day and time slot first.');
       }
       const docIdNum = Number(profile.id);
@@ -800,8 +897,6 @@ export function useBookAppointmentController({
       const consultMode: 'InClinic' | 'Tele' = mode === 'clinic' ? 'InClinic' : 'Tele';
       const visitType: 'InClinic' | 'Tele' = consultMode;
       const isTele = consultMode === 'Tele';
-      const appointmentDate = selectedDay.id;
-      const appointmentTime = selectedSlot.id;
       const effectiveUserId =
         typeof authUser?.userId === 'number'
           ? authUser.userId
@@ -886,14 +981,10 @@ export function useBookAppointmentController({
           razorpay_payment_id,
         };
 
-        console.log('🚀 [BookAppointment] API: POST api/Bookings/BookAs (Family Member)');
-        console.log('📦 [BookAppointment] Request Payload:', JSON.stringify(familyPayload, null, 2));
         try {
           const booking = await bookAsFamilyMutation(familyPayload).unwrap();
-          console.log('✅ [BookAppointment] Server Response:', JSON.stringify(booking, null, 2));
           data = booking.data;
         } catch (err) {
-          console.log('❌ [BookAppointment] Server Error:', JSON.stringify(err, null, 2));
           throw err;
         }
       } else {
@@ -918,14 +1009,10 @@ export function useBookAppointmentController({
           ),
         };
 
-        console.log('🚀 [BookAppointment] API: POST api/Bookings (Self)');
-        console.log('📦 [BookAppointment] Request Payload:', JSON.stringify(selfPayload, null, 2));
         try {
           const booking = await createBookingMutation(selfPayload).unwrap();
-          console.log('✅ [BookAppointment] Server Response:', JSON.stringify(booking, null, 2));
           data = booking.data;
         } catch (err) {
-          console.log('❌ [BookAppointment] Server Error:', JSON.stringify(err, null, 2));
           throw err;
         }
       }
@@ -947,6 +1034,7 @@ export function useBookAppointmentController({
     onClosePayment: () => {
       void onCancelHold('Payment cancelled by user');
     },
+    onReleaseUnpaidHold,
     onOpenPaymentStatus: (status, reason) => {
       paymentStatusRef.current = status;
       setPaymentStatus(status);
@@ -995,6 +1083,11 @@ export function useBookAppointmentController({
     onSelectDay: (id) => {
       const next = days.find((day) => day.id === id);
       if (!next || next.status === 'closed' || next.status === 'past') {
+        return;
+      }
+      // Re-tap selected day = explicit refresh (admin may have upserted schedule).
+      if (id === dayId) {
+        onRefreshSlots();
         return;
       }
       setDayId(id);

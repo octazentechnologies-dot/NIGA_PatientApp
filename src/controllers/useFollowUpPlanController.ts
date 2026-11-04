@@ -114,10 +114,12 @@ export function useFollowUpPlanController({
     refetch,
   } = useGetFollowUpsQuery(undefined, {
     skip: !isAuthenticated,
+    refetchOnMountOrArgChange: true,
   });
 
   const { data: visitsResponse } = useGetPatientVisitsQuery(undefined, {
     skip: !isAuthenticated,
+    refetchOnMountOrArgChange: true,
   });
 
   const [completeFollowUp] = useCompleteFollowUpMutation();

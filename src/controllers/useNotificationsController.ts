@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
+import { clearNotificationTray } from '../services/notifications';
 import {
   useGetNotificationsQuery,
   useGetUnreadNotificationCountQuery,
@@ -146,11 +147,12 @@ export function useNotificationsController({
     refetch,
   } = useGetNotificationsQuery(
     { pageNumber, pageSize },
-    { skip: !isAuthenticated },
+    { skip: !isAuthenticated, refetchOnMountOrArgChange: true },
   );
   const { data: unreadFromApi, refetch: refetchUnread } =
     useGetUnreadNotificationCountQuery(undefined, {
       skip: !isAuthenticated,
+      refetchOnMountOrArgChange: true,
     });
   const [markNotificationReadApi] = useMarkNotificationReadMutation();
   const [markAllReadApi] = useMarkAllNotificationsReadMutation();
@@ -217,6 +219,8 @@ export function useNotificationsController({
       prev.map((item) => (item.id === id ? { ...item, unread: false } : item)),
     );
     setRevealedId(null);
+    // Keep the OS notification shade in sync with the inbox after a read.
+    void clearNotificationTray();
     if (!isAuthenticated) return;
     const numId = Number(id);
     if (!Number.isNaN(numId) && numId > 0) {
@@ -246,6 +250,7 @@ export function useNotificationsController({
     onMarkAllRead: () => {
       setAccumulated((prev) => prev.map((item) => ({ ...item, unread: false })));
       setRevealedId(null);
+      void clearNotificationTray();
       if (!isAuthenticated) return;
       void markAllReadApi()
         .unwrap()

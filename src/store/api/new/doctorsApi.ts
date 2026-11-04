@@ -198,21 +198,27 @@ export const doctorsApi = newBaseApi.injectEndpoints({
         url: `api/Public/Doctors/${doctorId}/Slots`,
         params: { date },
       }),
+      // Schedules can appear while the app is open (admin upsert). Never keep
+      // an empty/hasSchedule:false cache after the subscriber unmounts.
+      keepUnusedDataFor: 0,
       providesTags: (_result, _err, { doctorId, date }) => [
         { type: 'Slots', id: `${doctorId}-${date}` },
       ],
     }),
     getDoctorFees: build.query<DoctorFeeResponse, number | string>({
       query: (doctorId) => `api/Fees/Public/${doctorId}`,
+      keepUnusedDataFor: 30,
     }),
     getDoctorReviews: build.query<DoctorReviewsResponse, number | string>({
       query: (doctorId) => `api/Reviews/Doctor/${doctorId}`,
+      keepUnusedDataFor: 30,
     }),
     getDoctorTeleAvailability: build.query<
       DoctorTeleAvailabilityResponse,
       number | string
     >({
       query: (doctorId) => `api/Tele/Availability/${doctorId}`,
+      keepUnusedDataFor: 15,
     }),
     getDoctorFilterOptions: build.query<DoctorFilterOptionsData, void>({
       query: () => 'api/Public/Doctors/FilterOptions',

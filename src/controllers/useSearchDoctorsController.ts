@@ -155,7 +155,7 @@ export function useSearchDoctorsController({
       pageNumber: 1,
       pageSize: 5,
     },
-    { skip: !active || !selectedCityLabel },
+    { skip: !active || !selectedCityLabel, refetchOnMountOrArgChange: true },
   );
 
   const doctors = useMemo<NearbyDoctor[]>(() => {

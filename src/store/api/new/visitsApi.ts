@@ -272,6 +272,7 @@ export const visitsApi = newBaseApi.injectEndpoints({
         { type: 'VisitDetail', id: String(body.patientAppId) },
         'Visits',
         'Timeline',
+        'Slots',
       ],
     }),
     cancelAppointment: build.mutation<
@@ -287,6 +288,7 @@ export const visitsApi = newBaseApi.injectEndpoints({
         { type: 'VisitDetail', id: String(body.patientAppId) },
         'Visits',
         'Timeline',
+        'Slots',
       ],
     }),
     getRefundPolicy: build.query<RefundPolicyResponse, number | string>({

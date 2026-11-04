@@ -84,7 +84,10 @@ export function RescheduleAppointmentView(vm: AppointmentDetailViewModel) {
           >
             {vm.rescheduleDays.map((day) => {
               const selected = day.id === selectedDay?.id;
-              const disabled = day.status === 'closed' || day.status === 'full';
+              const disabled =
+                day.status === 'closed' ||
+                day.status === 'full' ||
+                day.status === 'past';
               return (
                 <Pressable
                   key={day.id}
@@ -114,7 +117,27 @@ export function RescheduleAppointmentView(vm: AppointmentDetailViewModel) {
             })}
           </ScrollView>
 
-          {selectedDay ? (
+          {vm.rescheduleSlotsLoading ? (
+            <AppText variant="bodyMd" color={colors.muted} raw>
+              Loading slots…
+            </AppText>
+          ) : null}
+
+          {vm.rescheduleSlotsEmpty ? (
+            <AppText variant="bodyMd" color={colors.muted} raw>
+              No slots available for this day.
+            </AppText>
+          ) : null}
+
+          {!vm.rescheduleSlotsLoading &&
+          selectedDay &&
+          selectedDay.status === 'full' ? (
+            <AppText variant="bodyMd" color={colors.muted} raw>
+              All times are booked for this day. Pick another date.
+            </AppText>
+          ) : null}
+
+          {!vm.rescheduleSlotsLoading && selectedDay ? (
             <>
               <SlotRow
                 title={vm.t('rescheduleMorning')}
@@ -219,11 +242,6 @@ export function RescheduleAppointmentView(vm: AppointmentDetailViewModel) {
             {vm.nextShortWhen || '—'}
           </AppText>
         </View>
-        {vm.rescheduleError ? (
-          <AppText variant="bodyMd" color={colors.error} raw>
-            {vm.rescheduleError}
-          </AppText>
-        ) : null}
         <Pressable
           accessibilityRole="button"
           disabled={!vm.canConfirmReschedule}

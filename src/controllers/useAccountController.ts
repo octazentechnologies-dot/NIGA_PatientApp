@@ -24,6 +24,8 @@ export type DataRequestHistoryRow = {
 export type AccountViewModel = {
   language: AppLanguage;
   t: (key: TranslationKey) => string;
+  /** True while profile is loading and no name is available yet. */
+  isLoading: boolean;
   profileName: string;
   profileInitials: string;
   profilePhone: string;
@@ -98,7 +100,11 @@ export function useAccountController({
   const authUser = useAppSelector((state) => state.auth.user);
   const authMobile = useAppSelector((state) => state.auth.mobile);
 
-  const { data: profileQueryResponse } = useGetPatientProfileQuery(undefined, {
+  const {
+    data: profileQueryResponse,
+    isLoading: profileLoading,
+  } = useGetPatientProfileQuery(undefined, {
+    refetchOnMountOrArgChange: 60,
     skip: !isAuthenticated,
   });
   const [updatePatientProfile] = useUpdatePatientProfileMutation();
@@ -172,9 +178,13 @@ export function useAccountController({
     authMobile ||
     '';
 
+  const isLoading =
+    isAuthenticated && profileLoading && profileQueryResponse == null;
+
   return {
     language,
     t,
+    isLoading,
     profileName,
     profileInitials,
     profilePhone,

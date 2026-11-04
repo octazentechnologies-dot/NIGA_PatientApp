@@ -191,6 +191,30 @@ export function getLastRegisteredPushToken(): string | null {
   return lastRegisteredToken;
 }
 
+/**
+ * Clear presented OS notifications (shade/tray) and the app icon badge.
+ * Used after inbox mark-read / mark-all-read so the tray matches the in-app inbox.
+ */
+export async function clearNotificationTray(): Promise<void> {
+  if (Platform.OS === 'web') {
+    return;
+  }
+  try {
+    await Notifications.dismissAllNotificationsAsync();
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'dismissAllNotificationsAsync failed';
+    logNotifications('Clear tray failed', message);
+  }
+  try {
+    await Notifications.setBadgeCountAsync(0);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'setBadgeCountAsync failed';
+    logNotifications('Clear badge failed', message);
+  }
+}
+
 export function attachNotificationListeners(): NotificationListenerCleanup {
   const received = Notifications.addNotificationReceivedListener((notification) => {
     const data = parseNotificationPayload(notification);

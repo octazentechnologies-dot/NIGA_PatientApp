@@ -8,13 +8,21 @@ export type TimelineAppointment = {
   at: string;
   refId: number;
   title: string;
+  doctorName?: string | null;
+  appointmentType?: string | null;
+  consultationCompleted?: boolean | null;
+  prescriptionSigned?: boolean | null;
 };
 
 export type TimelinePrescription = {
   erxSnapshotId: number;
   patientAppId: number;
-  patientId: number;
-  doctorId: number;
+  patientId?: number;
+  doctorId?: number;
+  doctorName?: string | null;
+  remedyCount?: number | null;
+  isExpired?: boolean | null;
+  expiresAt?: string | null;
   status: string;
   signedAt: string;
 };
@@ -87,11 +95,25 @@ export type GetPrescriptionsListResponse = {
   message?: string;
 };
 
+/** API documentType values for POST /api/Patient/Documents. */
+export type PatientDocumentType =
+  | 'Report'
+  | 'Prescription'
+  | 'LabReport'
+  | 'Invoice'
+  | 'Other';
+
 export type ApiPatientDocument = {
   documentId: number;
   fileName: string;
   mime: string;
   size?: number;
+  /** Owning patient — self or family member. */
+  patientId?: number;
+  documentType?: PatientDocumentType | string;
+  description?: string | null;
+  /** Prefer when present; older payloads may only send createdAt. */
+  uploadedAt?: string | null;
   createdAt?: string;
   createdBy?: number;
   downloadUrl?: string;
@@ -108,6 +130,17 @@ export type GetDocumentByIdResponse = {
   data?: ApiPatientDocument;
   code?: string;
   message?: string;
+};
+
+export type UploadDocumentRequest = {
+  /** expo-file-system File / Blob part — do not set Content-Type on FormData. */
+  file: Blob;
+  fileName: string;
+  mimeType?: string;
+  /** Family member patientId; omit for logged-in self. */
+  patientId?: number | null;
+  documentType?: PatientDocumentType | string | null;
+  description?: string | null;
 };
 
 export type UploadDocumentResponse = {
@@ -257,7 +290,6 @@ function normalizePrescription(raw: unknown): GetPrescriptionResponse {
 function normalizePrescriptionList(payload: unknown): GetPrescriptionsListResponse {
   const data: ApiPrescriptionListItem[] = [];
   const rows = unwrapRows(payload);
-  console.log('💊 [normalizePrescriptionList] Unwrapped rows count:', rows.length, 'Payload:', JSON.stringify(payload));
   for (const raw of rows) {
     const row = asRecord(raw);
     if (!row) continue;
@@ -357,12 +389,10 @@ export const recordsApi = newBaseApi.injectEndpoints({
             ? { patientId: arg.patientId }
             : undefined;
         const history = await baseQuery({ url: 'api/Erx/History', params });
-        console.log('💊 [api/Erx/History] response:', JSON.stringify(history, null, 2));
         if (!history.error && history.data) {
           return { data: normalizePrescriptionList(history.data) };
         }
         const legacy = await baseQuery({ url: 'api/Erx/Prescriptions', params });
-        console.log('💊 [api/Erx/Prescriptions] response:', JSON.stringify(legacy, null, 2));
         if (!legacy.error && legacy.data) {
           return { data: normalizePrescriptionList(legacy.data) };
         }
@@ -396,7 +426,15 @@ export const recordsApi = newBaseApi.injectEndpoints({
             ? { patientId: params.patientId }
             : undefined,
       }),
-      providesTags: ['Documents'],
+      providesTags: (_result, _err, arg) => {
+        const patientId =
+          arg && typeof arg === 'object' && arg.patientId != null && arg.patientId > 0
+            ? arg.patientId
+            : null;
+        return patientId != null
+          ? [{ type: 'Documents', id: `patient-${patientId}` }, 'Documents']
+          : ['Documents'];
+      },
     }),
     getDocumentById: build.query<GetDocumentByIdResponse, number | string>({
       query: (documentId) => `api/Patient/Documents/${documentId}`,
@@ -405,12 +443,27 @@ export const recordsApi = newBaseApi.injectEndpoints({
         'Documents',
       ],
     }),
-    uploadDocument: build.mutation<UploadDocumentResponse, FormData>({
-      query: (formData) => ({
-        url: 'api/Patient/Documents',
-        method: 'POST',
-        body: formData,
-      }),
+    uploadDocument: build.mutation<UploadDocumentResponse, UploadDocumentRequest>({
+      query: ({ file, fileName, patientId, documentType, description }) => {
+        const formData = new FormData();
+        formData.append('file', file, fileName);
+        if (patientId != null && Number(patientId) > 0) {
+          formData.append('patientId', String(patientId));
+        }
+        const type = String(documentType || '').trim();
+        if (type) {
+          formData.append('documentType', type);
+        }
+        const desc = String(description || '').trim().slice(0, 500);
+        if (desc) {
+          formData.append('description', desc);
+        }
+        return {
+          url: 'api/Patient/Documents',
+          method: 'POST',
+          body: formData,
+        };
+      },
       invalidatesTags: ['Documents', 'Timeline'],
     }),
     deleteDocument: build.mutation<DeleteDocumentResponse, number | string>({

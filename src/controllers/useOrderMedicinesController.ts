@@ -23,11 +23,16 @@ import {
 import { useGetPatientProfileQuery } from '../store/api/new/patientProfileApi';
 import { useAppSelector } from '../store/hooks';
 import { messageFromUnknownError } from '../utilities/apiResponse';
+import { getApiErrorMessage, showAppToast } from '../utilities/toast';
 import {
   useChoosePharmacyController,
   type ChoosePharmacyViewModel,
 } from './useChoosePharmacyController';
 import { formatAddressLines } from './useMedicineCheckoutController';
+
+function toastOrderError(message: string): void {
+  showAppToast({ type: 'error', message });
+}
 
 export type OrderMedicineItem = {
   id: string;
@@ -283,7 +288,8 @@ export function useOrderMedicinesController({
 
   const place = async (pharmacyId: string) => {
     if (!isRefill && (!erxSnapshotId || !signed)) {
-      setOrderError(t('orderMedsMissingSnapshot'));
+      toastOrderError(t('orderMedsMissingSnapshot'));
+      setOrderError(null);
       return;
     }
     const isAuto = pharmacyId === 'auto' || pharmacyId === '';
@@ -295,9 +301,11 @@ export function useOrderMedicinesController({
     const addressId = selectedAddressId;
     try {
       if (isRefill && refillRequestId) {
+        // K8: POST /api/MedicineOrders/Refill/{id} — no erxSnapshotId in body.
         await startRefill({
           refillRequestId: Number(refillRequestId),
           ...(isAuto ? {} : { pharmacyPartnerId: partnerId }),
+          ...(addressId ? { addressId } : {}),
         }).unwrap();
         setPharmacyOpen(false);
         setQuotePlaced(true);
@@ -314,21 +322,24 @@ export function useOrderMedicinesController({
         setCreatedOrderId(orderId);
       }
       if (!orderId) {
-        setOrderError(t('orderMedsMissingSnapshot'));
+        toastOrderError(t('orderMedsMissingSnapshot'));
         return;
       }
       await grantConsent(orderId).unwrap();
       setPharmacyOpen(false);
       setQuotePlaced(true);
     } catch (err: unknown) {
-      setOrderError(messageFromUnknownError(err));
+      if (!getApiErrorMessage(err)) {
+        toastOrderError(messageFromUnknownError(err));
+      }
+      setOrderError(null);
     }
   };
 
   const pharmacy = useChoosePharmacyController({
     hasDelivery: true,
     pincode,
-    notice: orderError,
+    notice: null,
     continueBusy: creatingOrder || consenting || startingRefill,
     onBack: () => setPharmacyOpen(false),
     onContinue: (pharmacyId: string) => {
@@ -351,7 +362,7 @@ export function useOrderMedicinesController({
     medicines,
     pharmacyOpen,
     quotePlaced,
-    orderError,
+    orderError: null,
     pharmacy,
     addressLine,
     onBack: () => {
@@ -373,7 +384,7 @@ export function useOrderMedicinesController({
     },
     onSeePharmacies: () => {
       if (!isRefill && (!erxSnapshotId || !signed)) {
-        setOrderError(
+        toastOrderError(
           activeSnapshotId != null && !signed
             ? t('orderMedsUnsignedBody')
             : t('orderMedsNeedSigned'),
@@ -446,7 +457,10 @@ export function useOrderMedicinesController({
           setAddressForm(EMPTY_ADDRESS_FORM);
         })
         .catch((err: unknown) => {
-          setOrderError(messageFromUnknownError(err));
+          if (!getApiErrorMessage(err)) {
+            toastOrderError(messageFromUnknownError(err));
+          }
+          setOrderError(null);
         });
     },
     addresses,

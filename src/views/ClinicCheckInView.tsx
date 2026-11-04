@@ -175,11 +175,6 @@ export function ClinicCheckInView(vm: ClinicCheckInViewModel) {
               }
               style={styles.checkBtnActive}
             />
-            {vm.checkInError ? (
-              <AppText variant="bodyMd" color={colors.error} raw style={styles.center}>
-                {vm.checkInError}
-              </AppText>
-            ) : null}
           </View>
         )}
 

@@ -289,7 +289,10 @@ export function useFamilyMembersController({
     isLoading: isFamilyLoading,
     isError: isFamilyError,
     refetch: refetchFamily,
-  } = useGetFamilyQuery(undefined, { skip: !isAuthenticated });
+  } = useGetFamilyQuery(undefined, {
+    skip: !isAuthenticated,
+    refetchOnMountOrArgChange: true,
+  });
 
   const {
     data: apiRelations = [],

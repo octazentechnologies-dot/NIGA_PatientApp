@@ -23,6 +23,7 @@ import {
 import { useGetPatientProfileQuery } from '../store/api/new/patientProfileApi';
 import { useAppSelector } from '../store/hooks';
 import { messageFromUnknownError } from '../utilities/apiResponse';
+import { getApiErrorMessage, showAppToast } from '../utilities/toast';
 
 export type CheckoutPayMethod = 'online' | 'cod';
 
@@ -331,6 +332,12 @@ export function useMedicineCheckoutController({
     },
   });
 
+  useEffect(() => {
+    if (payment.errorMessage) {
+      showAppToast({ type: 'error', message: payment.errorMessage });
+    }
+  }, [payment.errorMessage]);
+
   const setAddressId = useCallback(
     (id: number | null) => {
       if (addressIdProp == null) {
@@ -344,15 +351,15 @@ export function useMedicineCheckoutController({
   const onPlaceOrder = useCallback(() => {
     setPlaceOrderNote(null);
     if (!medicineOrderId) {
-      setPlaceOrderNote(t('checkoutWaitingQuote'));
+      showAppToast({ type: 'info', message: t('checkoutWaitingQuote') });
       return;
     }
     if (!quoteLabel) {
-      setPlaceOrderNote(t('checkoutWaitingQuote'));
+      showAppToast({ type: 'info', message: t('checkoutWaitingQuote') });
       return;
     }
     if (!selectedAddressId) {
-      setPlaceOrderNote(t('orderMedsAddAddressHint'));
+      showAppToast({ type: 'info', message: t('orderMedsAddAddressHint') });
       setAddressPickerOpen(true);
       return;
     }
@@ -368,7 +375,12 @@ export function useMedicineCheckoutController({
           onPaid?.(res.data?.paymentOrderId ?? medicineOrderId);
         })
         .catch((err: unknown) => {
-          setPlaceOrderNote(messageFromUnknownError(err));
+          if (!getApiErrorMessage(err)) {
+            showAppToast({
+              type: 'error',
+              message: messageFromUnknownError(err),
+            });
+          }
         });
       return;
     }
@@ -433,7 +445,7 @@ export function useMedicineCheckoutController({
     onToggleLanguage: () => setLanguage(language === 'en' ? 'mr' : 'en'),
     onEditAddress: () => setAddressPickerOpen((v) => !v),
     onSelectMethod: setMethod,
-    placeOrderNote: placeOrderNote || payment.errorMessage,
+    placeOrderNote: null,
     payBusy: payment.busy,
     paymentState: payment.state,
     medicineOrderId,

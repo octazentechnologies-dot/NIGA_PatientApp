@@ -18,6 +18,12 @@ import {
 } from '../store/api/new/visitsApi';
 import { formatDate, formatTime, resolveApiUrl } from '../utilities/formatters';
 import { unwrapListOrPage } from '../utilities/paged';
+import {
+  useInvalidateOnActive,
+  type LiveQueryTag,
+} from '../utilities/rtkScreenFreshness';
+
+const VISITS_LIVE_TAGS: readonly LiveQueryTag[] = ['Visits'];
 
 export type VisitStatusFilter =
   | 'all'
@@ -208,19 +214,20 @@ export function useMyAppointmentsController({
     isError,
     refetch,
   } = useGetPatientVisitsQuery(queryParams, {
-    skip: !isAuthenticated,
+    skip: !isAuthenticated || !active,
     refetchOnMountOrArgChange: true,
   });
 
-  // Re-fetch immediately whenever screen becomes active (navigated to)
+  useInvalidateOnActive(active && isAuthenticated, VISITS_LIVE_TAGS);
+
+  // Reset pagination on rising edge; invalidateTags drives the refetch.
   const wasActiveRef = useRef(active);
   useEffect(() => {
     if (active && !wasActiveRef.current && isAuthenticated) {
       setPageNumber(1);
-      void refetch();
     }
     wasActiveRef.current = active;
-  }, [active, isAuthenticated, refetch]);
+  }, [active, isAuthenticated]);
 
   // Re-fetch when mobile app returns to foreground from background/web
   useEffect(() => {
@@ -247,6 +254,18 @@ export function useMyAppointmentsController({
 
   useEffect(() => {
     const filtered = pageItems.items.filter((item) => {
+      const visitStatus = (item.status || '').toUpperCase();
+      const isVisitCancelled =
+        visitStatus === 'CANCELLED' ||
+        visitStatus === 'DECLINED' ||
+        visitStatus === 'CANCELED';
+      // Default lists hide cancelled visits; only the Cancelled filter shows them.
+      if (statusFilter === 'CANCELLED') {
+        return isVisitCancelled;
+      }
+      if (isVisitCancelled) {
+        return false;
+      }
       const payStatus = (
         (item as { paymentStatus?: string }).paymentStatus || ''
       ).toUpperCase();
@@ -295,7 +314,7 @@ export function useMyAppointmentsController({
       }
       return [...prev, ...appended];
     });
-  }, [pageItems, pageNumber, patientLabel]);
+  }, [pageItems, pageNumber, patientLabel, statusFilter]);
 
   const resetFilters = useCallback(() => {
     setPageNumber(1);

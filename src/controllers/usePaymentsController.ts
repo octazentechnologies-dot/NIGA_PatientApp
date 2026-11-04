@@ -92,6 +92,7 @@ export function usePaymentsController({
     refetch: refetchHistory,
   } = useGetPaymentsHistoryQuery(undefined, {
     skip: !isAuthenticated,
+    refetchOnMountOrArgChange: true,
   });
 
   const serverPayments: PaymentItem[] = useMemo(() => {

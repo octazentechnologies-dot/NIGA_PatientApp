@@ -177,6 +177,7 @@ export function useSymptomDiaryController({
 
   const { data: diaryResponse } = useGetDiaryEntriesQuery(undefined, {
     skip: !isAuthenticated,
+    refetchOnMountOrArgChange: true,
   });
   const [createDiaryEntryApi] = useCreateDiaryEntryMutation();
 

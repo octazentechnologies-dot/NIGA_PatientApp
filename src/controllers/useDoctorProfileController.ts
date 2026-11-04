@@ -17,6 +17,12 @@ import {
   formatTime,
   resolveApiUrl,
 } from '../utilities/formatters';
+import {
+  useInvalidateOnActive,
+  type LiveQueryTag,
+} from '../utilities/rtkScreenFreshness';
+
+const DOCTOR_PROFILE_LIVE_TAGS: readonly LiveQueryTag[] = ['DoctorProfile'];
 
 export type DynamicDoctorReview = {
   id: string;
@@ -79,23 +85,28 @@ function emptyProfile(id: string): DoctorProfileSeed {
 
 export function useDoctorProfileController({
   doctorId,
+  active = true,
   onBack,
   onBook,
 }: {
   doctorId: string;
+  /** Profile overlay visible — invalidate DoctorProfile on enter. */
+  active?: boolean;
   onBack: () => void;
   onBook?: () => void;
 }): DoctorProfileViewModel {
   const { language, t } = useLocalization();
   const appConfig = useAppConfig();
   const isNumeric = Boolean(doctorId) && /^\d+$/.test(doctorId);
+  const profileLive = active && isNumeric;
   const {
     data: doctorDetailResponse,
     currentData: doctorDetailCurrent,
     isLoading: detailLoading,
     isFetching: detailFetching,
   } = useGetDoctorByIdQuery(doctorId, {
-    skip: !isNumeric,
+    skip: !profileLive,
+    refetchOnMountOrArgChange: true,
   });
   const {
     data: feesResponse,
@@ -103,18 +114,26 @@ export function useDoctorProfileController({
     isLoading: feesLoading,
     isFetching: feesFetching,
   } = useGetDoctorFeesQuery(doctorId, {
-    skip: !isNumeric,
+    skip: !profileLive,
+    // Semi-static fee schedule — short TTL OK.
+    refetchOnMountOrArgChange: 60,
   });
   const { data: reviewsResponse, currentData: reviewsCurrent } =
     useGetDoctorReviewsQuery(doctorId, {
-      skip: !isNumeric,
+      skip: !profileLive,
+      refetchOnMountOrArgChange: 60,
     });
   const {
     data: teleAvailability,
     currentData: teleCurrent,
     isLoading: teleLoading,
     isFetching: teleFetching,
-  } = useGetDoctorTeleAvailabilityQuery(doctorId, { skip: !isNumeric });
+  } = useGetDoctorTeleAvailabilityQuery(doctorId, {
+    skip: !profileLive,
+    refetchOnMountOrArgChange: true,
+  });
+
+  useInvalidateOnActive(profileLive, DOCTOR_PROFILE_LIVE_TAGS);
 
   // Prefer currentData so a previous doctor's cached payload never paints
   // while the newly selected doctorId is still fetching.

@@ -1,4 +1,7 @@
+import NetInfo from '@react-native-community/netinfo';
 import { configureStore } from '@reduxjs/toolkit';
+import { setupListeners } from '@reduxjs/toolkit/query';
+import { AppState, type AppStateStatus } from 'react-native';
 
 import { legacyBaseApi } from './api/legacy/legacyBaseApi';
 import { newBaseApi } from './api/new/newBaseApi';
@@ -41,6 +44,35 @@ export const store = configureStore({
       legacyBaseApi.middleware,
       newBaseApi.middleware,
     ),
+});
+
+/**
+ * React Native has no window focus events — wire AppState + NetInfo so
+ * refetchOnFocus / refetchOnReconnect actually run for live queries.
+ * Custom handler receives RTKQ action creators; we dispatch them.
+ */
+setupListeners(store.dispatch, (dispatch, actions) => {
+  const onAppState = (status: AppStateStatus) => {
+    if (status === 'active') {
+      dispatch(actions.onFocus());
+    } else if (status === 'background' || status === 'inactive') {
+      dispatch(actions.onFocusLost());
+    }
+  };
+  const appSub = AppState.addEventListener('change', onAppState);
+
+  const netSub = NetInfo.addEventListener((state) => {
+    if (state.isConnected && state.isInternetReachable !== false) {
+      dispatch(actions.onOnline());
+    } else {
+      dispatch(actions.onOffline());
+    }
+  });
+
+  return () => {
+    appSub.remove();
+    netSub();
+  };
 });
 
 export type RootState = ReturnType<typeof store.getState>;

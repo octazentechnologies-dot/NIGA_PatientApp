@@ -83,3 +83,12 @@ export function attachNotificationListeners(): NotificationListenerCleanup {
   }
   return impl.attachNotificationListeners();
 }
+
+/** Dismiss OS tray notifications + clear badge. No-op in Expo Go. */
+export async function clearNotificationTray(): Promise<void> {
+  const impl = loadImpl();
+  if (!impl) {
+    return;
+  }
+  await impl.clearNotificationTray();
+}

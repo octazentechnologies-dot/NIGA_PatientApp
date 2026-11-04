@@ -175,6 +175,10 @@ export function extractErrorMessage(
 export const newBaseApi = createApi({
   reducerPath: 'newApi',
   baseQuery: baseQueryWithReauth,
+  // Live screens stay fresh after background / network restore without
+  // process death. Per-endpoint keepUnusedDataFor still controls cache TTL.
+  refetchOnFocus: true,
+  refetchOnReconnect: true,
   tagTypes: [
     'Consents',
     'Doctors',

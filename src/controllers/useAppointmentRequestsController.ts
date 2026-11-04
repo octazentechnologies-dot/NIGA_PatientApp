@@ -104,7 +104,10 @@ export function useAppointmentRequestsController({
     pageSize,
   };
   const { data, isLoading, isFetching, isError, refetch } =
-    useGetAppointmentRequestsQuery(params, { skip: !isAuthenticated });
+    useGetAppointmentRequestsQuery(params, {
+      skip: !isAuthenticated,
+      refetchOnMountOrArgChange: true,
+    });
   const [respond] = useRespondAppointmentRequestMutation();
   const [cancel] = useCancelAppointmentRequestMutation();
 

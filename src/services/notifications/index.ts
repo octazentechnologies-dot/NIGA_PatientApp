@@ -18,6 +18,7 @@ export {
 } from './notificationNavigation';
 export {
   attachNotificationListeners,
+  clearNotificationTray,
   configureForegroundNotificationHandler,
   getLastRegisteredPushToken,
   obtainNativeDevicePushToken,

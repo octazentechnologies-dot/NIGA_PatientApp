@@ -132,12 +132,6 @@ export function OrderMedicinesView(vm: OrderMedicinesViewModel) {
             {vm.unsignedMessage}
           </AppText>
         ) : null}
-        {vm.orderError && !vm.pharmacyOpen ? (
-          <AppText variant="bodyMd" color={colors.error}>
-            {vm.orderError}
-          </AppText>
-        ) : null}
-
         {vm.choices.length > 0 ? (
           <View style={styles.card}>
             <AppText variant="headlineMd" color={colors.ink}>

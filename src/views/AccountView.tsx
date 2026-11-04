@@ -16,6 +16,7 @@ import { AppText } from '../components/AppText';
 import { usePatientTabScrollInset } from '../components/PatientTabBar';
 import { images } from '../config/images';
 import type { AccountViewModel } from '../controllers/useAccountController';
+import { AccountTabSkeleton } from '../components/skeleton/TabSkeletons';
 import type { TranslationKey } from '../localization/types';
 import { colors } from '../theme/colors';
 import { radii } from '../theme/radii';
@@ -51,7 +52,8 @@ const MY_CARE_ROWS: RowConfig[] = [
   { id: 'appointments', icon: 'calendar-outline', labelKey: 'accountAppointments' },
   { id: 'prescriptions', icon: 'medkit-outline', labelKey: 'accountPrescriptions' },
   { id: 'records', icon: 'folder-outline', labelKey: 'accountHealthRecords' },
-  { id: 'insights', icon: 'stats-chart-outline', labelKey: 'accountHealthInsights' },
+  // Health Insights — hide until feature is ready
+  // { id: 'insights', icon: 'stats-chart-outline', labelKey: 'accountHealthInsights' },
   {
     id: 'reminders',
     icon: 'notifications-outline',
@@ -117,6 +119,7 @@ const HELP_ROWS: RowConfig[] = [
 export function AccountView({
   language,
   t,
+  isLoading = false,
   profileName,
   profileInitials,
   profilePhone,
@@ -141,6 +144,10 @@ export function AccountView({
 }: AccountViewModel) {
   const insets = useSafeAreaInsets();
   const tabScrollInset = usePatientTabScrollInset();
+
+  if (isLoading) {
+    return <AccountTabSkeleton />;
+  }
 
   if (dataRequestsOpen) {
     return (

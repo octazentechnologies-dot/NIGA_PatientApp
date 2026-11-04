@@ -20,6 +20,15 @@ import {
   type MedicineOrderStageKey,
   type OrderMedicinesLaunch,
 } from '../utilities/medicineOrderStage';
+import {
+  useInvalidateOnActive,
+  type LiveQueryTag,
+} from '../utilities/rtkScreenFreshness';
+
+const MEDICINES_LIVE_TAGS: readonly LiveQueryTag[] = [
+  'Orders',
+  'Prescriptions',
+];
 
 export type MedicinesMemberId = string;
 
@@ -83,6 +92,8 @@ const STAGE_LABEL: Record<MedicineOrderStageKey, TranslationKey> = {
 export type MedicinesViewModel = {
   language: AppLanguage;
   t: (key: TranslationKey) => string;
+  /** True while first medicines payload is loading (no cached rows yet). */
+  isLoading: boolean;
   hasOrders: boolean;
   memberId: MedicinesMemberId;
   members: { id: MedicinesMemberId; labelKey: TranslationKey }[];
@@ -132,6 +143,7 @@ const PAST_FILTERS: MedicinesViewModel['pastFilters'] = [
 ];
 
 export function useMedicinesController({
+  active = true,
   onBookFollowUp,
   onSeePrescriptions,
   onTrackOrder,
@@ -142,6 +154,8 @@ export function useMedicinesController({
   onStartRefillOrder,
   forceHasOrders,
 }: {
+  /** Keep-alive tab visibility — invalidate mutable tags on enter. */
+  active?: boolean;
   onBookFollowUp?: () => void;
   onSeePrescriptions?: () => void;
   onTrackOrder?: (orderId?: string) => void;
@@ -159,24 +173,46 @@ export function useMedicinesController({
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
-  const { data: ordersResponse, refetch: refetchOrders } = useGetMedicineOrdersQuery(
-    undefined,
-    { skip: !isAuthenticated, refetchOnMountOrArgChange: true },
-  );
-  const { data: refillsResponse, refetch: refetchRefills } = useGetRefillsQuery(
-    undefined,
-    { skip: !isAuthenticated, refetchOnMountOrArgChange: true },
-  );
-  const { data: rxList, refetch: refetchPrescriptions } = useGetPrescriptionsListQuery(
-    undefined,
-    { skip: !isAuthenticated, refetchOnMountOrArgChange: true },
-  );
+  const {
+    data: ordersResponse,
+    isLoading: ordersLoading,
+    refetch: refetchOrders,
+  } = useGetMedicineOrdersQuery(undefined, {
+    skip: !isAuthenticated || !active,
+    refetchOnMountOrArgChange: true,
+  });
+  const {
+    data: refillsResponse,
+    isLoading: refillsLoading,
+    refetch: refetchRefills,
+  } = useGetRefillsQuery(undefined, {
+    skip: !isAuthenticated || !active,
+    refetchOnMountOrArgChange: true,
+  });
+  const {
+    data: rxList,
+    isLoading: rxLoading,
+    refetch: refetchPrescriptions,
+  } = useGetPrescriptionsListQuery(undefined, {
+    skip: !isAuthenticated || !active,
+    refetchOnMountOrArgChange: true,
+  });
   const { data: familyResponse, refetch: refetchFamily } = useGetFamilyQuery(undefined, {
-    skip: !isAuthenticated,
+    skip: !isAuthenticated || !active,
   });
 
+  useInvalidateOnActive(active && isAuthenticated, MEDICINES_LIVE_TAGS);
+
+  const isLoading =
+    isAuthenticated &&
+    active &&
+    (ordersLoading || refillsLoading || rxLoading) &&
+    ordersResponse == null &&
+    refillsResponse == null &&
+    rxList == null;
+
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || !active) return;
     const sub = AppState.addEventListener('change', (nextState: AppStateStatus) => {
       if (nextState === 'active') {
         void refetchOrders();
@@ -185,7 +221,7 @@ export function useMedicinesController({
       }
     });
     return () => sub.remove();
-  }, [isAuthenticated, refetchOrders, refetchRefills, refetchPrescriptions]);
+  }, [active, isAuthenticated, refetchOrders, refetchRefills, refetchPrescriptions]);
   const [acceptQuote] = useAcceptMedicineQuoteMutation();
   const [createOrder] = useCreateMedicineOrderMutation();
   const [grantConsent] = useGrantMedicineConsentMutation();
@@ -316,6 +352,7 @@ export function useMedicinesController({
   return {
     language,
     t,
+    isLoading,
     hasOrders,
     memberId,
     members,

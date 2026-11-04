@@ -25,6 +25,11 @@ export type BookedAppointment = {
   status: AppointmentRequestStatus;
   /** Server visit status e.g. 'COMPLETED', 'WAITING', 'NOT ARRIVED', etc. */
   visitStatus?: string;
+  /**
+   * After a patient reschedule, ignore stale server WAITING/WALK-IN until they
+   * check in again (API currently preserves queue status across reschedule).
+   */
+  suppressClinicCheckIn?: boolean;
   /** From Home / Visits — PENDING | PAID | … */
   paymentStatus?: string;
   payAtClinicAllowed?: boolean;

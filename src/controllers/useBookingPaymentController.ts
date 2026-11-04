@@ -24,6 +24,7 @@ import {
 import { useGetPatientProfileQuery } from '../store/api/new/patientProfileApi';
 import { extractErrorMessage } from '../store/api/new/newBaseApi';
 import { useAppSelector } from '../store/hooks';
+import { getApiErrorMessage } from '../utilities/toast';
 
 export type BookingPaymentDraft = {
   paymentSummaryLine: string;
@@ -76,6 +77,7 @@ export type BookingPaymentViewModel = BookingPaymentDraft & {
   onAddCard: () => void;
   onPay: () => void;
   onPayAtClinic: () => void;
+  onDismissPayError: () => void;
   resumePendingPayment: (paymentOrderId?: number) => void;
   reset: () => void;
 };
@@ -92,6 +94,7 @@ export function useBookingPaymentController({
   onPaymentPending,
   onPaymentFailed,
   onPayAtClinicSuccess,
+  onReleaseUnpaidHold,
 }: {
   draft: BookingPaymentDraft;
   active: boolean;
@@ -109,6 +112,8 @@ export function useBookingPaymentController({
   onPaymentPending?: (paymentOrderId: number) => void;
   onPaymentFailed?: (message: string) => void;
   onPayAtClinicSuccess?: (result: SubmitBookingPaymentResult) => void;
+  /** Clear unpaid online hold before re-booking as pay-at-clinic. */
+  onReleaseUnpaidHold?: (reasonText?: string) => Promise<void>;
 }): BookingPaymentViewModel {
   const { language, t } = useLocalization();
   const appConfig = useAppConfig();
@@ -200,17 +205,7 @@ export function useBookingPaymentController({
         anonymous: isRealToken,
       };
 
-      console.log('🚀 [BookingPayment] API: POST api/Payments/ConsultOrders');
-      console.log('📦 [BookingPayment] ConsultOrders Payload:', JSON.stringify(consultOrderPayload, null, 2));
-
-      let res;
-      try {
-        res = await createConsultOrder(consultOrderPayload).unwrap();
-        console.log('✅ [BookingPayment] ConsultOrders Response:', JSON.stringify(res, null, 2));
-      } catch (err) {
-        console.log('❌ [BookingPayment] ConsultOrders Error:', JSON.stringify(err, null, 2));
-        throw err;
-      }
+      const res = await createConsultOrder(consultOrderPayload).unwrap();
       return {
         gatewayReady: res.gatewayReady,
         keyId: res.keyId,
@@ -242,17 +237,12 @@ export function useBookingPaymentController({
         paymentOrderId: checkout.paymentOrderId,
       };
 
-      console.log('🚀 [BookingPayment] API: POST api/Payments/Bookings/UpdatePayment');
-      console.log('📦 [BookingPayment] UpdatePayment Payload:', JSON.stringify(updatePayload, null, 2));
-
       try {
         const res = await updateBookingPayment(updatePayload).unwrap();
-        console.log('✅ [BookingPayment] UpdatePayment Response:', JSON.stringify(res, null, 2));
         const status = (res.data?.paymentStatus || '').toUpperCase();
         const paid = status === 'PAID' || status === 'CAPTURED' || status === 'SUCCESS';
         return { paid, method: res.data?.method ?? null };
-      } catch (attachErr) {
-        console.log('❌ [BookingPayment] UpdatePayment Error:', JSON.stringify(attachErr, null, 2));
+      } catch {
         return undefined;
       }
     },
@@ -372,6 +362,13 @@ export function useBookingPaymentController({
     }
   }, [onPaymentFailed, payment.errorMessage, payment.state]);
 
+  // Surface gateway / create-order errors in the same toast channel as clinic errors.
+  useEffect(() => {
+    if (payment.errorMessage) {
+      setLocalError(payment.errorMessage);
+    }
+  }, [payment.errorMessage]);
+
   const selectedBank = PAY_BANKS.find((item) => item.id === selectedBankId);
   const selectedWallet = PAY_WALLETS.find((item) => item.id === selectedWalletId);
 
@@ -379,6 +376,10 @@ export function useBookingPaymentController({
     setLocalError(null);
     void payment.startPayment();
   }, [payment]);
+
+  const onDismissPayError = useCallback(() => {
+    setLocalError(null);
+  }, []);
 
   const onPayAtClinic = useCallback(() => {
     if (!isInClinicMode || clinicBusy) {
@@ -388,6 +389,16 @@ export function useBookingPaymentController({
       try {
         setClinicBusy(true);
         setLocalError(null);
+        // Abandoned online Checkout already created a hold — release it first so
+        // pay-at-clinic can re-book the same day/slot without a conflict.
+        if (livePatientAppIdRef.current != null && onReleaseUnpaidHold) {
+          await onReleaseUnpaidHold('Switching to pay at clinic after cancelled payment');
+          setLivePatientAppId(null);
+          setLiveBookingToken(null);
+          livePatientAppIdRef.current = null;
+          liveBookingTokenRef.current = null;
+          resetPayment();
+        }
         const result = await onSubmitBooking({
           payAtClinic: true,
           razorpay_order_id: null,
@@ -395,7 +406,6 @@ export function useBookingPaymentController({
         });
         setLivePatientAppId(result.patientAppId);
         setLiveBookingToken(result.bookingToken);
-        // Clear any stale pending payments upon recording clinic pay
         await clearPendingPayment();
         if (onPayAtClinicSuccess) {
           onPayAtClinicSuccess(result);
@@ -403,17 +413,35 @@ export function useBookingPaymentController({
           onPaymentPendingRef.current?.(0);
         }
       } catch (err) {
-        const e = err as { data?: unknown };
-        setLocalError(
-          extractErrorMessage(e?.data ?? err, 'Could not record pay at clinic.'),
-        );
+        // API failures already toasted by notifyApiResult — avoid double toast.
+        if (getApiErrorMessage(err)) {
+          setLocalError(null);
+          return;
+        }
+        const fromError =
+          err instanceof Error && err.message.trim() ? err.message : null;
+        const message =
+          fromError ||
+          extractErrorMessage(
+            (err as { data?: unknown })?.data ?? err,
+            'Could not record pay at clinic.',
+          );
+        // BookingPaymentView AppToast channel (same as gateway errors).
+        setLocalError(message);
       } finally {
         setClinicBusy(false);
       }
     })();
-  }, [clinicBusy, isInClinicMode, onPayAtClinicSuccess, onSubmitBooking]);
+  }, [
+    clinicBusy,
+    isInClinicMode,
+    onPayAtClinicSuccess,
+    onReleaseUnpaidHold,
+    onSubmitBooking,
+    resetPayment,
+  ]);
 
-  const payError = localError || payment.errorMessage;
+  const payError = localError;
   const payBusy =
     clinicBusy || payment.busy || payment.state === 'CREATING_ORDER';
 
@@ -474,6 +502,7 @@ export function useBookingPaymentController({
     onAddCard: () => setMethod('addCard'),
     onPay,
     onPayAtClinic,
+    onDismissPayError,
     resumePendingPayment: (orderId) => {
       void resumePending(orderId);
     },

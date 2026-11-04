@@ -156,9 +156,17 @@ export type RequestRefillResponse = {
   message?: string;
 };
 
+/**
+ * K8 refill Start Order body. ErxSnapshotId is resolved server-side from the
+ * RefillRequest row — never send erxSnapshotId on this endpoint (it is not on
+ * MedicineRefillOrderRequest and would reintroduce [Range(1..)] bind failures).
+ */
 export type RefillMedicineOrderRequest = {
   refillRequestId: number;
+  /** Omit for auto-route. */
   pharmacyPartnerId?: number;
+  /** Optional delivery address (same optional field as createMedicineOrder). */
+  addressId?: number | null;
 };
 
 export type ReviewMedicineOrderRequest = {
@@ -182,6 +190,7 @@ export type ReviewMedicineOrderResponse = {
  * - K6: POST /api/Payments/MedicineOrders
  * - K7: GET /api/MedicineOrders/{medicineOrderId}/Tracking
  * - K8: POST /api/MedicineOrders/Refill/{refillRequestId}
+ *       body { pharmacyPartnerId?, addressId? } — never erxSnapshotId
  * - K9: GET /api/Erx/Refills
  * - K10: POST /api/Erx/Refills
  */
@@ -253,11 +262,23 @@ export const medicinesApi = newBaseApi.injectEndpoints({
       CreateMedicineOrderResponse,
       RefillMedicineOrderRequest
     >({
-      query: ({ refillRequestId, pharmacyPartnerId }) => ({
-        url: `api/MedicineOrders/Refill/${refillRequestId}`,
-        method: 'POST',
-        body: pharmacyPartnerId ? { pharmacyPartnerId } : {},
-      }),
+      query: ({ refillRequestId, pharmacyPartnerId, addressId }) => {
+        const body: {
+          pharmacyPartnerId?: number;
+          addressId?: number;
+        } = {};
+        if (pharmacyPartnerId != null && pharmacyPartnerId > 0) {
+          body.pharmacyPartnerId = pharmacyPartnerId;
+        }
+        if (addressId != null && addressId > 0) {
+          body.addressId = addressId;
+        }
+        return {
+          url: `api/MedicineOrders/Refill/${refillRequestId}`,
+          method: 'POST',
+          body,
+        };
+      },
       invalidatesTags: ['Orders'],
     }),
     reviewMedicineOrder: build.mutation<

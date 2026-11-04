@@ -299,11 +299,6 @@ export function ClinicAppointmentView(vm: ClinicAppointmentViewModel) {
               loading={vm.payNowBusy}
               disabled={vm.payNowBusy}
             />
-            {vm.payNowError ? (
-              <AppText variant="bodyMd" color={colors.error} raw>
-                {vm.payNowError}
-              </AppText>
-            ) : null}
           </View>
         ) : null}
 
