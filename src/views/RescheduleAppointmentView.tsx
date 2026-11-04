@@ -68,10 +68,15 @@ export function RescheduleAppointmentView(vm: AppointmentDetailViewModel) {
 
         <View style={styles.policy}>
           <Ionicons name="information-circle" size={20} color={AMBER} />
-          <AppText variant="bodyMd" color={colors.ink} style={styles.flex}>
+          <AppText variant="bodyMd" color={colors.ink} style={styles.flex} raw>
             {vm.reschedulePolicy}
           </AppText>
         </View>
+        {vm.rescheduleLimitReached ? (
+          <AppText variant="bodyMd" color={colors.error} raw style={styles.flex}>
+            {vm.t('rescheduleLimitReached')}
+          </AppText>
+        ) : null}
 
         <View style={styles.card}>
           <AppText variant="titleMd" color={colors.ink}>

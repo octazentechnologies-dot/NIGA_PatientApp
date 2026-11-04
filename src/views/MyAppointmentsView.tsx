@@ -417,7 +417,9 @@ function AppointmentCard({
               color={statusColor}
               weightOverride="600"
             >
-              {item.visitStatusLabel || 'Unknown'}
+              {item.visitStatusLabelKey
+                ? t(item.visitStatusLabelKey)
+                : item.visitStatusLabel || t('visitLabelUnknown')}
             </AppText>
           </View>
         </View>

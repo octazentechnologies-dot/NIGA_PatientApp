@@ -20,6 +20,54 @@ export type ApiMedicineOrder = {
   consentGranted: boolean;
   quoteAmount?: number | null;
   payMode?: 'ONLINE' | 'COD' | null;
+  /** Additive list enrichment (PAT-MED-OD-API) — optional. */
+  pharmacyName?: string | null;
+  deliveredAt?: string | null;
+  deliveryFee?: number | null;
+  paymentOrderId?: number | null;
+};
+
+/** Shared enrichment shape for Tracking + History (additive). */
+export type MedicineOrderEnrichment = {
+  deliveredAt?: string | null;
+  subtotalMedicines?: number | null;
+  deliveryFee?: number | null;
+  totalPaid?: number | null;
+  currency?: string | null;
+  payMode?: string | null;
+  paymentReference?: string | null;
+  paymentOrderId?: number | null;
+  erxSnapshotId?: number | null;
+  rxLabel?: string | null;
+  doctorName?: string | null;
+  pharmacyPartnerId?: number | null;
+  pharmacyName?: string | null;
+  pharmacyArea?: string | null;
+  pharmacyLicenceNumber?: string | null;
+  pharmacyLicensed?: boolean | null;
+  pharmacyContactMasked?: string | null;
+  invoiceId?: number | null;
+  invoiceNumber?: string | null;
+  invoicePdfAvailable?: boolean | null;
+  canRequestRefill?: boolean | null;
+};
+
+export type MedicineInvoiceData = {
+  invoiceId: number;
+  number: string;
+  series?: string | null;
+  stream?: string | null;
+  paymentOrderId: number;
+  gstBreakup?: string | null;
+  pdfPath?: string | null;
+  secureDocumentId?: number | null;
+  createdAt?: string | null;
+};
+
+export type MedicineInvoiceResponse = {
+  success: boolean;
+  data?: MedicineInvoiceData;
+  message?: string;
 };
 
 export type GetMedicineOrdersResponse = {
@@ -105,18 +153,38 @@ export type TrackingItem = {
   remedyName: string;
   potencyCode?: string | null;
   quantityLabel?: string | null;
+  /** Optional line price when BE stores it; null → hide. */
+  lineAmount?: number | null;
 };
 
-export type MedicineOrderTrackingData = {
+/**
+ * Tracking payload for Order Details.
+ * Extra keys are additive (PAT-MED-OD-API); older servers omit them — treat as null.
+ */
+export type MedicineOrderTrackingData = MedicineOrderEnrichment & {
   medicineOrderId: number;
   status: string;
-  /** Null money → hide; never show ₹0. */
+  /** Null money → hide; never invent ₹0. */
   quoteAmount?: number | null;
-  currency?: string | null;
   /** Always arrays per BE-028. */
   items?: TrackingItem[];
   lines?: TrackingItem[];
   events: TrackingEvent[];
+};
+
+export type MedicineOrderHistoryRow = MedicineOrderEnrichment & {
+  medicineOrderId: number;
+  status: string;
+  quoteAmount?: number | null;
+  quoteNote?: string | null;
+  createdAt?: string | null;
+  items?: TrackingItem[];
+  events?: TrackingEvent[];
+};
+
+export type GetMedicineOrderHistoryResponse = {
+  success: boolean;
+  data: MedicineOrderHistoryRow[];
 };
 
 export type GetMedicineOrderTrackingResponse = {
@@ -258,6 +326,27 @@ export const medicinesApi = newBaseApi.injectEndpoints({
         `api/MedicineOrders/${medicineOrderId}/Tracking`,
       providesTags: ['Orders'],
     }),
+    getMedicineOrderHistory: build.query<GetMedicineOrderHistoryResponse, void>(
+      {
+        query: () => 'api/Patient/MedicineOrders/History',
+        providesTags: ['Orders'],
+      },
+    ),
+    getMedicineInvoiceByPayment: build.query<
+      MedicineInvoiceResponse,
+      number | string
+    >({
+      query: (paymentOrderId) => `api/Invoices/ByPayment/${paymentOrderId}`,
+    }),
+    createMedicineInvoiceByPayment: build.mutation<
+      MedicineInvoiceResponse,
+      number | string
+    >({
+      query: (paymentOrderId) => ({
+        url: `api/Invoices/ByPayment/${paymentOrderId}`,
+        method: 'POST',
+      }),
+    }),
     refillMedicineOrder: build.mutation<
       CreateMedicineOrderResponse,
       RefillMedicineOrderRequest
@@ -279,6 +368,7 @@ export const medicinesApi = newBaseApi.injectEndpoints({
           body,
         };
       },
+      // Orders list gains the new active order; Refills may flip APPROVED → ORDERED.
       invalidatesTags: ['Orders'],
     }),
     reviewMedicineOrder: build.mutation<
@@ -319,6 +409,9 @@ export const {
   useAcceptMedicineQuoteMutation,
   usePayMedicineOrderMutation,
   useGetMedicineOrderTrackingQuery,
+  useGetMedicineOrderHistoryQuery,
+  useLazyGetMedicineInvoiceByPaymentQuery,
+  useCreateMedicineInvoiceByPaymentMutation,
   useRefillMedicineOrderMutation,
   useReviewMedicineOrderMutation,
   useGetRefillsQuery,

@@ -60,6 +60,10 @@ import {
   markClinicCheckInSuppressed,
 } from '../utilities/clinicCheckInSuppress';
 import { formatMoney } from '../utilities/formatters';
+import {
+  isClinicCheckedInStatus,
+  mapPatientVisitDisplay,
+} from '../utilities/patientVisitDisplay';
 
 const RESCHEDULE_LIVE_TAGS: readonly LiveQueryTag[] = ['Slots'];
 
@@ -154,6 +158,15 @@ export type AppointmentDetailViewModel = {
   canJoin: boolean;
   phase: AppointmentPhase;
   bannerLabel: string;
+  /** Patient-facing status chip (Booked / Confirmed / Checked in / …). */
+  visitStatusLabel: string;
+  visitStatusLabelKey: TranslationKey;
+  visitLifecycle: 'upcoming' | 'overdue_grace' | 'expired' | 'open' | 'terminal';
+  showOverdueRescheduleCta: boolean;
+  showExpiredBookNewCta: boolean;
+  canRescheduleVisit: boolean;
+  canCancelVisit: boolean;
+  justRescheduled: boolean;
   countdown: string;
   consultWithLabel: string;
   visitWhenLabel: string;
@@ -180,6 +193,8 @@ export type AppointmentDetailViewModel = {
   currentShortWhen: string;
   nextShortWhen: string;
   reschedulePolicy: string;
+  /** True when API reports remaining === 0 or canReschedule false due to limit. */
+  rescheduleLimitReached: boolean;
   rescheduleReasonLabel: string;
   rescheduleError: string | null;
   rescheduleSlotsLoading: boolean;
@@ -259,6 +274,8 @@ export type AppointmentDetailViewModel = {
   clinicTravelNote: string;
   clinicFeeAmount: string;
   clinicBannerLabel: string;
+  /** Check-in / clinic status line from API (never stuck on Loading). */
+  clinicStatusLabel: string;
   clinicPhone: string | null;
   clinicMapLink: string | null;
   addressCopied: boolean;
@@ -629,6 +646,7 @@ export function useAppointmentDetailController({
   const [rescheduleNote, setRescheduleNote] = useState('');
   const [rescheduleError, setRescheduleError] = useState<string | null>(null);
   const [rescheduleSubmitting, setRescheduleSubmitting] = useState(false);
+  const [justRescheduled, setJustRescheduled] = useState(false);
   const [deviceCheckOpen, setDeviceCheckOpen] = useState(false);
   const [waitingRoomOpen, setWaitingRoomOpen] = useState(false);
   const [videoCallOpen, setVideoCallOpen] = useState(false);
@@ -689,11 +707,9 @@ export function useAppointmentDetailController({
       isClinicCheckInSuppressed(item.id) || Boolean(item.suppressClinicCheckIn);
     setSuppressClinicCheckIn(suppress);
 
-    const initialStatus = (item.visitStatus || '').toUpperCase();
-    if (
-      !suppress &&
-      (initialStatus === 'WAITING' || initialStatus === 'WALK-IN')
-    ) {
+    // Bare WAITING is Booked/Confirmed (not checked in). Only EARLY / READY /
+    // WALK-IN / WAITING+queue mean checked in — see isClinicCheckedInStatus.
+    if (!suppress && isClinicCheckedInStatus(item.visitStatus, null)) {
       setClinicCheckInState('waiting');
     } else {
       setClinicCheckInState('ready');
@@ -714,6 +730,7 @@ export function useAppointmentDetailController({
     setRescheduleReason(null);
     setRescheduleNote('');
     setRescheduleError(null);
+    setJustRescheduled(false);
     payLater.reset();
   }, [item.id, item.visitStatus, item.suppressClinicCheckIn, appointment?.id]);
 
@@ -721,30 +738,33 @@ export function useAppointmentDetailController({
     if (!visitDetail) return;
     if (String(visitDetail.patientAppId) !== String(item.id)) return;
     const status = (visitDetail.status || '').toUpperCase();
-    console.log('🔍 [VisitDetail Sync] status:', status, 'patientAppId:', visitDetail.patientAppId);
-    if (status === 'WAITING' || status === 'WALK-IN') {
-      if (suppressClinicCheckIn) {
-        // API kept pre-reschedule queue status — do not treat as checked in.
-        setClinicCheckInState('ready');
-        setCheckInQueuePosition(null);
-        setCheckInWaitMinutes(null);
-        setCheckedInAtLabel('');
-        return;
-      }
-      setClinicCheckInState('waiting');
-      if (visitDetail.queuePosition != null) {
-        setCheckInQueuePosition(Number(visitDetail.queuePosition));
-      }
-    } else {
+    const apiCheckedIn = isClinicCheckedInStatus(
+      visitDetail.status,
+      visitDetail.queuePosition,
+    );
+    if (suppressClinicCheckIn) {
+      // API may keep pre-reschedule queue status — do not treat as checked in.
       setClinicCheckInState('ready');
       setCheckInQueuePosition(null);
       setCheckInWaitMinutes(null);
       setCheckedInAtLabel('');
-      if (suppressClinicCheckIn) {
+      // Clear suppress once API no longer looks checked-in for this slot.
+      if (!apiCheckedIn && status !== 'WAITING' && status !== 'WALK-IN') {
         clearClinicCheckInSuppress(item.id);
         setSuppressClinicCheckIn(false);
       }
+      return;
     }
+    if (apiCheckedIn) {
+      setClinicCheckInState('waiting');
+      if (visitDetail.queuePosition != null) {
+        setCheckInQueuePosition(Number(visitDetail.queuePosition));
+      }
+      return;
+    }
+    setClinicCheckInState('ready');
+    setCheckInQueuePosition(null);
+    setCheckInWaitMinutes(null);
   }, [visitDetail, item.id, suppressClinicCheckIn]);
 
   useEffect(() => {
@@ -834,37 +854,82 @@ export function useAppointmentDetailController({
       (Array.isArray(prescriptionData?.items) &&
         prescriptionData.items.length > 0),
     );
-  // Checked-in UI is driven only by local clinicCheckInState. Raw VisitDetail
-  // WAITING/WALK-IN is synced into that state except after reschedule
-  // (suppressClinicCheckIn), when the API still returns the old queue status.
+  // Checked-in: local check-in success OR API statuses that mean arrived.
+  const apiCheckedIn = isClinicCheckedInStatus(
+    visitDetail?.status || item.visitStatus,
+    visitDetail?.queuePosition ?? checkInQueuePosition,
+  );
   const isCheckedIn =
     !isCompleted &&
     !isCancelled &&
     isClinic &&
-    clinicCheckInState === 'waiting';
-  const phase: AppointmentPhase =
-    isCompleted || isCancelled
-      ? 'ended'
-      : isClinic || isChat
-        ? 'confirmed'
-        : remainingMs <= -JOIN_GRACE_MS
-          ? 'ended'
-          : remainingMs <= 0
-            ? 'live'
-            : remainingMs <= NEAR_START_MS
-              ? 'upcoming'
-              : 'confirmed';
+    !suppressClinicCheckIn &&
+    (clinicCheckInState === 'waiting' || apiCheckedIn);
 
-  const bannerLabel =
-    phase === 'upcoming'
-      ? t('aptBannerStartsIn').replace('{minutes}', String(minutesUntil(remainingMs)))
-      : phase === 'live'
-        ? t('aptBannerLive')
-        : phase === 'ended'
-          ? t('aptBannerEnded')
-          : isClinic
-            ? t('aptBannerClinic')
-            : t('aptBannerConfirmed');
+  const visitIsPaidForDisplay =
+    localPaidOverride ||
+    isPaymentSettled(
+      visitDetail?.paymentStatus ?? item.paymentStatus,
+      visitDetail?.isPaid,
+    );
+
+  const visitDisplay = mapPatientVisitDisplay({
+    status: visitDetail?.status || item.visitStatus,
+    paymentStatus: visitDetail?.paymentStatus ?? item.paymentStatus,
+    isPaid: visitIsPaidForDisplay,
+    checkedIn: isCheckedIn,
+    lifecycleStatus: visitDetail?.lifecycleStatus,
+    isExpired: visitDetail?.isExpired,
+    canReschedule: visitDetail?.actions?.canReschedule,
+  });
+
+  const canRescheduleVisit =
+    visitDetail?.actions?.canReschedule !== false &&
+    visitDisplay.lifecycle !== 'expired' &&
+    visitDisplay.lifecycle !== 'terminal' &&
+    !isCompleted &&
+    !isCancelled;
+
+  const canCancelVisit =
+    visitDetail?.actions?.canCancel !== false &&
+    visitDisplay.lifecycle !== 'expired' &&
+    visitDisplay.lifecycle !== 'terminal' &&
+    !isCompleted &&
+    !isCancelled;
+
+  const phase: AppointmentPhase =
+    isCompleted || isCancelled || visitDisplay.lifecycle === 'expired'
+      ? 'ended'
+      : visitDisplay.lifecycle === 'overdue_grace'
+        ? 'ended'
+        : isClinic || isChat
+          ? 'confirmed'
+          : remainingMs <= -JOIN_GRACE_MS
+            ? 'ended'
+            : remainingMs <= 0
+              ? 'live'
+              : remainingMs <= NEAR_START_MS
+                ? 'upcoming'
+                : 'confirmed';
+
+  const bannerLabel = justRescheduled
+    ? t('visitLabelRescheduled')
+    : visitDisplay.lifecycle === 'overdue_grace'
+      ? t('visitOverdueBanner')
+      : visitDisplay.lifecycle === 'expired'
+        ? t('visitExpiredBanner')
+        : phase === 'upcoming'
+          ? t('aptBannerStartsIn').replace(
+              '{minutes}',
+              String(minutesUntil(remainingMs)),
+            )
+          : phase === 'live'
+            ? t('aptBannerLive')
+            : phase === 'ended'
+              ? t('aptBannerEnded')
+              : isClinic
+                ? t('aptBannerClinic')
+                : t(visitDisplay.labelKey);
 
   const startDate = new Date(item.startsAt);
   const fee =
@@ -1051,7 +1116,33 @@ export function useAppointmentDetailController({
       'rescheduleReasonPlaceholder',
     )
     : '';
+  const apiReschedulesRemaining =
+    visitDetail?.reschedulesRemaining != null &&
+    Number.isFinite(Number(visitDetail.reschedulesRemaining))
+      ? Number(visitDetail.reschedulesRemaining)
+      : null;
+  const apiRescheduleCount =
+    visitDetail?.rescheduleCount != null &&
+    Number.isFinite(Number(visitDetail.rescheduleCount))
+      ? Number(visitDetail.rescheduleCount)
+      : null;
+  // Prefer API remaining/count; never invent a client-only counter.
+  const rescheduleLimitReached =
+    apiReschedulesRemaining === 0 ||
+    (apiRescheduleCount != null && apiRescheduleCount >= 2);
+
+  const reschedulePolicy = rescheduleLimitReached
+    ? t('rescheduleLimitReached')
+    : apiReschedulesRemaining != null
+      ? t('reschedulePolicyMaxTwoRemaining').replace(
+          '{n}',
+          String(apiReschedulesRemaining),
+        )
+      : t('reschedulePolicyMaxTwo');
+
   const canConfirmReschedule = Boolean(
+    canRescheduleVisit &&
+    !rescheduleLimitReached &&
     selectedRescheduleDay &&
     selectedRescheduleDay.status === 'open' &&
     selectedRescheduleSlot &&
@@ -1184,6 +1275,14 @@ export function useAppointmentDetailController({
     canJoin: isRemoteConsult && phase !== 'ended',
     phase,
     bannerLabel,
+    visitStatusLabel: t(visitDisplay.labelKey),
+    visitStatusLabelKey: visitDisplay.labelKey,
+    visitLifecycle: visitDisplay.lifecycle,
+    showOverdueRescheduleCta: visitDisplay.showRescheduleCta && canRescheduleVisit,
+    showExpiredBookNewCta: visitDisplay.showBookNewCta,
+    canRescheduleVisit,
+    canCancelVisit,
+    justRescheduled,
     countdown: formatCountdown(Math.ceil(remainingMs / 1000), language),
     consultWithLabel: t('aptConsultWith')
       .replace('{name}', t(item.doctorNameKey))
@@ -1214,7 +1313,8 @@ export function useAppointmentDetailController({
     currentAppointmentLine,
     currentShortWhen,
     nextShortWhen,
-    reschedulePolicy: t('reschedulePolicy').replace('{deadline}', deadlineLabel),
+    reschedulePolicy,
+    rescheduleLimitReached,
     rescheduleReasonLabel,
     rescheduleError,
     rescheduleSlotsLoading,
@@ -1376,10 +1476,24 @@ export function useAppointmentDetailController({
     },
     onDownloadReceipt: () => undefined,
     onChangeTime: () => {
+      if (!canRescheduleVisit || rescheduleLimitReached) {
+        if (visitDisplay.lifecycle === 'expired' || rescheduleLimitReached) {
+          showAppToast({
+            type: 'info',
+            message: rescheduleLimitReached
+              ? t('rescheduleLimitReached')
+              : t('visitExpiredBanner'),
+          });
+        }
+        return;
+      }
       resetRescheduleForm();
       setRescheduleOpen(true);
     },
     onCancel: () => {
+      if (!canCancelVisit) {
+        return;
+      }
       resetCancelForm();
       setCancelSheetOpen(true);
     },
@@ -1515,8 +1629,8 @@ export function useAppointmentDetailController({
       };
       void rescheduleAppointmentMutation(reschedulePayload)
         .unwrap()
-        .then(() => {
-          // Success toast from notifyApiResult.
+        .then((response) => {
+          // Success toast from notifyApiResult; also surface Rescheduled chip.
           // New slot must not inherit prior check-in / queue UI. API may still
           // return WAITING; suppress until the patient checks in again.
           markClinicCheckInSuppressed(item.id);
@@ -1528,19 +1642,24 @@ export function useAppointmentDetailController({
           setCheckInWaitMinutes(null);
           setReadyAtLabel(null);
           setCheckInError(null);
+          setJustRescheduled(true);
+          // API success toast from notifyApiResult; banner/chip shows Rescheduled.
+          const nextStatus =
+            response?.appointment?.status?.trim() || 'WAITING';
           onUpdateAppointment(item.id, {
             whenLabel,
             dateLine: daySummary,
             timeLine,
             startsAt: newStartsAt,
-            visitStatus: 'NOT ARRIVED',
+            // Keep upcoming Booked/Confirmed chip — not NOT ARRIVED (missed).
+            visitStatus: nextStatus,
             suppressClinicCheckIn: true,
           });
           setRescheduleOpen(false);
           resetRescheduleForm();
         })
         .catch((err: unknown) => {
-          // Prefer notifyApiResult; toast only if base query left no message.
+          // 409 limit (and other API errors): notifyApiResult already toasts.
           if (!getApiErrorMessage(err)) {
             showAppToast({
               type: 'error',
@@ -1563,7 +1682,14 @@ export function useAppointmentDetailController({
     clinicDistanceLabel: '',
     clinicTravelNote: '',
     clinicFeeAmount: visitFeeLabel,
-    clinicBannerLabel: t('clinicAptBanner').replace('{when}', item.whenLabel),
+    clinicBannerLabel: justRescheduled
+      ? t('visitLabelRescheduled')
+      : visitDisplay.lifecycle === 'overdue_grace'
+        ? t('visitOverdueBanner')
+        : visitDisplay.lifecycle === 'expired'
+          ? t('visitExpiredBanner')
+          : t('clinicAptBanner').replace('{when}', item.whenLabel),
+    clinicStatusLabel: t(visitDisplay.labelKey),
     clinicPhone,
     clinicMapLink,
     addressCopied,
@@ -1601,8 +1727,9 @@ export function useAppointmentDetailController({
             setCheckInWaitMinutes(res.data.estimatedWaitMinutes);
           }
           setReadyAtLabel(res.data?.readyAt?.trim() || null);
+          const nextStatus = (res.data?.status || 'WAITING').trim() || 'WAITING';
           onUpdateAppointment(item.id, {
-            visitStatus: 'WAITING',
+            visitStatus: nextStatus,
             suppressClinicCheckIn: false,
           });
         })

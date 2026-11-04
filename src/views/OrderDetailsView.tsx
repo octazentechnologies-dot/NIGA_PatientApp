@@ -44,14 +44,8 @@ export function OrderDetailsView(vm: OrderDetailsViewModel) {
           >
             {vm.t('orderDetailTitle')}
           </AppText>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={vm.t('medsHelp')}
-            onPress={vm.onHelp}
-            style={styles.iconHit}
-          >
-            <Ionicons name="help-circle-outline" size={24} color={colors.ink} />
-          </Pressable>
+          {/* Spacer keeps title alignment after removing help icon */}
+          <View style={styles.iconHit} />
         </View>
       </View>
 
@@ -62,30 +56,46 @@ export function OrderDetailsView(vm: OrderDetailsViewModel) {
           { paddingBottom: 120 + sheetBottomPadding(insets, spacing.md) },
         ]}
       >
-        <View style={styles.deliveredBanner}>
-          <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-          <AppText variant="labelMd" color={colors.success} weightOverride="600" style={styles.flex}>
-            {vm.deliveredLine}
-          </AppText>
-        </View>
+        {vm.showDeliveredBanner && vm.deliveredLine ? (
+          <View style={styles.deliveredBanner}>
+            <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+            <AppText
+              variant="labelMd"
+              color={colors.success}
+              weightOverride="600"
+              style={styles.flex}
+            >
+              {vm.deliveredLine}
+            </AppText>
+          </View>
+        ) : null}
 
         <View style={styles.card}>
-          <AppText variant="labelSm" color={colors.muted} weightOverride="600" style={styles.uppercase}>
+          <AppText
+            variant="labelSm"
+            color={colors.muted}
+            weightOverride="600"
+            style={styles.uppercase}
+          >
             {vm.t('orderDetailItems')}
           </AppText>
           {vm.items.map((item) => (
             <View key={item.id} style={styles.itemRow}>
               <View style={styles.flex}>
                 <AppText variant="labelMd" color={colors.ink} weightOverride="600">
-                  {vm.t(item.nameKey)}
+                  {item.name}
                 </AppText>
-                <AppText variant="bodyMd" color={colors.muted}>
-                  {vm.t(item.detailKey)}
-                </AppText>
+                {item.detail ? (
+                  <AppText variant="bodyMd" color={colors.muted}>
+                    {item.detail}
+                  </AppText>
+                ) : null}
               </View>
-              <AppText variant="labelMd" color={colors.ink} weightOverride="600">
-                {item.priceLabel}
-              </AppText>
+              {item.priceLabel ? (
+                <AppText variant="labelMd" color={colors.ink} weightOverride="600">
+                  {item.priceLabel}
+                </AppText>
+              ) : null}
             </View>
           ))}
           <View style={styles.divider} />
@@ -113,82 +123,138 @@ export function OrderDetailsView(vm: OrderDetailsViewModel) {
               {vm.totalPaidLabel}
             </AppText>
           </View>
-          <AppText variant="labelSm" color={colors.muted} style={styles.payNote}>
-            {vm.paymentMethodLine}
-          </AppText>
+          {vm.paymentMethodLine ? (
+            <AppText variant="labelSm" color={colors.muted} style={styles.payNote}>
+              {vm.paymentMethodLine}
+            </AppText>
+          ) : null}
         </View>
 
-        <Pressable
-          accessibilityRole="button"
-          onPress={vm.onOpenPrescription}
-          style={styles.rxCard}
-        >
-          <View style={styles.rxIcon}>
-            <MaterialCommunityIcons name="clipboard-text-outline" size={22} color={colors.iconFill} />
-          </View>
-          <AppText variant="bodyMd" color={colors.ink} style={styles.flex}>
-            {vm
-              .t('orderDetailFulfilledAgainst')
-              .replace('{rx}', vm.rxId)
-              .replace('{doctor}', vm.doctorName)}
-          </AppText>
-          <Ionicons name="chevron-forward" size={20} color={colors.muted} />
-        </Pressable>
-
-        <View style={styles.card}>
-          <View style={styles.pharmacyHead}>
+        {vm.showFulfilledCard ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={vm.onOpenPrescription}
+            style={styles.rxCard}
+          >
             <View style={styles.rxIcon}>
-              <MaterialCommunityIcons name="storefront-outline" size={22} color={colors.iconFill} />
+              <MaterialCommunityIcons
+                name="clipboard-text-outline"
+                size={22}
+                color={colors.iconFill}
+              />
             </View>
-            <View style={styles.flex}>
-              <View style={styles.pharmacyTitleRow}>
-                <AppText variant="labelMd" color={colors.ink} weightOverride="600" style={styles.flex}>
-                  {vm.pharmacyName}
-                </AppText>
-                <View style={styles.licensedPill}>
-                  <AppText variant="labelSm" color={colors.success} weightOverride="600">
-                    {vm.t('orderDetailLicensed')}
-                  </AppText>
-                </View>
+            <AppText variant="bodyMd" color={colors.ink} style={styles.flex}>
+              {vm
+                .t('orderDetailFulfilledAgainst')
+                .replace('{rx}', vm.rxId || '—')
+                .replace('{doctor}', vm.doctorName || '—')}
+            </AppText>
+            <Ionicons name="chevron-forward" size={20} color={colors.muted} />
+          </Pressable>
+        ) : null}
+
+        {(vm.pharmacyName || vm.pharmacyLicense) ? (
+          <View style={styles.card}>
+            <View style={styles.pharmacyHead}>
+              <View style={styles.rxIcon}>
+                <MaterialCommunityIcons
+                  name="storefront-outline"
+                  size={22}
+                  color={colors.iconFill}
+                />
               </View>
-              <AppText variant="bodyMd" color={colors.muted}>
-                {vm.pharmacyLicense}
-              </AppText>
+              <View style={styles.flex}>
+                <View style={styles.pharmacyTitleRow}>
+                  <AppText
+                    variant="labelMd"
+                    color={colors.ink}
+                    weightOverride="600"
+                    style={styles.flex}
+                  >
+                    {vm.pharmacyName || vm.t('orderDetailPharmacyFallback')}
+                  </AppText>
+                  {vm.pharmacyLicensed ? (
+                    <View style={styles.licensedPill}>
+                      <AppText
+                        variant="labelSm"
+                        color={colors.success}
+                        weightOverride="600"
+                      >
+                        {vm.t('orderDetailLicensed')}
+                      </AppText>
+                    </View>
+                  ) : null}
+                </View>
+                {vm.pharmacyLicense ? (
+                  <AppText variant="bodyMd" color={colors.muted}>
+                    {vm.pharmacyLicense}
+                  </AppText>
+                ) : null}
+                {vm.pharmacyArea ? (
+                  <AppText variant="bodyMd" color={colors.muted}>
+                    {vm.pharmacyArea}
+                  </AppText>
+                ) : null}
+              </View>
             </View>
+            <AppButton
+              label={vm.t('orderDetailContactPharmacy')}
+              variant="secondary"
+              onPress={vm.onContactPharmacy}
+            />
+            {vm.pharmacyContactNote ? (
+              <AppText variant="labelSm" color={colors.muted}>
+                {vm.pharmacyContactNote}
+              </AppText>
+            ) : null}
           </View>
-          <AppButton
-            label={vm.t('orderDetailContactPharmacy')}
-            variant="secondary"
-            onPress={vm.onContactPharmacy}
-          />
-          <AppText variant="labelSm" color={colors.muted}>
-            {vm.t('orderDetailMaskedNumber')}
-          </AppText>
-        </View>
+        ) : null}
 
-        <View style={styles.card}>
-          <View style={styles.rowGap}>
-            <View style={styles.rxIcon}>
-              <Ionicons name="document-text-outline" size={22} color={colors.iconFill} />
+        {vm.showInvoiceCard ? (
+          <View style={styles.card}>
+            <View style={styles.rowGap}>
+              <View style={styles.rxIcon}>
+                <Ionicons
+                  name="document-text-outline"
+                  size={22}
+                  color={colors.iconFill}
+                />
+              </View>
+              <View style={styles.flex}>
+                <AppText variant="labelMd" color={colors.ink} weightOverride="600">
+                  {vm
+                    .t('orderDetailTaxInvoice')
+                    .replace(
+                      '{pharmacy}',
+                      vm.pharmacyName || vm.t('orderDetailPharmacyFallback'),
+                    )}
+                </AppText>
+                {vm.invoiceId ? (
+                  <AppText variant="bodyMd" color={colors.muted}>
+                    {vm.invoiceId}
+                  </AppText>
+                ) : null}
+              </View>
             </View>
-            <View style={styles.flex}>
-              <AppText variant="labelMd" color={colors.ink} weightOverride="600">
-                {vm.t('orderDetailTaxInvoice').replace('{pharmacy}', vm.pharmacyName)}
+            {vm.showInvoiceDownload ? (
+              <AppButton
+                label={vm.t('orderDetailDownloadInvoice')}
+                variant="secondary"
+                onPress={vm.onDownloadInvoice}
+                loading={vm.invoiceBusy}
+                disabled={vm.invoiceBusy}
+              />
+            ) : null}
+            {vm.invoiceMessage ? (
+              <AppText variant="bodyMd" color={colors.ink}>
+                {vm.invoiceMessage}
               </AppText>
-              <AppText variant="bodyMd" color={colors.muted}>
-                {vm.invoiceId}
-              </AppText>
-            </View>
+            ) : null}
+            <AppText variant="labelSm" color={colors.muted}>
+              {vm.t('orderDetailInvoiceNote')}
+            </AppText>
           </View>
-          <AppButton
-            label={vm.t('orderDetailDownloadInvoice')}
-            variant="secondary"
-            onPress={vm.onDownloadInvoice}
-          />
-          <AppText variant="labelSm" color={colors.muted}>
-            {vm.t('orderDetailInvoiceNote')}
-          </AppText>
-        </View>
+        ) : null}
 
         {vm.canRefill ? (
           <View style={styles.card}>
@@ -226,14 +292,17 @@ export function OrderDetailsView(vm: OrderDetailsViewModel) {
           </AppText>
           <HelpRow
             label={vm.t('orderDetailHelpWrong')}
+            badge={vm.helpComingSoon ? vm.t('orderDetailHelpComingSoon') : null}
             onPress={vm.onHelpWrongItem}
           />
           <HelpRow
             label={vm.t('orderDetailHelpMissing')}
+            badge={vm.helpComingSoon ? vm.t('orderDetailHelpComingSoon') : null}
             onPress={vm.onHelpMissingItem}
           />
           <HelpRow
             label={vm.t('orderDetailHelpRefund')}
+            badge={vm.helpComingSoon ? vm.t('orderDetailHelpComingSoon') : null}
             onPress={vm.onHelpRefund}
             last
           />
@@ -251,9 +320,11 @@ export function OrderDetailsView(vm: OrderDetailsViewModel) {
           variant="secondary"
           onPress={vm.onReorder}
         />
-        <AppText variant="labelSm" color={colors.muted} style={styles.footerNote}>
-          {vm.rxValidTill}
-        </AppText>
+        {vm.rxValidTill ? (
+          <AppText variant="labelSm" color={colors.muted} style={styles.footerNote}>
+            {vm.rxValidTill}
+          </AppText>
+        ) : null}
       </View>
 
       <RefillRequestSheet vm={vm} />
@@ -263,10 +334,12 @@ export function OrderDetailsView(vm: OrderDetailsViewModel) {
 
 function HelpRow({
   label,
+  badge,
   onPress,
   last,
 }: {
   label: string;
+  badge?: string | null;
   onPress: () => void;
   last?: boolean;
 }) {
@@ -279,7 +352,15 @@ function HelpRow({
       <AppText variant="bodyLg" color={colors.ink} style={styles.flex}>
         {label}
       </AppText>
-      <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+      {badge ? (
+        <View style={styles.comingSoonPill}>
+          <AppText variant="labelSm" color={WARN} weightOverride="600">
+            {badge}
+          </AppText>
+        </View>
+      ) : (
+        <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+      )}
     </Pressable>
   );
 }
@@ -342,7 +423,7 @@ function RefillRequestSheet({ vm }: { vm: OrderDetailsViewModel }) {
                     weightOverride="600"
                     style={styles.flex}
                   >
-                    {vm.t(med.nameKey)}
+                    {med.name}
                   </AppText>
                   <View
                     style={[
@@ -398,7 +479,11 @@ function RefillRequestSheet({ vm }: { vm: OrderDetailsViewModel }) {
             </View>
 
             <View style={styles.infoBox}>
-              <Ionicons name="information-circle-outline" size={18} color={colors.muted} />
+              <Ionicons
+                name="information-circle-outline"
+                size={18}
+                color={colors.muted}
+              />
               <AppText variant="bodyMd" color={colors.muted} style={styles.flex}>
                 {vm.t('refillConsentNote')}
               </AppText>
@@ -529,6 +614,12 @@ const styles = StyleSheet.create({
   },
   licensedPill: {
     backgroundColor: colors.successContainer,
+    borderRadius: radii.full,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  comingSoonPill: {
+    backgroundColor: WARN_FILL,
     borderRadius: radii.full,
     paddingHorizontal: 10,
     paddingVertical: 4,

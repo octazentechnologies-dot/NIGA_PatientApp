@@ -7,7 +7,11 @@ import {
   type AppointmentRequestStatus,
   type BookedAppointment,
 } from '../config/bookedAppointments';
-import { mapVisitStatus } from '../constants/statusMaps';
+import { mapVisitStatusDisplay } from '../constants/statusMaps';
+import {
+  isClinicCheckedInStatus,
+  mapPatientVisitDisplay,
+} from '../utilities/patientVisitDisplay';
 import { useLocalization } from '../localization/i18n';
 import type { AppLanguage, TranslationKey } from '../localization/types';
 import { useGetHomeDashboardQuery } from '../store/api/new/homeApi';
@@ -35,10 +39,11 @@ export type VisitStatusFilter =
 
 export type MyAppointmentRow = BookedAppointment & {
   visitStatusLabel: string;
+  visitStatusLabelKey?: TranslationKey;
   visitStatusColor: string;
   visitStatusBg: string;
   visitStatusBorder?: string;
-  visitBadgeType?: 'upcoming' | 'waiting' | 'completed' | 'cancelled' | 'neutral';
+  visitBadgeType?: 'upcoming' | 'waiting' | 'completed' | 'cancelled' | 'neutral' | 'missed';
   doctorPhotoUrl?: string | null;
   doctorSpecialization?: string;
 };
@@ -108,14 +113,31 @@ function mapVisitToRow(
   const formattedDate = formatDate(datePart) ?? datePart;
   const formattedTime = formatTime(item.appointmentTime) ?? item.appointmentTime ?? '';
   const whenLabel = [formattedDate, formattedTime].filter(Boolean).join(' · ');
-  const visual = mapVisitStatus(item.status);
+  const checkedIn = isClinicCheckedInStatus(item.status, item.queuePosition);
+  const display = mapPatientVisitDisplay({
+    status: item.status,
+    paymentStatus: item.paymentStatus,
+    isPaid: item.isPaid,
+    checkedIn,
+    isExpired: item.isExpired,
+  });
+  const visual = mapVisitStatusDisplay({
+    status: item.status,
+    paymentStatus: item.paymentStatus,
+    isPaid: item.isPaid,
+    checkedIn,
+    isExpired: item.isExpired,
+  });
   const statusUpper = (item.status || '').toUpperCase();
   const aptStatus: AppointmentRequestStatus =
     statusUpper === 'NOT ARRIVED' ||
       statusUpper === 'WAITING' ||
       statusUpper === 'E-CONSULT' ||
       statusUpper === 'REMAINING' ||
-      statusUpper === 'WALK-IN'
+      statusUpper === 'WALK-IN' ||
+      statusUpper === 'EARLY' ||
+      statusUpper === 'READY' ||
+      statusUpper === 'OVERDUE'
       ? 'confirmed'
       : 'waiting_acceptance';
 
@@ -154,6 +176,8 @@ function mapVisitToRow(
     reasonKey: '' as TranslationKey,
     status: aptStatus,
     visitStatus: item.status,
+    paymentStatus: item.paymentStatus ?? undefined,
+    visitStatusLabelKey: display.labelKey,
     visitStatusLabel: visual.label,
     visitStatusColor: visual.color,
     visitStatusBg: visual.background,

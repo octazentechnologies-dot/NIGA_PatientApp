@@ -4,7 +4,7 @@ export type PatientVisitItem = {
   patientAppId: number;
   appointmentDate: string;
   appointmentTime: string;
-  status: string; // 'NOT ARRIVED' | 'WAITING' | 'WALK-IN' | 'E-CONSULT' | 'REMAINING' | 'COMPLETED' | 'CANCELLED'
+  status: string; // 'NOT ARRIVED' | 'WAITING' | 'WALK-IN' | 'E-CONSULT' | 'REMAINING' | 'COMPLETED' | 'CANCELLED' | 'OVERDUE' | 'EXPIRED' | …
   consultMode: string;
   isTele: boolean;
   doctorId: number;
@@ -20,6 +20,14 @@ export type PatientVisitItem = {
   sessionStatus?: string | null;
   chatCount?: number;
   hasSummary?: boolean;
+  /** Present on list/detail when New-API includes payment on the row. */
+  paymentStatus?: string | null;
+  isPaid?: boolean;
+  /** New-API: appointment date+time already past server local time. */
+  isExpired?: boolean;
+  queuePosition?: number | null;
+  consultFee?: number | null;
+  currency?: string | null;
 };
 
 export type GetPatientVisitsParams = {
@@ -49,6 +57,8 @@ export type VisitDetailActions = {
   canJoinTele: boolean;
   canChat: boolean;
   canReview: boolean;
+  /** Present when New-API exposes refund eligibility. */
+  canRefund?: boolean;
 };
 
 export type VisitDetailData = {
@@ -93,7 +103,34 @@ export type VisitDetailData = {
   erxPdfExpiresAt?: string | null;
   /** BE-014 — hide when null. */
   clinicAddressLine?: string | null;
+  /** New-API list/detail: slot already past server local time. */
+  isExpired?: boolean;
+  /**
+   * Prefer when present: upcoming | overdue_grace | expired | open.
+   * Do not invent — only consume when New-API sends it.
+   */
+  lifecycleStatus?: string | null;
+  /** Patient reschedule count (0..2) when New-API exposes it. */
+  rescheduleCount?: number | null;
+  /** Remaining patient reschedules when New-API exposes it. */
+  reschedulesRemaining?: number | null;
   actions: VisitDetailActions;
+};
+
+/** Optional fields on RescheduleAppointment success when New-API starts returning them. */
+export type RescheduleAppointmentResponse = {
+  statusCode: number;
+  message: string;
+  appointment?: {
+    patientAppId: number;
+    appointmentDate: string;
+    appointmentTime: string;
+    status: string;
+    rescheduleCount?: number;
+    reschedulesRemaining?: number;
+  };
+  rescheduleCount?: number;
+  reschedulesRemaining?: number;
 };
 
 export type VisitDetailResponse = {
@@ -124,17 +161,6 @@ export type RescheduleAppointmentRequest = {
   appointmentDate: string; // yyyy-MM-dd
   appointmentTime: string; // HH:mm
   reason?: string;
-};
-
-export type RescheduleAppointmentResponse = {
-  statusCode: number;
-  message: string;
-  appointment?: {
-    patientAppId: number;
-    appointmentDate: string;
-    appointmentTime: string;
-    status: string;
-  };
 };
 
 export type CancelAppointmentRequest = {

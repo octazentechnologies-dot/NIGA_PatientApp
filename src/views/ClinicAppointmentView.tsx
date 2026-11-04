@@ -117,10 +117,43 @@ export function ClinicAppointmentView(vm: ClinicAppointmentViewModel) {
               {vm.t('cancelledTitle')}
             </AppText>
           </View>
+        ) : vm.visitLifecycle === 'overdue_grace' ||
+          vm.visitLifecycle === 'expired' ? (
+          <View
+            style={[
+              styles.banner,
+              vm.visitLifecycle === 'expired'
+                ? styles.bannerCancelled
+                : styles.bannerWarn,
+            ]}
+          >
+            <Ionicons
+              name={
+                vm.visitLifecycle === 'expired'
+                  ? 'alert-circle'
+                  : 'time-outline'
+              }
+              size={22}
+              color={
+                vm.visitLifecycle === 'expired' ? colors.error : colors.warning
+              }
+            />
+            <AppText
+              variant="labelMd"
+              color={
+                vm.visitLifecycle === 'expired' ? colors.error : colors.warning
+              }
+              weightOverride="600"
+              style={styles.flex}
+              raw
+            >
+              {vm.clinicBannerLabel}
+            </AppText>
+          </View>
         ) : !vm.isCompleted ? (
           <View style={styles.banner}>
             <Ionicons name="checkmark-circle" size={22} color={colors.success} />
-            <AppText variant="labelMd" color={colors.success} weightOverride="600" style={styles.flex}>
+            <AppText variant="labelMd" color={colors.success} weightOverride="600" style={styles.flex} raw>
               {vm.clinicBannerLabel}
             </AppText>
           </View>
@@ -246,15 +279,26 @@ export function ClinicAppointmentView(vm: ClinicAppointmentViewModel) {
 
           <DetailRow label={vm.t('clinicAptWhen')} value={vm.whenLabel} />
           <DetailRow label={vm.t('clinicAptType')} value={vm.modeConsultLabel} />
-          {vm.isCheckedIn && !vm.isCompleted && !vm.isCancelled ? (
+          {vm.clinicStatusLabel && !vm.isCancelled ? (
             <View style={styles.detailRow}>
               <AppText variant="bodyMd" color={colors.muted}>
                 {vm.t('clinicCheckInLabel')}
               </AppText>
               <View style={styles.checkedInPill}>
-                <Ionicons name="checkmark-circle" size={14} color={colors.success} />
-                <AppText variant="labelSm" color={colors.success} weightOverride="600">
-                  {vm.t('clinicAptCheckedInTitle')}
+                <Ionicons
+                  name={
+                    vm.isCheckedIn ? 'checkmark-circle' : 'ellipse-outline'
+                  }
+                  size={14}
+                  color={vm.isCheckedIn ? colors.success : colors.primary}
+                />
+                <AppText
+                  variant="labelSm"
+                  color={vm.isCheckedIn ? colors.success : colors.primary}
+                  weightOverride="600"
+                  raw
+                >
+                  {vm.clinicStatusLabel}
                 </AppText>
               </View>
             </View>
@@ -311,7 +355,11 @@ export function ClinicAppointmentView(vm: ClinicAppointmentViewModel) {
               />
             </View>
           ) : null
-        ) : !vm.isCheckedIn && !vm.isCancelled && vm.phase !== 'ended' ? (
+        ) : !vm.isCheckedIn &&
+          !vm.isCancelled &&
+          vm.phase !== 'ended' &&
+          vm.visitLifecycle !== 'overdue_grace' &&
+          vm.visitLifecycle !== 'expired' ? (
           <View style={styles.card}>
             <AppText variant="headlineMd" color={colors.ink}>
               {vm.t('clinicAptCheckInTitle')}
@@ -344,26 +392,50 @@ export function ClinicAppointmentView(vm: ClinicAppointmentViewModel) {
           ))}
         </View>
 
-        {!vm.isCompleted && !vm.isCancelled ? (
-          <View style={styles.footerActions}>
-            <Pressable
-              accessibilityRole="button"
+        {vm.showOverdueRescheduleCta ? (
+          <View style={styles.card}>
+            <AppButton
+              label={vm.t('visitOverdueReschedule')}
               onPress={vm.onChangeTime}
-              style={styles.outlineBtn}
-            >
-              <AppText variant="labelMd" color={colors.primaryOutline} weightOverride="600">
-                {vm.t('clinicAptReschedule')}
-              </AppText>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              onPress={vm.onCancel}
-              style={styles.outlineBtn}
-            >
-              <AppText variant="labelMd" color={colors.primaryOutline} weightOverride="600">
-                {vm.t('clinicAptCancel')}
-              </AppText>
-            </Pressable>
+            />
+          </View>
+        ) : null}
+
+        {vm.showExpiredBookNewCta ? (
+          <View style={styles.card}>
+            <AppButton
+              label={vm.t('visitExpiredBookNew')}
+              onPress={vm.onBookAnother}
+            />
+          </View>
+        ) : null}
+
+        {!vm.isCompleted &&
+        !vm.isCancelled &&
+        vm.visitLifecycle !== 'expired' ? (
+          <View style={styles.footerActions}>
+            {vm.canRescheduleVisit && !vm.rescheduleLimitReached ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={vm.onChangeTime}
+                style={styles.outlineBtn}
+              >
+                <AppText variant="labelMd" color={colors.primaryOutline} weightOverride="600">
+                  {vm.t('clinicAptReschedule')}
+                </AppText>
+              </Pressable>
+            ) : null}
+            {vm.canCancelVisit ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={vm.onCancel}
+                style={styles.outlineBtn}
+              >
+                <AppText variant="labelMd" color={colors.primaryOutline} weightOverride="600">
+                  {vm.t('clinicAptCancel')}
+                </AppText>
+              </Pressable>
+            ) : null}
           </View>
         ) : null}
 
@@ -478,6 +550,9 @@ const styles = StyleSheet.create({
   },
   bannerCancelled: {
     backgroundColor: colors.errorContainer,
+  },
+  bannerWarn: {
+    backgroundColor: colors.warningContainer,
   },
   checkedInCard: {
     backgroundColor: colors.successContainer,

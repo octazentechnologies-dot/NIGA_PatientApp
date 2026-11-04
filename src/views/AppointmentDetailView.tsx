@@ -111,12 +111,72 @@ export function AppointmentDetailView(vm: AppointmentDetailViewModel) {
               {vm.t('cancelledTitle')}
             </AppText>
           </View>
+        ) : vm.visitLifecycle === 'overdue_grace' ||
+          vm.visitLifecycle === 'expired' ? (
+          <View
+            style={[
+              styles.banner,
+              vm.visitLifecycle === 'expired'
+                ? styles.bannerCancelled
+                : undefined,
+            ]}
+          >
+            <Ionicons
+              name={
+                vm.visitLifecycle === 'expired'
+                  ? 'alert-circle'
+                  : 'time-outline'
+              }
+              size={22}
+              color={
+                vm.visitLifecycle === 'expired' ? colors.error : colors.warning
+              }
+            />
+            <AppText
+              variant="bodyMd"
+              color={
+                vm.visitLifecycle === 'expired' ? colors.error : colors.warning
+              }
+              weightOverride="600"
+              style={styles.flex}
+              raw
+            >
+              {vm.bannerLabel}
+            </AppText>
+          </View>
         ) : !vm.isCompleted ? (
           <View style={styles.banner}>
             <Ionicons name="checkmark-circle" size={22} color={colors.success} />
-            <AppText variant="bodyMd" color={colors.success} weightOverride="600" style={styles.flex}>
+            <AppText variant="bodyMd" color={colors.success} weightOverride="600" style={styles.flex} raw>
               {vm.bannerLabel}
             </AppText>
+          </View>
+        ) : null}
+        {vm.visitStatusLabel && !vm.isCancelled ? (
+          <View style={styles.statusChipRow}>
+            <View style={styles.statusChip}>
+              <AppText variant="labelSm" color={colors.primary} weightOverride="600" raw>
+                {vm.justRescheduled
+                  ? vm.t('visitLabelRescheduled')
+                  : vm.visitStatusLabel}
+              </AppText>
+            </View>
+          </View>
+        ) : null}
+        {vm.showOverdueRescheduleCta ? (
+          <View style={styles.card}>
+            <AppButton
+              label={vm.t('visitOverdueReschedule')}
+              onPress={vm.onChangeTime}
+            />
+          </View>
+        ) : null}
+        {vm.showExpiredBookNewCta ? (
+          <View style={styles.card}>
+            <AppButton
+              label={vm.t('visitExpiredBookNew')}
+              onPress={vm.onBookAnother}
+            />
           </View>
         ) : null}
 
@@ -465,6 +525,16 @@ const styles = StyleSheet.create({
   bannerCancelled: {
     backgroundColor: colors.errorContainer,
     borderColor: colors.error,
+  },
+  statusChipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusChip: {
+    backgroundColor: colors.primaryContainer,
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   card: {
     backgroundColor: colors.card,

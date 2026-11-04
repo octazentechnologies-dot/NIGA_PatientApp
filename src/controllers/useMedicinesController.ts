@@ -271,9 +271,25 @@ export function useMedicinesController({
     return rows.filter((order) => order.status === pastFilter);
   }, [orders, pastFilter, t]);
 
+  // Non-cancelled orders: eRx leaves "still order against". Open-only: hide refill Start Order.
+  const { orderedErxIds, openErxIds } = useMemo(() => {
+    const ordered = new Set<number>();
+    const open = new Set<number>();
+    for (const order of orders) {
+      const stage = medicineOrderStage(order.status);
+      const erx = Number(order.erxSnapshotId);
+      if (!Number.isFinite(erx) || erx <= 0) continue;
+      if (stage.key === 'cancelled') continue;
+      ordered.add(erx);
+      if (stage.key !== 'delivered') open.add(erx);
+    }
+    return { orderedErxIds: ordered, openErxIds: open };
+  }, [orders]);
+
   const orderableRx = useMemo<OrderableRx[]>(() => {
     return (rxList?.data ?? [])
       .filter((row) => Number(row.erxSnapshotId) > 0)
+      .filter((row) => !orderedErxIds.has(Number(row.erxSnapshotId)))
       .map((row) => {
         const signed = Boolean(row.signedAt) || /signed|locked/i.test(row.status || '');
         return {
@@ -286,7 +302,7 @@ export function useMedicinesController({
           canOrder: signed,
         };
       });
-  }, [rxList?.data]);
+  }, [orderedErxIds, rxList?.data]);
 
   const toRefill = (row: {
     refillRequestId: number;
@@ -302,12 +318,25 @@ export function useMedicinesController({
     subtitle: row.doctorName?.trim() || '',
   });
 
-  const pendingRefills = (refillsResponse?.data ?? [])
-    .filter((row) => String(row.status).toUpperCase() === 'PENDING')
-    .map(toRefill);
-  const approvedRefills = (refillsResponse?.data ?? [])
-    .filter((row) => String(row.status).toUpperCase() === 'APPROVED')
-    .map(toRefill);
+  const pendingRefills = useMemo(
+    () =>
+      (refillsResponse?.data ?? [])
+        .filter((row) => String(row.status).toUpperCase() === 'PENDING')
+        .map(toRefill),
+    [refillsResponse?.data, t],
+  );
+
+  const approvedRefills = useMemo(
+    () =>
+      (refillsResponse?.data ?? [])
+        .filter((row) => String(row.status).toUpperCase() === 'APPROVED')
+        .filter((row) => {
+          const erx = Number(row.erxSnapshotId);
+          return !(Number.isFinite(erx) && erx > 0 && openErxIds.has(erx));
+        })
+        .map(toRefill),
+    [openErxIds, refillsResponse?.data, t],
+  );
 
   const members = useMemo(() => {
     const base: { id: MedicinesMemberId; labelKey: TranslationKey }[] = [...MEMBERS];
